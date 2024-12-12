@@ -1,29 +1,29 @@
-import pyodbc
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import sessionmaker
 from config import Config
-from contextlib import contextmanager
 
-@contextmanager
-def get_db_connection():
-    """
-    Context manager to get a database connection
-    """
-    connection = None
+# Construct the database connection URL
+DATABASE_URL = (
+    f"mssql+pyodbc://{Config.SQL_SERVER_CONFIG['username']}:{Config.SQL_SERVER_CONFIG['password']}"
+    f"@{Config.SQL_SERVER_CONFIG['server']}/{Config.SQL_SERVER_CONFIG['database']}?"
+    f"driver={Config.SQL_SERVER_CONFIG['driver']}&TrustServerCertificate={Config.SQL_SERVER_CONFIG['trust_server_certificate']}"
+)
 
+# Create the SQLAlchemy engine
+engine = create_engine(DATABASE_URL)
+
+# Create a metadata object for reflecting tables
+metadata = MetaData()
+
+# Create a session factory
+Session = sessionmaker(bind=engine)
+
+def get_db_session():
+    """
+    Provides a new SQLAlchemy session for database operations.
+    """
+    session = Session()
     try:
-        connection = pyodbc.connect(
-            f"DRIVER={Config.SQL_SERVER_CONFIG['driver']};"
-            f"SERVER={Config.SQL_SERVER_CONFIG['server']};"
-            f"DATABASE={Config.SQL_SERVER_CONFIG['database']};"
-            f"UID={Config.SQL_SERVER_CONFIG['username']};"
-            f"PWD={Config.SQL_SERVER_CONFIG['password']};"
-            f"TrustServerCertificate={Config.SQL_SERVER_CONFIG['trust_server_certificate']};"
-        )
-        yield connection
-    
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        raise
-
+        yield session
     finally:
-        if connection:
-            connection.close()
+        session.close()

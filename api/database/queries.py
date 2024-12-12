@@ -1,69 +1,77 @@
-from .connection import get_db_connection
+from sqlalchemy import Table, select, and_, or_
+from .connection import engine, metadata
+
 
 def build_dynamic_query(
-    table: str,
+    table_name: str,
     columns: list[str] = None,
     conditions: dict = None,
     limit: int = None,
     offset: int = None,
-    joins: list[str] = None,
+    joins: list[str] = None,  # SQLAlchemy handles joins differently
     order_by: list[str] = None,
     group_by: list[str] = None
-) -> str:
+):
     """
-    Build a fully dynamic SQL query based on the provided arguments.
+    Build a fully dynamic SQLAlchemy query based on the provided arguments.
     """
-    # Base SELECT clause
-    columns_part = ", ".join(columns) if columns else "*"
-    query = f"SELECT {columns_part} FROM {table}"
+    # Reflect the table
+    table = Table(table_name, metadata, autoload_with=engine)
 
-    # Add JOIN clauses
-    if joins:
-        query += " " + " ".join(joins)
+    # Select specific columns or all columns
+    if columns:
+        query = select([table.c[col] for col in columns])
+    else:
+        query = select([table])
 
     # Add WHERE conditions
     if conditions:
-        conditions_part = " AND ".join(
-            [f"{col} {op} ?" for col, (op, _) in conditions.items()]
-        )
-        query += f" WHERE {conditions_part}"
+        condition_clauses = []
+        for col, (op, val) in conditions.items():
+            if op == "BETWEEN" and isinstance(val, list) and len(val) == 2:
+                condition_clauses.append(table.c[col].between(val[0], val[1]))
+            elif op == "=":
+                condition_clauses.append(table.c[col] == val)
+            elif op == ">":
+                condition_clauses.append(table.c[col] > val)
+            elif op == "<":
+                condition_clauses.append(table.c[col] < val)
+        query = query.where(and_(*condition_clauses))
 
     # Add GROUP BY
     if group_by:
-        query += f" GROUP BY {', '.join(group_by)}"
+        query = query.group_by(*[table.c[col] for col in group_by])
 
     # Add ORDER BY
     if order_by:
-        query += f" ORDER BY {', '.join(order_by)}"
+        query = query.order_by(*[table.c[col] for col in order_by])
 
     # Add LIMIT and OFFSET
     if limit:
-        query += f" LIMIT {limit}"
-        if offset:
-            query += f" OFFSET {offset}"
+        query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
 
     return query
 
 
 def execute_dynamic_query(
-    table: str,
+    table_name: str,
     columns: list[str] = None,
     conditions: dict = None,
     limit: int = None,
     offset: int = None,
-    joins: list[str] = None,
+    joins: list[str] = None,  # Joins can be handled in the query if needed
     order_by: list[str] = None,
     group_by: list[str] = None
 ) -> list[dict]:
     """
-    Execute a dynamically built query and return the results.
+    Execute a dynamically built SQLAlchemy query and return the results.
     """
     query = build_dynamic_query(
-        table, columns, conditions, limit, offset, joins, order_by, group_by
+        table_name, columns, conditions, limit, offset, joins, order_by, group_by
     )
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        condition_values = [val for _, val in conditions.values()] if conditions else []
-        cursor.execute(query, tuple(condition_values))
-        columns = [col[0] for col in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        return [dict(row) for row in result]
