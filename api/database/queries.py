@@ -1,6 +1,5 @@
 from .connection import get_db_connection
 
-
 def build_dynamic_query(
     table: str,
     columns: list[str] = None,
@@ -13,19 +12,6 @@ def build_dynamic_query(
 ) -> str:
     """
     Build a fully dynamic SQL query based on the provided arguments.
-
-    Args:
-        table (str): The primary table to fetch data from.
-        columns (list[str], optional): Specific columns to retrieve. Defaults to None (fetch all columns).
-        conditions (dict, optional): A dictionary of column-value pairs for WHERE conditions. Defaults to None.
-        limit (int, optional): Number of rows to fetch. Defaults to None (fetch all rows).
-        offset (int, optional): Offset for pagination. Defaults to None.
-        joins (list[str], optional): List of JOIN clauses. Example: ["INNER JOIN orders ON users.id = orders.user_id"].
-        order_by (list[str], optional): List of columns for ORDER BY. Example: ["created_at DESC", "id ASC"].
-        group_by (list[str], optional): List of columns for GROUP BY.
-
-    Returns:
-        str: The dynamically built SQL query.
     """
     # Base SELECT clause
     columns_part = ", ".join(columns) if columns else "*"
@@ -33,12 +19,13 @@ def build_dynamic_query(
 
     # Add JOIN clauses
     if joins:
-        for join in joins:
-            query += f" {join}"
+        query += " " + " ".join(joins)
 
     # Add WHERE conditions
     if conditions:
-        conditions_part = " AND ".join([f"{col} = ?" for col in conditions.keys()])
+        conditions_part = " AND ".join(
+            [f"{col} {op} ?" for col, (op, _) in conditions.items()]
+        )
         query += f" WHERE {conditions_part}"
 
     # Add GROUP BY
@@ -70,18 +57,13 @@ def execute_dynamic_query(
 ) -> list[dict]:
     """
     Execute a dynamically built query and return the results.
-
-    Args:
-        See `build_dynamic_query`.
-
-    Returns:
-        list[dict]: A list of rows, where each row is represented as a dictionary.
     """
     query = build_dynamic_query(
         table, columns, conditions, limit, offset, joins, order_by, group_by
     )
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute(query, tuple(conditions.values()) if conditions else ())
+        condition_values = [val for _, val in conditions.values()] if conditions else []
+        cursor.execute(query, tuple(condition_values))
         columns = [col[0] for col in cursor.description]
         return [dict(zip(columns, row)) for row in cursor.fetchall()]

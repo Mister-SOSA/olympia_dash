@@ -10,7 +10,7 @@ export default function Dashboard() {
     const gridRef = useRef<HTMLDivElement>(null);
 
     const [layout, setLayout] = useState([
-        { id: "TestWidget", x: 0, y: 0, w: 4, h: 2 },
+        { id: "Sales6MoVsLastYear", x: 0, y: 0, w: 4, h: 2 },
     ]);
 
     useEffect(() => {
