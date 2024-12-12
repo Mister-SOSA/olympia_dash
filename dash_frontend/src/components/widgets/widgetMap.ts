@@ -1,7 +1,7 @@
-import TestWidget from "./TestWidget";
+import Sales6MoVsLastYear from "./Sales6MoVsLastYear";
 
 const widgetMap: Record<string, React.ComponentType> = {
-    TestWidget: TestWidget,
+    Sales6MoVsLastYear: Sales6MoVsLastYear,
 };
 
 export default widgetMap;
