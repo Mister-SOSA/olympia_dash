@@ -15,7 +15,8 @@ def get_db_connection():
             f"SERVER={Config.SQL_SERVER_CONFIG['server']};"
             f"DATABASE={Config.SQL_SERVER_CONFIG['database']};"
             f"UID={Config.SQL_SERVER_CONFIG['username']};"
-            f"PWD={Config.SQL_SERVER_CONFIG['password']}"
+            f"PWD={Config.SQL_SERVER_CONFIG['password']};"
+            f"TrustServerCertificate={Config.SQL_SERVER_CONFIG['trust_server_certificate']};"
         )
         yield connection
     

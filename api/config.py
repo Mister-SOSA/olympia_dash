@@ -9,5 +9,6 @@ class Config:
         'database': os.getenv('SQL_DATABASE', ''),
         'username': os.getenv('SQL_USERNAME', ''),
         'password': os.getenv('SQL_PASSWORD', ''),
-        'driver': os.getenv('SQL_DRIVER', '')
+        'driver': os.getenv('SQL_DRIVER', ''),
+        'trust_server_certificate': os.getenv('SQL_TRUST_CERT', '')
     }
