@@ -1,13 +1,8 @@
 from flask import Flask, request, jsonify
-from flask_caching import Cache
 from pydantic import BaseModel, Field, ValidationError
 from database.queries import QueryBuilder
 
 app = Flask(__name__)
-
-# Cache Configuration
-app.config['CACHE_TYPE'] = 'SimpleCache'
-cache = Cache(app)
 
 # Logging
 import logging
@@ -34,7 +29,6 @@ class WidgetQueryParams(BaseModel):
 
 # Widget Query Endpoint
 @app.route('/api/widgets', methods=['POST'])
-@cache.cached(timeout=300, query_string=True)
 def get_widgets_post():
     """
     API endpoint to fetch widget data dynamically using POST and QueryBuilder.

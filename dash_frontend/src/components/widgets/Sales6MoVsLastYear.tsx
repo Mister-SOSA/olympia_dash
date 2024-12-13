@@ -12,9 +12,18 @@ export default function Sales6MoVsLastYear() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const response = await fetch(
-                    "/api/data/advanced?table=sales_data&columns=month,desktop,mobile&order_by=month ASC"
-                );
+                const response = await fetch("/api/widgets", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        table: "sales_data",
+                        columns: ["month", "desktop", "mobile"],
+                        sort: "month:ASC",
+                        limit: 100, // Adjust as needed
+                    }),
+                });
                 if (!response.ok) {
                     throw new Error(`Error: ${response.statusText}`);
                 }
