@@ -1,29 +1,25 @@
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import sessionmaker
+import pyodbc
 from config import Config
 
-# Construct the database connection URL
-DATABASE_URL = (
-    f"mssql+pyodbc://{Config.SQL_SERVER_CONFIG['username']}:{Config.SQL_SERVER_CONFIG['password']}"
-    f"@{Config.SQL_SERVER_CONFIG['server']}/{Config.SQL_SERVER_CONFIG['database']}?"
-    f"driver={Config.SQL_SERVER_CONFIG['driver']}&TrustServerCertificate={Config.SQL_SERVER_CONFIG['trust_server_certificate']}"
-)
+class DatabaseConnection:
+    def __init__(self):
+        config = Config.SQL_SERVER_CONFIG
+        self.connection_string = (
+            f"DRIVER={{{config['driver']}}};"
+            f"SERVER={config['server']};"
+            f"DATABASE={config['database']};"
+            f"UID={config['username']};"
+            f"PWD={config['password']};"
+            f"TrustServerCertificate={config['trust_server_certificate']};"
+        )
+        if config.get('trust_server_certificate', '').lower() == 'true':
+            self.connection_string += "TrustServerCertificate=Yes;"
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
-
-# Create a metadata object for reflecting tables
-metadata = MetaData()
-
-# Create a session factory
-Session = sessionmaker(bind=engine)
-
-def get_db_session():
-    """
-    Provides a new SQLAlchemy session for database operations.
-    """
-    session = Session()
-    try:
-        yield session
-    finally:
-        session.close()
+    def get_connection(self):
+        """Establish and return a new database connection."""
+        try:
+            connection = pyodbc.connect(self.connection_string)
+            return connection
+        except pyodbc.Error as e:
+            print(f"Error connecting to the database: {e}")
+            raise

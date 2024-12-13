@@ -1,53 +1,88 @@
-import json
-from flask import Flask, jsonify, request
-from database.queries import execute_dynamic_query
+from flask import Flask, request, jsonify
+from flask_caching import Cache
+from pydantic import BaseModel, Field, ValidationError
+from database.queries import QueryBuilder
 
 app = Flask(__name__)
 
-@app.route('/api/data/advanced', methods=['GET'])
-def get_advanced_data():
+# Cache Configuration
+app.config['CACHE_TYPE'] = 'SimpleCache'
+cache = Cache(app)
+
+# Logging
+import logging
+logging.basicConfig(level=logging.INFO)
+
+@app.before_request
+def log_request_info():
+    logging.info(f"Request Headers: {request.headers}")
+    logging.info(f"Request Body: {request.get_data()}")
+
+@app.after_request
+def log_response_info(response):
+    logging.info(f"Response: {response.status_code}")
+    return response
+
+# Input Validation Schema
+class WidgetQueryParams(BaseModel):
+    table: str = Field(default='widgets', pattern='^[a-zA-Z_]+$')
+    columns: list[str] = Field(default=[])
+    filters: str = None
+    sort: str = None
+    limit: int = Field(default=10, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+# Widget Query Endpoint
+@app.route('/api/widgets', methods=['POST'])
+@cache.cached(timeout=300, query_string=True)
+def get_widgets_post():
     """
-    API endpoint for advanced dynamic queries.
-    Query parameters:
-        - table (str): The name of the table (required).
-        - columns (str, optional): Comma-separated list of columns to fetch.
-        - conditions (str, optional): JSON object with column-operator-value triplets for filtering.
-        - limit (int, optional): Number of rows to fetch.
-        - offset (int, optional): Offset for pagination.
-        - joins (str, optional): Comma-separated JOIN clauses (not implemented).
-        - order_by (str, optional): Comma-separated columns for ordering.
-        - group_by (str, optional): Comma-separated columns for grouping.
+    API endpoint to fetch widget data dynamically using POST and QueryBuilder.
     """
     try:
-        # Parse and validate query parameters
-        table = request.args.get('table')
-        if not table:
-            return jsonify({"status": "error", "message": "Table name is required"}), 400
+        # Validate input using Pydantic
+        data = request.get_json()
+        validated_data = WidgetQueryParams(**data)
 
-        columns = request.args.get('columns', '').split(',') if request.args.get('columns') else None
-        conditions = json.loads(request.args.get('conditions', '{}')) if request.args.get('conditions') else None
-        limit = int(request.args.get('limit', 0)) if request.args.get('limit') else None
-        offset = int(request.args.get('offset', 0)) if request.args.get('offset') else None
-        order_by = request.args.get('order_by', '').split(',') if request.args.get('order_by') else None
-        group_by = request.args.get('group_by', '').split(',') if request.args.get('group_by') else None
+        # Extract parameters
+        table = validated_data.table
+        columns = validated_data.columns
+        filters = validated_data.filters
+        sort = validated_data.sort
+        limit = validated_data.limit
+        offset = validated_data.offset
 
-        # Execute the dynamic query
-        data = execute_dynamic_query(
-            table_name=table,
-            columns=columns,
-            conditions=conditions,
-            limit=limit,
-            offset=offset,
-            order_by=order_by,
-            group_by=group_by,
-        )
-        return jsonify({"status": "success", "data": data}), 200
+        # Build the query
+        qb = QueryBuilder(table)
+        qb = qb.select(columns if columns else ['*'])
+        if filters:
+            qb = qb.where(filters)
+        if sort:
+            column, direction = sort.split(':')
+            qb = qb.order_by(column, direction)
+        qb = qb.paginate(limit, offset)
 
-    except json.JSONDecodeError:
-        return jsonify({"status": "error", "message": "Malformed JSON in conditions"}), 400
+        query = qb.build_query()
+
+        # Execute query and return results
+        results = QueryBuilder.execute_query(query)
+
+        return jsonify({
+            "success": True,
+            "data": results
+        }), 200
+
+    except ValidationError as e:
+        return jsonify({
+            "success": False,
+            "error": e.errors()
+        }), 400
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logging.error(f"Error: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)

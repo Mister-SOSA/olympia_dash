@@ -1,77 +1,59 @@
-from sqlalchemy import Table, select, and_, or_
-from .connection import engine, metadata
+from database.connection import DatabaseConnection
 
+class QueryBuilder:
+    def __init__(self, table):
+        self.table = table
+        self.columns = []
+        self.filters = []
+        self.sort = None
+        self.limit = None
+        self.offset = None
 
-def build_dynamic_query(
-    table_name: str,
-    columns: list[str] = None,
-    conditions: dict = None,
-    limit: int = None,
-    offset: int = None,
-    joins: list[str] = None,  # SQLAlchemy handles joins differently
-    order_by: list[str] = None,
-    group_by: list[str] = None
-):
-    """
-    Build a fully dynamic SQLAlchemy query based on the provided arguments.
-    """
-    # Reflect the table
-    table = Table(table_name, metadata, autoload_with=engine)
+    def select(self, columns):
+        """Specify columns to select."""
+        self.columns = columns
+        return self
 
-    # Select specific columns or all columns
-    if columns:
-        query = select([table.c[col] for col in columns])
-    else:
-        query = select([table])
+    def where(self, condition):
+        """Add a WHERE condition."""
+        self.filters.append(condition)
+        return self
 
-    # Add WHERE conditions
-    if conditions:
-        condition_clauses = []
-        for col, (op, val) in conditions.items():
-            if op == "BETWEEN" and isinstance(val, list) and len(val) == 2:
-                condition_clauses.append(table.c[col].between(val[0], val[1]))
-            elif op == "=":
-                condition_clauses.append(table.c[col] == val)
-            elif op == ">":
-                condition_clauses.append(table.c[col] > val)
-            elif op == "<":
-                condition_clauses.append(table.c[col] < val)
-        query = query.where(and_(*condition_clauses))
+    def order_by(self, column, direction="ASC"):
+        """Add an ORDER BY clause."""
+        self.sort = f"{column} {direction}"
+        return self
 
-    # Add GROUP BY
-    if group_by:
-        query = query.group_by(*[table.c[col] for col in group_by])
+    def paginate(self, limit, offset):
+        """Add LIMIT and OFFSET for pagination."""
+        self.limit = limit
+        self.offset = offset
+        return self
 
-    # Add ORDER BY
-    if order_by:
-        query = query.order_by(*[table.c[col] for col in order_by])
+    def build_query(self):
+        """Generate the SQL query string for SQL Server."""
+        query = f"SELECT {', '.join(self.columns) if self.columns else '*'} FROM {self.table}"
+        if self.filters:
+            query += f" WHERE {' AND '.join(self.filters)}"
+        if self.sort:
+            query += f" ORDER BY {self.sort}"
+        else:
+            query += " ORDER BY (SELECT NULL)"  # SQL Server requires ORDER BY for OFFSET-FETCH
+        if self.limit is not None:
+            query += f" OFFSET {self.offset or 0} ROWS FETCH NEXT {self.limit} ROWS ONLY"
+        return query
 
-    # Add LIMIT and OFFSET
-    if limit:
-        query = query.limit(limit)
-    if offset:
-        query = query.offset(offset)
-
-    return query
-
-
-def execute_dynamic_query(
-    table_name: str,
-    columns: list[str] = None,
-    conditions: dict = None,
-    limit: int = None,
-    offset: int = None,
-    joins: list[str] = None,  # Joins can be handled in the query if needed
-    order_by: list[str] = None,
-    group_by: list[str] = None
-) -> list[dict]:
-    """
-    Execute a dynamically built SQLAlchemy query and return the results.
-    """
-    query = build_dynamic_query(
-        table_name, columns, conditions, limit, offset, joins, order_by, group_by
-    )
-
-    with engine.connect() as conn:
-        result = conn.execute(query)
-        return [dict(row) for row in result]
+    @staticmethod
+    def execute_query(query):
+        """Execute the given SQL query."""
+        db = DatabaseConnection()
+        connection = db.get_connection()
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+            results = cursor.fetchall()
+            columns = [column[0] for column in cursor.description]
+            return [dict(zip(columns, row)) for row in results]
+        finally:
+            cursor.close()
+            connection.close()

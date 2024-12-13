@@ -1,42 +1,54 @@
 "use client";
-import React from "react";
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer, YAxis } from "recharts";
 
-const chartData = [
-    { month: "January", desktop: 186, mobile: 80 },
-    { month: "February", desktop: 305, mobile: 200 },
-    { month: "March", desktop: 237, mobile: 120 },
-    { month: "April", desktop: 73, mobile: 190 },
-    { month: "May", desktop: 209, mobile: 130 },
-    { month: "June", desktop: 214, mobile: 140 },
-];
+import { useEffect, useState } from "react";
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Sales6MoVsLastYear() {
-    return (
-        <div className="widget" style={{ width: "100%", height: "100%" }}>
-            <div className="widget-header">Sales (6 Mo)</div>
+    const [data, setData] = useState([]); // State for chart data
+    const [loading, setLoading] = useState(true); // Loading state
+    const [error, setError] = useState<string | null>(null); // Error state
+    const updateInterval = 30000; // Interval rate in milliseconds (30 seconds)
 
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const response = await fetch(
+                    "/api/data/advanced?table=sales_data&columns=month,desktop,mobile&order_by=month ASC"
+                );
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.statusText}`);
+                }
+                const result = await response.json();
+                setData(result.data); // Update chart data
+            } catch (err: any) {
+                setError(err.message); // Set error message
+            } finally {
+                setLoading(false); // End loading state
+            }
+        }
+
+        fetchData(); // Fetch data immediately on mount
+
+        // Set interval to update data periodically
+        const interval = setInterval(fetchData, updateInterval);
+
+        // Clear interval on unmount
+        return () => clearInterval(interval);
+    }, []); // Empty dependency array to run only on mount
+
+    if (loading) return <div>Loading...</div>;
+    if (error) return <div>Error: {error}</div>;
+
+    return (
+        <div className="widget">
+            <h2>Sales Data</h2>
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                        dataKey="month"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                        tickFormatter={(value) => value.slice(0, 3)}
-                        stroke="#fff"
-                    />
-                    <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={10}
-                        tickFormatter={(value) => `$${value}k`}
-                        stroke="#fff"
-                    />
+                <BarChart data={data}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
                     <Tooltip />
-                    <Bar dataKey="desktop" fill="#4caf50" radius={4} />
-                    <Bar dataKey="mobile" fill="#2196f3" radius={4} />
+                    <Bar dataKey="desktop" fill="#82ca9d" />
+                    <Bar dataKey="mobile" fill="#8884d8" />
                 </BarChart>
             </ResponsiveContainer>
         </div>
