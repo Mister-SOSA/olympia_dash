@@ -11,22 +11,31 @@ export default function Sales6MoVsLastYear() {
 
     useEffect(() => {
         async function fetchData() {
+            // Get the last 6 full months
+            const now = new Date();
+            const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+            const startDate = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, "0")}-01`;
+            const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+
             try {
-                const response = await fetch("/api/widgets", {
+                const response = await fetch("http://localhost:5000/api/widgets", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        table: "sales_data",
-                        columns: ["month", "desktop", "mobile"],
+                        table: "invhead",
+                        columns: ["FORMAT(order_date, 'yyyy-MM') AS month", "SUM(invoice_tot) AS total"],
+                        filters: `order_date >= '${startDate}' AND order_date < '${endDate}'`,
                         sort: "month:ASC",
-                        limit: 100, // Adjust as needed
+                        group_by: "month",
                     }),
                 });
+
                 if (!response.ok) {
                     throw new Error(`Error: ${response.statusText}`);
                 }
+
                 const result = await response.json();
                 setData(result.data); // Update chart data
             } catch (err: any) {
@@ -50,14 +59,13 @@ export default function Sales6MoVsLastYear() {
 
     return (
         <div className="widget">
-            <h2>Sales Data</h2>
+            <h2>Invoice Totals (Last 6 Months)</h2>
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <Tooltip />
-                    <Bar dataKey="desktop" fill="#82ca9d" />
-                    <Bar dataKey="mobile" fill="#8884d8" />
+                    <Bar dataKey="total" fill="#82ca9d" />
                 </BarChart>
             </ResponsiveContainer>
         </div>
