@@ -2,50 +2,97 @@ from database.connection import DatabaseConnection
 
 class QueryBuilder:
     def __init__(self, table):
+        """
+        Initialize the QueryBuilder with a table name.
+        """
         self.table = table
         self.columns = []
         self.filters = []
         self.sort = None
         self.limit = None
         self.offset = None
+        self.group_by = []
 
     def select(self, columns):
-        """Specify columns to select."""
+        """
+        Specify the columns to select.
+        """
         self.columns = columns
         return self
 
     def where(self, condition):
-        """Add a WHERE condition."""
+        """
+        Add a WHERE condition.
+        """
         self.filters.append(condition)
         return self
+    
+    def order_by(self, sort):
+        """
+        Add an ORDER BY clause. Handles various formats like:
+        - "month ASC"
+        - "month"
+        - ["month ASC", "another_column DESC"]
+        """
+        if isinstance(sort, str):
+            # Split "month ASC" or default to "ASC" if direction is missing
+            parts = sort.split()
+            column = parts[0]
+            direction = parts[1].upper() if len(parts) > 1 else "ASC"
+            self.sort = f"{column} {direction}"
+        elif isinstance(sort, list):
+            # Handle a list of sort strings
+            self.sort = ", ".join(sort)
+        else:
+            raise ValueError(f"Invalid sort format: {sort}")
+        return self
 
-    def order_by(self, column, direction="ASC"):
-        """Add an ORDER BY clause."""
-        self.sort = f"{column} {direction}"
+    def group_by_clause(self, columns):
+        """
+        Add a GROUP BY clause.
+        """
+        self.group_by = columns
         return self
 
     def paginate(self, limit, offset):
-        """Add LIMIT and OFFSET for pagination."""
+        """
+        Add LIMIT and OFFSET for pagination.
+        """
         self.limit = limit
         self.offset = offset
         return self
 
     def build_query(self):
-        """Generate the SQL query string."""
+        """
+        Generate the SQL query string.
+        """
         query = f"SELECT {', '.join(self.columns) if self.columns else '*'} FROM {self.table}"
+        
+        # Add WHERE conditions
         if self.filters:
             query += f" WHERE {' AND '.join(self.filters)}"
+        
+        # Add GROUP BY clause
+        if self.group_by:
+            query += f" GROUP BY {', '.join(self.group_by)}"
+        
+        # Add ORDER BY clause
         if self.sort:
             query += f" ORDER BY {self.sort}"
         else:
-            query += " ORDER BY (SELECT NULL)"  # SQL Server requires ORDER BY
+            query += " ORDER BY (SELECT NULL)"  # Default order required for SQL Server with OFFSET
+        
+        # Add pagination
         if self.limit is not None and self.offset is not None:
             query += f" OFFSET {self.offset or 0} ROWS FETCH NEXT {self.limit} ROWS ONLY"
+        
         return query
 
     @staticmethod
     def execute_query(query, params=None):
-        """Execute the given SQL query."""
+        """
+        Execute the given SQL query and return the results as a list of dictionaries.
+        """
         db = DatabaseConnection()
         connection = db.get_connection()
         cursor = connection.cursor()
@@ -54,6 +101,8 @@ class QueryBuilder:
                 cursor.execute(query, params)  # Parameterized query
             else:
                 cursor.execute(query)
+            
+            # Fetch results and column names
             results = cursor.fetchall()
             columns = [column[0] for column in cursor.description]
             return [dict(zip(columns, row)) for row in results]
