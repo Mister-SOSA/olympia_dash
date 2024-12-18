@@ -1,78 +1,18 @@
+import React from "react";
 import Widget from "./Widget";
 import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } from "recharts";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { calculateDates, processData, nFormatter } from "../../utils/helpers";
 
-// Utility Functions
-const formatDate = (date: Date, day: number) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+interface SalesData {
+    month: string;
+    total: number;
+    year: number;
+}
 
-const calculateDates = () => {
-    const todaysDate = new Date();
-    const endOfMonth = new Date(todaysDate.getFullYear(), todaysDate.getMonth() + 1, 0);
-    const sixMonthsAgo = new Date(endOfMonth);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-
-    const sixMonthsAgoLastYear = new Date(sixMonthsAgo);
-    sixMonthsAgoLastYear.setFullYear(sixMonthsAgoLastYear.getFullYear() - 1);
-
-    const endOfMonthLastYear = new Date(endOfMonth);
-    endOfMonthLastYear.setFullYear(endOfMonthLastYear.getFullYear() - 1);
-
-    return {
-        sixMonthsAgoFormatted: formatDate(sixMonthsAgo, 1),
-        endOfMonthFormatted: formatDate(endOfMonth, endOfMonth.getDate()),
-        sixMonthsAgoLastYearFormatted: formatDate(sixMonthsAgoLastYear, 1),
-        endOfMonthLastYearFormatted: formatDate(endOfMonthLastYear, endOfMonthLastYear.getDate()),
-        currentYear: todaysDate.getFullYear(),
-    };
-};
-
-const processData = (data: any[], currentYear: number) => {
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const dataMap = new Map<string, { currentYear: number; lastYear: number }>();
-
-    data.forEach((item) => {
-        const monthKey = item.month.split("-")[1];
-        if (!dataMap.has(monthKey)) {
-            // Initialize with the correct type
-            dataMap.set(monthKey, { currentYear: 0, lastYear: 0 });
-        }
-
-        const year = parseInt(item.year, 10);
-        const values = dataMap.get(monthKey)!; // Non-null assertion since we just initialized it
-
-        if (year === currentYear) {
-            values.currentYear = Math.trunc(item.total);
-        } else {
-            values.lastYear = Math.trunc(item.total);
-        }
-    });
-
-    return Array.from(dataMap.entries()).map(([monthKey, values]) => ({
-        month: monthNames[parseInt(monthKey, 10) - 1],
-        currentYear: values.currentYear,
-        lastYear: values.lastYear,
-    }));
-};
-
-const nFormatter = (num: number, digits: number) => {
-    const lookup = [
-        { value: 1, symbol: "" },
-        { value: 1e3, symbol: "k" },
-        { value: 1e6, symbol: "M" },
-        { value: 1e9, symbol: "G" },
-        { value: 1e12, symbol: "T" },
-    ];
-    const item = lookup.findLast((item) => num >= item.value);
-    return item
-        ? (num / item.value).toFixed(digits).replace(/\.0+$|(?<=\.[0-9]*[1-9])0+$/, "").concat(item.symbol)
-        : "0";
-};
-
-// Chart Component
-const SalesChart = ({ data }: { data: any[] }) => {
+const SalesChart = ({ data }: { data: SalesData[] }) => {
     const { currentYear } = calculateDates();
-    const groupedData = processData(data, currentYear);
+    const groupedData = React.useMemo(() => processData(data, currentYear), [data, currentYear]);
 
     return (
         <ResponsiveContainer width="100%" height="100%">
@@ -107,10 +47,13 @@ const SalesChart = ({ data }: { data: any[] }) => {
     );
 };
 
-// Main Widget Component
 export default function Sales6MoVsLastYear() {
-    const { sixMonthsAgoFormatted, endOfMonthFormatted, sixMonthsAgoLastYearFormatted, endOfMonthLastYearFormatted } =
-        calculateDates();
+    const {
+        sixMonthsAgoFormatted,
+        endOfMonthFormatted,
+        sixMonthsAgoLastYearFormatted,
+        endOfMonthLastYearFormatted,
+    } = calculateDates();
 
     return (
         <Widget
@@ -127,7 +70,7 @@ export default function Sales6MoVsLastYear() {
             }}
             title="Total Sales (Last 6 Months vs Last Year)"
             updateInterval={300000}
-            render={(data) => <SalesChart data={data} />}
+            render={(data: SalesData[]) => <SalesChart data={data} />}
         />
     );
 }
