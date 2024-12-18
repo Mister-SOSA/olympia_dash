@@ -2,7 +2,8 @@ import React from "react";
 import Widget from "./Widget";
 import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { calculateDates, processData, nFormatter } from "../../utils/helpers";
+import { calculateDates, processData, nFormatter } from "@/utils/helpers";
+import config from "@/config";
 
 interface SalesData {
     month: string;
@@ -57,7 +58,7 @@ export default function Sales6MoVsLastYear() {
 
     return (
         <Widget
-            apiEndpoint="http://172.19.1.186:5001/api/widgets"
+            apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
             payload={{
                 table: "sumsales",
                 columns: ["FORMAT(sale_date, 'yyyy-MM') AS month", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
