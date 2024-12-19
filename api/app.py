@@ -52,4 +52,4 @@ def get_widgets_post():
     
     
 if __name__ == "__main__":
-    app.run(debug=True, port=5001, host='172.19.1.186')
+    app.run(debug=True, port=5001)
