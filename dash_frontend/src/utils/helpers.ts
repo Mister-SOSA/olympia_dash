@@ -3,11 +3,11 @@ import { SalesData } from "@/types";
 export const formatDate = (date: Date, day: number): string =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-export const calculateDates = () => {
+export const calculateDates = (months: number) => {
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     const sixMonthsAgo = new Date(endOfMonth);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - (months - 1));
 
     const sixMonthsAgoLastYear = new Date(sixMonthsAgo);
     sixMonthsAgoLastYear.setFullYear(sixMonthsAgoLastYear.getFullYear() - 1);

@@ -4,15 +4,12 @@ import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } f
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { calculateDates, processData, nFormatter } from "@/utils/helpers";
 import config from "@/config";
+import { SalesData } from "@/types";
 
-interface SalesData {
-    month: string;
-    total: number;
-    year: number;
-}
+let numberOfMonths = 6;
 
 const SalesChart = ({ data }: { data: SalesData[] }) => {
-    const { currentYear } = calculateDates();
+    const { currentYear } = calculateDates(numberOfMonths);
     const groupedData = React.useMemo(() => processData(data, currentYear), [data, currentYear]);
 
     return (
@@ -42,7 +39,7 @@ export default function Sales6Mo() {
     const {
         sixMonthsAgoFormatted,
         endOfMonthFormatted,
-    } = calculateDates();
+    } = calculateDates(numberOfMonths);
 
     return (
         <Widget

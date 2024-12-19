@@ -12,6 +12,7 @@ class QueryBuilder:
         self.limit = None
         self.offset = None
         self.group_by = []
+        self.join = None  # New attribute for JOIN clause
 
     def select(self, columns):
         """
@@ -26,7 +27,21 @@ class QueryBuilder:
         """
         self.filters.append(condition)
         return self
-    
+
+    def join_clause(self, join):
+        """
+        Add a JOIN clause.
+        Expected format:
+        join = {
+            "table": "other_table",
+            "on": "main_table.column = other_table.column",
+            "type": "LEFT"  # Optional, defaults to INNER if not specified
+        }
+        """
+        join_type = join.get("type", "INNER").upper()
+        self.join = f"{join_type} JOIN {join['table']} ON {join['on']}"
+        return self
+
     def order_by(self, sort):
         """
         Add an ORDER BY clause. Handles various formats like:
@@ -35,13 +50,11 @@ class QueryBuilder:
         - ["month ASC", "another_column DESC"]
         """
         if isinstance(sort, str):
-            # Split "month ASC" or default to "ASC" if direction is missing
             parts = sort.split()
             column = parts[0]
             direction = parts[1].upper() if len(parts) > 1 else "ASC"
             self.sort = f"{column} {direction}"
         elif isinstance(sort, list):
-            # Handle a list of sort strings
             self.sort = ", ".join(sort)
         else:
             raise ValueError(f"Invalid sort format: {sort}")
@@ -67,6 +80,10 @@ class QueryBuilder:
         Generate the SQL query string.
         """
         query = f"SELECT {', '.join(self.columns) if self.columns else '*'} FROM {self.table}"
+        
+        # Add JOIN clause if present
+        if self.join:
+            query += f" {self.join}"
         
         # Add WHERE conditions
         if self.filters:

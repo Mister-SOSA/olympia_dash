@@ -13,6 +13,7 @@ body {
 :root {
   --primary-color: #3490dc;
   --secondary-color: #ffed4a;
+  --help-color: #92c9f7;
   --accent-color: #38c172;
   --muted-color: #6c757d;
   --background-color: #202530;
@@ -21,8 +22,9 @@ body {
 
 /* <BarChart accessibilityLayer data={groupedData} margin={{ top: 20 }} className="last-blinking"> */
 
-.last-blinking > svg > .recharts-bar:last-of-type > .recharts-bar-rectangles > .recharts-layer > .recharts-bar-rectangle:last-of-type {
+.last-blinking > svg > .recharts-bar:last-of-type > .recharts-bar-rectangles > .recharts-layer > .recharts-bar-rectangle:last-of-type > path {
     animation: blink 1s infinite;
+    fill: var(--help-color);
 }
 
 @keyframes blink {
