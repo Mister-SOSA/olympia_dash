@@ -11,13 +11,29 @@ body {
 }
 
 :root {
-  --primary-color: #3490dc;
-  --secondary-color: #ffed4a;
-  --help-color: #92c9f7;
-  --accent-color: #38c172;
-  --muted-color: #6c757d;
-  --background-color: #202530;
-  --text-color: #ffffff;
+  --primary-color: #007aff;
+  --secondary-color: #ffcc00;
+  --help-color: #aebbff;
+  --accent-color: #34c759;
+  --muted-color: #8e8e93;
+  --background-color: #f2f2f7;
+  --text-color: #1c1c1e;
+  --chart-1: #007aff;
+  --chart-2: #ffcc00;
+  --chart-3: #ff3b30;
+  --chart-4: #34c759;
+  --chart-5: #ff9500;
+  --chart-6: #47e5e8;
+  --chart-7: #5ac8fa;
+  --chart-8: #64d2ff;
+  --chart-9: #30d158;
+  --chart-10: #ff375f;
+  --chart-11: #a284ff;
+  --chart-12: #ff9f00;
+  --chart-13: #ff5e3a;
+  --chart-14: #ffb900;
+  --chart-15: #4cd964;
+  --chart-other: #adadad;
 }
 
 /* <BarChart accessibilityLayer data={groupedData} margin={{ top: 20 }} className="last-blinking"> */

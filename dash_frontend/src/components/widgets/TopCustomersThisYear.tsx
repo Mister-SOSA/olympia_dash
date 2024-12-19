@@ -1,7 +1,7 @@
 import React from "react";
 import Widget from "./Widget";
 import { PieChart, Pie, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
@@ -32,31 +32,75 @@ function transformData(data: CustomerData[]): CustomerData[] {
     return Object.values(aggregated);
 }
 
+function mergeRest(data: CustomerData[], limit: number): CustomerData[] {
+    if (data.length <= limit) {
+        return data;
+    }
+
+    const rest: CustomerData = {
+        bus_name: "Other",
+        total_sales_dollars: data.slice(limit).reduce((acc, { total_sales_dollars }) => acc + total_sales_dollars, 0),
+    };
+
+    return [...data.slice(0, limit), rest];
+}
+
+function addColors(data: CustomerData[]): CustomerData[] {
+    data.forEach((item, index) => {
+        item.fill = `var(--chart-${index + 1})`;
+    });
+
+    data[data.length - 1].fill = "var(--chart-other)";
+
+    return data;
+}
+
+function sortData(data: CustomerData[]): CustomerData[] {
+    return data.sort((a, b) => {
+        if (a.bus_name === "Other") return 1;
+        if (b.bus_name === "Other") return -1;
+        return b.total_sales_dollars - a.total_sales_dollars;
+    });
+}
+
 const CustomerTable = ({ data }: { data: CustomerData[] }) => {
     const processedData = transformData(data); // Process the data before passing it to the chart
 
-    // Map processed data to a format suitable for the pie chart
     const chartData = processedData.map((item) => ({
-        name: item.bus_name,
-        value: item.total_sales_dollars,
+        bus_name: item.bus_name,
+        total_sales_dollars: item.total_sales_dollars,
     }));
+
+    const limitedData = mergeRest(chartData, 6);
+
+    addColors(limitedData);
+    sortData(limitedData);
+
+    console.log(limitedData);
+
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <ChartContainer config={{}}>
+            <ChartContainer config={{}} className="font-bold text-sm">
                 <PieChart>
                     <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                     <Pie
-                        data={chartData}
-                        dataKey="value"
-                        nameKey="name"
+                        data={limitedData}
+                        dataKey="total_sales_dollars"
+                        nameKey="bus_name"
                         innerRadius={60}
                         outerRadius={100}
-                        fill="var(--primary-color)"
-                        label={({ name, value }) => `${name}: $${nFormatter(value, 2)}`}
+                        paddingAngle={8}
+                        label={({ name, value }) => `$${nFormatter(value, 2)}`}
+                    />
+                    <ChartLegend
+                        align="center"
+                        layout="vertical"
+                        verticalAlign="bottom"
+                        className="display-flex flex-wrap flex-col"
                     />
                 </PieChart>
             </ChartContainer>
-        </ResponsiveContainer>
+        </ResponsiveContainer >
     );
 };
 
@@ -81,7 +125,6 @@ export default function TopCustomersThisYear() {
                     type: "LEFT"
                 },
                 group_by: ["sumsales.cust_code", "orderfrom.bus_name"],
-                limit: 8,
                 sort: ["total_sales_dollars DESC"]
             }}
             title="Top Customers This Year"
