@@ -141,3 +141,46 @@ body {
     @apply border-border;
   }
 }
+
+.overview-widget {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+.overview-subwidget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  background-color: #2a2f3e;
+  color: white;
+  border-radius: 1rem;
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+  border-radius: 1rem;
+  width: 20rem;
+  height: 100%;
+  background-color: var(--accent-color);
+  margin: 0 1rem;
+}
+
+.overview-subwidget-title {
+  font-size: 1rem;
+  font-weight: 800;
+  width: 100%;
+  text-align: left;
+}
+
+.overview-subwidget-value {
+  font-size: 2rem;
+  font-weight: 800;
+  width: 100%;
+  text-align: left;
+}
+

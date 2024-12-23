@@ -37,7 +37,7 @@ const SalesChart = ({ data }: { data: SalesData[] }) => {
 
 export default function Sales6Mo() {
     const {
-        sixMonthsAgoFormatted,
+        startDateFormatted,
         endOfMonthFormatted,
     } = calculateDates(numberOfMonths);
 
@@ -48,7 +48,7 @@ export default function Sales6Mo() {
                 table: "sumsales",
                 columns: ["FORMAT(sale_date, 'yyyy-MM') AS month", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
                 filters: `(
-                    (sale_date >= '${sixMonthsAgoFormatted}' AND sale_date <= '${endOfMonthFormatted}') 
+                    (sale_date >= '${startDateFormatted}' AND sale_date <= '${endOfMonthFormatted}') 
                 )`,
                 group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
                 sort: ["month ASC", "year ASC"],

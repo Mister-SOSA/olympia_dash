@@ -6,19 +6,19 @@ export const formatDate = (date: Date, day: number): string =>
 export const calculateDates = (months: number) => {
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const sixMonthsAgo = new Date(endOfMonth);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - (months - 1));
+    const startDate = new Date(endOfMonth);
+    startDate.setMonth(startDate.getMonth() - (months - 1));
 
-    const sixMonthsAgoLastYear = new Date(sixMonthsAgo);
-    sixMonthsAgoLastYear.setFullYear(sixMonthsAgoLastYear.getFullYear() - 1);
+    const startDateLastYear = new Date(startDate);
+    startDateLastYear.setFullYear(startDateLastYear.getFullYear() - 1);
 
     const endOfMonthLastYear = new Date(endOfMonth);
     endOfMonthLastYear.setFullYear(endOfMonthLastYear.getFullYear() - 1);
 
     return {
-        sixMonthsAgoFormatted: formatDate(sixMonthsAgo, 1),
+        startDateFormatted: formatDate(startDate, 1),
         endOfMonthFormatted: formatDate(endOfMonth, endOfMonth.getDate()),
-        sixMonthsAgoLastYearFormatted: formatDate(sixMonthsAgoLastYear, 1),
+        startDateLastYearFormatted: formatDate(startDateLastYear, 1),
         endOfMonthLastYearFormatted: formatDate(endOfMonthLastYear, endOfMonthLastYear.getDate()),
         currentYear: today.getFullYear(),
     };

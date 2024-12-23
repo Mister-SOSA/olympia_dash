@@ -47,9 +47,9 @@ const SalesChart = ({ data }: { data: SalesData[] }) => {
 
 export default function Sales6MoVsLastYear() {
     const {
-        sixMonthsAgoFormatted,
+        startDateFormatted,
         endOfMonthFormatted,
-        sixMonthsAgoLastYearFormatted,
+        startDateLastYearFormatted,
         endOfMonthLastYearFormatted,
     } = calculateDates(numberOfMonths);
 
@@ -60,8 +60,8 @@ export default function Sales6MoVsLastYear() {
                 table: "sumsales",
                 columns: ["FORMAT(sale_date, 'yyyy-MM') AS month", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
                 filters: `(
-                    (sale_date >= '${sixMonthsAgoFormatted}' AND sale_date <= '${endOfMonthFormatted}') 
-                    OR (sale_date >= '${sixMonthsAgoLastYearFormatted}' AND sale_date <= '${endOfMonthLastYearFormatted}')
+                    (sale_date >= '${startDateFormatted}' AND sale_date <= '${endOfMonthFormatted}') 
+                    OR (sale_date >= '${startDateLastYearFormatted}' AND sale_date <= '${endOfMonthLastYearFormatted}')
                 )`,
                 group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
                 sort: ["month ASC", "year ASC"],
