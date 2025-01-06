@@ -6,9 +6,15 @@ export const formatDate = (date: Date, day: number): string =>
 export const calculateDates = (months: number) => {
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const startDate = new Date(endOfMonth);
-    startDate.setMonth(startDate.getMonth() - (months - 1));
 
+    // Calculate the start date by subtracting months correctly
+    const startDate = new Date(today);
+    startDate.setMonth(today.getMonth() - (months - 1));
+    if (today.getDate() < startDate.getDate()) {
+        startDate.setDate(0); // Adjust for day overflow (e.g., from 31st to 30th)
+    }
+
+    // Ensure last year dates match
     const startDateLastYear = new Date(startDate);
     startDateLastYear.setFullYear(startDateLastYear.getFullYear() - 1);
 

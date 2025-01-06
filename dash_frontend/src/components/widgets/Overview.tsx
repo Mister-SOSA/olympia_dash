@@ -8,27 +8,42 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
     const { currentYear } = calculateDates(12);
     const groupedData = React.useMemo(() => processData(data, currentYear), [data, currentYear]);
 
+    console.log(
+        "This YTD sales", groupedData[groupedData.length - 1].currentYear,
+        "Last YTD sales", groupedData[groupedData.length - 1].lastYear
+    );
+
     return (
         <div className="overview-widget">
             <div className="overview-subwidget">
-                <div className="overview-subwidget-value">${nFormatter(groupedData.reduce((acc, { currentYear }) => acc + currentYear, 0), 2)}</div>
+                <div className="overview-header-container">
+                    <div className="overview-subwidget-value">${nFormatter(groupedData.reduce((acc, { currentYear }) => acc + currentYear, 0), 2)}</div>
+                    <div className="overview-subwidget-subtitle percent">
+                        {(groupedData[groupedData.length - 1].currentYear >= groupedData[groupedData.length - 1].lastYear ? '+' : '-')
+                            + nFormatter(Math.abs((groupedData[groupedData.length - 1].currentYear / groupedData.reduce((acc, { currentYear }) => acc + currentYear, 0)) * 100), 2)}%
+                    </div>
+                </div>
                 <div className="overview-subwidget-title">Sales YTD</div>
             </div>
-            <div className="overview-subwidget">
-                <div className="overview-subwidget-value">${nFormatter(groupedData.reduce((acc, { lastYear }) => acc + lastYear, 0), 2)}</div>
-                <div className="overview-subwidget-title">Sales LYTD</div>
-            </div>
-            <div className="overview-subwidget">
-                <div className="overview-subwidget-value">${nFormatter(groupedData[groupedData.length - 1].currentYear, 2)}</div>
+            <div className="overview-subwidget this-month">
+                <div className="overview-header-container">
+                    <div className="overview-subwidget-value">${nFormatter(groupedData[groupedData.length - 1].currentYear, 2)}</div>
+                    <div className="overview-subwidget-subtitle percent">
+                        {(groupedData[groupedData.length - 1].currentYear >= groupedData[groupedData.length - 2].currentYear ? '+' : '-')
+                            + nFormatter(Math.abs((groupedData[groupedData.length - 1].currentYear - groupedData[groupedData.length - 2].currentYear) / groupedData[groupedData.length - 2].currentYear * 100), 2)}%
+                    </div>
+                </div>
                 <div className="overview-subwidget-title">Sales This Month</div>
             </div>
-            <div className="overview-subwidget">
-                <div className="overview-subwidget-value">${nFormatter(groupedData[groupedData.length - 2].currentYear, 2)}</div>
-                <div className="overview-subwidget-title">Sales Last Month</div>
-            </div>
-            <div className="overview-subwidget">
-                <div className="overview-subwidget-value">${nFormatter(groupedData[groupedData.length - 1].currentYear - groupedData[groupedData.length - 2].currentYear, 2)}</div>
-                <div className="overview-subwidget-title">MoM Growth</div>
+            <div className="overview-subwidget this-week">
+                <div className="overview-header-container">
+                    <div className="overview-subwidget-value">${nFormatter(groupedData[groupedData.length - 1].currentYear, 2)}</div>
+                    <div className="overview-subwidget-subtitle percent">
+                        {(groupedData[groupedData.length - 1].currentYear >= groupedData[groupedData.length - 2].currentYear ? '+' : '-')
+                            + nFormatter(Math.abs((groupedData[groupedData.length - 1].currentYear - groupedData[groupedData.length - 2].currentYear) / groupedData[groupedData.length - 2].currentYear * 100), 2)}%
+                    </div>
+                </div>
+                <div className="overview-subwidget-title">Sales This Week</div>
             </div>
         </div>
     );

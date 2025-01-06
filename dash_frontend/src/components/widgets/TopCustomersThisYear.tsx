@@ -117,7 +117,7 @@ export default function TopCustomersThisYear() {
                     "SUM(sumsales.qty_sold) AS total_quantity_sold"
                 ],
                 filters: `(
-                    sumsales.sale_date >= '2024-01-01' AND sumsales.sale_date <= '2024-12-31'
+                    sumsales.sale_date >= '2025-01-01' AND sumsales.sale_date <= '2025-12-31'
                 )`,
                 join: {
                     table: "orderfrom",
