@@ -45,6 +45,7 @@ def get_widgets_post():
 
         # Execute the query
         results = QueryBuilder.execute_query(query)
+        print(query, results)
         return jsonify({"success": True, "data": results}), 200
     except Exception as e:
         logging.error(f"Error: {e}")

@@ -1,11 +1,18 @@
 import React from "react";
 import Widget from "./Widget";
 import { PieChart, Pie, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
 
+/* -------------------------------------- */
+/* 🛠️ Utility Functions                  */
+/* -------------------------------------- */
+
+/**
+ * Maps a business name to its parent company using config mappings.
+ */
 const parentMapping: { [key: string]: string } = config.PARENT_COMPANY_MAPPING;
 
 function mapToParentCompany(busName: string): string {
@@ -17,6 +24,9 @@ function mapToParentCompany(busName: string): string {
     return busName;
 }
 
+/**
+ * Aggregates sales data by parent company.
+ */
 function transformData(data: CustomerData[]): CustomerData[] {
     const aggregated: { [key: string]: CustomerData } = {};
 
@@ -32,6 +42,9 @@ function transformData(data: CustomerData[]): CustomerData[] {
     return Object.values(aggregated);
 }
 
+/**
+ * Merges remaining data into an "Other" category if exceeding the limit.
+ */
 function mergeRest(data: CustomerData[], limit: number): CustomerData[] {
     if (data.length <= limit) {
         return data;
@@ -45,16 +58,24 @@ function mergeRest(data: CustomerData[], limit: number): CustomerData[] {
     return [...data.slice(0, limit), rest];
 }
 
+/**
+ * Adds colors to each data point.
+ */
 function addColors(data: CustomerData[]): CustomerData[] {
     data.forEach((item, index) => {
         item.fill = `var(--chart-${index + 1})`;
     });
 
-    data[data.length - 1].fill = "var(--chart-other)";
+    if (data.length > 0) {
+        data[data.length - 1].fill = "var(--chart-other)";
+    }
 
     return data;
 }
 
+/**
+ * Sorts data, ensuring "Other" is always last.
+ */
 function sortData(data: CustomerData[]): CustomerData[] {
     return data.sort((a, b) => {
         if (a.bus_name === "Other") return 1;
@@ -63,20 +84,15 @@ function sortData(data: CustomerData[]): CustomerData[] {
     });
 }
 
+/* -------------------------------------- */
+/* 📊 CustomerTable Component            */
+/* -------------------------------------- */
+
 const CustomerTable = ({ data }: { data: CustomerData[] }) => {
-    const processedData = transformData(data); // Process the data before passing it to the chart
-
-    const chartData = processedData.map((item) => ({
-        bus_name: item.bus_name,
-        total_sales_dollars: item.total_sales_dollars,
-    }));
-
-    const limitedData = mergeRest(chartData, 6);
-
+    const processedData = transformData(data);
+    const limitedData = mergeRest(processedData, 6);
     addColors(limitedData);
     sortData(limitedData);
-
-    console.log(limitedData);
 
     return (
         <ResponsiveContainer width="100%" height="100%">
@@ -100,9 +116,13 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
                     />
                 </PieChart>
             </ChartContainer>
-        </ResponsiveContainer >
+        </ResponsiveContainer>
     );
 };
+
+/* -------------------------------------- */
+/* 📊 TopCustomersThisYear Component      */
+/* -------------------------------------- */
 
 export default function TopCustomersThisYear() {
     return (
@@ -129,7 +149,9 @@ export default function TopCustomersThisYear() {
             }}
             title="Top Customers This Year"
             updateInterval={300000}
-            render={(data: CustomerData[]) => <CustomerTable data={data} />}
+            render={(data: CustomerData[]) => {
+                return <CustomerTable data={data} />;
+            }}
         />
     );
 }
