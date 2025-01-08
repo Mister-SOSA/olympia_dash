@@ -13,5 +13,6 @@ export interface ProcessedSalesData {
 export interface CustomerData {
     bus_name: string;            // Business name
     total_sales_dollars: number; // Total sales dollars
+    fill: string;                // Fill color for the bar
 }
 
