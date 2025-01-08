@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Widget from "./Widget";
 import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -10,26 +10,16 @@ import { SalesData } from "@/types";
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
 
-const SalesChart = ({ data }: { data: { month: string; total: number }[] }) => {
-    if (!data || data.length === 0) {
-        return <div>No Data Available</div>;
-    }
 
+const SalesChart = ({ data }: { data: SalesData[] }) => {
     return (
         <ResponsiveContainer width="100%" height="100%">
             <ChartContainer config={{}}>
-                <BarChart
-                    accessibilityLayer
-                    data={data}
-                    margin={{ top: 20 }}
-                    className="last-blinking"
-                >
+                <BarChart data={data} margin={{ top: 20 }}>
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
                     <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-
-                    {/* Sales Data */}
-                    <Bar dataKey="total" fill="var(--primary-color)" radius={8}>
+                    <Bar dataKey="total" fill="var(--primary-color)" radius={8} isAnimationActive={false}>
                         <LabelList
                             position="top"
                             offset={12}
@@ -72,6 +62,7 @@ export default function Sales6Mo() {
                     return {
                         month,
                         total: entry?.total || 0,
+                        year: new Date(month).getFullYear(),
                     };
                 });
 

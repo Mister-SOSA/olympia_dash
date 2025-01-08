@@ -30,7 +30,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
                     <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
 
-                    <Bar dataKey="lastYear" fill="var(--accent-color)" radius={8}>
+                    <Bar dataKey="lastYear" fill="var(--accent-color)" radius={8} isAnimationActive={false}>
                         <LabelList
                             position="top"
                             offset={12}
@@ -41,7 +41,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
                         />
                     </Bar>
 
-                    <Bar dataKey="currentYear" fill="var(--primary-color)" radius={8}>
+                    <Bar dataKey="currentYear" fill="var(--primary-color)" radius={8} isAnimationActive={false}>
                         <LabelList
                             position="top"
                             offset={12}
@@ -67,10 +67,9 @@ export default function Sales6MoVsLastYear() {
         endDateFormatted,
         startDateLastYearFormatted,
         endDateLastYearFormatted,
-        currentYear,
-        lastYear,
+
         months,
-    } = calculateDateRange(6);
+    } = calculateDateRange(3);
 
     return (
         <Widget

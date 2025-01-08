@@ -77,7 +77,7 @@ export default function Overview() {
                 group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
                 sort: ["month ASC", "year ASC"],
             }}
-            title="Sales Overview"
+            title=""
             updateInterval={300000}
             render={(data: SalesData[]) => <OverviewWidget data={data} />}
         />
