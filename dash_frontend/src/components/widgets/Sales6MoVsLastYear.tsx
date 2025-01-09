@@ -91,21 +91,6 @@ export default function Sales6MoVsLastYear() {
 
                 const chartData = prepareChartData(groupedData);
 
-                console.log("🚀 Raw API Data:", data);
-
-                // Test Manual Matching
-                console.log(
-                    "🧪 Current Year Match:",
-                    data.find((d) => d.month === "2024-08" && d.year === 2024)
-                );
-
-                console.log(
-                    "🧪 Last Year Match:",
-                    data.find((d) => d.month === "2023-08" && d.year === 2023)
-                );
-
-                console.log("📅 Months Array:", months);
-
                 return <SalesChart data={chartData} />;
             }}
         />

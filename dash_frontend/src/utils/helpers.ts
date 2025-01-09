@@ -29,7 +29,6 @@ export const processData = (
     data: SalesData[],
     months: string[]
 ): ProcessedSalesData[] => {
-    console.log("🗓️ Months for Comparison:", months);
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -38,8 +37,6 @@ export const processData = (
     data.forEach(({ month, total }) => {
         dataMap.set(month, Math.trunc(total));
     });
-
-    console.log("🗺️ Data Map:", dataMap);
 
     // Process each month
     const groupedData = months.map((currentMonth) => {
@@ -54,10 +51,6 @@ export const processData = (
         const currentYearValue = dataMap.get(currentMonth) || 0;
         const lastYearValue = dataMap.get(previousMonth) || 0;
 
-        console.log(
-            `🔍 Month: ${monthName} | Current (${currentMonth}): ${currentYearValue} | Last (${previousMonth}): ${lastYearValue}`
-        );
-
         return {
             month: monthName,
             currentYear: currentYearValue,
@@ -65,7 +58,6 @@ export const processData = (
         };
     });
 
-    console.log("✅ Final Processed Data:", groupedData);
     return groupedData;
 };
 
