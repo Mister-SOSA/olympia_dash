@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Widget from "./Widget";
 import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { calculateDateRange, nFormatter } from "@/utils/helpers";
+import { calculateDateRange, nFormatter, monthNumberToName } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData } from "@/types";
 
@@ -17,7 +17,7 @@ const SalesChart = ({ data }: { data: SalesData[] }) => {
             <ChartContainer config={{}} >
                 <BarChart data={data} margin={{ top: 20 }} >
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
-                    <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
+                    <XAxis dataKey={"month"} tickLine={false} tickMargin={10} axisLine={false} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                     <Bar dataKey="total" fill="var(--primary-color)" radius={8} isAnimationActive={false} className="last-blinking">
                         <LabelList
@@ -60,7 +60,7 @@ export default function Sales6Mo() {
                 const chartData = months.map((month) => {
                     const entry = data.find((d) => d.month === month);
                     return {
-                        month,
+                        month: monthNumberToName(month, true),
                         total: entry?.total || 0,
                         year: new Date(month).getFullYear(),
                     };

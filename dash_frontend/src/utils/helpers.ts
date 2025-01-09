@@ -61,6 +61,15 @@ export const processData = (
     return groupedData;
 };
 
+export const monthNumberToName = (month: string, truncated: boolean = false): string => {
+    const [year, monthNum] = month.split("-");
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ];
+    return truncated ? monthNames[parseInt(monthNum, 10) - 1].substring(0, 3) : monthNames[parseInt(monthNum, 10) - 1];
+}
+
 
 export const prepareChartData = (data: ProcessedSalesData[]) => {
     if (!Array.isArray(data) || data.length === 0) {

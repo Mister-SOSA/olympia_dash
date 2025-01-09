@@ -4,7 +4,7 @@ import React from "react";
 import Widget from "./Widget";
 import { BarChart, Bar, XAxis, CartesianGrid, LabelList, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { calculateDateRange, processData, prepareChartData, nFormatter } from "@/utils/helpers";
+import { calculateDateRange, processData, prepareChartData, nFormatter, monthNumberToName } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
 
@@ -67,8 +67,7 @@ export default function Sales6MoVsLastYear() {
         endDateFormatted,
         startDateLastYearFormatted,
         endDateLastYearFormatted,
-
-        months,
+        months
     } = calculateDateRange(3);
 
     return (
