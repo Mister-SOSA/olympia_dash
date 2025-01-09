@@ -41,7 +41,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
                         />
                     </Bar>
 
-                    <Bar dataKey="currentYear" fill="var(--primary-color)" radius={8} isAnimationActive={false}>
+                    <Bar dataKey="currentYear" fill="var(--primary-color)" radius={8} isAnimationActive={false} className="last-blinking">
                         <LabelList
                             position="top"
                             offset={12}

@@ -38,9 +38,9 @@ body {
 
 /* <BarChart accessibilityLayer data={groupedData} margin={{ top: 20 }} className="last-blinking"> */
 
-.last-blinking > svg > .recharts-bar:last-of-type > .recharts-bar-rectangles > .recharts-layer > .recharts-bar-rectangle:last-of-type > path {
+.last-blinking > .recharts-bar-rectangles > .recharts-bar-rectangle:last-child > path {
     animation: blink 1s infinite;
-    fill: var(--help-color);
+    fill: var(--help-color) !important;
 }
 
 @keyframes blink {

@@ -14,12 +14,12 @@ import { SalesData } from "@/types";
 const SalesChart = ({ data }: { data: SalesData[] }) => {
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <ChartContainer config={{}}>
-                <BarChart data={data} margin={{ top: 20 }}>
+            <ChartContainer config={{}} >
+                <BarChart data={data} margin={{ top: 20 }} >
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
                     <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                    <Bar dataKey="total" fill="var(--primary-color)" radius={8} isAnimationActive={false}>
+                    <Bar dataKey="total" fill="var(--primary-color)" radius={8} isAnimationActive={false} className="last-blinking">
                         <LabelList
                             position="top"
                             offset={12}
