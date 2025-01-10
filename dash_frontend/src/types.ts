@@ -33,3 +33,11 @@ export interface CustomerData extends BaseData {
     totalSales: number;   // Total sales dollars
     color: string;        // Display color for charts
 }
+
+interface Widget {
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}

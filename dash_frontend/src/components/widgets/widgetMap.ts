@@ -3,7 +3,8 @@ import SalesByMonthBar from "./SalesByMonthBar";
 import TopCustomersThisYearPie from "./TopCustomersThisYearPie";
 import Overview from "./Overview";
 import SalesByDayBar from "./SalesByDayBar";
-import DateTimeWidget from "./DateTime";
+import ClockWidget from "./ClockWidget";
+import DateWidget from "./DateWidget";
 
 const widgetMap: Record<string, React.ComponentType> = {
     SalesByMonthComparisonBar: SalesByMonthComparisonBar,
@@ -11,7 +12,8 @@ const widgetMap: Record<string, React.ComponentType> = {
     TopCustomersThisYearPie: TopCustomersThisYearPie,
     Overview: Overview,
     SalesByDayBar: SalesByDayBar,
-    DateTimeWidget: DateTimeWidget,
+    ClockWidget: ClockWidget,
+    DateWidget: DateWidget,
 };
 
 export default widgetMap;

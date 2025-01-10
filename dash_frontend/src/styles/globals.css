@@ -212,3 +212,12 @@ body {
   text-align: left;
 }
 
+.time, .date {
+  font-weight: 800;
+}
+
+.widget-container {
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
