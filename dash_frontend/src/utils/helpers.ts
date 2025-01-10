@@ -146,3 +146,24 @@ export const prepareChartData = (data: ProcessedSalesData[]) => {
         previousPeriodSales: entry.previousPeriodSales,
     }));
 };
+
+export async function fetchApiData(apiEndpoint: string, payload: object): Promise<any> {
+    try {
+        const response = await fetch(apiEndpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.data;
+    } catch (err: any) {
+        throw new Error(err.message);
+    }
+}

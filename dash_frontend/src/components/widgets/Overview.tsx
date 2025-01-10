@@ -7,6 +7,7 @@ import { SalesData } from "@/types";
 /* 📊 OverviewWidget Component */
 const OverviewWidget = ({ data }: { data: SalesData[] }) => {
     const today = new Date();
+    console.log(data)
 
     const metrics = useMemo(() => {
         const dailyData = data.map((entry) => ({
@@ -59,28 +60,6 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             )
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        // **Sales Today**
-        const totalSalesToday = dailyData
-            .filter((entry) => {
-                const isSameDay = entry.date.getDate() === today.getDate();
-                const isSameMonth = entry.date.getMonth() === today.getMonth();
-                const isSameYear = entry.date.getFullYear() === today.getFullYear();
-                return isSameDay && isSameMonth && isSameYear;
-            })
-            .reduce((sum, entry) => sum + entry.total, 0);
-
-        // **Same Day Last Year**
-        const sameDayLastYear = new Date(today);
-        sameDayLastYear.setFullYear(today.getFullYear() - 1);
-        const totalSalesSameDayLastYear = dailyData
-            .filter((entry) => {
-                const isSameDay = entry.date.getDate() === sameDayLastYear.getDate();
-                const isSameMonth = entry.date.getMonth() === sameDayLastYear.getMonth();
-                const isSameYear = entry.date.getFullYear() === sameDayLastYear.getFullYear();
-                return isSameDay && isSameMonth && isSameYear;
-            })
-            .reduce((sum, entry) => sum + entry.total, 0);
-
         return {
             totalSalesYTD,
             totalSalesPreviousYTD,
@@ -88,8 +67,6 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             totalSalesPreviousMonth,
             totalSalesCurrentWeek,
             totalSalesPreviousWeek,
-            totalSalesToday,
-            totalSalesSameDayLastYear,
         };
     }, [data]);
 
@@ -100,8 +77,6 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
         totalSalesPreviousMonth,
         totalSalesCurrentWeek,
         totalSalesPreviousWeek,
-        totalSalesToday,
-        totalSalesSameDayLastYear,
     } = metrics;
 
     return (
@@ -123,8 +98,8 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             />
             <OverviewSubwidget
                 title="Sales Today"
-                value={totalSalesToday}
-                subtitle={calculatePercentageChange(totalSalesToday, totalSalesSameDayLastYear)}
+                value={data[data.length - 1].total}
+                subtitle=""
             />
         </div>
     );
