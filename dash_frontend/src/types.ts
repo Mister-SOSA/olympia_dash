@@ -9,9 +9,10 @@ export interface BaseData {
 /**
  * Flexible sales data type to handle multiple resolutions (daily, weekly, monthly, etc.).
  */
-export interface SalesData extends BaseData {
-    period: string;     // Period identifier (e.g., "2025-01-10", "2025-W02", "2025-01")
-    total: number;      // Total sales for the given period
+export interface SalesData {
+    period: string; // e.g., "2024-01"
+    total: number;  // Total sales
+    year: number;   // e.g., 2024
 }
 
 /**
@@ -28,7 +29,7 @@ export interface ProcessedSalesData {
  * Customer data type for tracking sales performance by customer.
  */
 export interface CustomerData extends BaseData {
-    businessName: string; // Business name (renamed from "bus_name" for clarity)
+    businessName: string; // Business name
     totalSales: number;   // Total sales dollars
-    color: string;        // Display color for UI elements like charts
+    color: string;        // Display color for charts
 }

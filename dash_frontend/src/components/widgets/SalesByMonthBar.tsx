@@ -42,7 +42,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
 /* 📊 Sales6Mo Component                  */
 /* -------------------------------------- */
 
-export default function Sales6Mo() {
+export default function SalesByMonthBar() {
     const [visibleMonths, setVisibleMonths] = useState(6); // Default to 6 months
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -82,7 +82,7 @@ export default function Sales6Mo() {
                     group_by: ["FORMAT(sale_date, 'yyyy-MM')"],
                     sort: ["period ASC"],
                 }}
-                title="Total Sales (Last 12 Months)"
+                title="Sales by Month"
                 updateInterval={300000}
                 render={(data: SalesData[]) => {
                     const chartData = data.slice(-visibleMonths).map((entry) => ({

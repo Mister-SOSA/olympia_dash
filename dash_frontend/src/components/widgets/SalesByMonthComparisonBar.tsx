@@ -70,7 +70,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
 /* 📊 Sales6MoVsLastYear Component        */
 /* -------------------------------------- */
 
-export default function Sales6MoVsLastYear() {
+export default function SalesByMonthComparisonBar() {
     const [visibleMonths, setVisibleMonths] = useState(6); // Default to 6 months
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -115,11 +115,9 @@ export default function Sales6MoVsLastYear() {
                     group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
                     sort: ["period ASC", "year ASC"],
                 }}
-                title="Total Sales (Last 6 Months vs Last Year)"
+                title="Sales by Month (Comparison)"
                 updateInterval={300000}
                 render={(data: SalesData[]) => {
-                    console.log("Widget Data:", data);
-
                     // Process and prepare data
                     const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
                     const chartData = prepareChartData(groupedData);

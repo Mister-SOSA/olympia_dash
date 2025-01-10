@@ -10,10 +10,10 @@ export default function Dashboard() {
     const gridRef = useRef<HTMLDivElement>(null);
 
     const [layout, setLayout] = useState([
-        // { id: "Overview", x: 0, y: 0, w: 12, h: 2 },
-        { id: "Sales6MoVsLastYear", x: 0, y: 2, w: 4, h: 4 },
-        { id: "Sales6Mo", x: 4, y: 2, w: 4, h: 4 },
-        // { id: "TopCustomersThisYear", x: 8, y: 2, w: 3, h: 7 },
+        { id: "Overview", x: 0, y: 0, w: 12, h: 2 },
+        { id: "SalesByMonthComparisonBar", x: 0, y: 2, w: 4, h: 4 },
+        { id: "SalesByMonthBar", x: 4, y: 2, w: 4, h: 4 },
+        { id: "TopCustomersThisYearPie", x: 8, y: 2, w: 3, h: 7 },
     ]);
 
     useEffect(() => {

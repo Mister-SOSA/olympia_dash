@@ -105,7 +105,9 @@ export const processSalesData = (
 };
 
 export const calculatePercentageChange = (current: number, previous: number): string => {
-    if (previous === 0) return "N/A";
+    if (previous === 0) {
+        return current === 0 ? "0%" : "N/A"; // No change or undefined
+    }
     const change = ((current - previous) / previous) * 100;
     return `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
 };
