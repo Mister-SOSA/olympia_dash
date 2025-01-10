@@ -92,7 +92,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
                 subtitle={calculatePercentageChange(totalSalesCurrentMonth, totalSalesPreviousMonth)}
             />
             <OverviewSubwidget
-                title="Sales (Last 7 Days)"
+                title="Sales Last 7 Days"
                 value={totalSalesRolling7Days}
                 subtitle={calculatePercentageChange(totalSalesRolling7Days, totalSalesPreviousRolling7Days)}
             />
