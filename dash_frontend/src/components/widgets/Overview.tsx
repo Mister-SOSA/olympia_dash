@@ -7,7 +7,6 @@ import { SalesData } from "@/types";
 /* 📊 OverviewWidget Component */
 const OverviewWidget = ({ data }: { data: SalesData[] }) => {
     const today = new Date();
-    console.log(data)
 
     const metrics = useMemo(() => {
         const dailyData = data.map((entry) => ({
@@ -43,21 +42,22 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             )
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        // **Weekly Sales (Matching Ranges Across Years)**
-        const startOfCurrentWeek = new Date(today);
-        startOfCurrentWeek.setDate(today.getDate() - today.getDay()); // Sunday of this week
-        const startOfSameWeekLastYear = new Date(startOfCurrentWeek);
-        startOfSameWeekLastYear.setFullYear(startOfSameWeekLastYear.getFullYear() - 1); // Same week last year
-        const totalSalesCurrentWeek = dailyData
-            .filter((entry) => entry.date >= startOfCurrentWeek && entry.date <= today)
+        // **Rolling 7-Day Sales**
+        const rolling7DaysStart = new Date(today);
+        rolling7DaysStart.setDate(today.getDate() - 8); // 7 days including today
+        const rolling7DaysEnd = today;
+
+        const previousRolling7DaysStart = new Date(rolling7DaysStart);
+        previousRolling7DaysStart.setDate(previousRolling7DaysStart.getDate() - 8); // Previous 7-day range
+        const previousRolling7DaysEnd = new Date(rolling7DaysStart);
+        previousRolling7DaysEnd.setDate(rolling7DaysStart.getDate() - 1);
+
+        const totalSalesRolling7Days = dailyData
+            .filter((entry) => entry.date >= rolling7DaysStart && entry.date <= rolling7DaysEnd)
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        const totalSalesPreviousWeek = dailyData
-            .filter(
-                (entry) =>
-                    entry.date >= startOfSameWeekLastYear &&
-                    entry.date <= new Date(startOfSameWeekLastYear.getFullYear(), startOfSameWeekLastYear.getMonth(), startOfSameWeekLastYear.getDate() + today.getDay())
-            )
+        const totalSalesPreviousRolling7Days = dailyData
+            .filter((entry) => entry.date >= previousRolling7DaysStart && entry.date <= previousRolling7DaysEnd)
             .reduce((sum, entry) => sum + entry.total, 0);
 
         return {
@@ -65,8 +65,8 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             totalSalesPreviousYTD,
             totalSalesCurrentMonth,
             totalSalesPreviousMonth,
-            totalSalesCurrentWeek,
-            totalSalesPreviousWeek,
+            totalSalesRolling7Days,
+            totalSalesPreviousRolling7Days,
         };
     }, [data]);
 
@@ -75,8 +75,8 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
         totalSalesPreviousYTD,
         totalSalesCurrentMonth,
         totalSalesPreviousMonth,
-        totalSalesCurrentWeek,
-        totalSalesPreviousWeek,
+        totalSalesRolling7Days,
+        totalSalesPreviousRolling7Days,
     } = metrics;
 
     return (
@@ -92,9 +92,9 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
                 subtitle={calculatePercentageChange(totalSalesCurrentMonth, totalSalesPreviousMonth)}
             />
             <OverviewSubwidget
-                title="Sales This Week"
-                value={totalSalesCurrentWeek}
-                subtitle={calculatePercentageChange(totalSalesCurrentWeek, totalSalesPreviousWeek)}
+                title="Sales (Last 7 Days)"
+                value={totalSalesRolling7Days}
+                subtitle={calculatePercentageChange(totalSalesRolling7Days, totalSalesPreviousRolling7Days)}
             />
             <OverviewSubwidget
                 title="Sales Today"
