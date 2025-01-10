@@ -14,6 +14,7 @@ export default function Dashboard() {
         { id: "SalesByMonthComparisonBar", x: 0, y: 2, w: 4, h: 4 },
         { id: "SalesByMonthBar", x: 4, y: 2, w: 4, h: 4 },
         { id: "TopCustomersThisYearPie", x: 8, y: 2, w: 3, h: 7 },
+        { id: "SalesByDayBar", x: 0, y: 6, w: 4, h: 4 },
     ]);
 
     useEffect(() => {
