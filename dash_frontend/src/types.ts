@@ -34,7 +34,7 @@ export interface CustomerData extends BaseData {
     color: string;        // Display color for charts
 }
 
-interface Widget {
+export interface Widget {
     id: string;
     x: number;
     y: number;
