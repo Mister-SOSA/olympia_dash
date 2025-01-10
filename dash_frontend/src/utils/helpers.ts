@@ -1,88 +1,121 @@
-import { format, startOfMonth, endOfMonth, subMonths, subYears, eachMonthOfInterval } from "date-fns";
+import {
+    format,
+    subDays,
+    subWeeks,
+    subMonths,
+    subYears,
+    eachDayOfInterval,
+    eachWeekOfInterval,
+    eachMonthOfInterval,
+} from "date-fns";
 import { SalesData, ProcessedSalesData } from "@/types";
 
-export const formatDate = (date: Date): string => {
-    return format(date, "yyyy-MM-dd");
-};
+/* -------------------------------------- */
+/* 📅 Date Helpers                        */
+/* -------------------------------------- */
 
-export const calculateDateRange = (months: number) => {
-    const endDate = endOfMonth(new Date());
-    const startDate = startOfMonth(subMonths(endDate, months - 1));
+export const formatDate = (date: Date): string => format(date, "yyyy-MM-dd");
 
-    const startDateLastYear = subYears(startDate, 1);
-    const endDateLastYear = subYears(endDate, 1);
+export const calculateDateRange = (
+    interval: number,
+    resolution: "daily" | "weekly" | "monthly",
+    referenceDate = new Date()
+) => {
+    const endDate = referenceDate;
+    let startDate, periods;
+
+    switch (resolution) {
+        case "daily":
+            startDate = subDays(endDate, interval - 1);
+            periods = eachDayOfInterval({ start: startDate, end: endDate }).map((date) =>
+                format(date, "yyyy-MM-dd")
+            );
+            break;
+        case "weekly":
+            startDate = subWeeks(endDate, interval - 1);
+            periods = eachWeekOfInterval({ start: startDate, end: endDate }).map((date) =>
+                format(date, "yyyy-'W'ww")
+            );
+            break;
+        case "monthly":
+            startDate = subMonths(endDate, interval - 1);
+            periods = eachMonthOfInterval({ start: startDate, end: endDate }).map((date) =>
+                format(date, "yyyy-MM")
+            );
+            break;
+        default:
+            throw new Error("Unsupported resolution.");
+    }
+
+    const lastYearStartDate = subYears(startDate, 1);
+    const lastYearEndDate = subYears(endDate, 1);
 
     return {
-        startDateFormatted: format(startDate, "yyyy-MM-dd"),
-        endDateFormatted: format(endDate, "yyyy-MM-dd"),
-        startDateLastYearFormatted: format(startDateLastYear, "yyyy-MM-dd"),
-        endDateLastYearFormatted: format(endDateLastYear, "yyyy-MM-dd"),
-        currentYear: endDate.getFullYear(),
-        lastYear: endDateLastYear.getFullYear(),
-        months: eachMonthOfInterval({ start: startDate, end: endDate }).map((date) =>
-            format(date, "yyyy-MM")
-        ),
+        current: { start: startDate, end: endDate, periods },
+        lastYear: { start: lastYearStartDate, end: lastYearEndDate },
     };
 };
 
-export const processData = (
+export const determinePreviousPeriod = (period: string): string => {
+    if (period.includes("W")) {
+        const [year, week] = period.split("-W");
+        const currentDate = new Date(`${year}-01-01`);
+        const previousWeek = subWeeks(currentDate, 1);
+        return format(previousWeek, "yyyy-'W'ww");
+    } else if (period.includes("-")) {
+        const previousMonth = subMonths(new Date(`${period}-01`), 1);
+        return format(previousMonth, "yyyy-MM");
+    } else {
+        const previousDay = subDays(new Date(period), 1);
+        return format(previousDay, "yyyy-MM-dd");
+    }
+};
+
+export const formatPeriodLabel = (period: string): string => {
+    if (period.includes("W")) {
+        return `Week ${period.split("-W")[1]}, ${period.split("-")[0]}`;
+    } else if (period.includes("-")) {
+        const [year, month] = period.split("-");
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${monthNames[parseInt(month, 10) - 1]} ${year}`;
+    }
+    return period;
+};
+
+/* -------------------------------------- */
+/* 🛠️ Data Processing Helpers             */
+/* -------------------------------------- */
+
+export const processSalesData = (
     data: SalesData[],
-    months: string[]
+    periods: string[]
 ): ProcessedSalesData[] => {
+    const dataMap = new Map(data.map(({ period, total }) => [period, total]));
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    // Create a map for quick lookup
-    const dataMap = new Map<string, number>();
-    data.forEach(({ month, total }) => {
-        dataMap.set(month, Math.trunc(total));
-    });
-
-    // Process each month
-    const groupedData = months.map((currentMonth) => {
-        const [currentYear, currentMonthNum] = currentMonth.split("-");
-        const previousYear = (parseInt(currentYear, 10) - 1).toString();
-        const previousMonth = `${previousYear}-${currentMonthNum}`;
-
-        const monthName = `${monthNames[parseInt(currentMonthNum, 10) - 1]} ${currentYear}`;
-        const previousMonthName = `${monthNames[parseInt(currentMonthNum, 10) - 1]} ${previousYear}`;
-
-        // Fetch data for current and previous months
-        const currentYearValue = dataMap.get(currentMonth) || 0;
-        const lastYearValue = dataMap.get(previousMonth) || 0;
+    return periods.map((currentPeriod) => {
+        const previousPeriod = determinePreviousPeriod(currentPeriod);
 
         return {
-            month: monthName,
-            currentYear: currentYearValue,
-            lastYear: lastYearValue,
+            period: currentPeriod,
+            periodLabel: formatPeriodLabel(currentPeriod), // Ensure periodLabel is added
+            currentPeriodSales: dataMap.get(currentPeriod) || 0,
+            previousPeriodSales: dataMap.get(previousPeriod) || 0,
         };
     });
-
-    return groupedData;
 };
 
-export const monthNumberToName = (month: string, truncated: boolean = false): string => {
-    const [year, monthNum] = month.split("-");
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
-    ];
-    return truncated ? monthNames[parseInt(monthNum, 10) - 1].substring(0, 3) : monthNames[parseInt(monthNum, 10) - 1];
-}
-
-
-export const prepareChartData = (data: ProcessedSalesData[]) => {
-    if (!Array.isArray(data) || data.length === 0) {
-        console.warn("⚠️ Chart data is empty or invalid!");
-        return [];
-    }
-
-    return data.map((entry) => ({
-        month: entry.month,
-        currentYear: entry.currentYear || 0,
-        lastYear: entry.lastYear || 0,
-    }));
+export const calculatePercentageChange = (current: number, previous: number): string => {
+    if (previous === 0) return "N/A";
+    const change = ((current - previous) / previous) * 100;
+    return `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
 };
+
+export const calculateTotal = (data: ProcessedSalesData[], key: "currentPeriodSales" | "previousPeriodSales"): number =>
+    data.reduce((acc, entry) => acc + entry[key], 0);
+
+/* -------------------------------------- */
+/* 📊 Chart Formatting Helpers            */
+/* -------------------------------------- */
 
 export const nFormatter = (num: number, digits: number): string => {
     const lookup = [
@@ -98,20 +131,16 @@ export const nFormatter = (num: number, digits: number): string => {
         : "0";
 };
 
-export const calculatePercentageChange = (current: number, previous: number): string => {
-    if (previous === 0) return "0%";
-    const change = ((current - previous) / previous) * 100;
-    return `${change >= 0 ? "+" : "-"}${nFormatter(Math.abs(change), 2)}%`;
-};
+export const prepareChartData = (data: ProcessedSalesData[]) => {
+    if (!Array.isArray(data) || data.length === 0) {
+        console.warn("⚠️ Chart data is empty or invalid!");
+        return [];
+    }
 
-export const calculateTotal = (data: ProcessedSalesData[], key: "currentYear" | "lastYear"): number => {
-    return data.reduce((acc, entry) => acc + entry[key], 0);
-};
-
-export const getLatestEntry = (data: ProcessedSalesData[]): ProcessedSalesData => {
-    return data[data.length - 1] || { month: "", currentYear: 0, lastYear: 0 };
-};
-
-export const getPreviousEntry = (data: ProcessedSalesData[]): ProcessedSalesData => {
-    return data[data.length - 2] || { month: "", currentYear: 0, lastYear: 0 };
+    return data.map((entry) => ({
+        period: entry.period,              // Keep original fields
+        periodLabel: entry.periodLabel,    // Preserve periodLabel
+        currentPeriodSales: entry.currentPeriodSales,
+        previousPeriodSales: entry.previousPeriodSales,
+    }));
 };
