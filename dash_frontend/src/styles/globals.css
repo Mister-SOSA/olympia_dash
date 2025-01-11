@@ -4,76 +4,17 @@
 
 @import 'gridstack/dist/gridstack.css';
 @import 'gridstack/dist/gridstack-extra.css';
+@import './theme.css';
 
 /* Base styles */
 body {
-  background-color: #202530;
-  color: white;
+  background-color: var(--background-dark);
+  color: var(--text-primary);
 }
-
-:root {
-    /* Primary Colors */
-    --primary: #4CAF50; /* Finance green */
-    --primary-light: #66BB6A;
-    --primary-dark: #388E3C;
-
-    /* Secondary Colors */
-    --secondary: #2196F3; /* Bright blue */
-    --secondary-light: #64B5F6;
-    --secondary-dark: #1976D2;
-
-    /* Accent Colors */
-    --accent-1: #FFC107; /* Gold */
-    --accent-2: #FF5722; /* Burnt orange */
-    --accent-3: #9C27B0; /* Royal purple */
-
-    /* Background Colors */
-    --background-dark: #121212; /* Main background */
-    --background-light: #1F1F1F; /* Card or modal background */
-    --background-highlight: #2B2B2B; /* Highlight sections */
-
-    /* Border Colors */
-    --border-light: #2E2E2E; /* Light border for contrast */
-    --border-dark: #1A1A1A; /* Subtle dark border */
-
-    /* Text Colors */
-    --text-primary: #E0E0E0; /* Primary text */
-    --text-secondary: #B0B0B0; /* Secondary text */
-    --text-muted: #757575; /* Muted/placeholder text */
-
-    /* Success, Warning, Error */
-    --success: #4CAF50;
-    --warning: #FFC107;
-    --error: #F44336;
-
-    /* Chart Colors */
-    --chart-1: #4CAF50; /* Finance green */
-    --chart-2: #2196F3; /* Bright blue */
-    --chart-3: #FFC107; /* Gold */
-    --chart-4: #FF5722; /* Burnt orange */
-    --chart-5: #9C27B0; /* Royal purple */
-    --chart-6: #E91E63; /* Deep pink */
-    --chart-7: #00BCD4; /* Cyan */
-    --chart-8: #8BC34A; /* Lime green */
-    --chart-9: #FF9800; /* Bright orange */
-    --chart-10: #673AB7; /* Indigo purple */
-    --chart-11: #3F51B5; /* Steel blue */
-    --chart-12: #F44336; /* Crimson red */
-    --chart-13: #607D8B; /* Muted slate */
-    --chart-14: #795548; /* Earthy brown */
-    --chart-15: #BDBDBD; /* Soft gray */
-
-    /* Shadows and Highlights */
-    --shadow-light: rgba(0, 0, 0, 0.2); /* Light shadow for cards */
-    --shadow-dark: rgba(0, 0, 0, 0.4); /* Darker shadow for depth */
-    --highlight: #4CAF50; /* Highlighted section color */
-}
-
-/* <BarChart accessibilityLayer data={groupedData} margin={{ top: 20 }} className="last-blinking"> */
 
 .last-blinking > .recharts-bar-rectangles > .recharts-bar-rectangle:last-child > path {
     animation: blink 1s infinite;
-    fill: var(--help-color) !important;
+    fill: var(--highlight) !important;
 }
 
 @keyframes blink {
@@ -93,86 +34,19 @@ body {
   justify-content: center;
   text-align: center;
   padding: 1rem;
-  background-color: #2a2f3e;
-  color: white;
+  background-color: var(--background-light);
+  color: var(--text-primary);
   border-radius: 1rem;
   width: 100%;
   height: 100%;
   font-size: 1rem;
-  border-radius: 1rem;
 }
 
-/* Widget header */
 .widget-header {
   font-size: 2rem;
   font-weight: 800;
   width: 100%;
   text-align: left;
-}
-
-/* Theme variables */
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
-}
-
-/* Apply global border style */
-@layer base {
-  * {
-    @apply border-border;
-  }
 }
 
 .overview-widget {
@@ -190,12 +64,8 @@ body {
   justify-content: center;
   text-align: center;
   padding: 1rem;
-  background-color: #474e63;
-  color: white;
-  border-radius: 1rem;
-  width: 100%;
-  height: 100%;
-  font-size: 1rem;
+  background-color: var(--background-highlight);
+  color: var(--text-primary);
   border-radius: 1rem;
   width: 20rem;
   height: 100%;
@@ -214,22 +84,22 @@ body {
 .overview-subwidget-subtitle {
   font-size: 1rem;
   font-weight: 800;
-  color: white;
+  color: var(--text-secondary);
   margin: 0;
   padding: 0;
-  background-color: #4f4f4f;
-  margin-left: .5rem;
-  border-radius: .5rem;
-  padding: .25rem;
+  background-color: var(--border-dark);
+  margin-left: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.25rem;
   opacity: 90%;
 }
 
 .negative {
-  background-color: #ff3b30;
+  background-color: var(--error);
 }
 
 .positive {
-  background-color: #34c759;
+  background-color: var(--success);
 }
 
 .overview-subwidget-title {
@@ -258,11 +128,11 @@ body {
 .widget-menu {
   position: fixed;
   width: 40%;
-  background-color: #151515;
+  background-color: var(--background-dark);
   border-radius: 8px;
   padding: 16px;
   z-index: 1000;
-  color: white;
+  color: var(--text-primary);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -275,7 +145,7 @@ body {
 }
 
 .shade {
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: var(--shadow-dark);
   height: 100vh;
   width: 100vw;
   position: fixed;
@@ -295,6 +165,6 @@ body {
 }
 
 .widget-menu-checkbox {
-  background-color: #151515;
-  border: 1px solid #8e8e93;
+  background-color: var(--background-dark);
+  border: 1px solid var(--border-light);
 }
