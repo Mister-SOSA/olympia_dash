@@ -21,7 +21,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
                 <BarChart
                     accessibilityLayer
                     data={data}
-                    margin={{ top: 20 }}
+                    margin={{ top: 30 }}
                     className="last-blinking"
                 >
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />

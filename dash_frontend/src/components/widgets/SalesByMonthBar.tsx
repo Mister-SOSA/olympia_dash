@@ -13,7 +13,7 @@ import { SalesData, ProcessedSalesData } from "@/types";
 const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
-            <BarChart data={data} margin={{ top: 20 }}>
+            <BarChart data={data} margin={{ top: 30 }}>
                 <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
                 <XAxis dataKey="periodLabel" tickLine={false} tickMargin={10} axisLine={false} />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
