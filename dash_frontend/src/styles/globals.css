@@ -14,7 +14,7 @@ body {
 
 .last-blinking > .recharts-bar-rectangles > .recharts-bar-rectangle:last-child > path {
     animation: blink 1s infinite;
-    fill: var(--highlight) !important;
+    fill: var(--chart-bar) !important;
 }
 
 @keyframes blink {
@@ -27,14 +27,20 @@ body {
 }
 
 /* Widget styles */
+
+.grid-stack-item-content {
+  padding: 1rem;
+  background-color: var(--background-light);
+  color: var(--text-primary);
+  border-radius: 1rem;
+}
+
 .widget {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 1rem;
-  background-color: var(--background-light);
   color: var(--text-primary);
   border-radius: 1rem;
   width: 100%;
@@ -43,10 +49,18 @@ body {
 }
 
 .widget-header {
-  font-size: 2rem;
+  font-size: 1rem;
   font-weight: 800;
   width: 100%;
-  text-align: left;
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
+.widget-content {
+  font-size: 1.2rem;
+  width: 100%;
+  height: 100%;
+  text-align: center;
 }
 
 .overview-widget {

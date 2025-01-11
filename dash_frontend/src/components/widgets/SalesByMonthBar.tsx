@@ -19,7 +19,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
                 <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                 <Bar
                     dataKey="currentPeriodSales"
-                    fill="var(--primary-color)"
+                    fill="var(--chart-bar)"
                     radius={8}
                     isAnimationActive={false}
                     className="last-blinking"

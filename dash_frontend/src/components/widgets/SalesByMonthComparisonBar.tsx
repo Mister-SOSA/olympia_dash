@@ -30,7 +30,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
 
                     <Bar
                         dataKey="previousPeriodSales"
-                        fill="var(--accent-color)"
+                        fill="var(--chart-1)"
                         radius={8}
                         isAnimationActive={false}
                     >
@@ -46,7 +46,7 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
 
                     <Bar
                         dataKey="currentPeriodSales"
-                        fill="var(--primary-color)"
+                        fill="var(--chart-bar)"
                         radius={8}
                         isAnimationActive={false}
                         className="last-blinking"

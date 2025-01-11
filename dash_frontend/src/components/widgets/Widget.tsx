@@ -64,8 +64,10 @@ export default function Widget({
 
     return (
         <div className="widget">
-            <h2>{title}</h2>
-            {render(data)}
+            <h2 className="widget-header">{title}</h2>
+            <div className="widget-content">
+                {render(data)}
+            </div>
         </div>
     );
 }
