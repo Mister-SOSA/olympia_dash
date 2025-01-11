@@ -12,29 +12,61 @@ body {
 }
 
 :root {
-  --primary-color: #007aff;
-  --secondary-color: #ffcc00;
-  --help-color: #aebbff;
-  --accent-color: #34c759;
-  --muted-color: #8e8e93;
-  --background-color: #f2f2f7;
-  --text-color: #1c1c1e;
-  --chart-1: #007aff;
-  --chart-2: #ffcc00;
-  --chart-3: #ff3b30;
-  --chart-4: #34c759;
-  --chart-5: #ff9500;
-  --chart-6: #47e5e8;
-  --chart-7: #5ac8fa;
-  --chart-8: #64d2ff;
-  --chart-9: #30d158;
-  --chart-10: #ff375f;
-  --chart-11: #a284ff;
-  --chart-12: #ff9f00;
-  --chart-13: #ff5e3a;
-  --chart-14: #ffb900;
-  --chart-15: #4cd964;
-  --chart-other: #adadad;
+    /* Primary Colors */
+    --primary: #4CAF50; /* Finance green */
+    --primary-light: #66BB6A;
+    --primary-dark: #388E3C;
+
+    /* Secondary Colors */
+    --secondary: #2196F3; /* Bright blue */
+    --secondary-light: #64B5F6;
+    --secondary-dark: #1976D2;
+
+    /* Accent Colors */
+    --accent-1: #FFC107; /* Gold */
+    --accent-2: #FF5722; /* Burnt orange */
+    --accent-3: #9C27B0; /* Royal purple */
+
+    /* Background Colors */
+    --background-dark: #121212; /* Main background */
+    --background-light: #1F1F1F; /* Card or modal background */
+    --background-highlight: #2B2B2B; /* Highlight sections */
+
+    /* Border Colors */
+    --border-light: #2E2E2E; /* Light border for contrast */
+    --border-dark: #1A1A1A; /* Subtle dark border */
+
+    /* Text Colors */
+    --text-primary: #E0E0E0; /* Primary text */
+    --text-secondary: #B0B0B0; /* Secondary text */
+    --text-muted: #757575; /* Muted/placeholder text */
+
+    /* Success, Warning, Error */
+    --success: #4CAF50;
+    --warning: #FFC107;
+    --error: #F44336;
+
+    /* Chart Colors */
+    --chart-1: #4CAF50; /* Finance green */
+    --chart-2: #2196F3; /* Bright blue */
+    --chart-3: #FFC107; /* Gold */
+    --chart-4: #FF5722; /* Burnt orange */
+    --chart-5: #9C27B0; /* Royal purple */
+    --chart-6: #E91E63; /* Deep pink */
+    --chart-7: #00BCD4; /* Cyan */
+    --chart-8: #8BC34A; /* Lime green */
+    --chart-9: #FF9800; /* Bright orange */
+    --chart-10: #673AB7; /* Indigo purple */
+    --chart-11: #3F51B5; /* Steel blue */
+    --chart-12: #F44336; /* Crimson red */
+    --chart-13: #607D8B; /* Muted slate */
+    --chart-14: #795548; /* Earthy brown */
+    --chart-15: #BDBDBD; /* Soft gray */
+
+    /* Shadows and Highlights */
+    --shadow-light: rgba(0, 0, 0, 0.2); /* Light shadow for cards */
+    --shadow-dark: rgba(0, 0, 0, 0.4); /* Darker shadow for depth */
+    --highlight: #4CAF50; /* Highlighted section color */
 }
 
 /* <BarChart accessibilityLayer data={groupedData} margin={{ top: 20 }} className="last-blinking"> */
@@ -234,4 +266,35 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.widget-menu-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.shade {
+  background-color: rgba(0, 0, 0, 0.45);
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.widget-menu-checkbox {
+  background-color: #151515;
+  border: 1px solid #8e8e93;
 }

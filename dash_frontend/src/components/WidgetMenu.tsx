@@ -1,9 +1,12 @@
 import { Widget } from "@/types";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface MenuProps {
     masterWidgetList: Widget[];
     tempLayout: Widget[];
-    setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>; // Correct type for state setter
+    setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
     handleSave: () => void;
     handleCancel: () => void;
 }
@@ -24,26 +27,32 @@ const Menu: React.FC<MenuProps> = ({
     };
 
     return (
-        <div
-            className="widget-menu"
-        >
-            <h3>Select Widgets</h3>
-            {masterWidgetList.map((widget) => (
-                <div key={widget.id}>
-                    <input
-                        type="checkbox"
-                        checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
-                        onChange={() => toggleWidgetEnabled(widget.id)}
-                    />
-                    <label>{widget.id}</label>
-                </div>
-            ))}
-            <div style={{ marginTop: "16px" }}>
-                <button onClick={handleSave} style={{ marginRight: "8px" }}>
-                    Save
-                </button>
-                <button onClick={handleCancel}>Cancel</button>
-            </div>
+        <div className="shade">
+            <Card className="widget-menu">
+                <CardHeader>
+                    <CardTitle>Select Widgets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {masterWidgetList.map((widget) => (
+                        <div key={widget.id} className="flex items-center space-x-2 mb-2">
+                            <Checkbox
+                                checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
+                                onCheckedChange={() => toggleWidgetEnabled(widget.id)}
+                                className="widget-menu-checkbox"
+                            />
+                            <label className="text-sm font-medium">{widget.id}</label>
+                        </div>
+                    ))}
+                </CardContent>
+                <CardFooter className="widget-menu-footer">
+                    <Button onClick={handleCancel} variant="destructive">
+                        Cancel
+                    </Button>
+                    <Button className="bg-blue-600 text-white" onClick={handleSave}>
+                        Save
+                    </Button>
+                </CardFooter>
+            </Card>
         </div>
     );
 };
