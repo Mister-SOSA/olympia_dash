@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
 import { PieChart, Pie, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
@@ -104,6 +104,34 @@ function sortData(data: CustomerData[]): CustomerData[] {
 /* -------------------------------------- */
 
 const CustomerTable = ({ data }: { data: CustomerData[] }) => {
+    const [isLandscape, setIsLandscape] = useState(false);
+    const chartContainerRef = useRef<HTMLDivElement>(null);
+
+    // Function to calculate and set the aspect ratio
+    const updateAspectRatio = () => {
+        if (chartContainerRef.current) {
+            const { offsetWidth, offsetHeight } = chartContainerRef.current;
+            setIsLandscape(offsetWidth / offsetHeight > 1.5); // Landscape if aspect ratio > 1
+        }
+    };
+
+    // Use ResizeObserver to monitor changes in the container size
+    useEffect(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            updateAspectRatio();
+        });
+
+        if (chartContainerRef.current) {
+            resizeObserver.observe(chartContainerRef.current);
+        }
+
+        return () => {
+            if (chartContainerRef.current) {
+                resizeObserver.unobserve(chartContainerRef.current);
+            }
+        };
+    }, []);
+
     const processedData = React.useMemo(() => {
         if (!data || data.length === 0) {
             console.warn("No data received for CustomerTable");
@@ -112,7 +140,7 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
 
         const aggregatedData = transformData(data);
         const limitedData = mergeRest(aggregatedData, 6);
-        const coloredData = addColors(limitedData); // Ensure colors are added correctly
+        const coloredData = addColors(limitedData);
         return sortData(coloredData);
     }, [data]);
 
@@ -121,35 +149,42 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
     }
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
-            <ChartContainer config={{}} className="font-bold text-sm">
-                <PieChart>
-                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                    <Pie
-                        data={processedData}
-                        dataKey="totalSales"
-                        nameKey="businessName"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={8}
-                        label={({ name, value }) => `$${nFormatter(value, 2)}`}
-                        isAnimationActive={false}
-                    >
-                        {processedData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Pie>
-                    <ChartLegend
-                        align="center"
-                        layout="vertical"
-                        verticalAlign="bottom"
-                        className="display-flex flex-wrap flex-col"
-                    />
-                </PieChart>
-            </ChartContainer>
-        </ResponsiveContainer >
+        <div ref={chartContainerRef} style={{ width: "100%", height: "100%" }}>
+            <ResponsiveContainer>
+                <ChartContainer
+                    config={{}}
+                    className="font-bold customer-pie"
+                >
+                    <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                        <Pie
+                            data={processedData}
+                            dataKey="totalSales"
+                            nameKey="businessName"
+                            innerRadius={"45%"}
+                            outerRadius={"65%"}
+                            paddingAngle={8}
+                            label={({ name, value }) => `$${nFormatter(value, 2)}`}
+                            isAnimationActive={false}
+                            fontSize={isLandscape ? 16 : 12}
+                        >
+                            {processedData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <ChartLegend
+                            align={isLandscape ? "right" : "center"}
+                            layout={"vertical"}
+                            verticalAlign={isLandscape ? "middle" : "bottom"}
+                            className="display-flex flex-wrap flex-col"
+                        />
+                    </PieChart>
+                </ChartContainer>
+            </ResponsiveContainer>
+        </div>
     );
 };
+
 
 /* -------------------------------------- */
 /* 📊 TopCustomersThisYear Component      */
