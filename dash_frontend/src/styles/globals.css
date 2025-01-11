@@ -84,14 +84,14 @@ body {
 .overview-subwidget-subtitle {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   margin: 0;
   padding: 0;
   background-color: var(--border-dark);
   margin-left: 0.5rem;
   border-radius: 0.5rem;
   padding: 0.25rem;
-  opacity: 90%;
+  opacity: 100%;
 }
 
 .negative {
