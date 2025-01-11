@@ -5,6 +5,7 @@ import Overview from "./Overview";
 import SalesByDayBar from "./SalesByDayBar";
 import ClockWidget from "./ClockWidget";
 import DateWidget from "./DateWidget";
+import OutstandingOrdersTable from "./OutstandingOrdersTable";
 
 const widgetMap: Record<string, React.ComponentType> = {
     SalesByMonthComparisonBar: SalesByMonthComparisonBar,
@@ -14,6 +15,7 @@ const widgetMap: Record<string, React.ComponentType> = {
     SalesByDayBar: SalesByDayBar,
     ClockWidget: ClockWidget,
     DateWidget: DateWidget,
+    OutstandingOrdersTable: OutstandingOrdersTable,
 };
 
 export default widgetMap;

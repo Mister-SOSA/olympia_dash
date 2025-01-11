@@ -42,3 +42,22 @@ export type Widget = {
     h: number;
     enabled: boolean;
 };
+
+// Type for the raw data returned from the API
+export interface POItemData {
+    po_number: string; // Purchase order number
+    part_code: string; // Code of the part
+    part_desc: string; // Description of the part
+    date_orderd: string; // Date ordered (should be ISO string)
+    vend_prom_date: string; // Vendor promised date (should be ISO string)
+    date_prom_user: string | null; // User promised date (nullable)
+}
+
+export interface POItemTableData {
+    poNumber: string;
+    partCode: string;
+    partDescription: string;
+    dateOrdered: string; // Formatted date as string
+    vendorPromiseDate: string; // Formatted date as string
+    userPromisedDate: string; // "N/A" or formatted date as string
+}

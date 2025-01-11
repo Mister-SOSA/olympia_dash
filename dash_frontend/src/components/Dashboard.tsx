@@ -20,6 +20,7 @@ const masterWidgetList: Widget[] = [
     { id: "ClockWidget", x: 0, y: 0, w: 4, h: 2, enabled: true },
     { id: "DateWidget", x: 0, y: 0, w: 6, h: 2, enabled: true },
     { id: "TopCustomersThisYearPie", x: 0, y: 0, w: 3, h: 7, enabled: true },
+    { id: "OutstandingOrdersTable", x: 0, y: 0, w: 8, h: 5, enabled: true },
 ];
 
 // Function to read layout from localStorage
