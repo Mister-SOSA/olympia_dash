@@ -6,6 +6,7 @@ import "gridstack/dist/gridstack.css";
 import widgetMap from "./widgets/widgetMap";
 import { createRoot } from "react-dom/client";
 import { Widget } from "@/types";
+import Menu from "./WidgetMenu";
 
 // LocalStorage keys
 const LOCAL_STORAGE_KEY = "dashboard_layout";
@@ -23,22 +24,26 @@ const masterWidgetList: Widget[] = [
 
 // Function to read layout from localStorage
 const readLayoutFromStorage = (): Widget[] => {
-    const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (savedLayout) {
-        const parsedLayout: Widget[] = JSON.parse(savedLayout);
+    if (typeof window !== "undefined") {
+        const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (savedLayout) {
+            const parsedLayout: Widget[] = JSON.parse(savedLayout);
 
-        // Merge the master widget list with the saved layout
-        return masterWidgetList.map((masterWidget) => {
-            const savedWidget = parsedLayout.find((w) => w.id === masterWidget.id);
-            return savedWidget ? { ...masterWidget, ...savedWidget } : masterWidget;
-        });
+            // Merge the master widget list with the saved layout
+            return masterWidgetList.map((masterWidget) => {
+                const savedWidget = parsedLayout.find((w) => w.id === masterWidget.id);
+                return savedWidget ? { ...masterWidget, ...savedWidget } : masterWidget;
+            });
+        }
     }
     return masterWidgetList;
 };
 
 // Function to save layout to localStorage
 const saveLayoutToStorage = (layout: Widget[]) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
+    if (typeof window !== "undefined") {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
+    }
 };
 
 // Function to validate layout
@@ -55,19 +60,29 @@ export default function Dashboard() {
     const gridInstance = useRef<GridStack | null>(null); // Store GridStack instance
     const columnCount = 11; // Set desired column count here
 
-    const [layout, setLayout] = useState<Widget[]>(() => {
-        const savedLayout = readLayoutFromStorage();
-        return validateLayout(savedLayout, columnCount);
-    });
-
+    const [layout, setLayout] = useState<Widget[]>([]); // Default empty array
     const [menuOpen, setMenuOpen] = useState(false);
-    const [tempLayout, setTempLayout] = useState<Widget[]>(layout); // Temporary state for the menu
+    const [tempLayout, setTempLayout] = useState<Widget[]>([]); // Temporary state for the menu
+
+    useEffect(() => {
+        // Initialize layout from localStorage on client side
+        const savedLayout = readLayoutFromStorage();
+        setLayout(validateLayout(savedLayout, columnCount));
+    }, []);
 
     useEffect(() => {
         const handleKeyPress = (e: KeyboardEvent) => {
             if (e.key === "f" || e.key === "F") {
                 setMenuOpen((prev) => !prev);
                 setTempLayout(layout); // Copy current layout into temporary state
+            }
+
+            // Cleanup action triggered by "X" key
+            if (e.key === "x" || e.key === "X") {
+                if (gridInstance.current) {
+                    gridInstance.current.compact(); // Perform compaction
+                    console.log("Grid compacted.");
+                }
             }
         };
 
@@ -86,7 +101,7 @@ export default function Dashboard() {
                 {
                     cellHeight: 80,
                     column: columnCount,
-                    float: true,
+                    float: false, // Disable floating to allow widgets to auto-fill gaps
                 },
                 gridRef.current
             );
@@ -96,31 +111,34 @@ export default function Dashboard() {
 
         // Render the widgets
         const renderWidgets = (widgets: Widget[]) => {
-            // Clear all widgets from the grid
-            grid.removeAll();
+            // Ensure gridInstance is initialized and valid
+            if (grid && grid.engine) {
+                // Clear all widgets from the grid
+                grid.removeAll();
 
-            const enabledWidgets = widgets.filter((widget) => widget.enabled);
-            const adjustedLayout = validateLayout(enabledWidgets, columnCount);
+                const enabledWidgets = widgets.filter((widget) => widget.enabled);
+                const adjustedLayout = validateLayout(enabledWidgets, columnCount);
 
-            adjustedLayout.forEach((widget: Widget) => {
-                const el = grid.addWidget({
-                    x: widget.x,
-                    y: widget.y,
-                    w: widget.w,
-                    h: widget.h,
-                    id: widget.id,
-                    content: '<div class="grid-stack-item-content"></div>',
-                });
+                adjustedLayout.forEach((widget: Widget) => {
+                    const el = grid.addWidget({
+                        x: widget.x,
+                        y: widget.y,
+                        w: widget.w,
+                        h: widget.h,
+                        id: widget.id,
+                        content: '<div class="grid-stack-item-content"></div>',
+                    });
 
-                const contentDiv = el.querySelector(".grid-stack-item-content");
-                if (contentDiv) {
-                    const WidgetComponent = widgetMap[widget.id];
-                    if (WidgetComponent) {
-                        const root = createRoot(contentDiv);
-                        root.render(<WidgetComponent />);
+                    const contentDiv = el.querySelector(".grid-stack-item-content");
+                    if (contentDiv) {
+                        const WidgetComponent = widgetMap[widget.id];
+                        if (WidgetComponent) {
+                            const root = createRoot(contentDiv);
+                            root.render(<WidgetComponent />);
+                        }
                     }
-                }
-            });
+                });
+            }
         };
 
         renderWidgets(layout);
@@ -139,7 +157,10 @@ export default function Dashboard() {
         });
 
         return () => {
-            grid.destroy(false); // Retain DOM nodes
+            if (gridInstance.current) {
+                gridInstance.current.destroy(false); // Retain DOM nodes
+                gridInstance.current = null; // Clear the instance reference
+            }
         };
     }, [layout]);
 
@@ -153,49 +174,16 @@ export default function Dashboard() {
         setMenuOpen(false); // Close the menu without saving
     };
 
-    const toggleWidgetEnabled = (id: string) => {
-        setTempLayout((prev) =>
-            prev.map((widget) =>
-                widget.id === id ? { ...widget, enabled: !widget.enabled } : widget
-            )
-        );
-    };
-
     return (
         <div>
             {menuOpen && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: "20%",
-                        left: "20%",
-                        width: "60%",
-                        backgroundColor: "white",
-                        border: "1px solid #ccc",
-                        borderRadius: "8px",
-                        padding: "16px",
-                        zIndex: 1000,
-                        color: "black"
-                    }}
-                >
-                    <h3>Select Widgets</h3>
-                    {masterWidgetList.map((widget) => (
-                        <div key={widget.id}>
-                            <input
-                                type="checkbox"
-                                checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
-                                onChange={() => toggleWidgetEnabled(widget.id)}
-                            />
-                            <label>{widget.id}</label>
-                        </div>
-                    ))}
-                    <div style={{ marginTop: "16px" }}>
-                        <button onClick={handleSave} style={{ marginRight: "8px" }}>
-                            Save
-                        </button>
-                        <button onClick={handleCancel}>Cancel</button>
-                    </div>
-                </div>
+                <Menu
+                    masterWidgetList={masterWidgetList}
+                    tempLayout={tempLayout}
+                    setTempLayout={setTempLayout}
+                    handleSave={handleSave}
+                    handleCancel={handleCancel}
+                />
             )}
             <div ref={gridRef} className="grid-stack"></div>
         </div>
