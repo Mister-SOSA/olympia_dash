@@ -12,7 +12,6 @@ import { SalesData, ProcessedSalesData } from "@/types";
 /* -------------------------------------- */
 
 const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
-    console.log(data),
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
             <BarChart data={data} margin={{ top: 30 }}>
@@ -55,7 +54,8 @@ export default function SalesByDayBar() {
                 const { width } = entry.contentRect;
 
                 // Dynamically adjust visibleDays based on width
-                if (width >= 800) setVisibleDays(10);
+                if (width >= 1200) setVisibleDays(21);
+                else if (width >= 800) setVisibleDays(14);
                 else if (width >= 600) setVisibleDays(7);
                 else if (width >= 400) setVisibleDays(5);
                 else setVisibleDays(3);
@@ -80,7 +80,7 @@ export default function SalesByDayBar() {
                 payload={{
                     table: "sumsales",
                     columns: ["FORMAT(sale_date, 'yyyy-MM-dd') AS period", "SUM(sales_dol) AS total"],
-                    filters: `(sale_date >= DATEADD(DAY, -14, GETDATE()) AND sale_date <= GETDATE())`,
+                    filters: `(sale_date >= DATEADD(DAY, -30, GETDATE()) AND sale_date <= GETDATE())`,
                     group_by: ["FORMAT(sale_date, 'yyyy-MM-dd')"],
                     sort: ["period ASC"],
                 }}
@@ -110,6 +110,8 @@ export default function SalesByDayBar() {
                             previousPeriodSales: 0, // Add a default value for previousPeriodSales
                         };
                     });
+
+                    console.log(chartData);
 
                     return <SalesChart data={chartData.slice(-visibleDays)} />;
                 }}
