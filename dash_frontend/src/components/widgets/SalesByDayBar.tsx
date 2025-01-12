@@ -12,6 +12,7 @@ import { SalesData, ProcessedSalesData } from "@/types";
 /* -------------------------------------- */
 
 const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
+    console.log(data),
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
             <BarChart data={data} margin={{ top: 30 }}>
@@ -79,27 +80,38 @@ export default function SalesByDayBar() {
                 payload={{
                     table: "sumsales",
                     columns: ["FORMAT(sale_date, 'yyyy-MM-dd') AS period", "SUM(sales_dol) AS total"],
-                    filters: `(sale_date >= DATEADD(DAY, -30, GETDATE()) AND sale_date <= GETDATE())`,
+                    filters: `(sale_date >= DATEADD(DAY, -14, GETDATE()) AND sale_date <= GETDATE())`,
                     group_by: ["FORMAT(sale_date, 'yyyy-MM-dd')"],
                     sort: ["period ASC"],
                 }}
                 title="Sales by Day"
                 updateInterval={300000}
                 render={(data: SalesData[]) => {
-                    const chartData = data.slice(-visibleDays).map((entry) => {
-                        const periodDate = new Date(entry.period);
-                        const formattedLabel = `${format(periodDate, "EEE")} (${format(
-                            periodDate,
-                            "MMM d"
-                        )})`; // Format: Sun (Jan 1)
+                    const rangeStart = new Date();
+                    rangeStart.setDate(rangeStart.getDate() - 14); // Start of the 14-day range
+                    const rangeEnd = new Date(); // Today
+
+                    // Generate all dates in the range
+                    const allDates = [];
+                    for (let d = rangeStart; d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+                        allDates.push(new Date(d));
+                    }
+
+                    // Create a complete dataset with zero sales for missing days
+                    const chartData = allDates.map((date) => {
+                        const formattedDate = format(date, "yyyy-MM-dd");
+                        const entry = data.find((item) => item.period === formattedDate);
+                        const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`; // Format: Sun (Jan 1)
+
                         return {
-                            period: entry.period,
+                            period: formattedDate,
                             periodLabel: formattedLabel,
-                            currentPeriodSales: entry.total || 0,
-                            previousPeriodSales: 0, // Not relevant for this widget
+                            currentPeriodSales: entry?.total || 0,
+                            previousPeriodSales: 0, // Add a default value for previousPeriodSales
                         };
                     });
-                    return <SalesChart data={chartData} />;
+
+                    return <SalesChart data={chartData.slice(-visibleDays)} />;
                 }}
             />
         </div>
