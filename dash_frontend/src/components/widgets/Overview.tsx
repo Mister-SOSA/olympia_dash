@@ -27,7 +27,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             .filter((entry) => entry.date >= startOfPreviousYear && entry.date <= sameDayPreviousYear)
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        // **Monthly Sales (Matching Ranges Across Years)**
+        // **Monthly Sales**
         const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1); // First day of this month
         const startOfPreviousYearSameMonth = new Date(today.getFullYear() - 1, today.getMonth(), 1); // First day of same month last year
         const totalSalesCurrentMonth = dailyData
@@ -60,17 +60,17 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             .filter((entry) => entry.date >= previousRolling7DaysStart && entry.date <= previousRolling7DaysEnd)
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        const salesToday = useMemo(() => {
-            const todayData = data.find((entry) => {
-                const entryDate = new Date(entry.period);
+        // **Sales Today**
+        const totalSalesToday = dailyData
+            .filter((entry) => {
+                const entryDate = new Date(entry.date);
                 return (
                     entryDate.getFullYear() === today.getFullYear() &&
                     entryDate.getMonth() === today.getMonth() &&
                     entryDate.getDate() === today.getDate()
                 );
-            });
-            return todayData ? todayData.total : 0; // Return 0 if no sales data for today
-        }, [data]);
+            })
+            .reduce((sum, entry) => sum + entry.total, 0);
 
         return {
             totalSalesYTD,
@@ -79,7 +79,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             totalSalesPreviousMonth,
             totalSalesRolling7Days,
             totalSalesPreviousRolling7Days,
-            salesToday,
+            totalSalesToday,
         };
     }, [data]);
 
@@ -90,7 +90,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
         totalSalesPreviousMonth,
         totalSalesRolling7Days,
         totalSalesPreviousRolling7Days,
-        salesToday,
+        totalSalesToday,
     } = metrics;
 
     return (
@@ -112,8 +112,8 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             />
             <OverviewSubwidget
                 title="Sales Today"
-                value={salesToday}
-                subtitle=""
+                value={totalSalesToday}
+                subtitle=''
             />
         </div>
     );
