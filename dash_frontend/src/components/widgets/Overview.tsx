@@ -60,6 +60,18 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             .filter((entry) => entry.date >= previousRolling7DaysStart && entry.date <= previousRolling7DaysEnd)
             .reduce((sum, entry) => sum + entry.total, 0);
 
+        const salesToday = useMemo(() => {
+            const todayData = data.find((entry) => {
+                const entryDate = new Date(entry.period);
+                return (
+                    entryDate.getFullYear() === today.getFullYear() &&
+                    entryDate.getMonth() === today.getMonth() &&
+                    entryDate.getDate() === today.getDate()
+                );
+            });
+            return todayData ? todayData.total : 0; // Return 0 if no sales data for today
+        }, [data]);
+
         return {
             totalSalesYTD,
             totalSalesPreviousYTD,
@@ -67,6 +79,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             totalSalesPreviousMonth,
             totalSalesRolling7Days,
             totalSalesPreviousRolling7Days,
+            salesToday,
         };
     }, [data]);
 
@@ -77,6 +90,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
         totalSalesPreviousMonth,
         totalSalesRolling7Days,
         totalSalesPreviousRolling7Days,
+        salesToday,
     } = metrics;
 
     return (
@@ -98,7 +112,7 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             />
             <OverviewSubwidget
                 title="Sales Today"
-                value={data[data.length - 1].total}
+                value={salesToday}
                 subtitle=""
             />
         </div>
