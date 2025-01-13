@@ -188,10 +188,13 @@ th {
   font-weight: 800 !important;
   font-size: 1rem;
   padding: .5rem;
-  border-left: 1px solid var(--background-highlight);
   background-color: var(--background-dark) !important;
 }
 
-/* tbody > tr:nth-child(odd) {
+tbody > tr:nth-child(odd) {
   background-color: var(--background-highlight) !important;
-} */
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
