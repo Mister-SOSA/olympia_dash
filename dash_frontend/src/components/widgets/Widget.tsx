@@ -1,6 +1,7 @@
 "use client";
 
 import { JSX, useEffect, useState } from "react";
+import PropogateLoader from "react-spinners/PropagateLoader";
 
 interface WidgetProps {
     apiEndpoint?: string | null; // The API endpoint to fetch data from (optional)
@@ -59,8 +60,18 @@ export default function Widget({
         }
     }, [apiEndpoint, payload, updateInterval]);
 
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error}</div>;
+    if (loading) return (
+        <div>
+            <h2 className="widget-header">{title}</h2>
+            <div className="widget-content">
+                <div className="loader-container">
+                    <PropogateLoader className="loader" color="white" />
+                </div>
+            </div>
+        </div>
+    );
+
+    if (error) return <div>Error: {error} Retrying in {updateInterval / 1000} seconds...</div>;
 
     return (
         <div className="widget">
