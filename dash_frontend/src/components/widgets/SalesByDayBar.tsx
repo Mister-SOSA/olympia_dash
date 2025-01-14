@@ -78,11 +78,39 @@ export default function SalesByDayBar() {
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={{
-                    table: "sumsales",
-                    columns: ["FORMAT(sale_date, 'yyyy-MM-dd') AS period", "SUM(sales_dol) AS total"],
-                    filters: `(sale_date >= DATEADD(DAY, -30, GETDATE()) AND sale_date <= GETDATE())`,
-                    group_by: ["FORMAT(sale_date, 'yyyy-MM-dd')"],
-                    sort: ["period ASC"],
+                    raw_query: `
+                    -- Fetch sales data for the last 3 days from orditem
+                    SELECT 
+                        FORMAT(duedate, 'yyyy-MM-dd') AS period,
+                        SUM(ext_price) AS total
+                    FROM 
+                        orditem
+                    WHERE 
+                        duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+                        AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
+                        AND duedate <= GETDATE()
+                    GROUP BY 
+                        FORMAT(duedate, 'yyyy-MM-dd')
+
+                    UNION ALL
+
+                    -- Fetch sales data older than 3 days but within 30 days from sumsales
+                    SELECT 
+                        FORMAT(sale_date, 'yyyy-MM-dd') AS period,
+                        SUM(sales_dol) AS total
+                    FROM 
+                        sumsales
+                    WHERE 
+                        sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+                        AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
+                        AND sale_date <= GETDATE()
+                    GROUP BY 
+                        FORMAT(sale_date, 'yyyy-MM-dd')
+
+                    -- Combine and aggregate the data for consistent results
+                    ORDER BY 
+                        period ASC;
+                `,
                 }}
                 title="Sales by Day"
                 updateInterval={6000}
