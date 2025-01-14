@@ -6,69 +6,76 @@ import { SalesData } from "@/types";
 
 /* 📊 OverviewWidget Component */
 const OverviewWidget = ({ data }: { data: SalesData[] }) => {
-    const today = new Date();
+    // Get today's date in GMT
+    const now = new Date();
+    const todayGMT = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())); // Normalize to GMT
 
     const metrics = useMemo(() => {
         const dailyData = data.map((entry) => ({
             ...entry,
-            date: new Date(entry.period), // Convert period string to Date object
+            date: new Date(entry.period), // Convert period string to Date object in GMT
         }));
 
         // **Year-to-Date (YTD)**
-        const startOfYear = new Date(today.getFullYear(), 0, 1); // Jan 1 of the current year
+        const startOfYearGMT = new Date(Date.UTC(todayGMT.getUTCFullYear(), 0, 1)); // Jan 1 in GMT
         const totalSalesYTD = dailyData
-            .filter((entry) => entry.date >= startOfYear && entry.date <= today)
+            .filter((entry) => entry.date >= startOfYearGMT && entry.date <= todayGMT)
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        const startOfPreviousYear = new Date(today.getFullYear() - 1, 0, 1); // Jan 1 of the previous year
-        const sameDayPreviousYear = new Date(today);
-        sameDayPreviousYear.setFullYear(today.getFullYear() - 1);
+        const startOfPreviousYearGMT = new Date(Date.UTC(todayGMT.getUTCFullYear() - 1, 0, 1)); // Jan 1 of previous year in GMT
+        const sameDayPreviousYearGMT = new Date(todayGMT);
+        sameDayPreviousYearGMT.setUTCFullYear(todayGMT.getUTCFullYear() - 1);
         const totalSalesPreviousYTD = dailyData
-            .filter((entry) => entry.date >= startOfPreviousYear && entry.date <= sameDayPreviousYear)
+            .filter((entry) => entry.date >= startOfPreviousYearGMT && entry.date <= sameDayPreviousYearGMT)
             .reduce((sum, entry) => sum + entry.total, 0);
 
         // **Monthly Sales**
-        const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1); // First day of this month
-        const startOfPreviousYearSameMonth = new Date(today.getFullYear() - 1, today.getMonth(), 1); // First day of same month last year
+        const startOfCurrentMonthGMT = new Date(Date.UTC(todayGMT.getUTCFullYear(), todayGMT.getUTCMonth(), 1)); // First day of this month in GMT
+        const startOfPreviousYearSameMonthGMT = new Date(
+            Date.UTC(todayGMT.getUTCFullYear() - 1, todayGMT.getUTCMonth(), 1)
+        ); // First day of the same month last year in GMT
         const totalSalesCurrentMonth = dailyData
-            .filter((entry) => entry.date >= startOfCurrentMonth && entry.date <= today)
+            .filter((entry) => entry.date >= startOfCurrentMonthGMT && entry.date <= todayGMT)
             .reduce((sum, entry) => sum + entry.total, 0);
 
         const totalSalesPreviousMonth = dailyData
             .filter(
                 (entry) =>
-                    entry.date >= startOfPreviousYearSameMonth &&
-                    entry.date <= new Date(startOfPreviousYearSameMonth.getFullYear(), startOfPreviousYearSameMonth.getMonth(), today.getDate())
+                    entry.date >= startOfPreviousYearSameMonthGMT &&
+                    entry.date <= new Date(Date.UTC(
+                        startOfPreviousYearSameMonthGMT.getUTCFullYear(),
+                        startOfPreviousYearSameMonthGMT.getUTCMonth(),
+                        todayGMT.getUTCDate()
+                    ))
             )
             .reduce((sum, entry) => sum + entry.total, 0);
 
         // **Rolling 7-Day Sales**
-        const rolling7DaysStart = new Date(today);
-        rolling7DaysStart.setDate(today.getDate() - 8); // 7 days including today
-        const rolling7DaysEnd = today;
+        const rolling7DaysStartGMT = new Date(todayGMT);
+        rolling7DaysStartGMT.setUTCDate(todayGMT.getUTCDate() - 8); // 7 days including today
+        const rolling7DaysEndGMT = todayGMT;
 
-        const previousRolling7DaysStart = new Date(rolling7DaysStart);
-        previousRolling7DaysStart.setDate(previousRolling7DaysStart.getDate() - 8); // Previous 7-day range
-        const previousRolling7DaysEnd = new Date(rolling7DaysStart);
-        previousRolling7DaysEnd.setDate(rolling7DaysStart.getDate() - 1);
+        const previousRolling7DaysStartGMT = new Date(rolling7DaysStartGMT);
+        previousRolling7DaysStartGMT.setUTCDate(previousRolling7DaysStartGMT.getUTCDate() - 8); // Previous 7-day range
+        const previousRolling7DaysEndGMT = new Date(rolling7DaysStartGMT);
+        previousRolling7DaysEndGMT.setUTCDate(rolling7DaysStartGMT.getUTCDate() - 1);
 
         const totalSalesRolling7Days = dailyData
-            .filter((entry) => entry.date >= rolling7DaysStart && entry.date <= rolling7DaysEnd)
+            .filter((entry) => entry.date >= rolling7DaysStartGMT && entry.date <= rolling7DaysEndGMT)
             .reduce((sum, entry) => sum + entry.total, 0);
 
         const totalSalesPreviousRolling7Days = dailyData
-            .filter((entry) => entry.date >= previousRolling7DaysStart && entry.date <= previousRolling7DaysEnd)
+            .filter((entry) => entry.date >= previousRolling7DaysStartGMT && entry.date <= previousRolling7DaysEndGMT)
             .reduce((sum, entry) => sum + entry.total, 0);
 
-        // **Sales Today**
+        // **Sales Today (GMT)**
         const totalSalesToday = dailyData
             .filter((entry) => {
                 const entryDate = new Date(entry.date);
-                return (
-                    entryDate.getFullYear() === today.getFullYear() &&
-                    entryDate.getMonth() === today.getMonth() &&
-                    entryDate.getDate() === today.getDate()
-                );
+                const normalizedEntryDate = new Date(
+                    Date.UTC(entryDate.getUTCFullYear(), entryDate.getUTCMonth(), entryDate.getUTCDate())
+                ); // Normalize the entry date to GMT
+                return normalizedEntryDate.getTime() === todayGMT.getTime(); // Compare normalized dates in GMT
             })
             .reduce((sum, entry) => sum + entry.total, 0);
 
@@ -113,11 +120,12 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
             <OverviewSubwidget
                 title="Sales Today"
                 value={totalSalesToday}
-                subtitle=''
+                subtitle=""
             />
         </div>
     );
 };
+
 
 const OverviewSubwidget = ({
     title,
@@ -150,21 +158,48 @@ const OverviewSubwidget = ({
 export default function Overview() {
     const previousYearStart = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split("T")[0];
     const currentDate = new Date().toISOString().split("T")[0];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoDate = sevenDaysAgo.toISOString().split("T")[0];
 
     return (
         <Widget
             apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
             payload={{
-                table: "sumsales",
-                columns: ["FORMAT(sale_date, 'yyyy-MM-dd') AS period", "SUM(sales_dol) AS total"],
-                filters: `(
-                    sale_date >= '${previousYearStart}' 
+                raw_query: `
+                -- Fetch sales data for the last 7 days from orditem
+                SELECT 
+                    FORMAT(duedate, 'yyyy-MM-dd') AS period,
+                    SUM(ext_price) AS total
+                FROM 
+                    orditem
+                WHERE 
+                    duedate >= '${sevenDaysAgoDate}' -- Only the last 7 days
+                    AND duedate <= '${currentDate}'
+                GROUP BY 
+                    FORMAT(duedate, 'yyyy-MM-dd')
+
+                UNION ALL
+
+                -- Fetch sales data beyond the last 7 days (within the full year) from sumsales
+                SELECT 
+                    FORMAT(sale_date, 'yyyy-MM-dd') AS period,
+                    SUM(sales_dol) AS total
+                FROM 
+                    sumsales
+                WHERE 
+                    sale_date >= '${previousYearStart}' -- Full year
+                    AND sale_date < '${sevenDaysAgoDate}' -- Beyond the last 7 days
                     AND sale_date <= '${currentDate}'
-                )`,
-                group_by: ["FORMAT(sale_date, 'yyyy-MM-dd')"],
-                sort: ["period ASC"],
+                GROUP BY 
+                    FORMAT(sale_date, 'yyyy-MM-dd')
+
+                -- Combine and sort the data for consistent results
+                ORDER BY 
+                    period ASC;
+            `,
             }}
-            title=""
+            title="Overview"
             updateInterval={300000}
             render={(data: SalesData[]) => <OverviewWidget data={data} />}
         />
