@@ -53,6 +53,10 @@ export interface POItemData {
     date_orderd: string; // Date ordered (should be ISO string)
     vend_prom_date: string; // Vendor promised date (should be ISO string)
     date_prom_user: string | null; // User promised date (nullable)
+    recent_unit_price: number; // Recent unit price
+    recent_date_orderd: string | null; // Recent date ordered (nullable)
+    last_order_date: string | null; // Last order date (nullable)
+    last_order_unit_price: number | null; // Last order unit price (nullable)
 }
 
 export interface POItemTableData {
@@ -64,4 +68,6 @@ export interface POItemTableData {
     dateOrdered: string; // Formatted date as string
     vendorPromiseDate: string; // Formatted date as string
     userPromisedDate: string; // "N/A" or formatted date as string
+    recentUnitPrice: string; // Formatted unit price as string
+    lastOrderDate: string; // "N/A" or formatted date as string
 }
