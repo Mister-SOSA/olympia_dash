@@ -161,7 +161,7 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
                             data={processedData}
                             dataKey="totalSales"
                             nameKey="businessName"
-                            innerRadius={"45%"}
+                            innerRadius={"40%"}
                             outerRadius={"65%"}
                             paddingAngle={8}
                             label={({ name, value }) => `$${nFormatter(value, 2)}`}
