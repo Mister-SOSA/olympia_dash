@@ -3,39 +3,89 @@ import config from "@/config";
 import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { parseISO, format } from 'date-fns';
+import { parseISO, format } from "date-fns";
 
 /* -------------------------------------- */
-/* 📊 Outstanding Orders Table Component             */
+/* 📊 Outstanding Orders Table Component  */
 /* -------------------------------------- */
 
 export default function OutstandingOrdersTable() {
+    const hiddenVendorCodes = config.HIDDEN_OUTSTANDING_VENDOR_CODES.map((code) => `'${code}'`).join(", ");
+
     return (
         <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={{
                     raw_query: `
-WITH RecentOrders AS (
+WITH AdjustedOrders AS (
     SELECT
         po_number,
+        vend_code,
+        vend_name,
+        part_code,
+        part_desc,
+        unit_price,
+        date_orderd,
+        vend_prom_date,
+        date_prom_user,
+        date_rcv,
+        item_no,
+        part_type,
+        ROW_NUMBER() OVER (
+            PARTITION BY po_number, item_no
+            ORDER BY
+                CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END,
+                date_rcv DESC
+        ) AS row_num
+    FROM
+        poitem
+    WHERE
+        part_type = 'S' -- Filter rows by part_type = 'S'
+),
+FilteredOrders AS (
+    SELECT
+        po_number,
+        vend_code,
+        vend_name,
+        part_code,
+        part_desc,
+        unit_price,
+        date_orderd,
+        vend_prom_date,
+        date_prom_user,
+        date_rcv,
+        item_no,
+        part_type
+    FROM
+        AdjustedOrders
+    WHERE
+        row_num = 1
+        AND vend_code NOT IN (${hiddenVendorCodes}) -- Exclude hidden vendor codes
+),
+RecentOrders AS (
+    SELECT
+        po_number,
+        vend_code,
         vend_name,
         part_code,
         part_desc,
         unit_price AS recent_unit_price,
         date_orderd AS recent_date_orderd,
         vend_prom_date,
-        date_prom_user
+        date_prom_user,
+        part_type
     FROM
-        poitem
+        FilteredOrders
     WHERE
-        date_orderd >= DATEADD(DAY, -10, GETDATE()) -- Ordered in the last 10 days
-        AND date_rcv IS NULL -- Not yet received
-        AND vend_prom_date < GETDATE() - 1 -- Overdue
-        AND date_prom_user IN ('tomsta', 'purcha') -- Ordered by specific users
+        date_orderd >= DATEADD(DAY, -10, GETDATE())
+        AND date_rcv IS NULL
+        AND vend_prom_date < DATEADD(DAY, -1, GETDATE())
+        AND date_prom_user IN ('tomsta', 'purcha')
 )
 SELECT
     ro.po_number,
+    ro.vend_code,
     ro.vend_name,
     ro.part_code,
     ro.part_desc,
@@ -43,21 +93,26 @@ SELECT
     ro.recent_date_orderd,
     ro.vend_prom_date,
     ro.date_prom_user,
-    (SELECT TOP 1 p2.date_orderd
-     FROM poitem p2
-     WHERE p2.part_code = ro.part_code
-       AND p2.date_orderd < ro.recent_date_orderd -- Any prior order
-     ORDER BY p2.date_orderd DESC) AS last_order_date, -- Last order date
-    (SELECT TOP 1 p2.unit_price
-     FROM poitem p2
-     WHERE p2.part_code = ro.part_code
-       AND p2.date_orderd < ro.recent_date_orderd -- Match the same prior order
-     ORDER BY p2.date_orderd DESC) AS last_order_unit_price -- Last order unit price
+    ro.part_type,
+    lo.last_order_date,
+    lo.last_order_unit_price
 FROM
     RecentOrders ro
+OUTER APPLY (
+    SELECT TOP 1
+        p2.date_orderd AS last_order_date,
+        p2.unit_price AS last_order_unit_price
+    FROM
+        FilteredOrders p2
+    WHERE
+        p2.part_code = ro.part_code
+        AND p2.date_orderd < ro.recent_date_orderd
+    ORDER BY
+        p2.date_orderd DESC
+) lo
 ORDER BY
     ro.vend_prom_date ASC;
-                     `
+                    `,
                 }}
                 title="Outstanding Due In"
                 updateInterval={300000}
@@ -67,19 +122,34 @@ ORDER BY
                         vendName: item.vend_name,
                         partCode: item.part_code,
                         partDescription: item.part_desc,
-                        recentUnitPrice: `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(item.recent_unit_price)}`,
+                        recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                        }).format(item.recent_unit_price)}`,
                         dateOrdered: item.recent_date_orderd
-                            ? format(new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1)), 'MMM d, yyyy')
-                            : 'N/A',
+                            ? format(
+                                new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1)),
+                                "MMM d, yyyy"
+                            )
+                            : "N/A",
                         vendorPromiseDate: item.vend_prom_date
-                            ? format(new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1)), 'MMM d, yyyy')
-                            : 'N/A',
+                            ? format(
+                                new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1)),
+                                "MMM d, yyyy"
+                            )
+                            : "N/A",
                         lastOrderDate: item.last_order_date
-                            ? format(new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)), 'MMM d, yyyy')
-                            : 'N/A',
+                            ? format(
+                                new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)),
+                                "MMM d, yyyy"
+                            )
+                            : "N/A",
                         lastOrderUnitPrice: item.last_order_unit_price
-                            ? `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(item.last_order_unit_price)}`
-                            : 'N/A',
+                            ? `$${new Intl.NumberFormat("en-US", {
+                                minimumFractionDigits: 4,
+                                maximumFractionDigits: 4,
+                            }).format(item.last_order_unit_price)}`
+                            : "N/A",
                         userOrdered: item.date_prom_user,
                     }));
 
