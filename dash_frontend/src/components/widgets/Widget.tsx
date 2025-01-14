@@ -2,6 +2,7 @@
 
 import { JSX, useEffect, useState } from "react";
 import PropogateLoader from "react-spinners/PropagateLoader";
+import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
 interface WidgetProps {
     apiEndpoint?: string | null; // The API endpoint to fetch data from (optional)
@@ -21,6 +22,7 @@ export default function Widget({
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [fetchTrigger, setFetchTrigger] = useState<number>(0); // Used to reset the timer
 
     useEffect(() => {
         if (!apiEndpoint) {
@@ -49,6 +51,7 @@ export default function Widget({
                 setError(err.message);
             } finally {
                 setLoading(false);
+                setFetchTrigger((prev) => prev + 1); // Trigger timer reset
             }
         }
 
@@ -60,24 +63,42 @@ export default function Widget({
         }
     }, [apiEndpoint, payload, updateInterval]);
 
-    if (loading) return (
-        <div>
-            <h2 className="widget-header">{title}</h2>
-            <div className="widget-content">
-                <div className="loader-container">
-                    <PropogateLoader className="loader" color="white" />
+    if (loading)
+        return (
+            <div>
+                <h2 className="widget-header">{title}</h2>
+                <div className="widget-content">
+                    <div className="loader-container">
+                        <PropogateLoader className="loader" color="white" />
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
 
-    if (error) return <div>Error: {error} Retrying in {updateInterval / 1000} seconds...</div>;
+    if (error)
+        return (
+            <div>
+                Error: {error} Retrying in {updateInterval / 1000} seconds...
+            </div>
+        );
 
     return (
         <div className="widget">
             <h2 className="widget-header">{title}</h2>
             <div className="widget-content">
                 {render(data)}
+                <div className="timer-container">
+                    <CountdownCircleTimer
+                        key={fetchTrigger} // Reset the timer when fetchTrigger changes
+                        isPlaying
+                        duration={updateInterval / 1000}
+                        colors={["#000", "#000", "#000", "#000"]}
+                        colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
+                        strokeWidth={15}
+                    >
+                        {({ remainingTime }) => ''}
+                    </CountdownCircleTimer>
+                </div>
             </div>
         </div>
     );

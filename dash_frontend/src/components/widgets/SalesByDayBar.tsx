@@ -85,7 +85,7 @@ export default function SalesByDayBar() {
                     sort: ["period ASC"],
                 }}
                 title="Sales by Day"
-                updateInterval={60000}
+                updateInterval={6000}
                 render={(data: SalesData[]) => {
                     const rangeStart = new Date();
                     rangeStart.setDate(rangeStart.getDate() - 14); // Start of the 14-day range

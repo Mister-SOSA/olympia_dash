@@ -211,3 +211,21 @@ tbody > tr:nth-child(odd) {
   align-items: center;
   padding: 5rem;
 }
+
+.timer-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.timer-container > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: end;
+  padding: 0.5rem;
+}
+
+.timer-container > div > svg {
+  height: 1rem;
+  width: 1rem;
+}
