@@ -57,6 +57,7 @@ export interface POItemData {
     recent_date_orderd: string | null; // Recent date ordered (nullable)
     last_order_date: string | null; // Last order date (nullable)
     last_order_unit_price: number | null; // Last order unit price (nullable)
+    po_status: string; // Purchase order status
 }
 
 export interface POItemTableData {
@@ -70,4 +71,5 @@ export interface POItemTableData {
     userPromisedDate: string; // "N/A" or formatted date as string
     recentUnitPrice: string; // Formatted unit price as string
     lastOrderDate: string; // "N/A" or formatted date as string
+    POStatus: string; // Purchase order status
 }

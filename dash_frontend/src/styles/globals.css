@@ -192,9 +192,13 @@ th {
 }
 
 tbody > tr:nth-child(odd) {
-  background-color: var(--background-highlight) !important;
+  background-color: var(--background-highlight);
 }
 
 ::-webkit-scrollbar {
     display: none;
+}
+
+.cancelled-po {
+  background-color: var(--error-light) !important;
 }

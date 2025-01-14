@@ -9,6 +9,15 @@ import { parseISO, format } from "date-fns";
 /* 📊 Outstanding Orders Table Component  */
 /* -------------------------------------- */
 
+const statusCodes: { [key: string]: string } = {
+    '20': 'X', // Cancelled
+    '10': 'E', // Entered
+    '12': 'R', // Released
+    '14': 'V', // Received from Vendor
+    '16': 'C', // Closed
+    '18': 'I', // Vendor Invoice Received
+}
+
 export default function OutstandingOrdersTable() {
     const hiddenVendorCodes = config.HIDDEN_OUTSTANDING_VENDOR_CODES.map((code) => `'${code}'`).join(", ");
 
@@ -81,10 +90,10 @@ RecentOrders AS (
         date_orderd >= DATEADD(DAY, -10, GETDATE())
         AND date_rcv IS NULL
         AND vend_prom_date < DATEADD(DAY, -1, GETDATE())
-        AND date_prom_user IN ('tomsta', 'purcha')
 )
 SELECT
     ro.po_number,
+    ph.po_status, -- Fetch po_status from pohead
     ro.vend_code,
     ro.vend_name,
     ro.part_code,
@@ -98,6 +107,8 @@ SELECT
     lo.last_order_unit_price
 FROM
     RecentOrders ro
+LEFT JOIN
+    pohead ph ON ro.po_number = ph.po_number -- Join with pohead table
 OUTER APPLY (
     SELECT TOP 1
         p2.date_orderd AS last_order_date,
@@ -119,6 +130,7 @@ ORDER BY
                 render={(data: POItemData[]) => {
                     const tableData = data.map((item) => ({
                         poNumber: item.po_number,
+                        poStatus: item.po_status, // New Column
                         vendName: item.vend_name,
                         partCode: item.part_code,
                         partDescription: item.part_desc,
@@ -157,24 +169,29 @@ ORDER BY
 
                     return (
                         <ScrollArea className="h-[95%] rounded-md border mt-2">
-                            <Table className="text-left text-white outstanding-orders-table" wrapperClassName="overflow-clip">
+                            <Table className="text-left text-white outstanding-orders-table text-[1rem]" wrapperClassName="overflow-clip">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>PO Number</TableHead>
-                                        <TableHead>Vendor Name</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Vendor</TableHead>
                                         <TableHead>Part Code</TableHead>
-                                        <TableHead>Unit Price (Recent)</TableHead>
+                                        <TableHead>Unit Price</TableHead>
                                         <TableHead>Date Ordered</TableHead>
                                         <TableHead>Vendor Promise Date</TableHead>
-                                        <TableHead>Last Order Date</TableHead>
-                                        <TableHead>Unit Price (Last Order)</TableHead>
+                                        <TableHead>Prev. Order Date</TableHead>
+                                        <TableHead>Prev. Unit Price</TableHead>
                                         <TableHead>Ordered By</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {tableData.map((row, index) => (
-                                        <TableRow key={index}>
+                                        <TableRow
+                                            key={index}
+                                            className={statusCodes[row.poStatus] === 'X' ? 'cancelled-po' : ''}
+                                        >
                                             <TableCell>{row.poNumber}</TableCell>
+                                            <TableCell className='font-black'>{statusCodes[row.poStatus] || 'N/A'}</TableCell>
                                             <TableCell>{row.vendName}</TableCell>
                                             <TableCell>{row.partCode}</TableCell>
                                             <TableCell>{row.recentUnitPrice}</TableCell>
