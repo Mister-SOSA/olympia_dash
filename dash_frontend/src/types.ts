@@ -47,6 +47,7 @@ export type Widget = {
 export interface POItemData {
     po_number: string; // Purchase order number
     vend_name: string; // Vendor name
+    vend_code: string; // Vendor code
     part_code: string; // Code of the part
     part_desc: string; // Description of the part
     unit_price: number; // Unit price
@@ -58,11 +59,13 @@ export interface POItemData {
     last_order_date: string | null; // Last order date (nullable)
     last_order_unit_price: number | null; // Last order unit price (nullable)
     po_status: string; // Purchase order status
+    isGrouped: boolean; // Whether the row is a grouped row
 }
 
 export interface POItemTableData {
     poNumber: string;
     vendName: string;
+    vendCode: string;
     partCode: string;
     partDescription: string;
     unitPrice: number;
@@ -72,4 +75,5 @@ export interface POItemTableData {
     recentUnitPrice: string; // Formatted unit price as string
     lastOrderDate: string; // "N/A" or formatted date as string
     POStatus: string; // Purchase order status
+    isGrouped: boolean; // Whether the row is a grouped row
 }

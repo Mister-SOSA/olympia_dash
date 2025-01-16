@@ -17,6 +17,7 @@
     --text-secondary: #B0B0B0;
     --text-muted: #757575;
     --success: #4CAF50;
+    --success-light: rgba(76, 175, 80, 0.2);
     --warning: #FFC107;
     --error: #F44336;
     --error-light: rgba(244, 67, 54, 0.4);
