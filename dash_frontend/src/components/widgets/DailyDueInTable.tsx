@@ -84,7 +84,7 @@ RecentOrders AS (
     WHERE
         date_orderd >= DATEADD(DAY, -10, GETDATE() + 1)
         AND date_rcv IS NULL
-        AND CAST(vend_prom_date AS DATE) = CAST(GETDATE() + 1 AS DATE) -- Only orders promised for today
+        AND CAST(vend_prom_date AS DATE) = CAST(GETDATE() AS DATE) -- Only orders promised for today
 )
 SELECT
     ro.po_number,
@@ -174,8 +174,8 @@ ORDER BY
                                         <TableHead>Unit Price</TableHead>
                                         <TableHead>Date Ordered</TableHead>
                                         <TableHead>Vendor Promise Date</TableHead>
-                                        <TableHead>Prev. Order Date</TableHead>
                                         <TableHead>Prev. Unit Price</TableHead>
+                                        <TableHead>Prev. Order Date</TableHead>
                                         <TableHead>Ordered By</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -192,8 +192,8 @@ ORDER BY
                                             <TableCell>{row.recentUnitPrice}</TableCell>
                                             <TableCell>{row.dateOrdered}</TableCell>
                                             <TableCell>{row.vendorPromiseDate}</TableCell>
-                                            <TableCell>{row.lastOrderDate}</TableCell>
                                             <TableCell>{row.lastOrderUnitPrice}</TableCell>
+                                            <TableCell>{row.lastOrderDate}</TableCell>
                                             <TableCell>{row.userOrdered}</TableCell>
                                         </TableRow>
                                     ))}
