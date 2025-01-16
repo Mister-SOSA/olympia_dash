@@ -199,7 +199,7 @@ export default function Overview() {
                     period ASC;
             `,
             }}
-            title="Overview"
+            title=""
             updateInterval={300000}
             render={(data: SalesData[]) => <OverviewWidget data={data} />}
         />
