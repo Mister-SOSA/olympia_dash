@@ -83,8 +83,7 @@ RecentOrders AS (
         FilteredOrders
     WHERE
         date_orderd >= DATEADD(DAY, -10, GETDATE() + 1)
-        AND date_rcv IS NULL
-        AND CAST(vend_prom_date AS DATE) = CAST(GETDATE() AS DATE) -- Only orders promised for today
+        AND CAST(vend_prom_date AS DATE) = CAST(GETDATE() AS DATE) -- Include all orders promised for today
 )
 SELECT
     ro.po_number,

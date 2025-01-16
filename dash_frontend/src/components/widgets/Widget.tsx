@@ -95,7 +95,7 @@ export default function Widget({
                             duration={updateInterval / 1000}
                             colors={["#000", "#000", "#000", "#000"]}
                             colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
-                            strokeWidth={15}
+                            strokeWidth={25}
                         >
                             {({ remainingTime }) => ''}
                         </CountdownCircleTimer>
