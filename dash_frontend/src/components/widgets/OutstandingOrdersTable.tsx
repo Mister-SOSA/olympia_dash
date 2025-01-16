@@ -122,7 +122,8 @@ OUTER APPLY (
         p2.date_orderd DESC
 ) lo
 ORDER BY
-    ro.vend_prom_date ASC;
+    ro.po_number ASC, -- Group items by po_number
+    ro.vend_prom_date ASC; -- Sort within groups by vend_prom_date
                     `,
                 }}
                 title="Outstanding Due In"
