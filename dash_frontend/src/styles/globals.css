@@ -221,6 +221,13 @@ tbody>tr:nth-child(odd) {
   position: absolute;
   top: 0;
   right: 0;
+  height: 2rem;
+  width: 2rem;
+}
+
+.timer-container>* {
+  height: 2rem !important;
+  width: 2rem !important;
 }
 
 .timer-container>div {
@@ -228,6 +235,9 @@ tbody>tr:nth-child(odd) {
   align-items: baseline;
   justify-content: end;
   padding: 0.5rem;
+  height: 2rem;
+  width: 2rem;
+  position: absolute;
 }
 
 .timer-container>div>svg {
