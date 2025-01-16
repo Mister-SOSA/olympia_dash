@@ -117,7 +117,8 @@ OUTER APPLY (
         p2.date_orderd DESC
 ) lo
 ORDER BY
-    ro.vend_prom_date ASC;
+    ro.po_number ASC, -- Ensure items with the same po_number are grouped
+    ro.vend_prom_date ASC; -- Additional sorting within the same po_number group
                     `,
                 }}
                 title="Daily Due In"
