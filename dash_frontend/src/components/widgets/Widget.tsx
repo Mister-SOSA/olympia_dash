@@ -87,18 +87,20 @@ export default function Widget({
             <h2 className="widget-header">{title}</h2>
             <div className="widget-content">
                 {render(data)}
-                <div className="timer-container">
-                    <CountdownCircleTimer
-                        key={fetchTrigger} // Reset the timer when fetchTrigger changes
-                        isPlaying
-                        duration={updateInterval / 1000}
-                        colors={["#000", "#000", "#000", "#000"]}
-                        colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
-                        strokeWidth={15}
-                    >
-                        {({ remainingTime }) => ''}
-                    </CountdownCircleTimer>
-                </div>
+                {apiEndpoint && ( // Conditionally render the countdown timer only if apiEndpoint is truthy
+                    <div className="timer-container absolute">
+                        <CountdownCircleTimer
+                            key={fetchTrigger} // Reset the timer when fetchTrigger changes
+                            isPlaying
+                            duration={updateInterval / 1000}
+                            colors={["#000", "#000", "#000", "#000"]}
+                            colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
+                            strokeWidth={15}
+                        >
+                            {({ remainingTime }) => ''}
+                        </CountdownCircleTimer>
+                    </div>
+                )}
             </div>
         </div>
     );
