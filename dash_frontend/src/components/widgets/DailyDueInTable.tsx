@@ -187,7 +187,7 @@ export default function DailyDueInTable() {
 
                     return (
                         <ScrollArea className="h-[95%] rounded-md border mt-2">
-                            <Table className="text-left text-white outstanding-orders-table text-[1rem]" wrapperClassName="overflow-clip">
+                            <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>PO Number</TableHead>
