@@ -8,8 +8,8 @@ app = Flask(__name__)
 # Enable CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# disable logging
+logging.basicConfig(level=logging.ERROR)
 
 @app.route('/api/widgets', methods=['POST'])
 def get_widgets_post():
