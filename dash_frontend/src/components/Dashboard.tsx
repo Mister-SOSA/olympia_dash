@@ -61,7 +61,7 @@ export default function Dashboard() {
             <GridDashboard
                 ref={gridDashboardRef}
                 layout={layout}
-                onLayoutChange={setLayout}
+                onExternalLayoutChange={setLayout}
             />
         </div>
     );
