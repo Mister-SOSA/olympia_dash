@@ -34,15 +34,14 @@ export interface CustomerData extends BaseData {
     color: string;        // Display color for charts
 }
 
-export type Widget = {
+export interface Widget {
     id: string;
     x: number;
     y: number;
     w: number;
     h: number;
     enabled: boolean;
-};
-
+}
 // Type for the raw data returned from the API
 export interface POItemData {
     po_number: string; // Purchase order number
