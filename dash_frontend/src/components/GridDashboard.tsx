@@ -6,7 +6,7 @@ import React, {
     useImperativeHandle,
     forwardRef,
 } from "react";
-import { GridStack, GridStackNode } from "gridstack";
+import { GridStack, GridStackNode, GridItemHTMLElement } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot } from "react-dom/client";
 import { Widget } from "@/types";
@@ -138,33 +138,74 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // Handle external layout changes.
         useEffect(() => {
-            const externalIds = layout.map((w) => w.id).join("-");
-            const internalIds = layoutRef.current.map((w) => w.id).join("-");
-            if (externalIds !== internalIds && gridInstance.current) {
-                gridInstance.current.removeAll();
-                layoutRef.current = layout;
-                const grid = gridInstance.current;
-                layout
-                    .filter((widget) => widget.enabled)
-                    .forEach((widget) => {
-                        const el = grid.addWidget({
+            if (!gridInstance.current) return;
+            const grid = gridInstance.current;
+
+            // Only consider enabled widgets for rendering.
+            const newWidgets = layout.filter((w) => w.enabled);
+            const oldWidgets = layoutRef.current.filter((w) => w.enabled);
+
+            // Build sets of widget IDs for easy comparison.
+            const newIds = new Set(newWidgets.map((w) => w.id));
+            const oldIds = new Set(oldWidgets.map((w) => w.id));
+
+            // --- 1. Remove widgets that are no longer enabled ---
+            const widgetsToRemove = oldWidgets.filter((w) => !newIds.has(w.id));
+            widgetsToRemove.forEach((widget) => {
+                // GridStack adds an attribute (typically `gs-id`) to each widget element.
+                const element = grid.el.querySelector(
+                    `[gs-id="${widget.id}"]`
+                ) as GridItemHTMLElement | null;
+                if (element) {
+                    // Pass true to fully remove the element from the DOM.
+                    grid.removeWidget(element, true);
+                }
+            });
+
+            // --- 2. Add new widgets that weren’t present before ---
+            const widgetsToAdd = newWidgets.filter((w) => !oldIds.has(w.id));
+            widgetsToAdd.forEach((widget) => {
+                const el = grid.addWidget({
+                    x: widget.x,
+                    y: widget.y,
+                    w: widget.w,
+                    h: widget.h,
+                    id: widget.id,
+                    content: '<div class="grid-stack-item-content"></div>',
+                });
+                const contentDiv = el.querySelector(".grid-stack-item-content");
+                if (contentDiv) {
+                    const WidgetComponent = widgetMap[widget.id];
+                    if (WidgetComponent) {
+                        const root = createRoot(contentDiv);
+                        root.render(<WidgetComponent />);
+                    }
+                }
+            });
+
+            // --- 3. Update existing widgets if their position/size has changed ---
+            const widgetsToUpdate = newWidgets.filter((w) => oldIds.has(w.id));
+            widgetsToUpdate.forEach((widget) => {
+                const node = grid.engine.nodes.find((n) => n.id === widget.id);
+                if (node) {
+                    if (
+                        node.x !== widget.x ||
+                        node.y !== widget.y ||
+                        node.w !== widget.w ||
+                        node.h !== widget.h
+                    ) {
+                        grid.update(widget.id, {
                             x: widget.x,
                             y: widget.y,
                             w: widget.w,
                             h: widget.h,
-                            id: widget.id,
-                            content: '<div class="grid-stack-item-content"></div>',
                         });
-                        const contentDiv = el.querySelector(".grid-stack-item-content");
-                        if (contentDiv) {
-                            const WidgetComponent = widgetMap[widget.id];
-                            if (WidgetComponent) {
-                                const root = createRoot(contentDiv);
-                                root.render(<WidgetComponent />);
-                            }
-                        }
-                    });
-            }
+                    }
+                }
+            });
+
+            // Finally, update our internal layout reference.
+            layoutRef.current = layout;
         }, [layout]);
 
         return <div ref={gridRef} className="grid-stack"></div>;
