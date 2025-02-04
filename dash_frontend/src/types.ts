@@ -59,6 +59,8 @@ export interface POItemData {
     last_order_unit_price: number | null; // Last order unit price (nullable)
     po_status: string; // Purchase order status
     isGrouped: boolean; // Whether the row is a grouped row
+    item_no: number; // Item number
+    date_rcv: string | null; // Date received (nullable)
 }
 
 export interface POItemTableData {

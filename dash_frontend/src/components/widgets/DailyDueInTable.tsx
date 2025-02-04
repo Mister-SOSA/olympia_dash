@@ -2,7 +2,14 @@ import React, { useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 
@@ -11,141 +18,103 @@ import { format } from "date-fns";
 /* -------------------------------------- */
 
 const statusCodes: { [key: string]: string } = {
-    '20': 'X', // Cancelled
-    '10': 'E', // Entered
-    '12': 'R', // Released
-    '14': 'V', // Received from Vendor
-    '16': 'C', // Closed
-    '18': 'I', // Vendor Invoice Received
+    "20": "X", // Cancelled
+    "10": "E", // Entered
+    "12": "R", // Released
+    "14": "V", // Received from Vendor
+    "16": "C", // Closed
+    "18": "I", // Vendor Invoice Received
 };
 
 export default function DailyDueInTable() {
-    // Memoize the payload so its reference remains stable.
+    // Use a simplified SQL query that returns bulk data without heavy processing.
+    // This query pulls all poitem rows (joined to pohead for status) that fall in the desired date ranges.
     const widgetPayload = useMemo(
         () => ({
             raw_query: `
-        WITH AdjustedOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price,
-                date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                date_rcv,
-                item_no,
-                part_type,
-                ROW_NUMBER() OVER (
-                    PARTITION BY po_number, item_no
-                    ORDER BY
-                        CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END,
-                        date_rcv DESC
-                ) AS row_num
-            FROM
-                poitem
-        ),
-        FilteredOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price,
-                date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                date_rcv,
-                item_no,
-                part_type
-            FROM
-                AdjustedOrders
-            WHERE
-                row_num = 1
-        ),
-        RecentOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price AS recent_unit_price,
-                date_orderd AS recent_date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                part_type
-            FROM
-                FilteredOrders
-            WHERE
-                date_orderd >= DATEADD(DAY, -10, GETDATE() + 1)
-                AND CAST(vend_prom_date AS DATE) = CAST(GETDATE() AS DATE)
-        )
         SELECT
-            ro.po_number,
-            ph.po_status,
-            ro.vend_code,
-            ro.vend_name,
-            ro.part_code,
-            ro.part_desc,
-            ro.recent_unit_price,
-            ro.recent_date_orderd,
-            ro.vend_prom_date,
-            ro.date_prom_user,
-            ro.part_type,
-            lo.last_order_date,
-            lo.last_order_unit_price
-        FROM
-            RecentOrders ro
-        LEFT JOIN
-            pohead ph ON ro.po_number = ph.po_number
-        OUTER APPLY (
-            SELECT TOP 1
-                p2.date_orderd AS last_order_date,
-                p2.unit_price AS last_order_unit_price
-            FROM
-                FilteredOrders p2
-            WHERE
-                p2.part_code = ro.part_code
-                AND p2.date_orderd < ro.recent_date_orderd
-            ORDER BY
-                p2.date_orderd DESC
-        ) lo
-        ORDER BY
-            ro.po_number ASC,
-            ro.vend_prom_date ASC;
+          p.po_number,
+          p.vend_code,
+          p.vend_name,
+          p.part_code,
+          p.part_desc,
+          p.unit_price,
+          p.date_orderd,
+          p.vend_prom_date,
+          p.date_prom_user,
+          p.date_rcv,
+          p.item_no,
+          p.part_type,
+          ph.po_status
+        FROM poitem p
+        LEFT JOIN pohead ph ON p.po_number = ph.po_number
+        WHERE
+          p.date_orderd >= DATEADD(DAY, -10, DATEADD(DAY, 1, GETDATE()))
+          AND p.vend_prom_date >= CAST(GETDATE() AS DATE)
+          AND p.vend_prom_date < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))
+        ORDER BY p.po_number ASC, p.vend_prom_date ASC;
       `,
         }),
         []
     );
 
-    // Wrap the render function so that its reference is stable.
+    // Wrap the render function so that its reference remains stable.
+    // Here we perform grouping and selection to mimic the SQL window function.
     const renderFunction = useCallback((data: POItemData[]) => {
-        // Group and process data
-        const mergedData = data.reduce((acc: POItemData[], item: POItemData) => {
-            const isHiddenVendor = config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code);
-            if (isHiddenVendor) {
-                const existingEntry = acc.find(
-                    (entry) => entry.po_number === item.po_number && entry.vend_code === item.vend_code
-                );
-                if (existingEntry) {
-                    existingEntry.part_desc += `, ${item.part_desc}`;
-                    existingEntry.recent_unit_price =
-                        (existingEntry.recent_unit_price + item.recent_unit_price) / 2; // Average price
-                    existingEntry.isGrouped = true; // Mark as grouped
-                } else {
-                    acc.push({ ...item, isGrouped: true }); // Mark as grouped
-                }
-            } else {
-                acc.push({ ...item, isGrouped: false }); // Not grouped
+        // Group rows by a unique key (po_number + "_" + item_no)
+        const groups = new Map<string, POItemData[]>();
+        data.forEach((row) => {
+            const key = `${row.po_number}_${row.item_no}`;
+            if (!groups.has(key)) {
+                groups.set(key, []);
             }
-            return acc;
-        }, []);
+            groups.get(key)!.push(row);
+        });
 
-        // Map merged data to table rows
+        // For each group, select the best row per the SQL ordering:
+        // ORDER BY CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END, date_rcv DESC
+        // If the chosen row's vend_code is in the hidden list, merge all rows in the group.
+        const mergedData: POItemData[] = [];
+        groups.forEach((group) => {
+            // Sort the group according to the criteria:
+            // - Rows with non-null date_rcv come first (we treat them as having rank 1, null as rank 2)
+            // - Within the same rank, choose the row with the later date_rcv.
+            const sortedGroup = group.sort((a, b) => {
+                const aRank = a.date_rcv ? 1 : 2;
+                const bRank = b.date_rcv ? 1 : 2;
+                if (aRank !== bRank) {
+                    return aRank - bRank;
+                }
+                // Both are same rank; if dates exist, compare descending
+                if (a.date_rcv && b.date_rcv) {
+                    return new Date(b.date_rcv).getTime() - new Date(a.date_rcv).getTime();
+                }
+                return 0;
+            });
+            // The first row is our candidate
+            let best = { ...sortedGroup[0] };
+
+            // If the best row is from a hidden vendor, merge all rows in the group.
+            if (config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(best.vend_code)) {
+                let mergedPartDesc = best.part_desc;
+                let totalPrice = best.unit_price;
+                let count = 1;
+                sortedGroup.slice(1).forEach((row) => {
+                    mergedPartDesc += `, ${row.part_desc}`;
+                    totalPrice += row.unit_price;
+                    count++;
+                });
+                best.part_desc = mergedPartDesc;
+                best.unit_price = totalPrice / count;
+                best.isGrouped = true;
+            } else {
+                // Otherwise, keep the best row as selected by the ordering.
+                best.isGrouped = false;
+            }
+            mergedData.push(best);
+        });
+
+        // Map merged data to table row data
         const tableData = mergedData.map((item) => ({
             isGrouped: item.isGrouped,
             poNumber: item.po_number,
@@ -156,22 +125,34 @@ export default function DailyDueInTable() {
             recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
                 minimumFractionDigits: 4,
                 maximumFractionDigits: 4,
-            }).format(item.recent_unit_price)}`,
-            dateOrdered: item.recent_date_orderd
+            }).format(item.unit_price)}`,
+            dateOrdered: item.date_orderd
                 ? format(
-                    new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1)),
+                    new Date(
+                        new Date(item.date_orderd).setDate(
+                            new Date(item.date_orderd).getDate() + 1
+                        )
+                    ),
                     "MMM d, yyyy"
                 )
                 : "N/A",
             vendorPromiseDate: item.vend_prom_date
                 ? format(
-                    new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1)),
+                    new Date(
+                        new Date(item.vend_prom_date).setDate(
+                            new Date(item.vend_prom_date).getDate() + 1
+                        )
+                    ),
                     "MMM d, yyyy"
                 )
                 : "N/A",
             lastOrderDate: item.last_order_date
                 ? format(
-                    new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)),
+                    new Date(
+                        new Date(item.last_order_date).setDate(
+                            new Date(item.last_order_date).getDate() + 1
+                        )
+                    ),
                     "MMM d, yyyy"
                 )
                 : "N/A",
@@ -188,7 +169,10 @@ export default function DailyDueInTable() {
 
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
-                <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
+                <Table
+                    className="text-left text-white outstanding-orders-table text-[.95rem]"
+                    wrapperClassName="overflow-clip"
+                >
                     <TableHeader>
                         <TableRow>
                             <TableHead>PO Number</TableHead>
@@ -207,8 +191,8 @@ export default function DailyDueInTable() {
                         {tableData.map((row, index) => (
                             <TableRow
                                 key={index}
-                                className={`${statusCodes[row.poStatus] === 'X' ? 'cancelled-po' : ''} ${row.isGrouped ? 'grouped-po' : ''
-                                    } ${statusCodes[row.poStatus] === 'V' ? 'received-po' : ''}`}
+                                className={`${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} ${row.isGrouped ? "grouped-po" : ""
+                                    } ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}`}
                             >
                                 <TableCell>
                                     {row.poNumber}
@@ -221,7 +205,9 @@ export default function DailyDueInTable() {
                                         </span>
                                     )}
                                 </TableCell>
-                                <TableCell className="font-black">{statusCodes[row.poStatus] || 'N/A'}</TableCell>
+                                <TableCell className="font-black">
+                                    {statusCodes[row.poStatus] || "N/A"}
+                                </TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell>{row.recentUnitPrice}</TableCell>
