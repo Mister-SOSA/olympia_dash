@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -9,7 +9,6 @@ import { SalesData, ProcessedSalesData } from "@/types";
 /* -------------------------------------- */
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
-
 const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
     if (!data || data.length === 0) {
         return <div>No Data Available</div>;
@@ -18,16 +17,10 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
     return (
         <ResponsiveContainer width="100%" height="100%">
             <ChartContainer config={{}}>
-                <BarChart
-                    accessibilityLayer
-                    data={data}
-                    margin={{ top: 30 }}
-                    className="last-blinking"
-                >
+                <BarChart data={data} margin={{ top: 30 }} className="last-blinking">
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
                     <XAxis dataKey="periodLabel" tickLine={false} tickMargin={10} axisLine={false} />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-
                     <Bar
                         dataKey="previousPeriodSales"
                         fill="var(--chart-1)"
@@ -43,7 +36,6 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
                             formatter={(value: number) => `$${nFormatter(value, 2)}`}
                         />
                     </Bar>
-
                     <Bar
                         dataKey="currentPeriodSales"
                         fill="var(--chart-bar)"
@@ -67,22 +59,19 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
 };
 
 /* -------------------------------------- */
-/* 📊 Sales6MoVsLastYear Component        */
+/* 📊 SalesByMonthComparisonBar Component */
 /* -------------------------------------- */
-
 export default function SalesByMonthComparisonBar() {
-    const [visibleMonths, setVisibleMonths] = useState(6); // Default to 6 months
+    const [visibleMonths, setVisibleMonths] = useState(6);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const { current, lastYear } = calculateDateRange(12, "monthly"); // Fetch 12 months for both years
+    // Calculate the date ranges only once.
+    const { current, lastYear } = useMemo(() => calculateDateRange(12, "monthly"), []);
 
     useEffect(() => {
-        // Dynamically adjust visibleMonths based on container width
         const resizeObserver = new ResizeObserver((entries) => {
             for (let entry of entries) {
                 const { width } = entry.contentRect;
-
-                // Adjust visibleMonths based on width
                 if (width >= 1200) setVisibleMonths(9);
                 else if (width >= 800) setVisibleMonths(6);
                 else if (width >= 400) setVisibleMonths(3);
@@ -101,29 +90,37 @@ export default function SalesByMonthComparisonBar() {
         };
     }, []);
 
+    const widgetPayload = useMemo(
+        () => ({
+            table: "sumsales",
+            columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
+            filters: `(
+        (sale_date >= '${current.start.toISOString().split("T")[0]}' AND sale_date <= '${current.end.toISOString().split("T")[0]}') 
+        OR (sale_date >= '${lastYear.start.toISOString().split("T")[0]}' AND sale_date <= '${lastYear.end.toISOString().split("T")[0]}')
+      )`,
+            group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
+            sort: ["period ASC", "year ASC"],
+        }),
+        [current, lastYear]
+    );
+
+    const renderSalesComparison = useCallback(
+        (data: SalesData[]) => {
+            const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
+            const chartData = prepareChartData(groupedData);
+            return <SalesChart data={chartData} />;
+        },
+        [current.periods, visibleMonths]
+    );
+
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
-                payload={{
-                    table: "sumsales",
-                    columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
-                    filters: `(
-                        (sale_date >= '${current.start.toISOString().split("T")[0]}' AND sale_date <= '${current.end.toISOString().split("T")[0]}') 
-                        OR (sale_date >= '${lastYear.start.toISOString().split("T")[0]}' AND sale_date <= '${lastYear.end.toISOString().split("T")[0]}')
-                    )`,
-                    group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
-                    sort: ["period ASC", "year ASC"],
-                }}
+                payload={widgetPayload}
                 title="Sales by Month (Comparison)"
                 updateInterval={300000}
-                render={(data: SalesData[]) => {
-                    // Process and prepare data
-                    const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
-                    const chartData = prepareChartData(groupedData);
-
-                    return <SalesChart data={chartData} />;
-                }}
+                render={renderSalesComparison}
             />
         </div>
     );

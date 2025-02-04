@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -47,13 +47,11 @@ export default function SalesByDayBar() {
     const [visibleDays, setVisibleDays] = useState(10); // Default to 10 days
     const containerRef = useRef<HTMLDivElement>(null);
 
+    // Adjust visibleDays based on container width
     useEffect(() => {
-        // Dynamically adjust visibleDays based on container width
         const resizeObserver = new ResizeObserver((entries) => {
             for (let entry of entries) {
                 const { width } = entry.contentRect;
-
-                // Dynamically adjust visibleDays based on width
                 if (width >= 1200) setVisibleDays(21);
                 else if (width >= 800) setVisibleDays(14);
                 else if (width >= 600) setVisibleDays(7);
@@ -67,82 +65,88 @@ export default function SalesByDayBar() {
         }
 
         return () => {
-            if (containerRef.current) {
-                resizeObserver.disconnect();
-            }
+            resizeObserver.disconnect();
         };
     }, []);
+
+    // Memoize the payload so its reference does not change on every render.
+    const widgetPayload = useMemo(
+        () => ({
+            raw_query: `
+                -- Fetch sales data for the last 3 days from orditem
+                SELECT 
+                    FORMAT(duedate, 'yyyy-MM-dd') AS period,
+                    SUM(ext_price) AS total
+                FROM 
+                    orditem
+                WHERE 
+                    duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+                    AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
+                    AND duedate <= GETDATE()
+                GROUP BY 
+                    FORMAT(duedate, 'yyyy-MM-dd')
+
+                UNION ALL
+
+                -- Fetch sales data older than 3 days but within 30 days from sumsales
+                SELECT 
+                    FORMAT(sale_date, 'yyyy-MM-dd') AS period,
+                    SUM(sales_dol) AS total
+                FROM 
+                    sumsales
+                WHERE 
+                    sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+                    AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
+                    AND sale_date <= GETDATE()
+                GROUP BY 
+                    FORMAT(sale_date, 'yyyy-MM-dd')
+
+                -- Combine and aggregate the data for consistent results
+                ORDER BY 
+                    period ASC;
+            `,
+        }),
+        []
+    );
+
+    // Memoize the render function to prevent unnecessary re-creations.
+    const renderSalesData = useCallback((data: SalesData[]) => {
+        const rangeStart = new Date();
+        rangeStart.setDate(rangeStart.getDate() - 14); // Start of the 14-day range
+        const rangeEnd = new Date(); // Today
+
+        // Generate all dates in the range
+        const allDates: Date[] = [];
+        const currentDate = new Date(rangeStart);
+        while (currentDate <= rangeEnd) {
+            allDates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Create a complete dataset with zero sales for missing days
+        const chartData = allDates.map((date) => {
+            const formattedDate = format(date, "yyyy-MM-dd");
+            const entry = data.find((item) => item.period === formattedDate);
+            const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`;
+            return {
+                period: formattedDate,
+                periodLabel: formattedLabel,
+                currentPeriodSales: entry?.total || 0,
+                previousPeriodSales: 0, // Default value for previousPeriodSales
+            };
+        });
+
+        return <SalesChart data={chartData.slice(-visibleDays)} />;
+    }, [visibleDays]);
 
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
-                payload={{
-                    raw_query: `
-                    -- Fetch sales data for the last 3 days from orditem
-                    SELECT 
-                        FORMAT(duedate, 'yyyy-MM-dd') AS period,
-                        SUM(ext_price) AS total
-                    FROM 
-                        orditem
-                    WHERE 
-                        duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-                        AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
-                        AND duedate <= GETDATE()
-                    GROUP BY 
-                        FORMAT(duedate, 'yyyy-MM-dd')
-
-                    UNION ALL
-
-                    -- Fetch sales data older than 3 days but within 30 days from sumsales
-                    SELECT 
-                        FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-                        SUM(sales_dol) AS total
-                    FROM 
-                        sumsales
-                    WHERE 
-                        sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-                        AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
-                        AND sale_date <= GETDATE()
-                    GROUP BY 
-                        FORMAT(sale_date, 'yyyy-MM-dd')
-
-                    -- Combine and aggregate the data for consistent results
-                    ORDER BY 
-                        period ASC;
-                `,
-                }}
+                payload={widgetPayload}
                 title="Sales by Day"
                 updateInterval={60000}
-                render={(data: SalesData[]) => {
-                    const rangeStart = new Date();
-                    rangeStart.setDate(rangeStart.getDate() - 14); // Start of the 14-day range
-                    const rangeEnd = new Date(); // Today
-
-                    // Generate all dates in the range
-                    const allDates = [];
-                    for (let d = rangeStart; d <= rangeEnd; d.setDate(d.getDate() + 1)) {
-                        allDates.push(new Date(d));
-                    }
-
-                    // Create a complete dataset with zero sales for missing days
-                    const chartData = allDates.map((date) => {
-                        const formattedDate = format(date, "yyyy-MM-dd");
-                        const entry = data.find((item) => item.period === formattedDate);
-                        const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`; // Format: Sun (Jan 1)
-
-                        return {
-                            period: formattedDate,
-                            periodLabel: formattedLabel,
-                            currentPeriodSales: entry?.total || 0,
-                            previousPeriodSales: 0, // Add a default value for previousPeriodSales
-                        };
-                    });
-
-                    console.log(chartData);
-
-                    return <SalesChart data={chartData.slice(-visibleDays)} />;
-                }}
+                render={renderSalesData}
             />
         </div>
     );

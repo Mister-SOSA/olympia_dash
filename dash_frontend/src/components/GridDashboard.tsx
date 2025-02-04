@@ -15,7 +15,7 @@ import { saveLayoutToStorage, validateLayout } from "@/utils/layoutUtils";
 import widgetMap from "@/components/widgets/widgetMap";
 
 export interface GridDashboardProps {
-    // Layout passed down from Dashboard (live layout).
+    // Live layout passed down from Dashboard.
     layout: Widget[];
     // Callback for external layout updates.
     onExternalLayoutChange?: (layout: Widget[]) => void;
@@ -32,29 +32,53 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Internal layout reference to avoid unnecessary re-renders.
         const layoutRef = useRef<Widget[]>(layout);
 
-        // Expose a "compact" method to the parent via ref.
+        // Helper function to compare two layouts.
+        const layoutsEqual = (layout1: Widget[], layout2: Widget[]): boolean => {
+            if (layout1.length !== layout2.length) return false;
+            return layout1.every((w1) => {
+                const w2 = layout2.find((w) => w.id === w1.id);
+                return (
+                    !!w2 &&
+                    w1.x === w2.x &&
+                    w1.y === w2.y &&
+                    w1.w === w2.w &&
+                    w1.h === w2.h
+                );
+            });
+        };
+
+        // Expose the "compact" method to the parent.
         useImperativeHandle(ref, () => ({
             compact: () => {
                 if (gridInstance.current) {
                     gridInstance.current.compact();
-                    const updatedLayout = (gridInstance.current.save(false) as GridStackNode[]).map((node) => ({
-                        id: node.id as string,
-                        x: node.x ?? 0,
-                        y: node.y ?? 0,
-                        w: node.w ?? 1,
-                        h: node.h ?? 1,
-                        enabled: layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
-                    }));
+                    // Save the new positions.
+                    const updatedLayout = (gridInstance.current.save(false) as GridStackNode[]).map(
+                        (node) => ({
+                            id: node.id as string,
+                            x: node.x ?? 0,
+                            y: node.y ?? 0,
+                            w: node.w ?? 1,
+                            h: node.h ?? 1,
+                            // Preserve the enabled flag from our internal layout.
+                            enabled:
+                                layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
+                        })
+                    );
                     const validated = validateLayout(updatedLayout, COLUMN_COUNT);
-                    layoutRef.current = validated;
-                    saveLayoutToStorage(validated);
-                    if (onExternalLayoutChange) {
-                        onExternalLayoutChange(validated);
+                    // Only update if the layout has actually changed.
+                    if (!layoutsEqual(validated, layoutRef.current)) {
+                        layoutRef.current = validated;
+                        saveLayoutToStorage(validated);
+                        if (onExternalLayoutChange) {
+                            onExternalLayoutChange(validated);
+                        }
                     }
                 }
             },
         }));
 
+        // Initialize GridStack.
         useEffect(() => {
             if (!gridRef.current || gridInstance.current) return;
 
@@ -98,7 +122,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     y: node.y ?? 0,
                     w: node.w ?? 1,
                     h: node.h ?? 1,
-                    enabled: layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
+                    enabled:
+                        layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
                 }));
                 const validated = validateLayout(updatedLayout, COLUMN_COUNT);
                 layoutRef.current = validated;
@@ -111,7 +136,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             };
         }, [layout, onExternalLayoutChange]);
 
-        // Listen for external layout changes (if provided).
+        // Handle external layout changes.
         useEffect(() => {
             const externalIds = layout.map((w) => w.id).join("-");
             const internalIds = layoutRef.current.map((w) => w.id).join("-");

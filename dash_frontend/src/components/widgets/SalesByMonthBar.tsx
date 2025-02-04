@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -9,7 +9,6 @@ import { SalesData, ProcessedSalesData } from "@/types";
 /* -------------------------------------- */
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
-
 const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
@@ -39,20 +38,16 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
 );
 
 /* -------------------------------------- */
-/* 📊 Sales6Mo Component                  */
+/* 📊 SalesByMonthBar Component           */
 /* -------------------------------------- */
-
 export default function SalesByMonthBar() {
-    const [visibleMonths, setVisibleMonths] = useState(6); // Default to 6 months
+    const [visibleMonths, setVisibleMonths] = useState(6);
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Dynamically adjust visibleMonths based on container width
         const resizeObserver = new ResizeObserver((entries) => {
             for (let entry of entries) {
                 const { width } = entry.contentRect;
-
-                // Dynamically adjust visibleMonths based on width
                 if (width >= 800) setVisibleMonths(12);
                 else if (width >= 600) setVisibleMonths(9);
                 else if (width >= 400) setVisibleMonths(6);
@@ -71,28 +66,38 @@ export default function SalesByMonthBar() {
         };
     }, []);
 
+    const widgetPayload = useMemo(
+        () => ({
+            table: "sumsales",
+            columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total"],
+            filters: `(sale_date >= DATEADD(MONTH, -12, GETDATE()) AND sale_date <= GETDATE())`,
+            group_by: ["FORMAT(sale_date, 'yyyy-MM')"],
+            sort: ["period ASC"],
+        }),
+        []
+    );
+
+    const renderSalesByMonth = useCallback(
+        (data: SalesData[]) => {
+            const chartData = data.slice(-visibleMonths).map((entry) => ({
+                period: entry.period,
+                periodLabel: entry.period.split("-").join(" "),
+                currentPeriodSales: entry.total || 0,
+                previousPeriodSales: 0,
+            }));
+            return <SalesChart data={chartData} />;
+        },
+        [visibleMonths]
+    );
+
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
-                payload={{
-                    table: "sumsales",
-                    columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total"],
-                    filters: `(sale_date >= DATEADD(MONTH, -12, GETDATE()) AND sale_date <= GETDATE())`,
-                    group_by: ["FORMAT(sale_date, 'yyyy-MM')"],
-                    sort: ["period ASC"],
-                }}
+                payload={widgetPayload}
                 title="Sales by Month"
                 updateInterval={300000}
-                render={(data: SalesData[]) => {
-                    const chartData = data.slice(-visibleMonths).map((entry) => ({
-                        period: entry.period,
-                        periodLabel: entry.period.split("-").join(" "),
-                        currentPeriodSales: entry.total || 0,
-                        previousPeriodSales: 0,
-                    }));
-                    return <SalesChart data={chartData} />;
-                }}
+                render={renderSalesByMonth}
             />
         </div>
     );
