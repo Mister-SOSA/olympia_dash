@@ -13,6 +13,8 @@ import {
 } from "@/utils/layoutUtils";
 import { COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
+import { Flip, toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Helper: deep-clone an object (using JSON serialization for simplicity)
 const deepClone = (obj: any) => JSON.parse(JSON.stringify(obj));
@@ -78,7 +80,10 @@ export default function Dashboard() {
     // Function to load a preset from presets state.
     const loadPreset = useCallback(
         (index: number) => {
-            if (!presets[index]) return;
+            if (!presets[index]) {
+                toast(`Dash ${index + 1} is empty`, { type: "error" });
+                return;
+            }
             // Deep clone the preset so that we have a fresh copy.
             const clonedPreset = deepClone(presets[index]!);
             // Merge with the full master list.
@@ -87,7 +92,7 @@ export default function Dashboard() {
             setLayout([...merged]);
             setTempLayout([...merged]);
             setPresetIndex(index);
-            console.log(`Loaded preset ${index + 1}`);
+            toast(`Loaded Dash ${index + 1}`, { type: "info" });
         },
         [presets]
     );
@@ -110,6 +115,7 @@ export default function Dashboard() {
             else if (e.key.toLowerCase() === "x") {
                 if (gridDashboardRef.current) {
                     gridDashboardRef.current.compact();
+                    toast("Dash Compacted!", { type: "warning" });
                 }
             }
             // Use e.code so that Shift+Digit still gives "DigitX".
@@ -126,7 +132,7 @@ export default function Dashboard() {
                             newPresets[index] = deepClone(liveLayout);
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
-                            console.log(`Saved preset ${index + 1}`);
+                            toast(`Saved Layout ${index + 1}`, { type: "success" });
                         }
                     }
                     // Otherwise, load the preset (if it exists)
@@ -184,6 +190,13 @@ export default function Dashboard() {
                 ref={gridDashboardRef}
                 layout={layout}
                 onExternalLayoutChange={setLayout} // For updates from GridDashboard.
+            />
+            <ToastContainer
+                position="bottom-center"
+                autoClose={3000}
+                pauseOnHover
+                theme="colored"
+                transition={Flip}
             />
         </div>
     );

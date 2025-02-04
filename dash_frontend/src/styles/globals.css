@@ -248,3 +248,14 @@ tbody>tr:nth-child(odd) {
   height: 1rem;
   width: 1rem;
 }
+
+.Toastify__toast-container {
+  font-size: 2rem;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 800;
+  width: 100% !important;
+}
+
+.Toastify__toast {
+  width: 25% !important;
+}
