@@ -193,7 +193,7 @@ export default function Dashboard() {
             />
             <ToastContainer
                 position="bottom-center"
-                autoClose={3000}
+                autoClose={1000}
                 pauseOnHover
                 theme="colored"
                 transition={Flip}
