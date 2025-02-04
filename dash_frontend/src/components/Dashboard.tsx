@@ -1,11 +1,6 @@
 "use client";
 
-import React, {
-    useEffect,
-    useState,
-    useCallback,
-    useRef,
-} from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import Menu from "./WidgetMenu";
 import { Widget } from "@/types";
@@ -32,7 +27,7 @@ const mergePreset = (preset: Widget[]): Widget[] =>
     });
 
 // Helper: Find the next available preset index given the current index and a direction.
-// direction should be +1 (arrow right) or -1 (arrow left). If no other preset is found,
+// Direction should be +1 (arrow right) or -1 (arrow left). If no other preset is found,
 // return the current index.
 const findNextPresetIndex = (
     presets: Array<Widget[] | null>,
@@ -40,7 +35,7 @@ const findNextPresetIndex = (
     direction: number
 ): number => {
     let newIndex = currentIndex;
-    // Try up to 9 steps (to cover all slots).
+    // Try up to presets.length steps (to cover all slots).
     for (let i = 0; i < presets.length; i++) {
         newIndex = (newIndex + direction + presets.length) % presets.length;
         if (presets[newIndex] != null) {
@@ -103,8 +98,13 @@ export default function Dashboard() {
             // Toggle widget menu with "F"
             if (e.key.toLowerCase() === "f") {
                 setMenuOpen((prev) => !prev);
-                // Always initialize the menu from a full copy of the current layout.
-                setTempLayout([...layout]);
+                // Instead of copying just the current layout, merge the master list with the current layout.
+                setTempLayout(
+                    masterWidgetList.map((widget) => {
+                        const existing = layout.find((w) => w.id === widget.id);
+                        return existing ? existing : { ...widget, enabled: false };
+                    })
+                );
             }
             // Compact grid with "X"
             else if (e.key.toLowerCase() === "x") {
@@ -151,7 +151,7 @@ export default function Dashboard() {
         [layout, presets, presetIndex, loadPreset]
     );
 
-    // Cast the handler to EventListener to satisfy the DOM type.
+    // Register the keydown handler.
     useEffect(() => {
         window.addEventListener("keydown", handleKeyDown as EventListener);
         return () => window.removeEventListener("keydown", handleKeyDown as EventListener);
