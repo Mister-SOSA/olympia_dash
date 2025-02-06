@@ -27,11 +27,11 @@ const DateContent: React.FC = () => {
             const { width } = entry.contentRect;
 
             // Adjust font size based on width
-            const newFontSize = `${Math.max(16, Math.floor(width / 10))}px`;
+            const newFontSize = `${Math.max(48, Math.floor(width / 11))}px`;
             setFontSize(newFontSize);
 
             // Adjust date format based on width
-            if (width > 500) {
+            if (width > 600) {
                 setDateFormat({ weekday: "long", month: "long", day: "numeric" });
             } else if (width > 300) {
                 setDateFormat({ weekday: "short", month: "long", day: "numeric" });
