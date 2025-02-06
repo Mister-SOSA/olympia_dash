@@ -1,7 +1,18 @@
-import React, { useMemo, useCallback } from "react";
+import React, {
+    useMemo,
+    useCallback,
+    useState,
+    useEffect,
+    useRef,
+} from "react";
 import Widget from "./Widget";
 import { PieChart, Pie, ResponsiveContainer, Cell } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend } from "@/components/ui/chart";
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+    ChartLegend,
+} from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
@@ -29,7 +40,13 @@ function transformData(data: CustomerData[]): CustomerData[] {
     data.forEach(({ businessName, totalSales }) => {
         const parentCompany = mapToParentCompany(businessName || "Unknown");
         if (!aggregated[parentCompany]) {
-            aggregated[parentCompany] = { id: parentCompany, timestamp: new Date(), businessName: parentCompany, totalSales: 0, color: "" };
+            aggregated[parentCompany] = {
+                id: parentCompany,
+                timestamp: new Date(),
+                businessName: parentCompany,
+                totalSales: 0,
+                color: "",
+            };
         }
         aggregated[parentCompany].totalSales += totalSales;
     });
@@ -75,9 +92,78 @@ function sortData(data: CustomerData[]): CustomerData[] {
 }
 
 /* -------------------------------------- */
+/* 🔎 Custom Hook for Container Orientation */
+/* -------------------------------------- */
+/**
+ * Measures the container’s dimensions and returns "portrait" if the container’s
+ * height is greater than or equal to its width, or "landscape" otherwise.
+ */
+function useContainerOrientation(
+    ref: React.RefObject<HTMLElement | null>
+): "portrait" | "landscape" {
+    const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
+
+    useEffect(() => {
+        if (!ref.current) return;
+        const updateOrientation = () => {
+            const rect = ref.current!.getBoundingClientRect();
+            setOrientation(rect.width / 1.1 > rect.height ? "landscape" : "portrait");
+        };
+
+        // Initial orientation update
+        updateOrientation();
+
+        // Create a ResizeObserver to watch for container size changes
+        const resizeObserver = new ResizeObserver(() => {
+            updateOrientation();
+        });
+        resizeObserver.observe(ref.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [ref]);
+
+    return orientation;
+}
+
+/* -------------------------------------- */
 /* 📊 CustomerTable Component             */
 /* -------------------------------------- */
+const renderCustomLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, value, fill } = props;
+    const RADIAN = Math.PI / 180;
+    const offset = 30; // How far away from the pie edge you want the label
+
+    // Compute label x and y based on the slice's mid angle and offset.
+    const x = cx + (outerRadius + offset) * Math.cos(-midAngle * RADIAN);
+    const y = cy + (outerRadius + offset) * Math.sin(-midAngle * RADIAN);
+
+    // If x is nearly equal to cx (for top and bottom labels), use "middle".
+    const epsilon = 10; // Adjust if necessary depending on your chart size
+    const textAnchor =
+        Math.abs(x - cx) < epsilon ? "middle" : x > cx ? "start" : "end";
+
+    return (
+        <text
+            x={x}
+            y={y}
+            fill={fill} // use the slice's color
+            fontSize="20"
+            textAnchor={textAnchor}
+            dominantBaseline="middle" // vertically centers the text
+        >
+            ${nFormatter(value, 1)}
+        </text>
+    );
+};
+
+
 const CustomerTable = ({ data }: { data: CustomerData[] }) => {
+    // Use a ref to measure the container’s dimensions.
+    const containerRef = useRef<HTMLDivElement>(null);
+    const orientation = useContainerOrientation(containerRef);
+
     const processedData = useMemo(() => {
         if (!data || data.length === 0) {
             console.warn("No data received for CustomerTable");
@@ -93,29 +179,39 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
         return <div>No data available for chart</div>;
     }
 
+    // Adjust legend props based on container orientation.
+    const legendProps =
+        orientation === "portrait"
+            ? ({ align: "center", layout: "horizontal", verticalAlign: "bottom" } as const)
+            : ({ align: "right", layout: "vertical", verticalAlign: "middle" } as const);
+
     return (
-        <ResponsiveContainer>
-            <ChartContainer config={{}} className="font-bold customer-pie">
-                <PieChart>
-                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                    <Pie
-                        data={processedData}
-                        dataKey="totalSales"
-                        nameKey="businessName"
-                        innerRadius={"40%"}
-                        outerRadius={"65%"}
-                        paddingAngle={8}
-                        label={({ name, value }) => `$${nFormatter(value, 2)}`}
-                        isAnimationActive={false}
-                    >
-                        {processedData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Pie>
-                    <ChartLegend align="right" layout="vertical" verticalAlign="middle" />
-                </PieChart>
-            </ChartContainer>
-        </ResponsiveContainer>
+        // The outer div uses the ref so we can measure its size.
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+            {/* Remove the fixed aspect ratio so that the chart fills the container */}
+            <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={{}} className="font-bold customer-pie">
+                    <PieChart>
+                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                        <Pie
+                            data={processedData}
+                            dataKey="totalSales"
+                            nameKey="businessName"
+                            innerRadius="40%"
+                            outerRadius="65%"
+                            paddingAngle={8}
+                            label={renderCustomLabel}
+                            isAnimationActive={false}
+                        >
+                            {processedData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <ChartLegend {...legendProps} />
+                    </PieChart>
+                </ChartContainer>
+            </ResponsiveContainer>
+        </div>
     );
 };
 
@@ -123,7 +219,13 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
 /* 📊 TopCustomersThisYear Component       */
 /* -------------------------------------- */
 export default function TopCustomersThisYearPie() {
-    const startOfYear = useMemo(() => new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0], []);
+    const startOfYear = useMemo(
+        () =>
+            new Date(new Date().getFullYear(), 0, 1)
+                .toISOString()
+                .split("T")[0],
+        []
+    );
     const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
     const widgetPayload = useMemo(
@@ -158,7 +260,7 @@ export default function TopCustomersThisYearPie() {
         <Widget
             apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
             payload={widgetPayload}
-            title="Top Customers This Year"
+            title={`Top Customers - ${new Date().getFullYear()}`}
             updateInterval={300000}
             render={renderTopCustomers}
         />
