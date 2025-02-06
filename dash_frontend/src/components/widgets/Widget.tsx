@@ -34,15 +34,15 @@ export default function Widget({
         async function fetchData() {
             try {
                 const response = await fetch(apiEndpoint as string, {
-                    method: "POST",
+                    method: payload ? "POST" : "GET",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify(payload || {}),
+                    body: payload ? JSON.stringify(payload) : undefined,
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Error: ${response.statusText}`);
+                    throw new Error(`${response.status} - ${response.statusText}`);
                 }
 
                 const result = await response.json();

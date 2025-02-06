@@ -2,8 +2,23 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database.queries import QueryBuilder
 import logging
+import openmeteo_requests
+import requests_cache
+import pandas as pd
+from retry_requests import retry
 
 app = Flask(__name__)
+
+# OPEN-METEO API CONFIG
+cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
+retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
+openmeteo = openmeteo_requests.Client(session = retry_session)
+url = "https://api.open-meteo.com/v1/forecast"
+params = {
+	"latitude": 41.9353,
+	"longitude": -87.8656,
+	"current": "relative_humidity_2m"
+}
 
 # Enable CORS
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -58,6 +73,16 @@ def get_widgets_post():
         logging.error(f"Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/humidity', methods=['GET'])
+def get_humidity():
+    try:
+        response = openmeteo.weather_api(url, params=params)
+        data = response[0].Current().Variables(0).Value()
+        print(data)
+        return jsonify({"success": True, "data": data}), 200
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
