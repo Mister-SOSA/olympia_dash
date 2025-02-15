@@ -1,59 +1,88 @@
+"""
+Flask API for the Olympia Dashboard.
+
+This application provides two endpoints:
+1. POST /api/widgets: Executes either a raw SQL query or dynamically builds a query.
+2. GET /api/humidity: Retrieves current relative humidity data from the Open-Meteo API.
+"""
+
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from database.queries import QueryBuilder
-import logging
-import openmeteo_requests
 import requests_cache
-import pandas as pd
+import openmeteo_requests
 from retry_requests import retry
+from database.queries import QueryBuilder
 
+# Initialize Flask app
 app = Flask(__name__)
 
-# OPEN-METEO API CONFIG
-cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
-retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-openmeteo = openmeteo_requests.Client(session = retry_session)
-url = "https://api.open-meteo.com/v1/forecast"
-params = {
-	"latitude": 41.9353,
-	"longitude": -87.8656,
-	"current": "relative_humidity_2m"
-}
-
-# Enable CORS
+# Enable Cross-Origin Resource Sharing (CORS)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# disable logging
+# Configure logging for production. Adjust handlers/levels as needed.
 logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger(__name__)
+
+# Open-Meteo API client configuration with caching and retries.
+CACHE_EXPIRE_SECONDS = 3600
+cache_session = requests_cache.CachedSession('.cache', expire_after=CACHE_EXPIRE_SECONDS)
+retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+openmeteo_client = openmeteo_requests.Client(session=retry_session)
+
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_PARAMS = {
+    "latitude": 41.9353,
+    "longitude": -87.8656,
+    "current": "relative_humidity_2m"
+}
+
 
 @app.route('/api/widgets', methods=['POST'])
 def get_widgets_post():
-    try:
-        data = request.get_json()
+    """
+    Handle POST requests to retrieve widget data.
 
-        # Check if the user provided a raw query
+    Accepts a JSON payload that either contains a 'raw_query' to be executed directly,
+    or parameters to build a dynamic query:
+      - table: the table to query (required if not using 'raw_query')
+      - columns: list of columns to select (default: ["*"])
+      - filters: conditions for the WHERE clause
+      - group_by: columns to group by
+      - sort: sort order
+      - join: join clause(s)
+      - limit: limit for pagination
+      - offset: offset for pagination (default: 0)
+    """
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({"success": False, "error": "No JSON payload provided"}), 400
+
+        # If a raw SQL query is provided, execute it directly.
         raw_query = data.get("raw_query")
         if raw_query:
-            # Execute the raw query directly
             results = QueryBuilder.execute_query(raw_query)
             return jsonify({"success": True, "data": results}), 200
 
-        # Extract parameters for dynamic query building
+        # Ensure required parameters are provided.
         table = data.get("table")
+        if not table:
+            return jsonify({"success": False, "error": "Table parameter is required"}), 400
+
+        # Extract dynamic query parameters.
         columns = data.get("columns", ["*"])
-        filters = data.get("filters", None)
-        group_by = data.get("group_by", None)
-        sort = data.get("sort", None)
-        join = data.get("join", None)
-        limit = data.get("limit", None)
+        filters = data.get("filters")
+        group_by = data.get("group_by")
+        sort = data.get("sort")
+        join_clause = data.get("join")
+        limit = data.get("limit")
         offset = data.get("offset", 0)
 
-        # Initialize QueryBuilder
-        qb = QueryBuilder(table)
-        qb = qb.select(columns)
-
-        if join:
-            qb = qb.join_clause(join)
+        # Build the dynamic query.
+        qb = QueryBuilder(table).select(columns)
+        if join_clause:
+            qb = qb.join_clause(join_clause)
         if filters:
             qb = qb.where(filters)
         if group_by:
@@ -65,24 +94,36 @@ def get_widgets_post():
 
         query = qb.build_query()
 
-        # Execute the dynamically built query
+        # Execute the built query.
         results = QueryBuilder.execute_query(query)
-        logging.info(f"Query: {query}")
+        logger.info("Executed query: %s", query)
         return jsonify({"success": True, "data": results}), 200
+
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logger.error("Error in /api/widgets endpoint: %s", e)
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route('/api/humidity', methods=['GET'])
 def get_humidity():
+    """
+    Retrieve current relative humidity data from the Open-Meteo API.
+    
+    The humidity is extracted from the API response based on its expected structure.
+    Adjust the extraction logic if the API response format changes.
+    """
     try:
-        response = openmeteo.weather_api(url, params=params)
-        data = response[0].Current().Variables(0).Value()
-        print(data)
-        return jsonify({"success": True, "data": data}), 200
+        response = openmeteo_client.weather_api(OPEN_METEO_URL, params=OPEN_METEO_PARAMS)
+        # Extract the current relative humidity value from the response.
+        humidity = response[0].Current().Variables(0).Value()
+        return jsonify({"success": True, "data": humidity}), 200
+
     except Exception as e:
-        logging.error(f"Error: {e}")
+        logger.error("Error in /api/humidity endpoint: %s", e)
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+
 if __name__ == "__main__":
+    # DISABLE DEBUG FOR PROD
     app.run(debug=True, port=5001)
