@@ -27,7 +27,7 @@ const DateContent: React.FC = () => {
             const { width } = entry.contentRect;
 
             // Adjust font size based on width
-            const newFontSize = `${Math.max(48, Math.floor(width / 11))}px`;
+            const newFontSize = `${Math.max(48, Math.floor(width / 12))}px`;
             setFontSize(newFontSize);
 
             // Adjust date format based on width
