@@ -25,7 +25,8 @@ const config = {
         "1015", // PROVISUR TECHNOLOGIES
         "776", // ROBERT REISER & CO. INC.
         "6119", // ROME GRINDING SOLUTIONS
-        "6053" // ULINE
+        "6053", // ULINE
+        "105", // BIRO OF CHICAGO
     ]
 };
 
