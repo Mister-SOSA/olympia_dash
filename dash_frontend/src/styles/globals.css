@@ -260,3 +260,17 @@ tbody>tr:nth-child(odd) {
 .Toastify__toast {
   width: 25% !important;
 }
+
+@keyframes flashAnim {
+  from {
+    background-color: white;
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+.flash {
+  animation: flashAnim .5s ease-out;
+}

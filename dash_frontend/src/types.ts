@@ -79,17 +79,30 @@ export interface POItemTableData {
     isGrouped: boolean; // Whether the row is a grouped row
 }
 
+export interface InventoryMoveRaw {
+    trans_date: string;
+    user_id: string;
+    adj_type: string;
+    adj_status: string;
+    part_code: string;
+    lotqty: number;
+    uom: string;
+    location: string;
+    to_location: string;
+    recnum: string;
+    lot: string;
+}
+
 export interface InventoryMove {
-    moveDate: string; // Date of the move
-    moveUser: string; // User who made the move
-    adjustmentType: string; // Type of adjustment (e.g., "M", "R") (Remove, Add, Move, )
-    adjustmentStatus: string; // Status of the adjustment (e.g., "C", "O") (Closed, Open)
-    partCode: string; // Part code
-    partDescription: string; // Part description
-    quantity: number; // Quantity moved
-    uom: string; // Unit of measure
-    fromLocation: string; // From location
-    toLocation: string; // To location
-    docNumber: string; // Document number
-    lotNumber: string; // Lot number
+    moveDate: string;
+    moveUser: string;
+    adjustmentType: string;
+    adjustmentStatus: string;
+    partCode: string;
+    quantity: number;
+    uom: string;
+    fromLocation: string;
+    toLocation: string;
+    docNumber: string;
+    lotNumber: string;
 }
