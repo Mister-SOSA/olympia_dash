@@ -93,6 +93,7 @@ def get_widgets_post():
             qb = qb.paginate(limit, offset)
 
         query = qb.build_query()
+        print(query)
 
         # Execute the built query.
         results = QueryBuilder.execute_query(query)

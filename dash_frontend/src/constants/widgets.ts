@@ -11,4 +11,5 @@ export const masterWidgetList: Widget[] = [
     { id: "OutstandingOrdersTable", x: 0, y: 0, w: 8, h: 5, enabled: true },
     { id: "DailyDueInTable", x: 0, y: 0, w: 8, h: 5, enabled: true },
     { id: "Humidity", x: 0, y: 0, w: 5, h: 3, enabled: true },
+    { id: "DailyMovesByUser", x: 0, y: 0, w: 5, h: 4, enabled: true },
 ];

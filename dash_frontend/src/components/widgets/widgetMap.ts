@@ -8,6 +8,7 @@ import DateWidget from "./DateWidget";
 import OutstandingOrdersTable from "./OutstandingOrdersTable";
 import DailyDueInTable from "./DailyDueInTable";
 import Humidity from "./Humidity";
+import DailyMovesByUser from "./DailyMovesByUser";
 
 const widgetMap: Record<string, React.ComponentType> = {
     SalesByMonthComparisonBar: SalesByMonthComparisonBar,
@@ -20,6 +21,7 @@ const widgetMap: Record<string, React.ComponentType> = {
     OutstandingOrdersTable: OutstandingOrdersTable,
     DailyDueInTable: DailyDueInTable,
     Humidity: Humidity,
+    DailyMovesByUser: DailyMovesByUser,
 };
 
 export default widgetMap;

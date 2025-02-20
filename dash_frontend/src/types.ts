@@ -78,3 +78,18 @@ export interface POItemTableData {
     POStatus: string; // Purchase order status
     isGrouped: boolean; // Whether the row is a grouped row
 }
+
+export interface InventoryMove {
+    moveDate: string; // Date of the move
+    moveUser: string; // User who made the move
+    adjustmentType: string; // Type of adjustment (e.g., "M", "R") (Remove, Add, Move, )
+    adjustmentStatus: string; // Status of the adjustment (e.g., "C", "O") (Closed, Open)
+    partCode: string; // Part code
+    partDescription: string; // Part description
+    quantity: number; // Quantity moved
+    uom: string; // Unit of measure
+    fromLocation: string; // From location
+    toLocation: string; // To location
+    docNumber: string; // Document number
+    lotNumber: string; // Lot number
+}
