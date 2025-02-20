@@ -65,6 +65,7 @@ db.sqlite3-journal
 
 # Gunicorn
 .cache.sqlite
+.DS_Store
 
 # Flask stuff:
 instance/
