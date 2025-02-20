@@ -197,8 +197,8 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
                             data={processedData}
                             dataKey="totalSales"
                             nameKey="businessName"
-                            innerRadius="40%"
-                            outerRadius="65%"
+                            innerRadius="35%"
+                            outerRadius="55%"
                             paddingAngle={8}
                             label={renderCustomLabel}
                             isAnimationActive={false}
