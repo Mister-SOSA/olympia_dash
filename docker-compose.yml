@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./dash_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - custom_network
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build: ./api
+    ports:
+      - "5001:5001"
+    networks:
+      - custom_network
+    restart: always
+
+networks:
+  custom_network:
+    driver: bridge
