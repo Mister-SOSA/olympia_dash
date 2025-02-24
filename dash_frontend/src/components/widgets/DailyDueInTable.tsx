@@ -251,7 +251,7 @@ export default function DailyDueInTable() {
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
                 title="Daily Due In"
-                updateInterval={300000}
+                updateInterval={8000}
                 render={renderFunction}
             />
         </div>

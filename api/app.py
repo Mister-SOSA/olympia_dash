@@ -127,4 +127,4 @@ def get_humidity():
 
 if __name__ == "__main__":
     # DISABLE DEBUG FOR PROD
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5001, host='172.19.1.205')

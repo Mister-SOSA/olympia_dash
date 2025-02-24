@@ -215,7 +215,7 @@ export default function OutstandingOrdersTable() {
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
                 title="Outstanding Due In"
-                updateInterval={300000}
+                updateInterval={30000}
                 render={renderFunction}
             />
         </div>
