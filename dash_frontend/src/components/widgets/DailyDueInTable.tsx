@@ -138,6 +138,14 @@ export default function DailyDueInTable() {
             return acc;
         }, []);
 
+        // ─── 4.1. Sort Data ──────────────────────────────────────────────
+        // Sort alphabetically by vendor name (A-Z) and then by part code.
+        mergedData.sort((a, b) => {
+            const vendorComparison = a.vend_name.localeCompare(b.vend_name);
+            if (vendorComparison !== 0) return vendorComparison;
+            return a.part_code.localeCompare(b.part_code);
+        });
+
         // ─── 5. Map Data for Display with Proper Timezone Conversion ───────────────
         // Get the user's local timezone.
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
