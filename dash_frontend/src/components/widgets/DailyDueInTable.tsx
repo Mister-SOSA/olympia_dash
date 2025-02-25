@@ -48,7 +48,7 @@ export default function DailyDueInTable() {
             LEFT JOIN
                 pohead ph ON p.po_number = ph.po_number
             WHERE
-                p.date_orderd >= DATEADD(DAY, -90, GETDATE() + 1);
+                p.date_orderd >= DATEADD(DAY, -90, GETDATE());
         `,
         }),
         []
@@ -97,20 +97,24 @@ export default function DailyDueInTable() {
         // ─── 3. Filter Down to “Recent” Orders ─────────────────────────────────────
         // Recent orders are defined as those with:
         //   - date_orderd within the last 10 days, and
-        //   - vend_prom_date matching today.
+        //   - vend_prom_date matching yesterday (because of the one-day offset)
         const today = new Date();
         const tenDaysAgo = new Date();
         tenDaysAgo.setDate(today.getDate() - 10);
 
+        // Create a 'yesterday' date for filtering comparison
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
         // Helper: format a date as a simple date string (ignoring the time).
         const formatDate = (date: any) =>
             date ? new Date(date).toDateString() : null;
-        const todayStr = today.toDateString();
+        const yesterdayStr = yesterday.toDateString();
 
         const recentOrders = dedupedData.filter((item) => {
             const orderDate = new Date(item.date_orderd);
             const vendPromDateStr = formatDate(item.vend_prom_date);
-            return orderDate >= tenDaysAgo && vendPromDateStr === todayStr;
+            return orderDate >= tenDaysAgo && vendPromDateStr === yesterdayStr;
         });
 
         // ─── 4. Merge Hidden Vendors ──────────────────────────────────────────────
@@ -150,46 +154,53 @@ export default function DailyDueInTable() {
         // Get the user's local timezone.
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-        const tableData = mergedData.map((item) => ({
-            isGrouped: item.isGrouped,
-            poNumber: item.po_number,
-            poStatus: item.po_status,
-            vendName: item.vend_name,
-            partCode: item.part_code,
-            partDescription: item.part_desc,
-            recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-            }).format(item.unit_price)}`,
-            dateOrdered: item.date_orderd
-                ? format(
-                    toZonedTime(new Date(item.date_orderd), timeZone),
+        const tableData = mergedData.map((item) => {
+            // Adjust the vendor promise date by adding one day to display it as today's date
+            let correctedVendorPromiseDate = "N/A";
+            if (item.vend_prom_date) {
+                const correctedDate = new Date(item.vend_prom_date);
+                correctedDate.setDate(correctedDate.getDate() + 1);
+                correctedVendorPromiseDate = format(
+                    toZonedTime(correctedDate, timeZone),
                     "MMM d, yyyy",
                     { timeZone }
-                )
-                : "N/A",
-            vendorPromiseDate: item.vend_prom_date
-                ? format(
-                    toZonedTime(new Date(item.vend_prom_date), timeZone),
-                    "MMM d, yyyy",
-                    { timeZone }
-                )
-                : "N/A",
-            lastOrderDate: item.last_order_date
-                ? format(
-                    toZonedTime(new Date(item.last_order_date), timeZone),
-                    "MMM d, yyyy",
-                    { timeZone }
-                )
-                : "N/A",
-            lastOrderUnitPrice: item.last_order_unit_price
-                ? `$${new Intl.NumberFormat("en-US", {
+                );
+            }
+            return {
+                isGrouped: item.isGrouped,
+                poNumber: item.po_number,
+                poStatus: item.po_status,
+                vendName: item.vend_name,
+                partCode: item.part_code,
+                partDescription: item.part_desc,
+                recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
                     minimumFractionDigits: 4,
                     maximumFractionDigits: 4,
-                }).format(item.last_order_unit_price)}`
-                : "N/A",
-            userOrdered: item.date_prom_user,
-        }));
+                }).format(item.unit_price)}`,
+                dateOrdered: item.date_orderd
+                    ? format(
+                        toZonedTime(new Date(item.date_orderd), timeZone),
+                        "MMM d, yyyy",
+                        { timeZone }
+                    )
+                    : "N/A",
+                vendorPromiseDate: correctedVendorPromiseDate,
+                lastOrderDate: item.last_order_date
+                    ? format(
+                        toZonedTime(new Date(item.last_order_date), timeZone),
+                        "MMM d, yyyy",
+                        { timeZone }
+                    )
+                    : "N/A",
+                lastOrderUnitPrice: item.last_order_unit_price
+                    ? `$${new Intl.NumberFormat("en-US", {
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4,
+                    }).format(item.last_order_unit_price)}`
+                    : "N/A",
+                userOrdered: item.date_prom_user,
+            };
+        });
 
         console.log("Processed Data:", tableData);
 
