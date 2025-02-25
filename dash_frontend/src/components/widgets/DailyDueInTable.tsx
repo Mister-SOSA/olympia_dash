@@ -143,11 +143,11 @@ export default function DailyDueInTable() {
         }, []);
 
         // ─── 4.1. Sort Data ──────────────────────────────────────────────
-        // Sort alphabetically by vendor name (A-Z) and then by part code.
+        // Sort alphabetically by vendor name (A-Z) and then by PO Number.
         mergedData.sort((a, b) => {
             const vendorComparison = a.vend_name.localeCompare(b.vend_name);
             if (vendorComparison !== 0) return vendorComparison;
-            return a.part_code.localeCompare(b.part_code);
+            return a.po_number.localeCompare(b.po_number);
         });
 
         // ─── 5. Map Data for Display with Proper Timezone Conversion ───────────────
