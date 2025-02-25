@@ -171,11 +171,11 @@ export default function OutstandingOrdersTable() {
             userOrdered: item.date_prom_user,
         }));
 
-        // Sort tableData alphabetically by vendor name (A–Z), then by part code
+        // Sort tableData alphabetically by vendor name (A–Z), then by PO number (A–Z)
         tableData.sort((a, b) => {
             const vendorComparison = a.vendName.localeCompare(b.vendName);
             if (vendorComparison !== 0) return vendorComparison;
-            return a.partCode.localeCompare(b.partCode);
+            return a.poNumber.localeCompare(b.poNumber);
         });
 
         console.log("Data received from API:", tableData);
