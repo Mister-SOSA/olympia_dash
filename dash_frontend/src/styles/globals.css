@@ -59,7 +59,6 @@ body {
   text-align: center;
   margin-top: 0rem;
   height: 4%;
-  z-index: 999;
   overflow: visible;
 }
 
@@ -206,6 +205,7 @@ tbody {
 
 tbody>tr:nth-child(odd) {
   background-color: var(--background-highlight);
+  background-color: rgb(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar {
@@ -280,4 +280,38 @@ tbody>tr:nth-child(odd) {
 
 .flash {
   animation: flashAnim .5s ease-out;
+}
+
+.badge {
+  background-color: var(--shadow-dark);
+  color: white;
+  padding: 0.25rem 0.45rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  align-content: center;
+  border: 2px solid var(--shadow-dark);
+}
+
+.badge-success {
+  background-color: var(--success);
+}
+
+.badge-danger {
+  background-color: var(--error);
+}
+
+.badge-primary {
+  background-color: var(--success-light);
+}
+
+.table-dollars {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Consolas", monospace !important;
+  flex-direction: row;
+}
+
+.row-secondary {
+  background-color: rgb(0, 0, 0, 0.2);
 }

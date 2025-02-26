@@ -25,6 +25,24 @@ const statusCodes: { [key: string]: string } = {
 const RECENT_ORDER_THRESHOLD_DAYS = 30; // Adjust as needed
 const YESTERDAY_OFFSET = 1;
 
+/* Badge used on status codes in the table */
+const statusBadge = (statusCode: string) => {
+    const status = statusCodes[statusCode];
+    return (
+        <span
+            className={`badge ${status === "X"
+                ? "badge-danger"
+                : status === "V"
+                    ? "badge-success"
+                    : "badge-primary"
+                }`}
+        >
+            {status}
+        </span>
+    )
+}
+
+
 /**
  * Deduplicate rows by (po_number, item_no). If a duplicate is found,
  * the one with a valid date_rcv is preferred.
@@ -166,7 +184,7 @@ function mapToTableData(
             vendName: item.vend_name,
             partCode: item.part_code,
             partDescription: item.part_desc,
-            recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
+            recentUnitPrice: `${new Intl.NumberFormat("en-US", {
                 minimumFractionDigits: 4,
                 maximumFractionDigits: 4,
             }).format(item.unit_price)}`,
@@ -190,7 +208,7 @@ function mapToTableData(
                 )
                 : "N/A",
             lastOrderUnitPrice: item.last_order_unit_price
-                ? `$${new Intl.NumberFormat("en-US", {
+                ? `${new Intl.NumberFormat("en-US", {
                     minimumFractionDigits: 4,
                     maximumFractionDigits: 4,
                 }).format(item.last_order_unit_price)}`
@@ -198,9 +216,9 @@ function mapToTableData(
             qtyOrdered: item.qty_ord !== undefined && item.uom
                 ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
                 : "N/A",
-            qtyRecvd: item.qty_recvd !== undefined && item.uom
+            qtyRecvd: item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
                 ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
-                : "N/A",
+                : "-",
         };
     });
 }
@@ -261,12 +279,12 @@ export default function DailyDueInTable() {
                             <TableHead>Status</TableHead>
                             <TableHead>Vendor</TableHead>
                             <TableHead>Part Code</TableHead>
-                            <TableHead>Unit Price</TableHead>
-                            <TableHead>Date Ordered</TableHead>
-                            <TableHead>Qty Ordered</TableHead>
-                            <TableHead>Qty Received</TableHead>
-                            <TableHead>Prev. Unit Price</TableHead>
-                            <TableHead>Prev. Order Date</TableHead>
+                            <TableHead className="text-right">Qty Ordered</TableHead>
+                            <TableHead className="text-right">Qty Received</TableHead>
+                            <TableHead className="text-right">Date Ordered</TableHead>
+                            <TableHead className="text-right">Prev. Order</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Prev. Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -274,25 +292,25 @@ export default function DailyDueInTable() {
                             <TableRow
                                 key={index}
                                 className={`
-                  ${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} 
-                  ${row.isGrouped ? "grouped-po" : ""} 
-                  ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}
-                `}
+                                    ${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} 
+                                    ${row.isGrouped ? "grouped-po" : ""} 
+                                    ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}
+                                `}
                             >
                                 <TableCell className="font-black">
                                     {row.poNumber}
                                 </TableCell>
                                 <TableCell className="font-black">
-                                    {statusCodes[row.poStatus] || "N/A"}
+                                    {statusBadge(row.poStatus)}
                                 </TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
-                                <TableCell className="text-right">{row.recentUnitPrice}</TableCell>
-                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
                                 <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right">{row.lastOrderUnitPrice}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
                                 <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary"><div className="table-dollars"><span className="dollar-sign">$</span><span className="dollar-value">{row.recentUnitPrice}</span></div></TableCell>
+                                <TableCell className="text-right row-secondary"><div className="table-dollars"><span className="dollar-sign">$</span><span className="dollar-value">{row.lastOrderUnitPrice}</span></div></TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
