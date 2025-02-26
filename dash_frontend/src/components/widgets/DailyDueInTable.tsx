@@ -95,33 +95,12 @@ function filterRecentOrders(data: POItemData[]): POItemData[] {
 }
 
 /**
- * Merge rows for vendors that should be hidden. When a hidden vendor is found,
- * combine the part description and average the unit prices.
+ * Remove rows for vendors that should be hidden.
  */
-function mergeHiddenVendors(data: POItemData[]): POItemData[] {
-    return data.reduce((acc: POItemData[], item: POItemData) => {
-        const isHiddenVendor = config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(
-            item.vend_code
-        );
-        if (isHiddenVendor) {
-            const existingEntry = acc.find(
-                (entry) =>
-                    entry.po_number === item.po_number &&
-                    entry.vend_code === item.vend_code
-            );
-            if (existingEntry) {
-                existingEntry.part_desc += `, ${item.part_desc}`;
-                existingEntry.unit_price =
-                    (existingEntry.unit_price + item.unit_price) / 2;
-                existingEntry.isGrouped = true;
-            } else {
-                acc.push({ ...item, isGrouped: true });
-            }
-        } else {
-            acc.push({ ...item, isGrouped: false });
-        }
-        return acc;
-    }, []);
+function removeHiddenVendors(data: POItemData[]): POItemData[] {
+    return data.filter(
+        (item) => !config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code)
+    );
 }
 
 /**
@@ -246,7 +225,7 @@ export default function DailyDueInTable() {
         let processedData = deduplicateData(data);
         processedData = computePreviousOrderDetails(processedData);
         const recentOrders = filterRecentOrders(processedData);
-        let mergedData = mergeHiddenVendors(recentOrders);
+        let mergedData = removeHiddenVendors(recentOrders);
         mergedData = sortOrders(mergedData);
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const tableData = mapToTableData(mergedData, timeZone);
