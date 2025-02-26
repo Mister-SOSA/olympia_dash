@@ -265,7 +265,6 @@ export default function DailyDueInTable() {
                             <TableHead>Date Ordered</TableHead>
                             <TableHead>Qty Ordered</TableHead>
                             <TableHead>Qty Received</TableHead>
-                            <TableHead>Vendor Promise Date</TableHead>
                             <TableHead>Prev. Unit Price</TableHead>
                             <TableHead>Prev. Order Date</TableHead>
                         </TableRow>
@@ -292,7 +291,6 @@ export default function DailyDueInTable() {
                                 <TableCell className="text-right">{row.dateOrdered}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
                                 <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right">{row.vendorPromiseDate}</TableCell>
                                 <TableCell className="text-right">{row.lastOrderUnitPrice}</TableCell>
                                 <TableCell className="text-right">{row.lastOrderDate}</TableCell>
                             </TableRow>

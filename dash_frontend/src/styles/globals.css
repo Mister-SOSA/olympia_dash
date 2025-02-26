@@ -195,13 +195,13 @@ body {
 th {
   color: white !important;
   font-weight: 800 !important;
-  font-size: 1rem;
+  font-size: 1.1rem;
   padding: .5rem;
   background-color: var(--background-dark) !important;
 }
 
 tbody {
-  font-size: .9rem;
+  font-size: 1.1;
 }
 
 tbody>tr:nth-child(odd) {
