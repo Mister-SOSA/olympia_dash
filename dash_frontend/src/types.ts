@@ -61,6 +61,9 @@ export interface POItemData {
     isGrouped: boolean; // Whether the row is a grouped row
     item_no: number; // Item number
     date_rcv: string | null; // Date received (nullable)
+    qty_ord: number; // Quantity ordered
+    qty_recvd: number; // Quantity received
+    uom: string; // Unit of measure
 }
 
 export interface POItemTableData {

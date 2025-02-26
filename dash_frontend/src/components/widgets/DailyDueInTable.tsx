@@ -11,7 +11,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, toZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 
 const statusCodes: { [key: string]: string } = {
     "20": "X", // Cancelled
@@ -137,7 +137,8 @@ interface TableRowData {
     vendorPromiseDate: string;
     lastOrderDate: string;
     lastOrderUnitPrice: string;
-    userOrdered: string | null;
+    qtyOrdered: string;
+    qtyRecvd: string;
 }
 
 /**
@@ -170,11 +171,23 @@ function mapToTableData(
                 maximumFractionDigits: 4,
             }).format(item.unit_price)}`,
             dateOrdered: item.date_orderd
-                ? formatDate(new Date(new Date(item.date_orderd).setDate(new Date(item.date_orderd).getDate() + 1)))
+                ? formatDate(
+                    new Date(
+                        new Date(item.date_orderd).setDate(
+                            new Date(item.date_orderd).getDate() + 1
+                        )
+                    )
+                )
                 : "N/A",
             vendorPromiseDate: correctedVendorPromiseDate,
             lastOrderDate: item.last_order_date
-                ? formatDate(new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)))
+                ? formatDate(
+                    new Date(
+                        new Date(item.last_order_date).setDate(
+                            new Date(item.last_order_date).getDate() + 1
+                        )
+                    )
+                )
                 : "N/A",
             lastOrderUnitPrice: item.last_order_unit_price
                 ? `$${new Intl.NumberFormat("en-US", {
@@ -182,7 +195,12 @@ function mapToTableData(
                     maximumFractionDigits: 4,
                 }).format(item.last_order_unit_price)}`
                 : "N/A",
-            userOrdered: item.date_prom_user,
+            qtyOrdered: item.qty_ord !== undefined && item.uom
+                ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
+                : "N/A",
+            qtyRecvd: item.qty_recvd !== undefined && item.uom
+                ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
+                : "N/A",
         };
     });
 }
@@ -202,10 +220,12 @@ export default function DailyDueInTable() {
           p.unit_price,
           p.date_orderd,
           p.vend_prom_date,
-          p.date_prom_user,
           p.item_no,
           p.part_type,
-          p.date_rcv
+          p.date_rcv,
+          p.qty_ord,
+          p.qty_recvd,
+          p.uom
         FROM
           poitem p
         LEFT JOIN
@@ -243,10 +263,11 @@ export default function DailyDueInTable() {
                             <TableHead>Part Code</TableHead>
                             <TableHead>Unit Price</TableHead>
                             <TableHead>Date Ordered</TableHead>
+                            <TableHead>Qty Ordered</TableHead>
+                            <TableHead>Qty Received</TableHead>
                             <TableHead>Vendor Promise Date</TableHead>
                             <TableHead>Prev. Unit Price</TableHead>
                             <TableHead>Prev. Order Date</TableHead>
-                            <TableHead>Ordered By</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -277,10 +298,11 @@ export default function DailyDueInTable() {
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell>{row.recentUnitPrice}</TableCell>
                                 <TableCell>{row.dateOrdered}</TableCell>
+                                <TableCell>{row.qtyOrdered}</TableCell>
+                                <TableCell>{row.qtyRecvd}</TableCell>
                                 <TableCell>{row.vendorPromiseDate}</TableCell>
                                 <TableCell>{row.lastOrderUnitPrice}</TableCell>
                                 <TableCell>{row.lastOrderDate}</TableCell>
-                                <TableCell>{row.userOrdered}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
