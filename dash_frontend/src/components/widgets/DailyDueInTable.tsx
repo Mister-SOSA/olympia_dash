@@ -199,7 +199,7 @@ function mapToTableData(
                 ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
                 : "N/A",
             qtyRecvd: item.qty_recvd !== undefined && item.uom
-                ? `${Math.round(item.qty_recvd)} ${item.uom}`
+                ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
                 : "N/A",
         };
     });
