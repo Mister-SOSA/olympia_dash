@@ -118,13 +118,11 @@ function sortOrders(data: POItemData[]): POItemData[] {
 }
 
 /**
- * Helper to format a date using the user's local timezone.
+ * Helper to format a date.
  */
-function formatDateWithTimezone(date: any, timeZone: string): string {
+function formatDate(date: any): string {
     if (!date) return "N/A";
-    return format(toZonedTime(new Date(date), timeZone), "MMM d, yyyy", {
-        timeZone,
-    });
+    return format(new Date(date), "MMM d, yyyy");
 }
 
 interface TableRowData {
@@ -152,13 +150,12 @@ function mapToTableData(
     return data.map((item) => {
         // Adjust vendor promise date: add one day before formatting.
         const correctedVendorPromiseDate = item.vend_prom_date
-            ? formatDateWithTimezone(
+            ? formatDate(
                 new Date(
                     new Date(item.vend_prom_date).setDate(
                         new Date(item.vend_prom_date).getDate() + 1
                     )
-                ),
-                timeZone
+                )
             )
             : "N/A";
         return {
@@ -173,11 +170,11 @@ function mapToTableData(
                 maximumFractionDigits: 4,
             }).format(item.unit_price)}`,
             dateOrdered: item.date_orderd
-                ? formatDateWithTimezone(item.date_orderd, timeZone)
+                ? formatDate(new Date(new Date(item.date_orderd).setDate(new Date(item.date_orderd).getDate() + 1)))
                 : "N/A",
             vendorPromiseDate: correctedVendorPromiseDate,
             lastOrderDate: item.last_order_date
-                ? formatDateWithTimezone(item.last_order_date, timeZone)
+                ? formatDate(new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)))
                 : "N/A",
             lastOrderUnitPrice: item.last_order_unit_price
                 ? `$${new Intl.NumberFormat("en-US", {
