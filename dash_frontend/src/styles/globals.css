@@ -200,6 +200,10 @@ th {
   background-color: var(--background-dark) !important;
 }
 
+tbody {
+  font-size: .9rem;
+}
+
 tbody>tr:nth-child(odd) {
   background-color: var(--background-highlight);
 }

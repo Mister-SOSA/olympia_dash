@@ -199,7 +199,7 @@ function mapToTableData(
                 ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
                 : "N/A",
             qtyRecvd: item.qty_recvd !== undefined && item.uom
-                ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
+                ? `${Math.round(item.qty_recvd)} ${item.uom}`
                 : "N/A",
         };
     });
@@ -280,29 +280,21 @@ export default function DailyDueInTable() {
                   ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}
                 `}
                             >
-                                <TableCell>
+                                <TableCell className="font-black">
                                     {row.poNumber}
-                                    {row.isGrouped && (
-                                        <span
-                                            className="ml-2 px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-md"
-                                            title="This PO is grouped"
-                                        >
-                                            G
-                                        </span>
-                                    )}
                                 </TableCell>
                                 <TableCell className="font-black">
                                     {statusCodes[row.poStatus] || "N/A"}
                                 </TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
-                                <TableCell>{row.recentUnitPrice}</TableCell>
-                                <TableCell>{row.dateOrdered}</TableCell>
-                                <TableCell>{row.qtyOrdered}</TableCell>
-                                <TableCell>{row.qtyRecvd}</TableCell>
-                                <TableCell>{row.vendorPromiseDate}</TableCell>
-                                <TableCell>{row.lastOrderUnitPrice}</TableCell>
-                                <TableCell>{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right">{row.recentUnitPrice}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
+                                <TableCell className="text-right">{row.vendorPromiseDate}</TableCell>
+                                <TableCell className="text-right">{row.lastOrderUnitPrice}</TableCell>
+                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
