@@ -301,6 +301,10 @@ tbody>tr:nth-child(odd) {
   background-color: var(--error);
 }
 
+.badge-warning {
+  background-color: var(--warning);
+}
+
 .badge-primary {
   background-color: var(--success-light);
 }

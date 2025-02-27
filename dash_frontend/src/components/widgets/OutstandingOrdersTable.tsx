@@ -19,6 +19,22 @@ const statusCodes: { [key: string]: string } = {
     '18': 'I', // Vendor Invoice Received
 };
 
+const statusBadge = (statusCode: string) => {
+    const status = statusCodes[statusCode];
+    return (
+        <span
+            className={`badge ${status === "X"
+                ? "badge-danger"
+                : status === "V"
+                    ? "badge-success"
+                    : "badge-primary"
+                }`}
+        >
+            {status}
+        </span>
+    );
+};
+
 export default function OutstandingOrdersTable() {
     // Memoize the hidden vendor codes string
     const hiddenVendorCodes = useMemo(
@@ -26,152 +42,168 @@ export default function OutstandingOrdersTable() {
         []
     );
 
+    // Updated query to include qty_ord, uom and preserve vend_prom_date.
     const widgetPayload = useMemo(
         () => ({
             raw_query: `
-                WITH AdjustedOrders AS (
-                    SELECT
-                        po_number,
-                        vend_code,
-                        vend_name,
-                        part_code,
-                        part_desc,
-                        unit_price,
-                        date_orderd,
-                        vend_prom_date,
-                        date_prom_user,
-                        date_rcv,
-                        item_no,
-                        part_type,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY po_number, item_no
-                            ORDER BY
-                                CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END,
-                                date_rcv DESC
-                        ) AS row_num
-                    FROM
-                        poitem
-                    WHERE
-                        part_type = 'S'
-                ),
-                FilteredOrders AS (
-                    SELECT
-                        po_number,
-                        vend_code,
-                        vend_name,
-                        part_code,
-                        part_desc,
-                        unit_price,
-                        date_orderd,
-                        vend_prom_date,
-                        date_prom_user,
-                        date_rcv,
-                        item_no,
-                        part_type
-                    FROM
-                        AdjustedOrders
-                    WHERE
-                        row_num = 1
-                        AND vend_code NOT IN (${hiddenVendorCodes})
-                ),
-                RecentOrders AS (
-                    SELECT
-                        po_number,
-                        vend_code,
-                        vend_name,
-                        part_code,
-                        part_desc,
-                        unit_price AS recent_unit_price,
-                        date_orderd AS recent_date_orderd,
-                        vend_prom_date,
-                        date_prom_user,
-                        part_type
-                    FROM
-                        FilteredOrders
-                    WHERE
-                        date_orderd >= DATEADD(DAY, -10, GETDATE())
-                        AND date_rcv IS NULL
-                        AND vend_prom_date < DATEADD(DAY, -1, GETDATE())
-                )
-                SELECT
-                    ro.po_number,
-                    ph.po_status,
-                    ro.vend_code,
-                    ro.vend_name,
-                    ro.part_code,
-                    ro.part_desc,
-                    ro.recent_unit_price,
-                    ro.recent_date_orderd,
-                    ro.vend_prom_date,
-                    ro.date_prom_user,
-                    ro.part_type,
-                    lo.last_order_date,
-                    lo.last_order_unit_price
-                FROM
-                    RecentOrders ro
-                LEFT JOIN
-                    pohead ph ON ro.po_number = ph.po_number
-                OUTER APPLY (
-                    SELECT TOP 1
-                        p2.date_orderd AS last_order_date,
-                        p2.unit_price AS last_order_unit_price
-                    FROM
-                        FilteredOrders p2
-                    WHERE
-                        p2.part_code = ro.part_code
-                        AND p2.date_orderd < ro.recent_date_orderd
+        WITH AdjustedOrders AS (
+            SELECT
+                po_number,
+                vend_code,
+                vend_name,
+                part_code,
+                part_desc,
+                unit_price,
+                date_orderd,
+                vend_prom_date,
+                date_prom_user,
+                date_rcv,
+                item_no,
+                part_type,
+                qty_ord,
+                uom,
+                ROW_NUMBER() OVER (
+                    PARTITION BY po_number, item_no
                     ORDER BY
-                        p2.date_orderd DESC
-                ) lo
-                WHERE
-                    ph.po_status = '12'
-                ORDER BY
-                    ro.po_number ASC,
-                    ro.vend_prom_date ASC;
+                        CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END,
+                        date_rcv DESC
+                ) AS row_num
+            FROM
+                poitem
+            WHERE
+                part_type = 'S'
+        ),
+        FilteredOrders AS (
+            SELECT
+                po_number,
+                vend_code,
+                vend_name,
+                part_code,
+                part_desc,
+                unit_price,
+                date_orderd,
+                vend_prom_date,
+                date_prom_user,
+                date_rcv,
+                item_no,
+                part_type,
+                qty_ord,
+                uom
+            FROM
+                AdjustedOrders
+            WHERE
+                row_num = 1
+                AND vend_code NOT IN (${hiddenVendorCodes})
+        ),
+        RecentOrders AS (
+            SELECT
+                po_number,
+                vend_code,
+                vend_name,
+                part_code,
+                part_desc,
+                unit_price AS recent_unit_price,
+                date_orderd AS recent_date_orderd,
+                vend_prom_date,
+                date_prom_user,
+                part_type,
+                qty_ord,
+                uom
+            FROM
+                FilteredOrders
+            WHERE
+                date_orderd >= DATEADD(DAY, -10, GETDATE())
+                AND date_rcv IS NULL
+                AND vend_prom_date < DATEADD(DAY, -1, GETDATE())
+        )
+        SELECT
+            ro.po_number,
+            ph.po_status,
+            ro.vend_code,
+            ro.vend_name,
+            ro.part_code,
+            ro.part_desc,
+            ro.recent_unit_price,
+            ro.recent_date_orderd,
+            ro.vend_prom_date,
+            ro.date_prom_user,
+            ro.part_type,
+            ro.qty_ord,
+            ro.uom,
+            lo.last_order_date,
+            lo.last_order_unit_price
+        FROM
+            RecentOrders ro
+        LEFT JOIN
+            pohead ph ON ro.po_number = ph.po_number
+        OUTER APPLY (
+            SELECT TOP 1
+                p2.date_orderd AS last_order_date,
+                p2.unit_price AS last_order_unit_price
+            FROM
+                FilteredOrders p2
+            WHERE
+                p2.part_code = ro.part_code
+                AND p2.date_orderd < ro.recent_date_orderd
+            ORDER BY
+                p2.date_orderd DESC
+        ) lo
+        WHERE
+            ph.po_status = '12'
+        ORDER BY
+            ro.po_number ASC,
+            ro.vend_prom_date ASC;
       `,
         }),
         [hiddenVendorCodes]
     );
 
     const renderFunction = useCallback((data: POItemData[]) => {
-        const tableData = data.map((item) => ({
-            poNumber: item.po_number,
-            poStatus: item.po_status,
-            vendName: item.vend_name,
-            partCode: item.part_code,
-            partDescription: item.part_desc,
-            recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-            }).format(item.recent_unit_price)}`,
-            dateOrdered: item.recent_date_orderd
-                ? format(
-                    new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            vendorPromiseDate: item.vend_prom_date
-                ? format(
-                    new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            lastOrderDate: item.last_order_date
-                ? format(
-                    new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            lastOrderUnitPrice: item.last_order_unit_price
-                ? `$${new Intl.NumberFormat("en-US", {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4,
-                }).format(item.last_order_unit_price)}`
-                : "N/A",
-            userOrdered: item.date_prom_user,
-        }));
+        const tableData = data.map((item) => {
+            // Adjust dates: add one day to order date, add two days to vendor promise date.
+            const adjustedOrderDate = item.recent_date_orderd
+                ? new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1))
+                : null;
+            const adjustedVendPromDate = item.vend_prom_date
+                ? new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1))
+                : null;
 
-        // Sort tableData alphabetically by vendor name (A–Z), then by PO number (A–Z), then by part code (A–Z)
+            // Calculate overdue days based on the adjusted vendor promise date.
+            const overdueDays =
+                adjustedVendPromDate ? Math.floor((new Date().getTime() - adjustedVendPromDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+            return {
+                poNumber: item.po_number,
+                poStatus: item.po_status,
+                vendName: item.vend_name,
+                partCode: item.part_code,
+                qtyOrdered:
+                    item.qty_ord !== undefined && item.uom
+                        ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
+                        : "N/A",
+                dateOrdered: adjustedOrderDate ? format(adjustedOrderDate, "MMM d, yyyy") : "N/A",
+                vendorPromiseDate: adjustedVendPromDate ? format(adjustedVendPromDate, "MMM d, yyyy") : "N/A",
+                lastOrderDate: item.last_order_date
+                    ? format(new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)), "MMM d, yyyy")
+                    : "N/A",
+                recentUnitPrice: item.recent_unit_price
+                    ? new Intl.NumberFormat("en-US", {
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4,
+                    }).format(item.recent_unit_price)
+                    : "N/A",
+                lastOrderUnitPrice: item.last_order_unit_price
+                    ? new Intl.NumberFormat("en-US", {
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4,
+                    }).format(item.last_order_unit_price)
+                    : "N/A",
+                overdueDays,
+                isGrouped: false, // Outstanding orders don't use grouping so default to false
+            };
+        });
+
+        // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
         tableData.sort((a, b) => {
             const vendorComparison = a.vendName.localeCompare(b.vendName);
             if (vendorComparison !== 0) return vendorComparison;
@@ -182,34 +214,57 @@ export default function OutstandingOrdersTable() {
 
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
-                <Table className="text-left text-white outstanding-orders-table text-[1rem]" wrapperClassName="overflow-clip">
+                <Table
+                    className="text-left text-white outstanding-orders-table text-[.95rem]"
+                    wrapperClassName="overflow-clip"
+                >
                     <TableHeader>
                         <TableRow>
                             <TableHead>PO Number</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Vendor</TableHead>
                             <TableHead>Part Code</TableHead>
-                            <TableHead>Unit Price</TableHead>
-                            <TableHead>Date Ordered</TableHead>
-                            <TableHead>Vendor Promise Date</TableHead>
-                            <TableHead>Prev. Order Date</TableHead>
-                            <TableHead>Prev. Unit Price</TableHead>
-                            <TableHead>Ordered By</TableHead>
+                            <TableHead className="text-right">Qty Ordered</TableHead>
+                            <TableHead className="text-right">Date Ordered</TableHead>
+                            <TableHead className="text-right">Vendor Promise Date</TableHead>
+                            <TableHead className="text-right">Prev. Order</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Prev. Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {tableData.map((row, index) => (
-                            <TableRow key={index} className={statusCodes[row.poStatus] === 'X' ? 'cancelled-po' : ''}>
-                                <TableCell>{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{statusCodes[row.poStatus] || 'N/A'}</TableCell>
+                            <TableRow
+                                key={index}
+                                className={`
+                  ${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} 
+                  ${row.isGrouped ? "grouped-po" : ""} 
+                  ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}
+                `}
+                            >
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
-                                <TableCell>{row.recentUnitPrice}</TableCell>
-                                <TableCell>{row.dateOrdered}</TableCell>
-                                <TableCell>{row.vendorPromiseDate}</TableCell>
-                                <TableCell>{row.lastOrderDate}</TableCell>
-                                <TableCell>{row.lastOrderUnitPrice}</TableCell>
-                                <TableCell>{row.userOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right">
+                                    {row.vendorPromiseDate}
+                                    <span className="badge badge-warning ml-2">{row.overdueDays}</span>
+                                </TableCell>
+                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
