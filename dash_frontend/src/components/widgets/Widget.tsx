@@ -47,7 +47,9 @@ export default function Widget({
 
                 const result = await response.json();
                 setData(result.data);
+                console.log(`Module ${title} fetched data:`, result.data);
             } catch (err: any) {
+                console.error(`Error fetching data for module ${title}:`, err);
                 setError(err.message);
             } finally {
                 setLoading(false);

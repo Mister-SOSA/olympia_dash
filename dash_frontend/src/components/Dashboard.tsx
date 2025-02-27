@@ -100,6 +100,7 @@ export default function Dashboard() {
     // Keydown handler for toggling the menu, saving/loading presets, and compacting.
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
+            console.log(`Key pressed: ${e.key}`);
             // Toggle widget menu with "F"
             if (e.key.toLowerCase() === "f") {
                 setMenuOpen((prev) => !prev);
@@ -152,6 +153,8 @@ export default function Dashboard() {
                 if (newIndex !== presetIndex) {
                     loadPreset(newIndex);
                 }
+            } else if (e.key === "0") {
+                console.log("Fired");
             }
         },
         [layout, presets, presetIndex, loadPreset]

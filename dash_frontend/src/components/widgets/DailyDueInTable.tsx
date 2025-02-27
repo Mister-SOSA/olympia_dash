@@ -265,8 +265,6 @@ export default function DailyDueInTable() {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const tableData = mapToTableData(mergedData, timeZone);
 
-        console.log("Processed Data:", tableData);
-
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
                 <Table

@@ -252,7 +252,6 @@ export default function TopCustomersThisYearPie() {
     );
 
     const renderTopCustomers = useCallback((data: CustomerData[]) => {
-        console.log("Data received from API:", data);
         return <CustomerTable data={data} />;
     }, []);
 

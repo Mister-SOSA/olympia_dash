@@ -31,8 +31,6 @@ export default function InventoryMovesLog() {
         const newDocSet = new Set<string>(tableData.map(row => row.docNumber));
         previousDocsRef.current = newDocSet;
 
-        console.log("Data received from API:", tableData);
-
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
                 <Table className="text-left text-white inventory-moves-log-table text-[1rem]" wrapperClassName="overflow-clip">
