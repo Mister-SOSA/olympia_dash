@@ -1,14 +1,9 @@
 "use client";
 
-import React, {
-    useEffect,
-    useRef,
-    useImperativeHandle,
-    forwardRef,
-} from "react";
+import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { GridStack, GridStackNode, GridItemHTMLElement } from "gridstack";
 import "gridstack/dist/gridstack.css";
-import { createRoot } from "react-dom/client";
+import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
 import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
 import { saveLayoutToStorage, validateLayout } from "@/utils/layoutUtils";
@@ -31,6 +26,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const gridInstance = useRef<GridStack | null>(null);
         // Internal layout reference to avoid unnecessary re-renders.
         const layoutRef = useRef<Widget[]>(layout);
+
+        // Store widget roots to allow proper unmounting.
+        const widgetRoots = useRef<Map<string, Root>>(new Map());
 
         // Helper function to compare two layouts.
         const layoutsEqual = (layout1: Widget[], layout2: Widget[]): boolean => {
@@ -88,9 +86,18 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             );
             const grid = gridInstance.current;
 
+            // Function to render all widgets.
             const renderWidgets = (widgets: Widget[]) => {
                 if (!grid || !grid.engine) return;
+
+                // Defer unmounting of existing React roots.
+                widgetRoots.current.forEach((root) => {
+                    setTimeout(() => root.unmount(), 0);
+                });
+                widgetRoots.current.clear();
+
                 grid.removeAll();
+
                 widgets
                     .filter((widget) => widget.enabled)
                     .forEach((widget) => {
@@ -108,6 +115,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                             if (WidgetComponent) {
                                 const root = createRoot(contentDiv);
                                 root.render(<WidgetComponent />);
+                                widgetRoots.current.set(widget.id, root);
                             }
                         }
                     });
@@ -131,6 +139,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             });
 
             return () => {
+                // On cleanup, defer unmounting of all widget roots.
+                widgetRoots.current.forEach((root) => {
+                    setTimeout(() => root.unmount(), 0);
+                });
+                widgetRoots.current.clear();
+
                 grid.destroy(false);
                 gridInstance.current = null;
             };
@@ -152,12 +166,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // --- 1. Remove widgets that are no longer enabled ---
             const widgetsToRemove = oldWidgets.filter((w) => !newIds.has(w.id));
             widgetsToRemove.forEach((widget) => {
-                // GridStack adds an attribute (typically `gs-id`) to each widget element.
                 const element = grid.el.querySelector(
                     `[gs-id="${widget.id}"]`
                 ) as GridItemHTMLElement | null;
                 if (element) {
-                    // Pass true to fully remove the element from the DOM.
+                    // Defer unmounting the React component if it exists.
+                    const root = widgetRoots.current.get(widget.id);
+                    if (root) {
+                        setTimeout(() => root.unmount(), 0);
+                        widgetRoots.current.delete(widget.id);
+                    }
                     grid.removeWidget(element, true);
                 }
             });
@@ -179,6 +197,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     if (WidgetComponent) {
                         const root = createRoot(contentDiv);
                         root.render(<WidgetComponent />);
+                        widgetRoots.current.set(widget.id, root);
                     }
                 }
             });

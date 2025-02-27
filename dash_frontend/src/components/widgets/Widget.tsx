@@ -31,6 +31,9 @@ export default function Widget({
             return;
         }
 
+        // Create an AbortController to cancel any ongoing fetches when the component unmounts.
+        const controller = new AbortController();
+
         async function fetchData() {
             try {
                 const response = await fetch(apiEndpoint as string, {
@@ -39,6 +42,7 @@ export default function Widget({
                         "Content-Type": "application/json",
                     },
                     body: payload ? JSON.stringify(payload) : undefined,
+                    signal: controller.signal, // Attach the abort signal to the fetch request.
                 });
 
                 if (!response.ok) {
@@ -49,20 +53,31 @@ export default function Widget({
                 setData(result.data);
                 console.log(`Module ${title} fetched data:`, result.data);
             } catch (err: any) {
-                console.error(`Error fetching data for module ${title}:`, err);
-                setError(err.message);
+                // Only log errors that are not due to the fetch being aborted.
+                if (err.name !== "AbortError") {
+                    console.error(`Error fetching data for module ${title}:`, err);
+                    setError(err.message);
+                }
             } finally {
                 setLoading(false);
-                setFetchTrigger((prev) => prev + 1); // Trigger timer reset
+                setFetchTrigger((prev) => prev + 1); // Trigger timer reset.
             }
         }
 
         fetchData();
 
+        let interval: NodeJS.Timeout | number;
         if (updateInterval) {
-            const interval = setInterval(fetchData, updateInterval);
-            return () => clearInterval(interval);
+            interval = setInterval(fetchData, updateInterval);
         }
+
+        // Cleanup: clear the interval and abort any ongoing fetch.
+        return () => {
+            if (updateInterval) {
+                clearInterval(interval);
+            }
+            controller.abort();
+        };
     }, [apiEndpoint, payload, updateInterval]);
 
     if (loading)
@@ -89,17 +104,17 @@ export default function Widget({
             <h2 className="widget-header">{title}</h2>
             <div className="widget-content">
                 {render(data)}
-                {apiEndpoint && ( // Conditionally render the countdown timer only if apiEndpoint is truthy
+                {apiEndpoint && ( // Conditionally render the countdown timer only if apiEndpoint is truthy.
                     <div className="timer-container absolute">
                         <CountdownCircleTimer
-                            key={fetchTrigger} // Reset the timer when fetchTrigger changes
+                            key={fetchTrigger} // Reset the timer when fetchTrigger changes.
                             isPlaying
                             duration={updateInterval / 1000}
                             colors={["#000", "#000", "#000", "#000"]}
                             colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
                             strokeWidth={25}
                         >
-                            {({ remainingTime }) => ''}
+                            {({ remainingTime }) => ""}
                         </CountdownCircleTimer>
                     </div>
                 )}
