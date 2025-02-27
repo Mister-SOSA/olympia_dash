@@ -122,7 +122,12 @@ export default function Dashboard() {
             // Use e.code so that Shift+Digit still gives "DigitX".
             else if (e.code.startsWith("Digit")) {
                 const digit = parseInt(e.code.replace("Digit", ""), 10);
-                if (digit >= 1 && digit <= 9) {
+                if (digit === 0) {
+                    // trigger a hard reload of the page
+                    window.location.reload();
+                }
+
+                else if (digit >= 1 && digit <= 9) {
                     const index = digit - 1;
                     // If Shift is pressed, save the current live layout as a preset.
                     if (e.shiftKey) {
@@ -153,8 +158,6 @@ export default function Dashboard() {
                 if (newIndex !== presetIndex) {
                     loadPreset(newIndex);
                 }
-            } else if (e.key === "0") {
-                console.log("Fired");
             }
         },
         [layout, presets, presetIndex, loadPreset]
