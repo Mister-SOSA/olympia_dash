@@ -292,7 +292,7 @@ export default function DailyDueInTable() {
                                 className={`
                                     ${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} 
                                     ${row.isGrouped ? "grouped-po" : ""} 
-                                    ${statusCodes[row.poStatus] === "V" ? "received-po" : ""}
+                                    ${["V", "C"].includes(statusCodes[row.poStatus]) ? "received-po" : ""}
                                 `}
                             >
                                 <TableCell className="font-black">
