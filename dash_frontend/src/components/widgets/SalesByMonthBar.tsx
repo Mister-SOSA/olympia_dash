@@ -32,7 +32,8 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement | null>)
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width } = entry.contentRect;
-                if (width >= 800) setVisibleMonths(12);
+                if (width >= 1200) setVisibleMonths(16);
+                else if (width >= 800) setVisibleMonths(12);
                 else if (width >= 600) setVisibleMonths(9);
                 else if (width >= 400) setVisibleMonths(6);
                 else setVisibleMonths(3);
