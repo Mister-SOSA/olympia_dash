@@ -174,6 +174,7 @@ export default function Overview() {
 
     const widgetPayload = useMemo(
         () => ({
+            module: "Overview",
             raw_query: `
         -- Fetch sales data for the last 7 days from orditem
         SELECT 

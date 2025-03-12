@@ -40,8 +40,7 @@ const statusBadge = (statusCode: string) => {
             {status}
         </span>
     )
-}
-
+};
 
 /**
  * Deduplicate rows by (po_number, item_no). If a duplicate is found,
@@ -227,6 +226,7 @@ export default function DailyDueInTable() {
     // Prepare the raw query payload using useMemo.
     const widgetPayload = useMemo(
         () => ({
+            module: "DailyDueInTable",
             raw_query: `
         SELECT
           p.po_number,

@@ -72,6 +72,7 @@ export default function SalesByDayBar() {
     // Memoize the payload so its reference does not change on every render.
     const widgetPayload = useMemo(
         () => ({
+            module: "SalesByDayBar",
             raw_query: `
                 -- Fetch sales data for the last 3 days from orditem
                 SELECT 

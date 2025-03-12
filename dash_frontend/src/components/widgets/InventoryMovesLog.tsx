@@ -79,6 +79,7 @@ export default function InventoryMovesLog() {
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={{
+                    module: "InventoryMovesLog",
                     table: "inadjinf",
                     columns: [
                         "trans_date",

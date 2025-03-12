@@ -62,6 +62,7 @@ export default function DailyMovesByUser() {
 
     // Updated payload using COUNT(*) to sum the moves per user.
     const payload = {
+        module: "DailyMovesByUser",
         table: "inadjinf",
         columns: ["user_id", "COUNT(*) as moves"],
         group_by: ["inadjinf.user_id"],

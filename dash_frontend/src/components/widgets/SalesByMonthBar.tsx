@@ -68,6 +68,7 @@ export default function SalesByMonthBar() {
 
     const widgetPayload = useMemo(
         () => ({
+            module: "SalesByMonthBar",
             table: "sumsales",
             columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total"],
             filters: `(sale_date >= DATEADD(MONTH, -12, GETDATE()) AND sale_date <= GETDATE())`,

@@ -92,6 +92,7 @@ export default function SalesByMonthComparisonBar() {
 
     const widgetPayload = useMemo(
         () => ({
+            module: "SalesByMonthComparisonBar",
             table: "sumsales",
             columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
             filters: `(

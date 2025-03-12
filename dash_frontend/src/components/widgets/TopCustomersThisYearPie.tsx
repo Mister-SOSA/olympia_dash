@@ -230,6 +230,7 @@ export default function TopCustomersThisYearPie() {
 
     const widgetPayload = useMemo(
         () => ({
+            module: "TopCustomersThisYearPie",
             table: "sumsales",
             columns: [
                 "sumsales.cust_code",

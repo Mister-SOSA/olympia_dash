@@ -21,7 +21,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configure logging for production. Adjust handlers/levels as needed.
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Open-Meteo API client configuration with caching and retries.
@@ -53,8 +53,10 @@ def get_widgets_post():
       - join: join clause(s)
       - limit: limit for pagination
       - offset: offset for pagination (default: 0)
+      - module: the name of the module requesting the query
     """
     try:
+        module = request.headers.get("module")
         data = request.get_json(force=True)
         if not data:
             return jsonify({"success": False, "error": "No JSON payload provided"}), 400
@@ -63,6 +65,7 @@ def get_widgets_post():
         raw_query = data.get("raw_query")
         if raw_query:
             results = QueryBuilder.execute_query(raw_query)
+            logger.info(f'{module} executed raw query')
             return jsonify({"success": True, "data": results}), 200
 
         # Ensure required parameters are provided.
@@ -93,15 +96,14 @@ def get_widgets_post():
             qb = qb.paginate(limit, offset)
 
         query = qb.build_query()
-        print(query)
 
         # Execute the built query.
         results = QueryBuilder.execute_query(query)
-        logger.info("Executed query: %s", query)
+        logger.info(f'{module} executed dynamic query: {query}')
         return jsonify({"success": True, "data": results}), 200
 
     except Exception as e:
-        logger.error("Error in /api/widgets endpoint: %s", e)
+        logger.error(f"{module} Error in /api/widgets endpoint: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

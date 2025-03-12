@@ -45,6 +45,7 @@ export default function OutstandingOrdersTable() {
     // Updated query to include qty_ord, uom and preserve vend_prom_date.
     const widgetPayload = useMemo(
         () => ({
+            module: "OutstandingOrdersTable",
             raw_query: `
         WITH AdjustedOrders AS (
             SELECT
