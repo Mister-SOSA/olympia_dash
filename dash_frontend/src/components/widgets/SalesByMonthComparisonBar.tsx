@@ -1,15 +1,64 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { calculateDateRange, processSalesData, prepareChartData, nFormatter } from "@/utils/helpers";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    CartesianGrid,
+    LabelList,
+} from "recharts";
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+    calculateDateRange,
+    processSalesData,
+    prepareChartData,
+    nFormatter,
+} from "@/utils/helpers";
 import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
 
 /* -------------------------------------- */
+/* 🔎 useResponsiveVisibleMonths Hook      */
+/* -------------------------------------- */
+/**
+ * Determines the number of visible months based on the container width.
+ */
+function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement>): number {
+    const [visibleMonths, setVisibleMonths] = useState(6);
+
+    useEffect(() => {
+        if (!ref.current) return;
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                const { width } = entry.contentRect;
+                if (width >= 1200) setVisibleMonths(9);
+                else if (width >= 800) setVisibleMonths(6);
+                else if (width >= 400) setVisibleMonths(3);
+                else setVisibleMonths(1);
+            }
+        });
+        resizeObserver.observe(ref.current);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [ref]);
+
+    return visibleMonths;
+}
+
+/* -------------------------------------- */
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
-const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
+interface SalesChartProps {
+    data: ProcessedSalesData[];
+}
+
+const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
     if (!data || data.length === 0) {
         return <div>No Data Available</div>;
     }
@@ -19,7 +68,12 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
             <ChartContainer config={{}}>
                 <BarChart data={data} margin={{ top: 30 }} className="last-blinking">
                     <CartesianGrid vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
-                    <XAxis dataKey="periodLabel" tickLine={false} tickMargin={10} axisLine={false} />
+                    <XAxis
+                        dataKey="periodLabel"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                    />
                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                     <Bar
                         dataKey="previousPeriodSales"
@@ -62,39 +116,24 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => {
 /* 📊 SalesByMonthComparisonBar Component */
 /* -------------------------------------- */
 export default function SalesByMonthComparisonBar() {
-    const [visibleMonths, setVisibleMonths] = useState(6);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(document.createElement('div'));
+    const visibleMonths = useResponsiveVisibleMonths(containerRef);
 
-    // Calculate the date ranges only once.
-    const { current, lastYear } = useMemo(() => calculateDateRange(12, "monthly"), []);
-
-    useEffect(() => {
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                const { width } = entry.contentRect;
-                if (width >= 1200) setVisibleMonths(9);
-                else if (width >= 800) setVisibleMonths(6);
-                else if (width >= 400) setVisibleMonths(3);
-                else setVisibleMonths(1);
-            }
-        });
-
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            if (containerRef.current) {
-                resizeObserver.disconnect();
-            }
-        };
-    }, []);
+    // Calculate date ranges for the current and last year (12-month period).
+    const { current, lastYear } = useMemo(
+        () => calculateDateRange(12, "monthly"),
+        []
+    );
 
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByMonthComparisonBar",
             table: "sumsales",
-            columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total", "YEAR(sale_date) AS year"],
+            columns: [
+                "FORMAT(sale_date, 'yyyy-MM') AS period",
+                "SUM(sales_dol) AS total",
+                "YEAR(sale_date) AS year",
+            ],
             filters: `(
         (sale_date >= '${current.start.toISOString().split("T")[0]}' AND sale_date <= '${current.end.toISOString().split("T")[0]}') 
         OR (sale_date >= '${lastYear.start.toISOString().split("T")[0]}' AND sale_date <= '${lastYear.end.toISOString().split("T")[0]}')
