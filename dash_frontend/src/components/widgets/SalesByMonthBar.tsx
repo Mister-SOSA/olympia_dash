@@ -18,6 +18,7 @@ import { SalesData, ProcessedSalesData } from "@/types";
 /* -------------------------------------- */
 /**
  * Returns the number of visible months based on the container's width.
+ * - width >= 1200: 16 months
  * - width >= 800: 12 months
  * - width >= 600: 9 months
  * - width >= 400: 6 months

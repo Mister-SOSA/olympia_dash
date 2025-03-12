@@ -1,6 +1,13 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    CartesianGrid,
+    LabelList,
+} from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import { format } from "date-fns";
@@ -8,10 +15,48 @@ import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
 
 /* -------------------------------------- */
+/* 🔎 useResponsiveVisibleDays Hook        */
+/* -------------------------------------- */
+/**
+ * Determines the number of visible days based on the container's width.
+ * - width >= 1200: 21 days
+ * - width >= 800: 14 days
+ * - width >= 600: 7 days
+ * - width >= 400: 5 days
+ * - Otherwise: 3 days
+ */
+function useResponsiveVisibleDays(ref: React.RefObject<HTMLDivElement | null>): number {
+    const [visibleDays, setVisibleDays] = useState(10);
+
+    useEffect(() => {
+        if (!ref.current) return;
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width } = entry.contentRect;
+                if (width >= 1200) setVisibleDays(21);
+                else if (width >= 800) setVisibleDays(14);
+                else if (width >= 600) setVisibleDays(7);
+                else if (width >= 400) setVisibleDays(5);
+                else setVisibleDays(3);
+            }
+        });
+        resizeObserver.observe(ref.current);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [ref]);
+
+    return visibleDays;
+}
+
+/* -------------------------------------- */
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
+interface SalesChartProps {
+    data: ProcessedSalesData[];
+}
 
-const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
+const SalesChart: React.FC<SalesChartProps> = ({ data }) => (
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
             <BarChart data={data} margin={{ top: 30 }}>
@@ -42,81 +87,59 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
 /* -------------------------------------- */
 /* 📊 SalesByDayBar Component             */
 /* -------------------------------------- */
-
 export default function SalesByDayBar() {
-    const [visibleDays, setVisibleDays] = useState(10); // Default to 10 days
     const containerRef = useRef<HTMLDivElement>(null);
+    const visibleDays = useResponsiveVisibleDays(containerRef);
 
-    // Adjust visibleDays based on container width
-    useEffect(() => {
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                const { width } = entry.contentRect;
-                if (width >= 1200) setVisibleDays(21);
-                else if (width >= 800) setVisibleDays(14);
-                else if (width >= 600) setVisibleDays(7);
-                else if (width >= 400) setVisibleDays(5);
-                else setVisibleDays(3);
-            }
-        });
-
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, []);
-
-    // Memoize the payload so its reference does not change on every render.
+    // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByDayBar",
             raw_query: `
-                -- Fetch sales data for the last 3 days from orditem
-                SELECT 
-                    FORMAT(duedate, 'yyyy-MM-dd') AS period,
-                    SUM(ext_price) AS total
-                FROM 
-                    orditem
-                WHERE 
-                    duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-                    AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
-                    AND duedate <= GETDATE()
-                GROUP BY 
-                    FORMAT(duedate, 'yyyy-MM-dd')
+        -- Fetch sales data for the last 3 days from orditem
+        SELECT 
+          FORMAT(duedate, 'yyyy-MM-dd') AS period,
+          SUM(ext_price) AS total
+        FROM 
+          orditem
+        WHERE 
+          duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+          AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
+          AND duedate <= GETDATE()
+        GROUP BY 
+          FORMAT(duedate, 'yyyy-MM-dd')
 
-                UNION ALL
+        UNION ALL
 
-                -- Fetch sales data older than 3 days but within 30 days from sumsales
-                SELECT 
-                    FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-                    SUM(sales_dol) AS total
-                FROM 
-                    sumsales
-                WHERE 
-                    sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-                    AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
-                    AND sale_date <= GETDATE()
-                GROUP BY 
-                    FORMAT(sale_date, 'yyyy-MM-dd')
+        -- Fetch sales data older than 3 days but within 30 days from sumsales
+        SELECT 
+          FORMAT(sale_date, 'yyyy-MM-dd') AS period,
+          SUM(sales_dol) AS total
+        FROM 
+          sumsales
+        WHERE 
+          sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
+          AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
+          AND sale_date <= GETDATE()
+        GROUP BY 
+          FORMAT(sale_date, 'yyyy-MM-dd')
 
-                -- Combine and aggregate the data for consistent results
-                ORDER BY 
-                    period ASC;
-            `,
+        -- Combine and aggregate the data for consistent results
+        ORDER BY 
+          period ASC;
+      `,
         }),
         []
     );
 
-    // Memoize the render function to prevent unnecessary re-creations.
+    // Memoize the render function.
     const renderSalesData = useCallback((data: SalesData[]) => {
+        // Define a 14-day range ending today.
         const rangeStart = new Date();
-        rangeStart.setDate(rangeStart.getDate() - 14); // Start of the 14-day range
-        const rangeEnd = new Date(); // Today
+        rangeStart.setDate(rangeStart.getDate() - 14);
+        const rangeEnd = new Date();
 
-        // Generate all dates in the range
+        // Generate all dates within the range.
         const allDates: Date[] = [];
         const currentDate = new Date(rangeStart);
         while (currentDate <= rangeEnd) {
@@ -124,8 +147,8 @@ export default function SalesByDayBar() {
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        // Create a complete dataset with zero sales for missing days
-        const chartData = allDates.map((date) => {
+        // Build the complete dataset with zero sales for missing dates.
+        const chartData: ProcessedSalesData[] = allDates.map((date) => {
             const formattedDate = format(date, "yyyy-MM-dd");
             const entry = data.find((item) => item.period === formattedDate);
             const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`;
@@ -133,7 +156,7 @@ export default function SalesByDayBar() {
                 period: formattedDate,
                 periodLabel: formattedLabel,
                 currentPeriodSales: entry?.total || 0,
-                previousPeriodSales: 0, // Default value for previousPeriodSales
+                previousPeriodSales: 0,
             };
         });
 
