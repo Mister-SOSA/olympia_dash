@@ -59,7 +59,6 @@ export default function Widget({
                     setError(err.message);
                 }
             } finally {
-                setLoading(false);
                 setFetchTrigger((prev) => prev + 1); // Trigger timer reset.
             }
         }
