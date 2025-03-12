@@ -34,7 +34,7 @@ const mapToParentCompany = (businessName: string): string => {
     if (!businessName) return "Unknown";
     for (const key in PARENT_MAPPING) {
         if (businessName.toUpperCase().includes(key)) {
-            return PARENT_MAPPING[key];
+            return PARENT_MAPPING[key as keyof typeof PARENT_MAPPING];
         }
     }
     return businessName;
@@ -160,7 +160,11 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
         return <div>No data available for chart</div>;
     }
 
-    const legendProps =
+    const legendProps: {
+        align: "center" | "right";
+        layout: "horizontal" | "vertical";
+        verticalAlign: "bottom" | "middle";
+    } =
         orientation === "portrait"
             ? { align: "center", layout: "horizontal", verticalAlign: "bottom" }
             : { align: "right", layout: "vertical", verticalAlign: "middle" };
