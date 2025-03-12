@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import Widget from "./Widget";
 import {
     ResponsiveContainer,
@@ -42,7 +42,7 @@ export default function DailyMovesByUser() {
 
     useEffect(() => {
         const resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
+            for (const entry of entries) {
                 const { width } = entry.contentRect;
                 if (width >= 800) setVisibleCategories(12);
                 else if (width >= 600) setVisibleCategories(9);
@@ -60,23 +60,28 @@ export default function DailyMovesByUser() {
         };
     }, []);
 
-    // Updated payload using COUNT(*) to sum the moves per user.
-    const payload = {
-        module: "DailyMovesByUser",
-        table: "inadjinf",
-        columns: ["user_id", "COUNT(*) as moves"],
-        group_by: ["inadjinf.user_id"],
-        filters: `trans_date = '${new Date().toISOString().split("T")[0]}' AND user_id != 'AUTO'`,
-        sort: "moves DESC",
-    };
+    // Compute today's date as an ISO string (YYYY-MM-DD)
+    const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);
+    // Memoize the widget payload to keep it stable between renders.
+    const widgetPayload = useMemo(
+        () => ({
+            module: "DailyMovesByUser",
+            table: "inadjinf",
+            columns: ["user_id", "COUNT(*) as moves"],
+            group_by: ["inadjinf.user_id"],
+            filters: `trans_date = '${currentDate}' AND user_id != 'AUTO'`,
+            sort: "moves DESC",
+        }),
+        [currentDate]
+    );
 
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
-                payload={payload}
+                payload={widgetPayload}
                 title="Daily Moves By User"
-                updateInterval={5000} // Refresh every 50 seconds
+                updateInterval={5000}
                 render={(data: MovesByUserData[]) => {
                     // Transform the data to match the chart's expected keys.
                     const transformedData = data.map((item) => ({
