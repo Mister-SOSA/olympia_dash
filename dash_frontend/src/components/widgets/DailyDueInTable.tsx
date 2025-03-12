@@ -13,7 +13,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
 
-const statusCodes: { [key: string]: string } = {
+/* -------------------------------------- */
+/* Constants & Helper Functions           */
+/* -------------------------------------- */
+const STATUS_CODES: { [key: string]: string } = {
     "20": "X", // Cancelled
     "10": "E", // Entered
     "12": "R", // Released
@@ -22,29 +25,23 @@ const statusCodes: { [key: string]: string } = {
     "18": "I", // Vendor Invoice Received
 };
 
-const RECENT_ORDER_THRESHOLD_DAYS = 30; // Adjust as needed
+const RECENT_ORDER_THRESHOLD_DAYS = 30;
 const YESTERDAY_OFFSET = 1;
 
-/* Badge used on status codes in the table */
 const statusBadge = (statusCode: string) => {
-    const status = statusCodes[statusCode];
-    return (
-        <span
-            className={`badge ${status === "X"
-                ? "badge-danger"
-                : status === "V"
-                    ? "badge-success"
-                    : "badge-primary"
-                }`}
-        >
-            {status}
-        </span>
-    )
+    const status = STATUS_CODES[statusCode];
+    const badgeClass =
+        status === "X"
+            ? "badge-danger"
+            : status === "V"
+                ? "badge-success"
+                : "badge-primary";
+    return <span className={`badge ${badgeClass}`}>{status}</span>;
 };
 
 /**
  * Deduplicate rows by (po_number, item_no). If a duplicate is found,
- * the one with a valid date_rcv is preferred.
+ * prefer the row with a valid date_rcv.
  */
 function deduplicateData(data: POItemData[]): POItemData[] {
     const dedupedMap = new Map<string, POItemData>();
@@ -128,8 +125,8 @@ function sortOrders(data: POItemData[]): POItemData[] {
     return data.sort((a, b) => {
         const vendorComparison = a.vend_name.localeCompare(b.vend_name);
         if (vendorComparison !== 0) return vendorComparison;
-        const poNumberComparison = a.po_number.localeCompare(b.po_number);
-        if (poNumberComparison !== 0) return poNumberComparison;
+        const poComparison = a.po_number.localeCompare(b.po_number);
+        if (poComparison !== 0) return poComparison;
         return a.part_code.localeCompare(b.part_code);
     });
 }
@@ -161,13 +158,10 @@ interface TableRowData {
 /**
  * Map the processed data into the format expected by the table.
  */
-function mapToTableData(
-    data: POItemData[],
-    timeZone: string
-): TableRowData[] {
+function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
     return data.map((item) => {
         // Adjust vendor promise date: add one day before formatting.
-        const correctedVendorPromiseDate = item.vend_prom_date
+        const correctedVendPromDate = item.vend_prom_date
             ? formatDate(
                 new Date(
                     new Date(item.vend_prom_date).setDate(
@@ -196,7 +190,7 @@ function mapToTableData(
                     )
                 )
                 : "N/A",
-            vendorPromiseDate: correctedVendorPromiseDate,
+            vendorPromiseDate: correctedVendPromDate,
             lastOrderDate: item.last_order_date
                 ? formatDate(
                     new Date(
@@ -212,18 +206,23 @@ function mapToTableData(
                     maximumFractionDigits: 4,
                 }).format(item.last_order_unit_price)}`
                 : "N/A",
-            qtyOrdered: item.qty_ord !== undefined && item.uom
-                ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
-                : "N/A",
-            qtyRecvd: item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
-                ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
-                : "-",
+            qtyOrdered:
+                item.qty_ord !== undefined && item.uom
+                    ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
+                    : "N/A",
+            qtyRecvd:
+                item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
+                    ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
+                    : "-",
         };
     });
 }
 
+/* -------------------------------------- */
+/* DailyDueInTable Component              */
+/* -------------------------------------- */
 export default function DailyDueInTable() {
-    // Prepare the raw query payload using useMemo.
+    // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
             module: "DailyDueInTable",
@@ -255,13 +254,14 @@ export default function DailyDueInTable() {
         []
     );
 
-    // Render function that processes data and returns the table UI.
+    // Process and transform data for the table.
     const renderFunction = useCallback((data: POItemData[]) => {
         let processedData = deduplicateData(data);
         processedData = computePreviousOrderDetails(processedData);
         const recentOrders = filterRecentOrders(processedData);
         let mergedData = removeHiddenVendors(recentOrders);
         mergedData = sortOrders(mergedData);
+
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const tableData = mapToTableData(mergedData, timeZone);
 
@@ -290,25 +290,31 @@ export default function DailyDueInTable() {
                             <TableRow
                                 key={index}
                                 className={`
-                                    ${statusCodes[row.poStatus] === "X" ? "cancelled-po" : ""} 
-                                    ${row.isGrouped ? "grouped-po" : ""} 
-                                    ${["V", "C"].includes(statusCodes[row.poStatus]) ? "received-po" : ""}
-                                `}
+                  ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
+                  ${row.isGrouped ? "grouped-po" : ""}
+                  ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
+                `}
                             >
-                                <TableCell className="font-black">
-                                    {row.poNumber}
-                                </TableCell>
-                                <TableCell className="font-black">
-                                    {statusBadge(row.poStatus)}
-                                </TableCell>
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
                                 <TableCell className="text-right">{row.qtyRecvd}</TableCell>
                                 <TableCell className="text-right">{row.dateOrdered}</TableCell>
                                 <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                <TableCell className="text-right row-secondary"><div className="table-dollars"><span className="dollar-sign">$</span><span className="dollar-value">{row.recentUnitPrice}</span></div></TableCell>
-                                <TableCell className="text-right row-secondary"><div className="table-dollars"><span className="dollar-sign">$</span><span className="dollar-value">{row.lastOrderUnitPrice}</span></div></TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
