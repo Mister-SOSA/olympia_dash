@@ -54,7 +54,7 @@ export default function Widget({
                 });
 
                 if (!response.ok) {
-                    throw new Error(`${response.status} - ${response.statusText}`);
+                    console.error(`Error fetching data for module ${title}:`, response.statusText);
                 }
 
                 const result = await response.json();
