@@ -3,6 +3,7 @@
 import { JSX, useEffect, useState } from "react";
 import PropogateLoader from "react-spinners/PropagateLoader";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { MdError } from "react-icons/md";
 
 interface WidgetProps {
     apiEndpoint?: string | null; // The API endpoint to fetch data from (optional)
@@ -94,8 +95,14 @@ export default function Widget({
 
     if (error)
         return (
-            <div>
-                Error: {error} Retrying in {updateInterval / 1000} seconds...
+            <div className="widget">
+                <h2 className="widget-header">{title}</h2>
+                <div className="widget-content">
+                    <div className="widget-error-container">
+                        <MdError size={48} />
+                        Error: {error} Retrying in {updateInterval / 1000} seconds...
+                    </div>
+                </div>
             </div>
         );
 
