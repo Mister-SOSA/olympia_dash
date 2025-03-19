@@ -7,6 +7,7 @@ This application provides two endpoints:
 """
 
 import logging
+import colorlog
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests_cache
@@ -14,15 +15,22 @@ import openmeteo_requests
 from retry_requests import retry
 from database.queries import QueryBuilder
 
-# Initialize Flask app
-app = Flask(__name__)
-
-# Enable Cross-Origin Resource Sharing (CORS)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# Configure logging for production. Adjust handlers/levels as needed.
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configure colorized logging with uniform format
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    '%(log_color)s%(asctime)s - %(levelname)-8s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    log_colors={
+        'DEBUG':    'cyan',
+        'INFO':     'green',
+        'WARNING':  'yellow',
+        'ERROR':    'red',
+        'CRITICAL': 'bold_red',
+    }
+))
+logger = colorlog.getLogger()
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 # Open-Meteo API client configuration with caching and retries.
 CACHE_EXPIRE_SECONDS = 3600
@@ -37,6 +45,8 @@ OPEN_METEO_PARAMS = {
     "current": "relative_humidity_2m"
 }
 
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/api/widgets', methods=['POST'])
 def get_widgets_post():
@@ -65,7 +75,7 @@ def get_widgets_post():
         raw_query = data.get("raw_query")
         if raw_query:
             results = QueryBuilder.execute_query(raw_query)
-            logger.info(f'{module} executed raw query')
+            logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed raw query', module)
             return jsonify({"success": True, "data": results}), 200
 
         # Ensure required parameters are provided.
@@ -99,11 +109,11 @@ def get_widgets_post():
 
         # Execute the built query.
         results = QueryBuilder.execute_query(query)
-        logger.info(f'{module} executed dynamic query: {query}')
+        logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed dynamic query | Query: %s', module, query)
         return jsonify({"success": True, "data": results}), 200
 
     except Exception as e:
-        logger.error(f"{module} | Error in /api/widgets endpoint: {e} | {query if 'query' in locals() else ''}")
+        logger.error('Module: %s | Endpoint: /api/widgets | Error: %s | Query: %s', module, e, query if 'query' in locals() else 'N/A')
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -122,7 +132,7 @@ def get_humidity():
         return jsonify({"success": True, "data": humidity}), 200
 
     except Exception as e:
-        logger.error("Error in /api/humidity endpoint: %s", e)
+        logger.error('Endpoint: /api/humidity | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
