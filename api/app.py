@@ -71,7 +71,7 @@ def get_widgets_post():
         module = request.headers.get("module")
         data = request.get_json(force=True)
         if not data:
-            return jsonify({"success": False, "error": "No JSON payload provided"}), 400
+            return jsonify({"success": False, "error": "No JSON payload provided"}), 200
 
         # If a raw SQL query is provided, execute it directly.
         raw_query = data.get("raw_query")
@@ -83,7 +83,7 @@ def get_widgets_post():
         # Ensure required parameters are provided.
         table = data.get("table")
         if not table:
-            return jsonify({"success": False, "error": "Table parameter is required"}), 400
+            return jsonify({"success": False, "error": "Table parameter is required"}), 200
 
         # Extract dynamic query parameters.
         columns = data.get("columns", ["*"])
@@ -116,7 +116,8 @@ def get_widgets_post():
 
     except Exception as e:
         logger.error('Module: %s | Endpoint: /api/widgets | Error: %s | Query: %s', module, e, query if 'query' in locals() else 'N/A')
-        return jsonify({"success": False, "error": str(e)}), 500
+        # Return error with HTTP 200 so the widget always receives a JSON response
+        return jsonify({"success": False, "error": str(e)}), 200
 
 
 @app.route('/api/humidity', methods=['GET'])
@@ -135,7 +136,7 @@ def get_humidity():
 
     except Exception as e:
         logger.error('Endpoint: /api/humidity | Error: %s', e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 200
 
 
 
