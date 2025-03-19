@@ -103,7 +103,7 @@ def get_widgets_post():
         return jsonify({"success": True, "data": results}), 200
 
     except Exception as e:
-        logger.error(f"{module} Error in /api/widgets endpoint: {e}")
+        logger.error(f"{module} | Error in /api/widgets endpoint: {e} | {query}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
