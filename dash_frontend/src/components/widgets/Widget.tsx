@@ -40,8 +40,9 @@ export default function Widget({
 
         async function fetchData(retries = 3, delay = 2000) {
             try {
-                if (updateInterval) {
+                if (updateInterval && intervalRef.current) {
                     clearInterval(intervalRef.current as NodeJS.Timeout); // Pause normal updates
+                    intervalRef.current = null;
                 }
 
                 const response = await fetch(apiEndpoint as string, {
