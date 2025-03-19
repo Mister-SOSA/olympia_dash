@@ -59,6 +59,13 @@ export default function Widget({
                 }
 
                 const result = await response.json();
+
+                // If the API signals an error, immediately set the error state.
+                if (!result.success) {
+                    setError(result.error);
+                    return;
+                }
+
                 setData(result.data);
                 setError(null); // Clear previous errors
                 setRetryTime(null); // Reset retry time
@@ -102,8 +109,10 @@ export default function Widget({
                     }
 
                     retryTimeoutRef.current = setTimeout(() => {
-                        clearInterval(retryIntervalRef.current!);
-                        retryIntervalRef.current = null;
+                        if (retryIntervalRef.current) {
+                            clearInterval(retryIntervalRef.current);
+                            retryIntervalRef.current = null;
+                        }
                         fetchData(retries > 0 ? retries - 1 : retries, nextDelay);
                     }, nextDelay);
                 }
@@ -157,7 +166,7 @@ export default function Widget({
                         {retryTime !== null && <p className="text-[1rem]">Retrying in {retryTime} seconds...</p>}
                     </div>
                 </div>
-            </div >
+            </div>
         );
 
     return (
