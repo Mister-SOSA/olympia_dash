@@ -1,4 +1,23 @@
 from database.connection import DatabaseConnection
+import colorlog
+import logging
+
+# Configure colorized logging with uniform format
+handler = colorlog.StreamHandler()
+handler.setFormatter(colorlog.ColoredFormatter(
+    '%(log_color)s%(asctime)s - %(levelname)-8s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    log_colors={
+        'DEBUG':    'cyan',
+        'INFO':     'green',
+        'WARNING':  'yellow',
+        'ERROR':    'red',
+        'CRITICAL': 'bold_red',
+    }
+))
+logger = colorlog.getLogger()
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class QueryBuilder:
     def __init__(self, table):
@@ -111,18 +130,26 @@ class QueryBuilder:
         Execute the given SQL query and return the results as a list of dictionaries.
         """
         db = DatabaseConnection()
+        logger.info("Opening database connection for query: %s", query)
         connection = db.get_connection()
         cursor = connection.cursor()
         try:
             if params:
+                logger.info("Executing parameterized query with params: %s", params)
                 cursor.execute(query, params)  # Parameterized query
             else:
+                logger.info("Executing query without parameters.")
                 cursor.execute(query)
             
             # Fetch results and column names
             results = cursor.fetchall()
             columns = [column[0] for column in cursor.description]
+            logger.info("Query executed successfully, fetched %d rows.", len(results))
             return [dict(zip(columns, row)) for row in results]
+        except Exception as e:
+            logger.error("Error executing query: %s", e)
+            raise
         finally:
             cursor.close()
             connection.close()
+            logger.info("Closed database connection for query.")
