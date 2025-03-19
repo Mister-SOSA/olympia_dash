@@ -3,7 +3,7 @@ import Widget from "./Widget";
 import config from "@/config";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
+import { format, differenceInCalendarMonths } from "date-fns";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -30,7 +30,7 @@ type ProductUnitData = {
 /* TopProductUnitSalesTable Component       */
 /* -------------------------------------- */
 export default function TopProductUnitSalesTable() {
-    // Prepare the widget payload with the raw SQL query.
+    // Prepare the widget payload with SQL query.
     const widgetPayload = useMemo(
         () => ({
             module: "TopProductUnitSales",
@@ -43,7 +43,7 @@ export default function TopProductUnitSalesTable() {
                 "date_entered"
             ],
             filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND `,
-            sort: ["date_entered DESC", "order_numb ASC"],
+            sort: ["date_entered DESC"],
         }),
         []
     );
@@ -51,22 +51,80 @@ export default function TopProductUnitSalesTable() {
 
     // Transform raw data into table row data.
     const renderFunction = useCallback((data: ProductUnitData[]) => {
-        const tableData = data.map((row) => ({
-            partCode: row.part_code,
-            partDesc: row.part_desc,
-            qty: row.qty,
-            uom: row.uom,
-            dateEntered: format(new Date(row.date_entered), "MM/dd/yyyy"),
-        }));
+        console.log(data);
+        if (!data || !Array.isArray(data)) {
+            return <div>No data available</div>;
+        }
+        // Initialize product aggregates for each product in PRODUCTS
+        const aggregates: {
+            [key: string]: {
+                partCode: string;
+                partDesc: string;
+                uom: string;
+                total3: number;
+                total6: number;
+                total9: number;
+                total12: number;
+            };
+        } = {};
 
-        // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
-        tableData.sort((a, b) => {
-            if (a.partCode < b.partCode) return -1;
-            if (a.partCode > b.partCode) return 1;
-            return 0;
+        // Initialize aggregates for all products in PRODUCTS
+        PRODUCTS.forEach(code => {
+            aggregates[code] = {
+                partCode: code,
+                partDesc: "",
+                uom: "",
+                total3: 0,
+                total6: 0,
+                total9: 0,
+                total12: 0,
+            };
         });
 
-        // Render the table within a scrollable container.
+        const now = new Date();
+        data.forEach(row => {
+            const code = row.part_code;
+            // Only process if the product is in our list
+            if (aggregates[code]) {
+                // Use the first available partDesc and uom
+                if (!aggregates[code].partDesc && row.part_desc) {
+                    aggregates[code].partDesc = row.part_desc;
+                }
+                if (!aggregates[code].uom && row.uom) {
+                    aggregates[code].uom = row.uom;
+                }
+                const saleDate = new Date(row.date_entered);
+                const diffMonths = differenceInCalendarMonths(now, saleDate);
+                // Only include sales from the past 12 months
+                if (diffMonths < 12) {
+                    if (diffMonths < 3) {
+                        aggregates[code].total3 += row.qty;
+                    }
+                    if (diffMonths < 6) {
+                        aggregates[code].total6 += row.qty;
+                    }
+                    if (diffMonths < 9) {
+                        aggregates[code].total9 += row.qty;
+                    }
+                    aggregates[code].total12 += row.qty;
+                }
+            }
+        });
+
+        // Prepare table rows with average monthly units for each period
+        const tableData = Object.values(aggregates).map(product => ({
+            partCode: product.partCode,
+            partDesc: product.partDesc || product.partCode,
+            uom: product.uom,
+            avg3: (product.total3 / 3).toFixed(2),
+            avg6: (product.total6 / 6).toFixed(2),
+            avg9: (product.total9 / 9).toFixed(2),
+            avg12: (product.total12 / 12).toFixed(2),
+        }));
+
+        // Sort tableData alphabetically by partCode
+        tableData.sort((a, b) => a.partCode.localeCompare(b.partCode));
+
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
                 <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
@@ -74,9 +132,11 @@ export default function TopProductUnitSalesTable() {
                         <TableRow>
                             <TableCell>Part Code</TableCell>
                             <TableCell>Part Description</TableCell>
-                            <TableCell>Qty</TableCell>
                             <TableCell>UOM</TableCell>
-                            <TableCell>Date Entered</TableCell>
+                            <TableCell>Avg 3 Mo</TableCell>
+                            <TableCell>Avg 6 Mo</TableCell>
+                            <TableCell>Avg 9 Mo</TableCell>
+                            <TableCell>Avg 12 Mo</TableCell>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -84,9 +144,11 @@ export default function TopProductUnitSalesTable() {
                             <TableRow key={i}>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell>{row.partDesc}</TableCell>
-                                <TableCell>{row.qty}</TableCell>
                                 <TableCell>{row.uom}</TableCell>
-                                <TableCell>{row.dateEntered}</TableCell>
+                                <TableCell>{row.avg3}</TableCell>
+                                <TableCell>{row.avg6}</TableCell>
+                                <TableCell>{row.avg9}</TableCell>
+                                <TableCell>{row.avg12}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

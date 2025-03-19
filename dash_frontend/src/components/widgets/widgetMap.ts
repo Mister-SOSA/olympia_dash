@@ -11,6 +11,7 @@ import Humidity from "./Humidity";
 import DailyMovesByUser from "./DailyMovesByUser";
 import InventoryMovesLog from "./InventoryMovesLog";
 import DailyDueInHiddenVendTable from "./DailyDueInHiddenVendTable";
+import TopProductUnitSales from "./TopProductUnitSales";
 
 const widgetMap: Record<string, React.ComponentType> = {
     SalesByMonthComparisonBar: SalesByMonthComparisonBar,
@@ -26,6 +27,7 @@ const widgetMap: Record<string, React.ComponentType> = {
     DailyMovesByUser: DailyMovesByUser,
     InventoryMovesLog: InventoryMovesLog,
     DailyDueInHiddenVendTable: DailyDueInHiddenVendTable,
+    TopProductUnitSales: TopProductUnitSales,
 };
 
 export default widgetMap;

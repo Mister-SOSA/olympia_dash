@@ -29,7 +29,6 @@ const config = {
         "105", // BIRO OF CHICAGO
         "6011", // CRESCENT ELECTRIC SUPPLY COMPANY
         "122", // CHEMSTATION CHICAGO LLC
-        "776", // ROBERT REISER & CO. INC.
         "135", // CINTAS CORPORATION
     ]
 };

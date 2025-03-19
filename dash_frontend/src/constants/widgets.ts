@@ -14,4 +14,5 @@ export const masterWidgetList: Widget[] = [
     { id: "DailyMovesByUser", x: 0, y: 0, w: 5, h: 4, enabled: false },
     { id: "InventoryMovesLog", x: 0, y: 0, w: 8, h: 5, enabled: false },
     { id: "DailyDueInHiddenVendTable", x: 0, y: 0, w: 8, h: 5, enabled: false },
+    { id: "TopProductUnitSales", x: 0, y: 0, w: 5, h: 4, enabled: false },
 ];
