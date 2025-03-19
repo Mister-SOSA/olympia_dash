@@ -60,10 +60,9 @@ export default function Widget({
 
                 const result = await response.json();
 
-                // If the API signals an error, immediately set the error state.
+                // If the API signals an error, throw an error to trigger retry logic.
                 if (!result.success) {
-                    setError(result.error);
-                    return;
+                    throw new Error(result.error);
                 }
 
                 setData(result.data);
