@@ -42,8 +42,8 @@ export default function TopProductUnitSalesTable() {
                 "uom",
                 "date_entered"
             ],
-            filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND `,
-            sort: ["date_entered DESC"],
+            filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND qty > 0 AND date_entered >= DATEADD(MONTH, -12, GETDATE())`,
+            sort: ["date_entered DESC", "part_code ASC"],
         }),
         []
     );
@@ -122,21 +122,21 @@ export default function TopProductUnitSalesTable() {
             avg12: (product.total12 / 12).toFixed(2),
         }));
 
-        // Sort tableData alphabetically by partCode
-        tableData.sort((a, b) => a.partCode.localeCompare(b.partCode));
+        // Sort tableData by units sold in the past 12 months
+        tableData.sort((a, b) => parseFloat(b.avg12) - parseFloat(a.avg12));
 
         return (
-            <ScrollArea className="h-[95%] rounded-md border mt-2">
+            <ScrollArea className="h-[97%] rounded-md border mt-2">
                 <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>
-                            <TableCell>Part Code</TableCell>
-                            <TableCell>Part Description</TableCell>
-                            <TableCell>UOM</TableCell>
-                            <TableCell>Avg 3 Mo</TableCell>
-                            <TableCell>Avg 6 Mo</TableCell>
-                            <TableCell>Avg 9 Mo</TableCell>
-                            <TableCell>Avg 12 Mo</TableCell>
+                            <TableHead>Part Code</TableHead>
+                            <TableHead>Part Description</TableHead>
+                            <TableHead>UOM</TableHead>
+                            <TableHead>Avg 3 Mo</TableHead>
+                            <TableHead>Avg 6 Mo</TableHead>
+                            <TableHead>Avg 9 Mo</TableHead>
+                            <TableHead>Avg 12 Mo</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
