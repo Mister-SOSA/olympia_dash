@@ -3,6 +3,23 @@ import Widget from "./Widget";
 import { nFormatter, calculatePercentageChange } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData } from "@/types";
+import { MdAttachMoney } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const overviewWidgetMeta = {
+    id: "Overview",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Sales Overview",
+    category: "Sales",
+    description: "Displays an overview of sales metrics.",
+    icon: <MdAttachMoney />,
+};
 
 /* -------------------------------------- */
 /* 📊 OverviewWidget Component            */

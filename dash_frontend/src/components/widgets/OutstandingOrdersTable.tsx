@@ -5,6 +5,23 @@ import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { MdLocalShipping } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const outstandingOrdersTableMeta = {
+    id: "OutstandingOrdersTable",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Outstanding Orders",
+    category: "Purchasing",
+    description: "Displays overdue incoming orders.",
+    icon: <MdLocalShipping size={24} />,
+};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */

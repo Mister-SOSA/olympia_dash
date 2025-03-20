@@ -12,6 +12,24 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { MdAttachMoney } from "react-icons/md";
+
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const salesByMonthBarMeta = {
+    id: "SalesByMonthBar",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Sales by Month",
+    category: "Sales",
+    description: "Displays sales dollars by month.",
+    icon: <MdAttachMoney />,
+};
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */

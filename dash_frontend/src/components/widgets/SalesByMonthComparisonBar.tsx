@@ -21,6 +21,23 @@ import {
 } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { MdAttachMoney } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const salesByMonthComparisonBarMeta = {
+    id: "SalesByMonthComparisonBar",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Sales by Month (Comparison)",
+    category: "Sales",
+    description: "Displays sales dollars by month for the current and last year.",
+    icon: <MdAttachMoney />,
+};
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
