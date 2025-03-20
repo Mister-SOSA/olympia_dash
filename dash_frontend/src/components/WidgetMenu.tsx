@@ -75,7 +75,6 @@ const Menu: React.FC<MenuProps> = ({
                                         className="widget-menu-checkbox"
                                     />
                                     <label className="text-sm font-medium flex items-center">
-                                        {widget.icon && <span className="mr-2">{widget.icon}</span>}
                                         {widget.displayName || widget.id}
                                     </label>
                                 </div>
