@@ -25,7 +25,7 @@ export const dailyDueInTableMeta = {
     h: 4,
     enabled: true,
     displayName: "Daily Due In",
-    category: "Purchasing",
+    category: "🧾 Purchasing",
     description: "Displays daily due-in orders.",
     icon: <MdLocalShipping size={24} />,
 };

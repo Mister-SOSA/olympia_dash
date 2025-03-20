@@ -26,7 +26,7 @@ export const salesByDayBarMeta = {
     h: 4,
     enabled: true,
     displayName: "Sales by Day",
-    category: "Sales",
+    category: "💸 Sales",
     description: "Displays sales dollars by day.",
     icon: <MdAttachMoney />,
 };

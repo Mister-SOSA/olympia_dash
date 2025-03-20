@@ -25,7 +25,7 @@ export const dailyDueInHiddenVendTableMeta = {
     h: 4,
     enabled: true,
     displayName: "Daily Due In (Maintenance Only)",
-    category: "Purchasing",
+    category: "🧾 Purchasing",
     description: "Displays daily due-in orders for maintenance only.",
     icon: <MdLocalShipping size={24} />,
 };

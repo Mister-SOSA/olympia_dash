@@ -16,7 +16,7 @@ export const overviewWidgetMeta = {
     h: 4,
     enabled: true,
     displayName: "Sales Overview",
-    category: "Sales",
+    category: "💸 Sales",
     description: "Displays an overview of sales metrics.",
     icon: <MdAttachMoney />,
 };

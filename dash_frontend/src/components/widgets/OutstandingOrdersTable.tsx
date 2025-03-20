@@ -18,7 +18,7 @@ export const outstandingOrdersTableMeta = {
     h: 4,
     enabled: true,
     displayName: "Outstanding Orders",
-    category: "Purchasing",
+    category: "🧾 Purchasing",
     description: "Displays overdue incoming orders.",
     icon: <MdLocalShipping size={24} />,
 };

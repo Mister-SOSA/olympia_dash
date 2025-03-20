@@ -15,7 +15,7 @@ export const humidityWidgetMeta = {
     h: 4,
     enabled: true,
     displayName: "Humidity",
-    category: "Utilities",
+    category: "🔧 Utilities",
     description: "Displays the current humidity.",
     icon: <MdWater />,
 };

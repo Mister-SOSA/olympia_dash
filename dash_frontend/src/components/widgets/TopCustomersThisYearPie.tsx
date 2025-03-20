@@ -29,7 +29,7 @@ export const topCustomersThisYearPieMeta = {
     h: 4,
     enabled: true,
     displayName: "Top Customers This Year",
-    category: "Sales",
+    category: "💸 Sales",
     description: "Displays the top customers this year.",
     icon: <MdMoney />
 };

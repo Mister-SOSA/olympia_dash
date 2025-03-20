@@ -10,7 +10,7 @@ export const clockWidgetMeta = {
     h: 4,
     enabled: true,
     displayName: "Clock",
-    category: "Utilities",
+    category: "🔧 Utilities",
     description: "Displays the current time.",
     icon: <MdAccessTime size={24} />,
 };

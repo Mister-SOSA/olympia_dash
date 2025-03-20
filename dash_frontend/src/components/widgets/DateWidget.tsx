@@ -13,7 +13,7 @@ export const dateWidgetMeta = {
     h: 4,
     enabled: true,
     displayName: "Date",
-    category: "Utilities",
+    category: "🔧 Utilities",
     description: "Displays the current date.",
     icon: <MdDateRange />,
 };
