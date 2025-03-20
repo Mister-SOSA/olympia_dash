@@ -7,6 +7,7 @@ This application provides two endpoints:
 """
 
 import logging
+import colorlog
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests_cache
@@ -14,15 +15,24 @@ import openmeteo_requests
 from retry_requests import retry
 from database.queries import QueryBuilder
 
-# Initialize Flask app
-app = Flask(__name__)
-
-# Enable Cross-Origin Resource Sharing (CORS)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# Configure logging for production. Adjust handlers/levels as needed.
-logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
+# Configure colorized logging with uniform format
+logger = colorlog.getLogger()
+# Only add the handler if one isn't already attached to prevent duplicate logs.
+if not any(isinstance(h, colorlog.StreamHandler) for h in logger.handlers):
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(colorlog.ColoredFormatter(
+        '%(log_color)s%(asctime)s - %(levelname)-8s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        log_colors={
+            'DEBUG':    'cyan',
+            'INFO':     'green',
+            'WARNING':  'yellow',
+            'ERROR':    'red',
+            'CRITICAL': 'bold_red',
+        }
+    ))
+    logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 # Open-Meteo API client configuration with caching and retries.
 CACHE_EXPIRE_SECONDS = 3600
@@ -37,6 +47,8 @@ OPEN_METEO_PARAMS = {
     "current": "relative_humidity_2m"
 }
 
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/api/widgets', methods=['POST'])
 def get_widgets_post():
@@ -53,22 +65,25 @@ def get_widgets_post():
       - join: join clause(s)
       - limit: limit for pagination
       - offset: offset for pagination (default: 0)
+      - module: the name of the module requesting the query
     """
     try:
+        module = request.headers.get("module")
         data = request.get_json(force=True)
         if not data:
-            return jsonify({"success": False, "error": "No JSON payload provided"}), 400
+            return jsonify({"success": False, "error": "No JSON payload provided"}), 200
 
         # If a raw SQL query is provided, execute it directly.
         raw_query = data.get("raw_query")
         if raw_query:
             results = QueryBuilder.execute_query(raw_query)
+            logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed raw query', module)
             return jsonify({"success": True, "data": results}), 200
 
         # Ensure required parameters are provided.
         table = data.get("table")
         if not table:
-            return jsonify({"success": False, "error": "Table parameter is required"}), 400
+            return jsonify({"success": False, "error": "Table parameter is required"}), 200
 
         # Extract dynamic query parameters.
         columns = data.get("columns", ["*"])
@@ -93,16 +108,16 @@ def get_widgets_post():
             qb = qb.paginate(limit, offset)
 
         query = qb.build_query()
-        print(query)
 
         # Execute the built query.
         results = QueryBuilder.execute_query(query)
-        logger.info("Executed query: %s", query)
+        logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed dynamic query | Query: %s', module, query)
         return jsonify({"success": True, "data": results}), 200
 
     except Exception as e:
-        logger.error("Error in /api/widgets endpoint: %s", e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error('Module: %s | Endpoint: /api/widgets | Error: %s | Query: %s', module, e, query if 'query' in locals() else 'N/A')
+        # Return error with HTTP 200 so the widget always receives a JSON response
+        return jsonify({"success": False, "error": str(e)}), 200
 
 
 @app.route('/api/humidity', methods=['GET'])
@@ -120,11 +135,11 @@ def get_humidity():
         return jsonify({"success": True, "data": humidity}), 200
 
     except Exception as e:
-        logger.error("Error in /api/humidity endpoint: %s", e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error('Endpoint: /api/humidity | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
 
 
 
 if __name__ == "__main__":
     # DISABLE DEBUG FOR PROD
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5001, host='172.19.1.95')

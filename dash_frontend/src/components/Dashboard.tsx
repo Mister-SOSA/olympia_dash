@@ -100,6 +100,7 @@ export default function Dashboard() {
     // Keydown handler for toggling the menu, saving/loading presets, and compacting.
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
+            console.log(`Key pressed: ${e.key}`);
             // Toggle widget menu with "F"
             if (e.key.toLowerCase() === "f") {
                 setMenuOpen((prev) => !prev);
@@ -121,7 +122,12 @@ export default function Dashboard() {
             // Use e.code so that Shift+Digit still gives "DigitX".
             else if (e.code.startsWith("Digit")) {
                 const digit = parseInt(e.code.replace("Digit", ""), 10);
-                if (digit >= 1 && digit <= 9) {
+                if (digit === 0) {
+                    // trigger a hard reload of the page
+                    window.location.reload();
+                }
+
+                else if (digit >= 1 && digit <= 9) {
                     const index = digit - 1;
                     // If Shift is pressed, save the current live layout as a preset.
                     if (e.shiftKey) {

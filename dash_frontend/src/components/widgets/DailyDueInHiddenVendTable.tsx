@@ -17,16 +17,16 @@ import { MdLocalShipping } from "react-icons/md";
 /* -------------------------------------- */
 /* Widget Metadata                        */
 /* -------------------------------------- */
-export const dailyDueInTableMeta = {
-    id: "DailyDueInTable",
+export const dailyDueInHiddenVendTableMeta = {
+    id: "DailyDueInHiddenVendTable",
     x: 0,
     y: 0,
     w: 4,
     h: 4,
     enabled: true,
-    displayName: "Daily Due In",
+    displayName: "Daily Due In (Maintenance Only)",
     category: "🧾 Purchasing",
-    description: "Displays daily due-in orders.",
+    description: "Displays daily due-in orders for maintenance only.",
     icon: <MdLocalShipping size={24} />,
 };
 
@@ -130,7 +130,7 @@ function filterRecentOrders(data: POItemData[]): POItemData[] {
  */
 function removeHiddenVendors(data: POItemData[]): POItemData[] {
     return data.filter(
-        (item) => !config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code)
+        (item) => config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code)
     );
 }
 
@@ -345,8 +345,8 @@ export default function DailyDueInTable() {
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
-                title="Daily Due In"
-                updateInterval={8000}
+                title="Daily Due In (Maintenance Only)"
+                updateInterval={15000}
                 render={renderFunction}
             />
         </div>

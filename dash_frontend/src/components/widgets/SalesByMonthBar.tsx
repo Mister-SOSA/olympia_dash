@@ -1,15 +1,81 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import { ResponsiveContainer, BarChart, Bar, XAxis, CartesianGrid, LabelList } from "recharts";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    CartesianGrid,
+    LabelList,
+} from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { MdAttachMoney } from "react-icons/md";
+
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const salesByMonthBarMeta = {
+    id: "SalesByMonthBar",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Sales by Month",
+    category: "💸 Sales",
+    description: "Displays sales dollars by month.",
+    icon: <MdAttachMoney size={24} />,
+};
+
+/* -------------------------------------- */
+/* 🔎 useResponsiveVisibleMonths Hook      */
+/* -------------------------------------- */
+/**
+ * Returns the number of visible months based on the container's width.
+ * - width >= 1200: 16 months
+ * - width >= 800: 12 months
+ * - width >= 600: 9 months
+ * - width >= 400: 6 months
+ * - Otherwise: 3 months
+ */
+function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement | null>): number {
+    const [visibleMonths, setVisibleMonths] = useState(6);
+
+    useEffect(() => {
+        if (!ref.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width } = entry.contentRect;
+                if (width >= 1200) setVisibleMonths(16);
+                else if (width >= 800) setVisibleMonths(12);
+                else if (width >= 600) setVisibleMonths(9);
+                else if (width >= 400) setVisibleMonths(6);
+                else setVisibleMonths(3);
+            }
+        });
+
+        resizeObserver.observe(ref.current);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [ref]);
+
+    return visibleMonths;
+}
 
 /* -------------------------------------- */
 /* 📊 SalesChart Component                */
 /* -------------------------------------- */
-const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
+interface SalesChartProps {
+    data: ProcessedSalesData[];
+}
+
+const SalesChart: React.FC<SalesChartProps> = ({ data }) => (
     <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={{}}>
             <BarChart data={data} margin={{ top: 30 }}>
@@ -41,33 +107,12 @@ const SalesChart = ({ data }: { data: ProcessedSalesData[] }) => (
 /* 📊 SalesByMonthBar Component           */
 /* -------------------------------------- */
 export default function SalesByMonthBar() {
-    const [visibleMonths, setVisibleMonths] = useState(6);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (let entry of entries) {
-                const { width } = entry.contentRect;
-                if (width >= 800) setVisibleMonths(12);
-                else if (width >= 600) setVisibleMonths(9);
-                else if (width >= 400) setVisibleMonths(6);
-                else setVisibleMonths(3);
-            }
-        });
-
-        if (containerRef.current) {
-            resizeObserver.observe(containerRef.current);
-        }
-
-        return () => {
-            if (containerRef.current) {
-                resizeObserver.disconnect();
-            }
-        };
-    }, []);
+    const visibleMonths = useResponsiveVisibleMonths(containerRef);
 
     const widgetPayload = useMemo(
         () => ({
+            module: "SalesByMonthBar",
             table: "sumsales",
             columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total"],
             filters: `(sale_date >= DATEADD(MONTH, -12, GETDATE()) AND sale_date <= GETDATE())`,

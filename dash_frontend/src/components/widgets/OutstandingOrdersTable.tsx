@@ -5,12 +5,28 @@ import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { MdLocalShipping } from "react-icons/md";
 
 /* -------------------------------------- */
-/* 📊 Outstanding Orders Table Component  */
+/* Widget Metadata                        */
 /* -------------------------------------- */
+export const outstandingOrdersTableMeta = {
+    id: "OutstandingOrdersTable",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Outstanding Orders",
+    category: "🧾 Purchasing",
+    description: "Displays overdue incoming orders.",
+    icon: <MdLocalShipping size={24} />,
+};
 
-const statusCodes: { [key: string]: string } = {
+/* -------------------------------------- */
+/* Constants & Helper Functions           */
+/* -------------------------------------- */
+const STATUS_CODES: { [key: string]: string } = {
     '20': 'X', // Cancelled
     '10': 'E', // Entered
     '12': 'R', // Released
@@ -19,15 +35,35 @@ const statusCodes: { [key: string]: string } = {
     '18': 'I', // Vendor Invoice Received
 };
 
+const renderStatusBadge = (statusCode: string) => {
+    const status = STATUS_CODES[statusCode];
+    const badgeClass =
+        status === "X"
+            ? "badge-danger"
+            : status === "V"
+                ? "badge-success"
+                : "badge-primary";
+
+    return <span className={`badge ${badgeClass}`}>{status}</span>;
+};
+
+const adjustDateByOneDay = (dateStr?: string): Date | null =>
+    dateStr ? new Date(new Date(dateStr).setDate(new Date(dateStr).getDate() + 1)) : null;
+
+/* -------------------------------------- */
+/* OutstandingOrdersTable Component       */
+/* -------------------------------------- */
 export default function OutstandingOrdersTable() {
-    // Memoize the hidden vendor codes string
+    // Memoize hidden vendor codes string for query filtering.
     const hiddenVendorCodes = useMemo(
-        () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map((code) => `'${code}'`).join(", "),
+        () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map(code => `'${code}'`).join(", "),
         []
     );
 
+    // Prepare the widget payload with the raw SQL query.
     const widgetPayload = useMemo(
         () => ({
+            module: "OutstandingOrdersTable",
             raw_query: `
         WITH AdjustedOrders AS (
             SELECT
@@ -43,6 +79,8 @@ export default function OutstandingOrdersTable() {
                 date_rcv,
                 item_no,
                 part_type,
+                qty_ord,
+                uom,
                 ROW_NUMBER() OVER (
                     PARTITION BY po_number, item_no
                     ORDER BY
@@ -67,7 +105,9 @@ export default function OutstandingOrdersTable() {
                 date_prom_user,
                 date_rcv,
                 item_no,
-                part_type
+                part_type,
+                qty_ord,
+                uom
             FROM
                 AdjustedOrders
             WHERE
@@ -85,7 +125,9 @@ export default function OutstandingOrdersTable() {
                 date_orderd AS recent_date_orderd,
                 vend_prom_date,
                 date_prom_user,
-                part_type
+                part_type,
+                qty_ord,
+                uom
             FROM
                 FilteredOrders
             WHERE
@@ -105,6 +147,8 @@ export default function OutstandingOrdersTable() {
             ro.vend_prom_date,
             ro.date_prom_user,
             ro.part_type,
+            ro.qty_ord,
+            ro.uom,
             lo.last_order_date,
             lo.last_order_unit_price
         FROM
@@ -123,6 +167,8 @@ export default function OutstandingOrdersTable() {
             ORDER BY
                 p2.date_orderd DESC
         ) lo
+        WHERE
+            ph.po_status = '12'
         ORDER BY
             ro.po_number ASC,
             ro.vend_prom_date ASC;
@@ -131,76 +177,104 @@ export default function OutstandingOrdersTable() {
         [hiddenVendorCodes]
     );
 
+    // Transform raw data into table row data.
     const renderFunction = useCallback((data: POItemData[]) => {
-        const tableData = data.map((item) => ({
-            poNumber: item.po_number,
-            poStatus: item.po_status,
-            vendName: item.vend_name,
-            partCode: item.part_code,
-            partDescription: item.part_desc,
-            recentUnitPrice: `$${new Intl.NumberFormat("en-US", {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-            }).format(item.recent_unit_price)}`,
-            dateOrdered: item.recent_date_orderd
-                ? format(
-                    new Date(new Date(item.recent_date_orderd).setDate(new Date(item.recent_date_orderd).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            vendorPromiseDate: item.vend_prom_date
-                ? format(
-                    new Date(new Date(item.vend_prom_date).setDate(new Date(item.vend_prom_date).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            lastOrderDate: item.last_order_date
-                ? format(
-                    new Date(new Date(item.last_order_date).setDate(new Date(item.last_order_date).getDate() + 1)),
-                    "MMM d, yyyy"
-                )
-                : "N/A",
-            lastOrderUnitPrice: item.last_order_unit_price
-                ? `$${new Intl.NumberFormat("en-US", {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4,
-                }).format(item.last_order_unit_price)}`
-                : "N/A",
-            userOrdered: item.date_prom_user,
-        }));
+        const tableData = data.map((item) => {
+            const adjustedOrderDate = adjustDateByOneDay(item.recent_date_orderd ?? undefined);
+            const adjustedVendPromDate = adjustDateByOneDay(item.vend_prom_date ?? undefined);
 
-        console.log("Data received from API:", tableData);
+            // Calculate overdue days based on the adjusted vendor promise date.
+            const overdueDays = adjustedVendPromDate
+                ? Math.floor((new Date().getTime() - adjustedVendPromDate.getTime()) / (1000 * 60 * 60 * 24) + 1)
+                : 0;
 
+            return {
+                poNumber: item.po_number,
+                poStatus: item.po_status,
+                vendName: item.vend_name,
+                partCode: item.part_code,
+                qtyOrdered:
+                    item.qty_ord !== undefined && item.uom
+                        ? `${new Intl.NumberFormat("en-US").format(item.qty_ord)} ${item.uom}`
+                        : "N/A",
+                dateOrdered: adjustedOrderDate ? format(adjustedOrderDate, "MMM d, yyyy") : "N/A",
+                vendorPromiseDate: adjustedVendPromDate ? format(adjustedVendPromDate, "MMM d, yyyy") : "N/A",
+                lastOrderDate: item.last_order_date
+                    ? format(adjustDateByOneDay(item.last_order_date) as Date, "MMM d, yyyy")
+                    : "N/A",
+                recentUnitPrice: item.recent_unit_price
+                    ? new Intl.NumberFormat("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+                        .format(item.recent_unit_price)
+                    : "N/A",
+                lastOrderUnitPrice: item.last_order_unit_price
+                    ? new Intl.NumberFormat("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+                        .format(item.last_order_unit_price)
+                    : "N/A",
+                overdueDays,
+                isGrouped: false, // Outstanding orders don't use grouping, default to false.
+            };
+        });
+
+        // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
+        tableData.sort((a, b) => {
+            const vendorComparison = a.vendName.localeCompare(b.vendName);
+            if (vendorComparison !== 0) return vendorComparison;
+            const poComparison = a.poNumber.localeCompare(b.poNumber);
+            if (poComparison !== 0) return poComparison;
+            return a.partCode.localeCompare(b.partCode);
+        });
+
+        // Render the table within a scrollable container.
         return (
             <ScrollArea className="h-[95%] rounded-md border mt-2">
-                <Table className="text-left text-white outstanding-orders-table text-[1rem]" wrapperClassName="overflow-clip">
+                <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>
                             <TableHead>PO Number</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Vendor</TableHead>
                             <TableHead>Part Code</TableHead>
-                            <TableHead>Unit Price</TableHead>
-                            <TableHead>Date Ordered</TableHead>
-                            <TableHead>Vendor Promise Date</TableHead>
-                            <TableHead>Prev. Order Date</TableHead>
-                            <TableHead>Prev. Unit Price</TableHead>
-                            <TableHead>Ordered By</TableHead>
+                            <TableHead className="text-right">Qty Ordered</TableHead>
+                            <TableHead className="text-right">Date Ordered</TableHead>
+                            <TableHead className="text-right">Vendor Promise Date</TableHead>
+                            <TableHead className="text-right">Prev. Order</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Prev. Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {tableData.map((row, index) => (
-                            <TableRow key={index} className={statusCodes[row.poStatus] === 'X' ? 'cancelled-po' : ''}>
-                                <TableCell>{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{statusCodes[row.poStatus] || 'N/A'}</TableCell>
+                            <TableRow
+                                key={index}
+                                className={`
+                  ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
+                  ${row.isGrouped ? "grouped-po" : ""} 
+                  ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
+                `}
+                            >
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{renderStatusBadge(row.poStatus)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
-                                <TableCell>{row.recentUnitPrice}</TableCell>
-                                <TableCell>{row.dateOrdered}</TableCell>
-                                <TableCell>{row.vendorPromiseDate}</TableCell>
-                                <TableCell>{row.lastOrderDate}</TableCell>
-                                <TableCell>{row.lastOrderUnitPrice}</TableCell>
-                                <TableCell>{row.userOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right">
+                                    {row.vendorPromiseDate}
+                                    <span className="badge badge-warning ml-2">{row.overdueDays}</span>
+                                </TableCell>
+                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -215,7 +289,7 @@ export default function OutstandingOrdersTable() {
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
                 title="Outstanding Due In"
-                updateInterval={300000}
+                updateInterval={30000}
                 render={renderFunction}
             />
         </div>

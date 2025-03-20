@@ -7,6 +7,10 @@
 @import './theme.css';
 
 /* Base styles */
+nextjs-portal {
+  display: none;
+}
+
 body {
   background-color: var(--background-dark);
   color: var(--text-primary);
@@ -53,11 +57,13 @@ body {
 }
 
 .widget-header {
-  font-size: 1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   width: 100%;
   text-align: center;
-  margin-top: 0.1rem;
+  margin-top: 0rem;
+  height: 4%;
+  overflow: visible;
 }
 
 .widget-content {
@@ -192,13 +198,18 @@ body {
 th {
   color: white !important;
   font-weight: 800 !important;
-  font-size: 1rem;
+  font-size: 1.1rem;
   padding: .5rem;
   background-color: var(--background-dark) !important;
 }
 
+tbody {
+  font-size: 1.1;
+}
+
 tbody>tr:nth-child(odd) {
   background-color: var(--background-highlight);
+  background-color: rgb(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar {
@@ -273,4 +284,77 @@ tbody>tr:nth-child(odd) {
 
 .flash {
   animation: flashAnim .5s ease-out;
+}
+
+.badge {
+  background-color: var(--shadow-dark);
+  color: white;
+  padding: 0.25rem 0.45rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  align-content: center;
+  border: 2px solid var(--shadow-dark);
+}
+
+.badge-success {
+  background-color: var(--success);
+}
+
+.badge-danger {
+  background-color: var(--error);
+}
+
+.badge-warning {
+  background-color: var(--warning);
+}
+
+.badge-primary {
+  background-color: var(--success-light);
+}
+
+.table-dollars {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Consolas", monospace !important;
+  flex-direction: row;
+}
+
+.row-secondary {
+  background-color: rgb(0, 0, 0, 0.2);
+}
+
+.widget-error-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: var(--error);
+  font-weight: 800;
+}
+
+.percent-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  /* similar to Tailwind's px-2 py-0.5 */
+  border-radius: 9999px;
+  /* fully rounded */
+  font-size: 0.75rem;
+  /* text-xs */
+  font-weight: bold;
+  margin-right: 0.5rem;
+  /* provides spacing before the value */
+}
+
+.percent-badge.positive {
+  background-color: #22c55e;
+  /* equivalent to Tailwind bg-green-500 */
+  color: white;
+}
+
+.percent-badge.negative {
+  background-color: #ef4444;
+  /* equivalent to Tailwind bg-red-500 */
+  color: white;
 }

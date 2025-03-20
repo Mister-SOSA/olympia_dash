@@ -1,5 +1,5 @@
 const config = {
-    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:5001",
+    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://172.19.1.95:5001",
     PARENT_COMPANY_MAPPING: {
         "GORDON FOOD": "GORDON FOOD",
         "RESTAURANT DEPOT": "RESTAURANT DEPOT",
@@ -27,6 +27,9 @@ const config = {
         "6119", // ROME GRINDING SOLUTIONS
         "6053", // ULINE
         "105", // BIRO OF CHICAGO
+        "6011", // CRESCENT ELECTRIC SUPPLY COMPANY
+        "122", // CHEMSTATION CHICAGO LLC
+        "135", // CINTAS CORPORATION
     ]
 };
 

@@ -2,6 +2,23 @@ import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { IoWater, IoWaterSharp } from "react-icons/io5";
+import { MdWater } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const humidityWidgetMeta = {
+    id: "Humidity",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Humidity",
+    category: "🔧 Utilities",
+    description: "Displays the current humidity.",
+    icon: <MdWater />,
+};
 
 interface HumidityData {
     [x: string]: any;

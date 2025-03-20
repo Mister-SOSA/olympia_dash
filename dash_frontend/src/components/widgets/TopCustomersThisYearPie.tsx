@@ -16,26 +16,52 @@ import {
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
+import { MdMoney } from "react-icons/md";
 
 /* -------------------------------------- */
-/* 🛠️ Utility Functions                  */
+/* Widget Metadata                        */
 /* -------------------------------------- */
+export const topCustomersThisYearPieMeta = {
+    id: "TopCustomersThisYearPie",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Top Customers This Year",
+    category: "💸 Sales",
+    description: "Displays the top customers this year.",
+    icon: <MdMoney size={24} />
+};
 
-const parentMapping: { [key: string]: string } = config.PARENT_COMPANY_MAPPING;
+// Constants
+const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
+const CHART_COLORS = [
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
+    "var(--chart-6)",
+    "var(--chart-other)",
+];
 
-function mapToParentCompany(businessName: string): string {
-    if (!businessName) {
-        return "Unknown";
-    }
-    for (const key in parentMapping) {
+// Map a business name to its parent company using the config mapping.
+const mapToParentCompany = (businessName: string): string => {
+    if (!businessName) return "Unknown";
+    for (const key in PARENT_MAPPING) {
         if (businessName.toUpperCase().includes(key)) {
-            return parentMapping[key];
+            return PARENT_MAPPING[key as keyof typeof PARENT_MAPPING];
         }
     }
     return businessName;
-}
+};
 
-function transformData(data: CustomerData[]): CustomerData[] {
+// Combine data transformation steps into one function.
+const processCustomerData = (data: CustomerData[]): CustomerData[] => {
+    if (!data || data.length === 0) return [];
+
+    // Aggregate data by parent company.
     const aggregated: { [key: string]: CustomerData } = {};
     data.forEach(({ businessName, totalSales }) => {
         const parentCompany = mapToParentCompany(businessName || "Unknown");
@@ -50,54 +76,42 @@ function transformData(data: CustomerData[]): CustomerData[] {
         }
         aggregated[parentCompany].totalSales += totalSales;
     });
-    return Object.values(aggregated);
-}
 
-function mergeRest(data: CustomerData[], limit: number): CustomerData[] {
-    if (data.length <= limit) {
-        return data;
+    let aggregatedData = Object.values(aggregated);
+
+    // Merge entries beyond the top 6 into an "Other" category.
+    const LIMIT = 6;
+    if (aggregatedData.length > LIMIT) {
+        const otherTotal = aggregatedData
+            .slice(LIMIT)
+            .reduce((acc, { totalSales }) => acc + totalSales, 0);
+        aggregatedData = [
+            ...aggregatedData.slice(0, LIMIT),
+            {
+                id: "other",
+                timestamp: new Date(),
+                businessName: "Other",
+                totalSales: otherTotal,
+                color: CHART_COLORS[CHART_COLORS.length - 1],
+            },
+        ];
     }
-    const rest: CustomerData = {
-        id: "other",
-        timestamp: new Date(),
-        businessName: "Other",
-        totalSales: data.slice(limit).reduce((acc, { totalSales }) => acc + totalSales, 0),
-        color: "var(--chart-other)",
-    };
-    return [...data.slice(0, limit), rest];
-}
 
-function addColors(data: CustomerData[]): CustomerData[] {
-    const chartColors = [
-        "var(--chart-1)",
-        "var(--chart-2)",
-        "var(--chart-3)",
-        "var(--chart-4)",
-        "var(--chart-5)",
-        "var(--chart-6)",
-        "var(--chart-other)",
-    ];
-    return data.map((item, index) => ({
-        ...item,
-        color: chartColors[index] || "var(--chart-other)",
-    }));
-}
-
-function sortData(data: CustomerData[]): CustomerData[] {
-    return data.sort((a, b) => {
+    // Sort so that "Other" is always last and the rest are in descending order.
+    aggregatedData.sort((a, b) => {
         if (a.businessName === "Other") return 1;
         if (b.businessName === "Other") return -1;
         return b.totalSales - a.totalSales;
     });
-}
 
-/* -------------------------------------- */
-/* 🔎 Custom Hook for Container Orientation */
-/* -------------------------------------- */
-/**
- * Measures the container’s dimensions and returns "portrait" if the container’s
- * height is greater than or equal to its width, or "landscape" otherwise.
- */
+    // Assign colors to each slice.
+    return aggregatedData.map((item, index) => ({
+        ...item,
+        color: CHART_COLORS[index] || CHART_COLORS[CHART_COLORS.length - 1],
+    }));
+};
+
+// Custom hook to determine the container's orientation.
 function useContainerOrientation(
     ref: React.RefObject<HTMLElement | null>
 ): "portrait" | "landscape" {
@@ -105,18 +119,15 @@ function useContainerOrientation(
 
     useEffect(() => {
         if (!ref.current) return;
+
         const updateOrientation = () => {
-            const rect = ref.current!.getBoundingClientRect();
-            setOrientation(rect.width / 1.1 > rect.height ? "landscape" : "portrait");
+            const { width, height } = ref.current!.getBoundingClientRect();
+            setOrientation(width / 1.1 > height ? "landscape" : "portrait");
         };
 
-        // Initial orientation update
         updateOrientation();
 
-        // Create a ResizeObserver to watch for container size changes
-        const resizeObserver = new ResizeObserver(() => {
-            updateOrientation();
-        });
+        const resizeObserver = new ResizeObserver(updateOrientation);
         resizeObserver.observe(ref.current);
 
         return () => {
@@ -127,68 +138,56 @@ function useContainerOrientation(
     return orientation;
 }
 
-/* -------------------------------------- */
-/* 📊 CustomerTable Component             */
-/* -------------------------------------- */
-const renderCustomLabel = (props: any) => {
+// Custom label component for the Pie chart.
+const CustomLabel = (props: any) => {
     const { cx, cy, midAngle, outerRadius, value, fill } = props;
     const RADIAN = Math.PI / 180;
-    const offset = 30; // How far away from the pie edge you want the label
-
-    // Compute label x and y based on the slice's mid angle and offset.
+    const offset = 30;
     const x = cx + (outerRadius + offset) * Math.cos(-midAngle * RADIAN);
     const y = cy + (outerRadius + offset) * Math.sin(-midAngle * RADIAN);
-
-    // If x is nearly equal to cx (for top and bottom labels), use "middle".
-    const epsilon = 10; // Adjust if necessary depending on your chart size
-    const textAnchor =
-        Math.abs(x - cx) < epsilon ? "middle" : x > cx ? "start" : "end";
+    const epsilon = 10;
+    const textAnchor = Math.abs(x - cx) < epsilon ? "middle" : x > cx ? "start" : "end";
 
     return (
         <text
             x={x}
             y={y}
-            fill={fill} // use the slice's color
+            fill={fill}
             fontSize="20"
             textAnchor={textAnchor}
-            dominantBaseline="middle" // vertically centers the text
+            dominantBaseline="middle"
         >
             ${nFormatter(value, 1)}
         </text>
     );
 };
 
+interface CustomerPieChartProps {
+    data: CustomerData[];
+}
 
-const CustomerTable = ({ data }: { data: CustomerData[] }) => {
-    // Use a ref to measure the container’s dimensions.
+// Component that renders the Pie chart.
+const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const orientation = useContainerOrientation(containerRef);
 
-    const processedData = useMemo(() => {
-        if (!data || data.length === 0) {
-            console.warn("No data received for CustomerTable");
-            return [];
-        }
-        const aggregatedData = transformData(data);
-        const limitedData = mergeRest(aggregatedData, 6);
-        const coloredData = addColors(limitedData);
-        return sortData(coloredData);
-    }, [data]);
+    const processedData = useMemo(() => processCustomerData(data), [data]);
 
-    if (processedData.length === 0) {
+    if (!processedData.length) {
         return <div>No data available for chart</div>;
     }
 
-    // Adjust legend props based on container orientation.
-    const legendProps =
+    const legendProps: {
+        align: "center" | "right";
+        layout: "horizontal" | "vertical";
+        verticalAlign: "bottom" | "middle";
+    } =
         orientation === "portrait"
-            ? ({ align: "center", layout: "horizontal", verticalAlign: "bottom" } as const)
-            : ({ align: "right", layout: "vertical", verticalAlign: "middle" } as const);
+            ? { align: "center", layout: "horizontal", verticalAlign: "bottom" }
+            : { align: "right", layout: "vertical", verticalAlign: "middle" };
 
     return (
-        // The outer div uses the ref so we can measure its size.
         <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-            {/* Remove the fixed aspect ratio so that the chart fills the container */}
             <ResponsiveContainer width="100%" height="100%">
                 <ChartContainer config={{}} className="font-bold customer-pie">
                     <PieChart>
@@ -200,7 +199,7 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
                             innerRadius="35%"
                             outerRadius="55%"
                             paddingAngle={8}
-                            label={renderCustomLabel}
+                            label={<CustomLabel />}
                             isAnimationActive={false}
                         >
                             {processedData.map((entry, index) => (
@@ -215,21 +214,18 @@ const CustomerTable = ({ data }: { data: CustomerData[] }) => {
     );
 };
 
-/* -------------------------------------- */
-/* 📊 TopCustomersThisYear Component       */
-/* -------------------------------------- */
+// Main component to render the widget.
 export default function TopCustomersThisYearPie() {
+    const currentYear = new Date().getFullYear();
     const startOfYear = useMemo(
-        () =>
-            new Date(new Date().getFullYear(), 0, 1)
-                .toISOString()
-                .split("T")[0],
-        []
+        () => new Date(currentYear, 0, 1).toISOString().split("T")[0],
+        [currentYear]
     );
     const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
     const widgetPayload = useMemo(
         () => ({
+            module: "TopCustomersThisYearPie",
             table: "sumsales",
             columns: [
                 "sumsales.cust_code",
@@ -237,9 +233,7 @@ export default function TopCustomersThisYearPie() {
                 "SUM(sumsales.sales_dol) AS totalSales",
                 "SUM(sumsales.qty_sold) AS total_quantity_sold",
             ],
-            filters: `(
-          sumsales.sale_date >= '${startOfYear}' AND sumsales.sale_date <= '${today}'
-      )`,
+            filters: `(sumsales.sale_date >= '${startOfYear}' AND sumsales.sale_date <= '${today}')`,
             join: {
                 table: "orderfrom",
                 on: "sumsales.cust_code = orderfrom.cust_code",
@@ -251,18 +245,17 @@ export default function TopCustomersThisYearPie() {
         [startOfYear, today]
     );
 
-    const renderTopCustomers = useCallback((data: CustomerData[]) => {
-        console.log("Data received from API:", data);
-        return <CustomerTable data={data} />;
-    }, []);
+    const renderChart = useCallback((data: CustomerData[]) => (
+        <CustomerPieChart data={data} />
+    ), []);
 
     return (
         <Widget
             apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
             payload={widgetPayload}
-            title={`Top Customers - ${new Date().getFullYear()}`}
+            title={`Top Customers - ${currentYear}`}
             updateInterval={300000}
-            render={renderTopCustomers}
+            render={renderChart}
         />
     );
 }
