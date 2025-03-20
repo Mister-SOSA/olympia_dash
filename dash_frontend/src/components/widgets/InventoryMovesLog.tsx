@@ -4,6 +4,24 @@ import config from "@/config";
 import { InventoryMove, InventoryMoveRaw } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MdMoveToInbox } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const inventoryMovesLogMeta = {
+    id: "InventoryMovesLog",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Inventory Moves Log",
+    category: "Logistics",
+    description: "Displays the latest inventory moves.",
+    icon: <MdMoveToInbox />,
+};
+
 
 /* -------------------------------------- */
 /* Helper: Map Raw Data to Table Row      */
