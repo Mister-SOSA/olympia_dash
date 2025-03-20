@@ -59,16 +59,16 @@ const Menu: React.FC<MenuProps> = ({
         <div className="shade">
             <Card className="widget-menu">
                 <CardHeader>
-                    <CardTitle>Select Widgets</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-center">⚙️ Manage Widgets</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {/* Search Input */}
                     <input
                         type="text"
-                        placeholder="Search widgets..."
+                        placeholder="🔎 Search widgets..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="widget-search-input mb-4"
+                        className="widget-search-input mb-4 p-2 w-full border border-[--border-light] rounded-lg bg-[--background-dark]"
                     />
 
                     {/* Group widgets by category */}
@@ -76,7 +76,7 @@ const Menu: React.FC<MenuProps> = ({
                         const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : true;
                         return (
                             <div key={category} className="mb-4 align-items-center">
-                                <div className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border] rounded-lg" onClick={() => toggleCategory(category)}>
+                                <div className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border-light] rounded-lg" onClick={() => toggleCategory(category)}>
                                     <h3 className="text-lg font-semibold">{category}</h3>
                                     <span className="font-black text-xl">{isExpanded ? '-' : '+'}</span>
                                 </div>
@@ -101,7 +101,7 @@ const Menu: React.FC<MenuProps> = ({
                     <Button onClick={handleCancel} variant="destructive">
                         Cancel
                     </Button>
-                    <Button className="bg-blue-600 text-white" onClick={handleSave}>
+                    <Button className="bg-blue-600 hover:bg-blue-800 text-white" onClick={handleSave}>
                         Save
                     </Button>
                 </CardFooter>
