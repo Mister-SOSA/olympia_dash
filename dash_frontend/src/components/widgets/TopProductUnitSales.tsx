@@ -117,30 +117,35 @@ export default function TopProductUnitSalesTable() {
                 avg9: computeAvg(3, 9),   // Last 9 months
                 avg12: computeAvg(0, 12), // All 12 months
             };
+
+        }
+            // Sort by the average of the last 12 months
+        ).sort((a, b) => {
+            return parseInt(b.avg12.replace(/,/g, "")) - parseInt(a.avg12.replace(/,/g, ""));
         });
 
         return (
-            <ScrollArea className="h-[97%] rounded-md border mt-2">
+            <ScrollArea className="h-[99%] rounded-md border mt-2">
                 <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>
                             <TableHead>Part Code</TableHead>
                             <TableHead>Part Description</TableHead>
-                            <TableHead>Avg 3 Mo</TableHead>
-                            <TableHead>Avg 6 Mo</TableHead>
-                            <TableHead>Avg 9 Mo</TableHead>
-                            <TableHead>Avg 12 Mo</TableHead>
+                            <TableHead className="text-right">Avg 3 Mo</TableHead>
+                            <TableHead className="text-right">Avg 6 Mo</TableHead>
+                            <TableHead className="text-right">Avg 9 Mo</TableHead>
+                            <TableHead className="text-right">Avg 12 Mo</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {tableData.map((row, i) => (
                             <TableRow key={i}>
-                                <TableCell>{row.partCode}</TableCell>
+                                <TableCell className="font-black">{row.partCode}</TableCell>
                                 <TableCell>{row.partDesc}</TableCell>
-                                <TableCell>{row.avg3}</TableCell>
-                                <TableCell>{row.avg6}</TableCell>
-                                <TableCell>{row.avg9}</TableCell>
-                                <TableCell>{row.avg12}</TableCell>
+                                <TableCell className="text-right">{row.avg3}</TableCell>
+                                <TableCell className="text-right">{row.avg6}</TableCell>
+                                <TableCell className="text-right">{row.avg9}</TableCell>
+                                <TableCell className="text-right">{row.avg12}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
