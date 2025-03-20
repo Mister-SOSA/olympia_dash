@@ -333,3 +333,28 @@ tbody>tr:nth-child(odd) {
   color: var(--error);
   font-weight: 800;
 }
+
+.percent-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  /* similar to Tailwind's px-2 py-0.5 */
+  border-radius: 9999px;
+  /* fully rounded */
+  font-size: 0.75rem;
+  /* text-xs */
+  font-weight: bold;
+  margin-right: 0.5rem;
+  /* provides spacing before the value */
+}
+
+.percent-badge.positive {
+  background-color: #22c55e;
+  /* equivalent to Tailwind bg-green-500 */
+  color: white;
+}
+
+.percent-badge.negative {
+  background-color: #ef4444;
+  /* equivalent to Tailwind bg-red-500 */
+  color: white;
+}

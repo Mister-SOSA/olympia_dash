@@ -98,30 +98,40 @@ export default function TopProductUnitSalesTable() {
             const product = productMap[partCode];
             const monthlyData = product.monthly;
 
-            // Helper function: given a starting index in the 'months' array and a period length, compute the average
-            const computeAvg = (startIndex: number, periodLength: number) => {
+            // Helper function: compute raw average for given period
+            const computeAvgRaw = (startIndex: number, periodLength: number) => {
                 let sum = 0;
                 for (let i = startIndex; i < startIndex + periodLength; i++) {
                     const mKey = months[i];
                     sum += monthlyData[mKey] || 0;
                 }
-                const avg = Math.floor(sum / periodLength);
-                return avg.toLocaleString();
+                return Math.floor(sum / periodLength);
             };
+
+            const avg3Raw = computeAvgRaw(9, 3);
+            const avg6Raw = computeAvgRaw(6, 6);
+            const avg9Raw = computeAvgRaw(3, 9);
+            const avg12Raw = computeAvgRaw(0, 12);
+
+            const pctChange = (current: number, next: number) => {
+                if (next === 0) return null;
+                return ((current - next) / next) * 100;
+            };
+
+            const pct3 = pctChange(avg3Raw, avg6Raw);
+            const pct6 = pctChange(avg6Raw, avg9Raw);
+            const pct9 = pctChange(avg9Raw, avg12Raw);
 
             return {
                 partCode,
                 partDesc: product.partDesc,
-                avg3: computeAvg(9, 3),   // Last 3 months
-                avg6: computeAvg(6, 6),   // Last 6 months
-                avg9: computeAvg(3, 9),   // Last 9 months
-                avg12: computeAvg(0, 12), // All 12 months
+                avg3: { value: avg3Raw.toLocaleString(), pct: pct3 },
+                avg6: { value: avg6Raw.toLocaleString(), pct: pct6 },
+                avg9: { value: avg9Raw.toLocaleString(), pct: pct9 },
+                avg12: { value: avg12Raw.toLocaleString() },
             };
-
-        }
-            // Sort by the average of the last 12 months
-        ).sort((a, b) => {
-            return parseInt(b.avg12.replace(/,/g, "")) - parseInt(a.avg12.replace(/,/g, ""));
+        }).sort((a, b) => {
+            return parseInt(b.avg12.value.replace(/,/g, "")) - parseInt(a.avg12.value.replace(/,/g, ""));
         });
 
         return (
@@ -142,10 +152,31 @@ export default function TopProductUnitSalesTable() {
                             <TableRow key={i}>
                                 <TableCell className="font-black">{row.partCode}</TableCell>
                                 <TableCell>{row.partDesc}</TableCell>
-                                <TableCell className="text-right">{row.avg3}</TableCell>
-                                <TableCell className="text-right">{row.avg6}</TableCell>
-                                <TableCell className="text-right">{row.avg9}</TableCell>
-                                <TableCell className="text-right">{row.avg12}</TableCell>
+                                <TableCell className="text-right">
+                                    {row.avg3.pct !== null && (
+                                        <span className={`percent-badge ${row.avg3.pct >= 0 ? "positive" : "negative"}`}>
+                                            {row.avg3.pct >= 0 ? "+" : ""}{row.avg3.pct.toFixed(1)}%
+                                        </span>
+                                    )}
+                                    {row.avg3.value}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {row.avg6.pct !== null && (
+                                        <span className={`percent-badge ${row.avg6.pct >= 0 ? "positive" : "negative"}`}>
+                                            {row.avg6.pct >= 0 ? "+" : ""}{row.avg6.pct.toFixed(1)}%
+                                        </span>
+                                    )}
+                                    {row.avg6.value}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {row.avg9.pct !== null && (
+                                        <span className={`percent-badge ${row.avg9.pct >= 0 ? "positive" : "negative"}`}>
+                                            {row.avg9.pct >= 0 ? "+" : ""}{row.avg9.pct.toFixed(1)}%
+                                        </span>
+                                    )}
+                                    {row.avg9.value}
+                                </TableCell>
+                                <TableCell className="text-right font-black">{row.avg12.value}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
