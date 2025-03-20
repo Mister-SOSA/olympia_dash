@@ -16,6 +16,23 @@ import {
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
+import { MdMoney } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const topCustomersThisYearPieMeta = {
+    id: "TopCustomersThisYearPie",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Top Customers This Year",
+    category: "Sales",
+    description: "Displays the top customers this year.",
+    icon: <MdMoney />
+};
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;

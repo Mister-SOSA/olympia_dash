@@ -4,6 +4,23 @@ import config from "@/config";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
+import { MdOutbox } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const topProductUnitSalesMeta = {
+    id: "TopProductUnitSales",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Top Product Unit Sales",
+    category: "Sales",
+    description: "Displays the top product unit sales.",
+    icon: <MdOutbox />,
+};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */

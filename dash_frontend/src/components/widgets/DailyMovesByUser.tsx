@@ -17,7 +17,7 @@ import { MdMoveToInbox } from "react-icons/md";
 /* Widget Metadata                        */
 /* -------------------------------------- */
 export const dailyMovesByUserMeta = {
-    id: "DailyDueInTable",
+    id: "DailyMovesByUser",
     x: 0,
     y: 0,
     w: 4,
