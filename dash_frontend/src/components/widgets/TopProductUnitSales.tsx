@@ -126,7 +126,7 @@ export default function TopProductUnitSalesTable() {
 
         return (
             <ScrollArea className="h-[99%] rounded-md border mt-2">
-                <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
+                <Table className="text-left text-white outstanding-orders-table text-[.9rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>
                             <TableHead>Part Code</TableHead>
