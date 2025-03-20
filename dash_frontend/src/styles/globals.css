@@ -7,6 +7,10 @@
 @import './theme.css';
 
 /* Base styles */
+nextjs-portal {
+  display: none;
+}
+
 body {
   background-color: var(--background-dark);
   color: var(--text-primary);
