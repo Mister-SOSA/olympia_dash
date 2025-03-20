@@ -75,19 +75,19 @@ const Menu: React.FC<MenuProps> = ({
                     {Object.keys(groupedWidgets).map((category) => {
                         const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : true;
                         return (
-                            <div key={category} className="mb-4">
-                                <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleCategory(category)}>
-                                    <h3 className="text-lg font-semibold mb-2">{category}</h3>
-                                    <span>{isExpanded ? '-' : '+'}</span>
+                            <div key={category} className="mb-4 align-items-center">
+                                <div className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border] rounded-lg" onClick={() => toggleCategory(category)}>
+                                    <h3 className="text-lg font-semibold">{category}</h3>
+                                    <span className="font-black text-xl">{isExpanded ? '-' : '+'}</span>
                                 </div>
                                 {isExpanded && groupedWidgets[category].map(widget => (
-                                    <div key={widget.id} className="flex items-center space-x-2 mb-2">
+                                    <div key={widget.id} className="flex items-center space-x-2 m-1 p-1">
                                         <Checkbox
                                             checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
                                             onCheckedChange={() => toggleWidgetEnabled(widget.id)}
                                             className="widget-menu-checkbox"
                                         />
-                                        <label className="text-sm font-medium flex items-center">
+                                        <label className="text-sm font-medium flex items-center ">
                                             {widget.icon && <span className="mr-2">{widget.icon}</span>}
                                             {widget.displayName || widget.id}
                                         </label>
