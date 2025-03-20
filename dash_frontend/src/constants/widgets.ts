@@ -1,18 +1,32 @@
 import { Widget } from "@/types";
+import { overviewWidgetMeta } from "@/components/widgets/Overview";
+import { salesByDayBarMeta } from "@/components/widgets/SalesByDayBar";
+import { salesByMonthBarMeta } from "@/components/widgets/SalesByMonthBar";
+import { salesByMonthComparisonBarMeta } from "@/components/widgets/SalesByMonthComparisonBar";
+import { clockWidgetMeta } from "@/components/widgets/ClockWidget";
+import { dateWidgetMeta } from "@/components/widgets/DateWidget";
+import { topCustomersThisYearPieMeta } from "@/components/widgets/TopCustomersThisYearPie";
+import { outstandingOrdersTableMeta } from "@/components/widgets/OutstandingOrdersTable";
+import { dailyDueInTableMeta } from "@/components/widgets/DailyDueInTable";
+import { humidityWidgetMeta } from "@/components/widgets/Humidity";
+import { dailyMovesByUserMeta } from "@/components/widgets/DailyMovesByUser";
+import { inventoryMovesLogMeta } from "@/components/widgets/InventoryMovesLog";
+import { dailyDueInHiddenVendTableMeta } from "@/components/widgets/DailyDueInHiddenVendTable";
+import { topProductUnitSalesMeta } from "@/components/widgets/TopProductUnitSales";
 
 export const masterWidgetList: Widget[] = [
-    { id: "Overview", x: 0, y: 0, w: 11, h: 2, enabled: true },
-    { id: "SalesByDayBar", x: 0, y: 0, w: 5, h: 4, enabled: true },
-    { id: "SalesByMonthBar", x: 0, y: 0, w: 5, h: 4, enabled: true },
-    { id: "SalesByMonthComparisonBar", x: 0, y: 0, w: 5, h: 4, enabled: true },
-    { id: "ClockWidget", x: 0, y: 0, w: 4, h: 2, enabled: true },
-    { id: "DateWidget", x: 0, y: 0, w: 6, h: 2, enabled: false },
-    { id: "TopCustomersThisYearPie", x: 0, y: 0, w: 3, h: 7, enabled: false },
-    { id: "OutstandingOrdersTable", x: 0, y: 0, w: 8, h: 5, enabled: false },
-    { id: "DailyDueInTable", x: 0, y: 0, w: 8, h: 5, enabled: false },
-    { id: "Humidity", x: 0, y: 0, w: 5, h: 3, enabled: false },
-    { id: "DailyMovesByUser", x: 0, y: 0, w: 5, h: 4, enabled: false },
-    { id: "InventoryMovesLog", x: 0, y: 0, w: 8, h: 5, enabled: false },
-    { id: "DailyDueInHiddenVendTable", x: 0, y: 0, w: 8, h: 5, enabled: false },
-    { id: "TopProductUnitSales", x: 0, y: 0, w: 5, h: 4, enabled: false },
+    overviewWidgetMeta,
+    salesByDayBarMeta,
+    salesByMonthBarMeta,
+    salesByMonthComparisonBarMeta,
+    clockWidgetMeta,
+    dateWidgetMeta,
+    topCustomersThisYearPieMeta,
+    outstandingOrdersTableMeta,
+    dailyDueInTableMeta,
+    humidityWidgetMeta,
+    dailyMovesByUserMeta,
+    inventoryMovesLogMeta,
+    dailyDueInHiddenVendTableMeta,
+    topProductUnitSalesMeta,
 ];

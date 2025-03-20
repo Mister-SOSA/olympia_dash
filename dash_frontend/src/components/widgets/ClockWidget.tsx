@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
+import { MdAccessTime } from "react-icons/md";
+
+export const clockWidgetMeta = {
+    id: "ClockWidget",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Clock",
+    category: "Utilities",
+    description: "Displays the current time.",
+    icon: <MdAccessTime size={24} />,
+};
 
 const DateTimeContent: React.FC = () => {
     const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());

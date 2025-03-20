@@ -12,6 +12,23 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
+import { MdLocalShipping } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const dailyDueInHiddenVendTableMeta = {
+    id: "DailyDueInHiddenVendTable",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Daily Due In (Maintenance Only)",
+    category: "Purchasing",
+    description: "Displays daily due-in orders for maintenance only.",
+    icon: <MdLocalShipping size={24} />,
+};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */

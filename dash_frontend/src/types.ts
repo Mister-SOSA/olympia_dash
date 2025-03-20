@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 /**
  * Base type for data entries with a unique identifier and timestamp.
  */
@@ -41,6 +43,10 @@ export interface Widget {
     w: number;
     h: number;
     enabled: boolean;
+    displayName?: string;
+    category?: string;
+    description?: string;
+    icon?: ReactNode;
 }
 // Type for the raw data returned from the API
 export interface POItemData {
