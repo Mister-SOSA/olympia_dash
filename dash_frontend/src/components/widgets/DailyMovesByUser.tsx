@@ -26,7 +26,7 @@ export const dailyMovesByUserMeta = {
     displayName: "Daily Moves By User",
     category: "📦 Logistics",
     description: "Displays the number of moves made by each user today.",
-    icon: <MdMoveToInbox />,
+    icon: <MdMoveToInbox size={24} />,
 };
 
 

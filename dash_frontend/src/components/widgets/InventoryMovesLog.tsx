@@ -19,7 +19,7 @@ export const inventoryMovesLogMeta = {
     displayName: "Inventory Moves Log",
     category: "📦 Logistics",
     description: "Displays the latest inventory moves.",
-    icon: <MdMoveToInbox />,
+    icon: <MdMoveToInbox size={24} />,
 };
 
 

@@ -19,7 +19,7 @@ export const topProductUnitSalesMeta = {
     displayName: "Top Product Unit Sales",
     category: "💸 Sales",
     description: "Displays the top product unit sales.",
-    icon: <MdOutbox />,
+    icon: <MdOutbox size={24} />,
 };
 
 /* -------------------------------------- */

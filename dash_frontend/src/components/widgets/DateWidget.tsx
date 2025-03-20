@@ -15,7 +15,7 @@ export const dateWidgetMeta = {
     displayName: "Date",
     category: "🔧 Utilities",
     description: "Displays the current date.",
-    icon: <MdDateRange />,
+    icon: <MdDateRange size={24} />,
 };
 
 const DateContent: React.FC = () => {

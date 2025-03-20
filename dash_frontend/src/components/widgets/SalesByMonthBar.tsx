@@ -28,7 +28,7 @@ export const salesByMonthBarMeta = {
     displayName: "Sales by Month",
     category: "💸 Sales",
     description: "Displays sales dollars by month.",
-    icon: <MdAttachMoney />,
+    icon: <MdAttachMoney size={24} />,
 };
 
 /* -------------------------------------- */

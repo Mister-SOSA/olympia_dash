@@ -31,7 +31,7 @@ export const topCustomersThisYearPieMeta = {
     displayName: "Top Customers This Year",
     category: "💸 Sales",
     description: "Displays the top customers this year.",
-    icon: <MdMoney />
+    icon: <MdMoney size={24} />
 };
 
 // Constants

@@ -36,7 +36,7 @@ export const salesByMonthComparisonBarMeta = {
     displayName: "Sales by Month (Comparison)",
     category: "💸 Sales",
     description: "Displays sales dollars by month for the current and last year.",
-    icon: <MdAttachMoney />,
+    icon: <MdAttachMoney size={24} />,
 };
 
 /* -------------------------------------- */
