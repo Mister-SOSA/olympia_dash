@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface MenuProps {
     masterWidgetList: Widget[];
@@ -73,26 +74,37 @@ const Menu: React.FC<MenuProps> = ({
 
                     {/* Group widgets by category */}
                     {Object.keys(groupedWidgets).map((category) => {
-                        const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : true;
+                        const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : false;
                         return (
                             <div key={category} className="mb-4 align-items-center">
                                 <div className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border-light] rounded-lg" onClick={() => toggleCategory(category)}>
                                     <h3 className="text-lg font-semibold">{category}</h3>
                                     <span className="font-black text-xl">{isExpanded ? '-' : '+'}</span>
                                 </div>
-                                {isExpanded && groupedWidgets[category].map(widget => (
-                                    <div key={widget.id} className="flex items-center space-x-2 m-1 p-1">
-                                        <Checkbox
-                                            checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
-                                            onCheckedChange={() => toggleWidgetEnabled(widget.id)}
-                                            className="widget-menu-checkbox"
-                                        />
-                                        <label className="text-sm font-medium flex items-center ">
-                                            {widget.icon && <span className="mr-2">{widget.icon}</span>}
-                                            {widget.displayName || widget.id}
-                                        </label>
-                                    </div>
-                                ))}
+                                <AnimatePresence>
+                                    {isExpanded && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            {groupedWidgets[category].map(widget => (
+                                                <div key={widget.id} className="flex items-center space-x-2 m-1 p-1">
+                                                    <Checkbox
+                                                        checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
+                                                        onCheckedChange={() => toggleWidgetEnabled(widget.id)}
+                                                        className="widget-menu-checkbox"
+                                                    />
+                                                    <label className="text-sm font-medium flex items-center ">
+                                                        {widget.icon && <span className="mr-2">{widget.icon}</span>}
+                                                        {widget.displayName || widget.id}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         );
                     })}
