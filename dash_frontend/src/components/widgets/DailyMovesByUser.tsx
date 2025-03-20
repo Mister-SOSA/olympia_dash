@@ -11,6 +11,24 @@ import {
 } from "recharts";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
+import { MdMoveToInbox } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const dailyMovesByUserMeta = {
+    id: "DailyDueInTable",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Daily Moves By User",
+    category: "Logistics",
+    description: "Displays the number of moves made by each user today.",
+    icon: <MdMoveToInbox />,
+};
+
 
 interface MovesByUserData {
     user_id: number;

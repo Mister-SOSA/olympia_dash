@@ -1,5 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
+import { MdDateRange } from "react-icons/md";
+
+/* -------------------------------------- */
+/* Widget Metadata                        */
+/* -------------------------------------- */
+export const dateWidgetMeta = {
+    id: "DateWidget",
+    x: 0,
+    y: 0,
+    w: 4,
+    h: 4,
+    enabled: true,
+    displayName: "Date",
+    category: "Utilities",
+    description: "Displays the current date.",
+    icon: <MdDateRange />,
+};
 
 const DateContent: React.FC = () => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
