@@ -56,6 +56,10 @@ const Menu: React.FC<MenuProps> = ({
         );
     };
 
+    const clearDashboard = () => {
+        setTempLayout(prev => prev.map(widget => ({ ...widget, enabled: false })));
+    };
+
     return (
         <div className="shade">
             <Card className="widget-menu">
@@ -112,6 +116,9 @@ const Menu: React.FC<MenuProps> = ({
                 <CardFooter className="widget-menu-footer">
                     <Button onClick={handleCancel} variant="destructive">
                         Cancel
+                    </Button>
+                    <Button onClick={clearDashboard} className="bg-gray-600 hover:bg-gray-700 text-white">
+                        Clear Dashboard
                     </Button>
                     <Button className="bg-blue-600 hover:bg-blue-800 text-white" onClick={handleSave}>
                         Save
