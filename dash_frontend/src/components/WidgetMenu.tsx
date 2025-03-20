@@ -20,6 +20,14 @@ const Menu: React.FC<MenuProps> = ({
     handleCancel,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+    const toggleCategory = (category: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [category]: !prev[category]
+        }));
+    };
 
     const filteredWidgets = masterWidgetList.filter(widget => {
         const term = searchTerm.toLowerCase();
@@ -64,23 +72,30 @@ const Menu: React.FC<MenuProps> = ({
                     />
 
                     {/* Group widgets by category */}
-                    {Object.keys(groupedWidgets).map((category) => (
-                        <div key={category} className="mb-4">
-                            <h3 className="text-lg font-semibold mb-2">{category}</h3>
-                            {groupedWidgets[category].map(widget => (
-                                <div key={widget.id} className="flex items-center space-x-2 mb-2">
-                                    <Checkbox
-                                        checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
-                                        onCheckedChange={() => toggleWidgetEnabled(widget.id)}
-                                        className="widget-menu-checkbox"
-                                    />
-                                    <label className="text-sm font-medium flex items-center">
-                                        {widget.displayName || widget.id}
-                                    </label>
+                    {Object.keys(groupedWidgets).map((category) => {
+                        const isExpanded = expandedCategories[category] !== undefined ? expandedCategories[category] : true;
+                        return (
+                            <div key={category} className="mb-4">
+                                <div className="flex items-center justify-between cursor-pointer" onClick={() => toggleCategory(category)}>
+                                    <h3 className="text-lg font-semibold mb-2">{category}</h3>
+                                    <span>{isExpanded ? '-' : '+'}</span>
                                 </div>
-                            ))}
-                        </div>
-                    ))}
+                                {isExpanded && groupedWidgets[category].map(widget => (
+                                    <div key={widget.id} className="flex items-center space-x-2 mb-2">
+                                        <Checkbox
+                                            checked={tempLayout.find((w) => w.id === widget.id)?.enabled ?? false}
+                                            onCheckedChange={() => toggleWidgetEnabled(widget.id)}
+                                            className="widget-menu-checkbox"
+                                        />
+                                        <label className="text-sm font-medium flex items-center">
+                                            {widget.icon && <span className="mr-2">{widget.icon}</span>}
+                                            {widget.displayName || widget.id}
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })}
                 </CardContent>
                 <CardFooter className="widget-menu-footer">
                     <Button onClick={handleCancel} variant="destructive">
