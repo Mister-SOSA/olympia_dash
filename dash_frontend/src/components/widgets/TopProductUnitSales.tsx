@@ -3,7 +3,7 @@ import Widget from "./Widget";
 import config from "@/config";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format, differenceInCalendarMonths } from "date-fns";
+import { format, subMonths, endOfMonth } from "date-fns";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -17,113 +17,107 @@ const PRODUCTS = [
     "100", "104"
 ];
 
-
+// Raw data type for each record from the API
 type ProductUnitData = {
     part_code: string;
     part_desc: string;
-    qty: number;
-    uom: string;
-    date_entered: string;
+    qty_ship_unt: number;
+    trans_year: number; // Added trans_year
+    trans_mo: number;   // Added trans_mo
 };
 
+// Shape of each product’s aggregated data:
+//  - partDesc: string
+//  - each 'yyyy-MM' key: number
+interface ProductAggregates {
+    partDesc: string;
+    [monthKey: string]: string | number;
+}
+
 /* -------------------------------------- */
-/* TopProductUnitSalesTable Component       */
+/* TopProductUnitSalesTable Component     */
 /* -------------------------------------- */
 export default function TopProductUnitSalesTable() {
     // Prepare the widget payload with SQL query.
+    // This filter now only returns data for the last 12 complete months.
     const widgetPayload = useMemo(
         () => ({
             module: "TopProductUnitSales",
-            table: "orditem",
+            table: "shpordview",
             columns: [
                 "part_code",
                 "part_desc",
-                "qty",
-                "uom",
-                "date_entered"
+                "qty_ship_unt",
+                "trans_year", // Added trans_year
+                "trans_mo",   // Added trans_mo
             ],
-            filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND qty > 0 AND date_entered >= DATEADD(MONTH, -12, GETDATE())`,
-            sort: ["date_entered DESC", "part_code ASC"],
+            filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND qty_ship_unt > 0 AND trans_datetime >= DATEADD(MONTH, -12, DATEADD(DAY, 1, EOMONTH(GETDATE())))`,
+            sort: ["trans_datetime DESC", "part_code ASC"],
         }),
         []
     );
 
-
     // Transform raw data into table row data.
     const renderFunction = useCallback((data: ProductUnitData[]) => {
-        console.log(data);
         if (!data || !Array.isArray(data)) {
             return <div>No data available</div>;
         }
-        // Initialize product aggregates for each product in PRODUCTS
-        const aggregates: {
-            [key: string]: {
-                partCode: string;
-                partDesc: string;
-                uom: string;
-                total3: number;
-                total6: number;
-                total9: number;
-                total12: number;
-            };
-        } = {};
 
-        // Initialize aggregates for all products in PRODUCTS
-        PRODUCTS.forEach(code => {
-            aggregates[code] = {
-                partCode: code,
-                partDesc: "",
-                uom: "",
-                total3: 0,
-                total6: 0,
-                total9: 0,
-                total12: 0,
-            };
-        });
-
+        // Calculate the list of 12 complete months (oldest first, newest last)
         const now = new Date();
-        data.forEach(row => {
-            const code = row.part_code;
-            // Only process if the product is in our list
-            if (aggregates[code]) {
-                // Use the first available partDesc and uom
-                if (!aggregates[code].partDesc && row.part_desc) {
-                    aggregates[code].partDesc = row.part_desc;
-                }
-                if (!aggregates[code].uom && row.uom) {
-                    aggregates[code].uom = row.uom;
-                }
-                const saleDate = new Date(row.date_entered);
-                const diffMonths = differenceInCalendarMonths(now, saleDate);
-                // Only include sales from the past 12 months
-                if (diffMonths < 12) {
-                    if (diffMonths < 3) {
-                        aggregates[code].total3 += row.qty;
-                    }
-                    if (diffMonths < 6) {
-                        aggregates[code].total6 += row.qty;
-                    }
-                    if (diffMonths < 9) {
-                        aggregates[code].total9 += row.qty;
-                    }
-                    aggregates[code].total12 += row.qty;
-                }
+        // Assuming the last complete month is the previous month
+        const lastCompleteMonth = subMonths(endOfMonth(now), 1);
+        const months: string[] = [];
+        for (let i = 11; i >= 0; i--) {
+            const monthDate = subMonths(lastCompleteMonth, i);
+            months.push(format(monthDate, 'yyyy-MM'));
+        }
+
+        // Group raw data by product and by month
+        const productMap: { [key: string]: { partDesc: string; monthly: { [key: string]: number } } } = {};
+
+        data.forEach((record) => {
+            // Construct monthKey using trans_year and trans_mo columns
+            const monthKey = `${record.trans_year}-${String(record.trans_mo).padStart(2, '0')}`;
+            // Only consider months in our defined 12-month range
+            if (!months.includes(monthKey)) return;
+
+            if (!productMap[record.part_code]) {
+                productMap[record.part_code] = {
+                    partDesc: record.part_desc,
+                    monthly: {}
+                };
+                // Initialize monthly totals to 0
+                months.forEach((m) => productMap[record.part_code].monthly[m] = 0);
             }
+            productMap[record.part_code].monthly[monthKey] += record.qty_ship_unt;
         });
 
-        // Prepare table rows with average monthly units for each period
-        const tableData = Object.values(aggregates).map(product => ({
-            partCode: product.partCode,
-            partDesc: product.partDesc || product.partCode,
-            uom: product.uom,
-            avg3: (product.total3 / 3).toFixed(2),
-            avg6: (product.total6 / 6).toFixed(2),
-            avg9: (product.total9 / 9).toFixed(2),
-            avg12: (product.total12 / 12).toFixed(2),
-        }));
+        // Build the table data by computing averages over the past 3, 6, 9, and 12 months
+        const tableData = Object.keys(productMap).map((partCode) => {
+            const product = productMap[partCode];
+            const monthlyData = product.monthly;
 
-        // Sort tableData by units sold in the past 12 months
-        tableData.sort((a, b) => parseFloat(b.avg12) - parseFloat(a.avg12));
+            // Helper function: given a starting index in the 'months' array and a period length, compute the average
+            const computeAvg = (startIndex: number, periodLength: number) => {
+                let sum = 0;
+                for (let i = startIndex; i < startIndex + periodLength; i++) {
+                    const mKey = months[i];
+                    sum += monthlyData[mKey] || 0;
+                }
+                const avg = Math.floor(sum / periodLength);
+                return avg.toLocaleString();
+            };
+
+            return {
+                partCode,
+                partDesc: product.partDesc,
+                avg3: computeAvg(9, 3),   // Last 3 months
+                avg6: computeAvg(6, 6),   // Last 6 months
+                avg9: computeAvg(3, 9),   // Last 9 months
+                avg12: computeAvg(0, 12), // All 12 months
+            };
+        });
 
         return (
             <ScrollArea className="h-[97%] rounded-md border mt-2">
@@ -132,7 +126,6 @@ export default function TopProductUnitSalesTable() {
                         <TableRow>
                             <TableHead>Part Code</TableHead>
                             <TableHead>Part Description</TableHead>
-                            <TableHead>UOM</TableHead>
                             <TableHead>Avg 3 Mo</TableHead>
                             <TableHead>Avg 6 Mo</TableHead>
                             <TableHead>Avg 9 Mo</TableHead>
@@ -144,7 +137,6 @@ export default function TopProductUnitSalesTable() {
                             <TableRow key={i}>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell>{row.partDesc}</TableCell>
-                                <TableCell>{row.uom}</TableCell>
                                 <TableCell>{row.avg3}</TableCell>
                                 <TableCell>{row.avg6}</TableCell>
                                 <TableCell>{row.avg9}</TableCell>
@@ -158,7 +150,7 @@ export default function TopProductUnitSalesTable() {
     }, []);
 
     return (
-        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden" >
+        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
@@ -166,6 +158,6 @@ export default function TopProductUnitSalesTable() {
                 updateInterval={30000}
                 render={renderFunction}
             />
-        </div >
+        </div>
     );
 }
