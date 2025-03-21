@@ -27,23 +27,21 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Internal layout reference to avoid unnecessary re-renders.
         const layoutRef = useRef<Widget[]>(layout);
 
-        // Store widget roots to allow proper unmounting.
-        const widgetRoots = useRef<Map<string, Root>>(new Map());
-
-        // Helper function to compare two layouts.
         const layoutsEqual = (layout1: Widget[], layout2: Widget[]): boolean => {
             if (layout1.length !== layout2.length) return false;
             return layout1.every((w1) => {
-                const w2 = layout2.find((w) => w.id === w1.id);
-                return (
-                    !!w2 &&
+                const w2 = layout2.find(w => w.id === w1.id);
+                return !!w2 &&
                     w1.x === w2.x &&
                     w1.y === w2.y &&
                     w1.w === w2.w &&
-                    w1.h === w2.h
-                );
+                    w1.h === w2.h &&
+                    w1.enabled === w2.enabled;
             });
         };
+
+        // Store widget roots to allow proper unmounting.
+        const widgetRoots = useRef<Map<string, Root>>(new Map());
 
         // Expose the "compact" method to the parent.
         useImperativeHandle(ref, () => ({
@@ -153,6 +151,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Handle external layout changes.
         useEffect(() => {
             if (!gridInstance.current) return;
+            if (layoutsEqual(layoutRef.current, layout)) {
+                return;
+            }
             const grid = gridInstance.current;
 
             // Only consider enabled widgets for rendering.

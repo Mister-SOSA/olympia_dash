@@ -59,6 +59,20 @@ export default function Dashboard() {
     // presetIndex is the currently active preset (0-based).
     const [presetIndex, setPresetIndex] = useState<number>(0);
 
+    // Helper function for deep comparison
+    const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
+        if (l1.length !== l2.length) return false;
+        return l1.every(widget1 => {
+            const widget2 = l2.find(w => w.id === widget1.id);
+            return widget2 &&
+                widget1.x === widget2.x &&
+                widget1.y === widget2.y &&
+                widget1.w === widget2.w &&
+                widget1.h === widget2.h &&
+                widget1.enabled === widget2.enabled;
+        });
+    };
+
     // Ref to access GridDashboard's imperative API.
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
@@ -173,9 +187,10 @@ export default function Dashboard() {
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
-        // Update the live layout with a new array reference.
-        setLayout([...tempLayout]);
-    }, [tempLayout]);
+        if (!layoutsEqual(layout, tempLayout)) {
+            setLayout([...tempLayout]);
+        }
+    }, [tempLayout, layout]);
 
     const handleCancel = useCallback(() => {
         setMenuOpen(false);
