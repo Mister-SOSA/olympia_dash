@@ -133,8 +133,13 @@ export default function Dashboard() {
                     gridDashboardRef.current.compact();
                     toast("Dash Compacted!", { type: "warning" });
                 }
-            } else if (e.code.startsWith("digit")) {
-                const digit = parseInt(e.code.replace("Digit", ""), 10);
+            } else if ((!e.shiftKey && key >= "0" && key <= "9") || (e.shiftKey && e.code.startsWith("Digit"))) {
+                let digit: number;
+                if (e.shiftKey) {
+                    digit = parseInt(e.code.replace("Digit", ""), 10);
+                } else {
+                    digit = parseInt(key, 10);
+                }
                 if (digit === 0) {
                     window.location.reload();
                 } else if (digit >= 1 && digit <= 9) {
@@ -146,7 +151,7 @@ export default function Dashboard() {
                             newPresets[index] = deepClone(liveLayout);
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
-                            toast(`Saved Layout ${index + 1}`, { type: "success" });
+                            toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
                         }
                     } else {
                         loadPreset(index);
@@ -183,28 +188,6 @@ export default function Dashboard() {
 
     return (
         <div>
-            <table className="grid-layout-debug w-50 text-center">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>X</th>
-                        <th>Y</th>
-                        <th>W</th>
-                        <th>H</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {layout.filter((widget) => widget.enabled).map((widget) => (
-                        <tr key={widget.id}>
-                            <td>{widget.id}</td>
-                            <td>{widget.x}</td>
-                            <td>{widget.y}</td>
-                            <td>{widget.w}</td>
-                            <td>{widget.h}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
             {menuOpen && (
                 <Menu
                     masterWidgetList={masterWidgetList}
