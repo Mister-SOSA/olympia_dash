@@ -37,11 +37,11 @@ const findNextPresetIndex = (
     direction: number
 ): number => {
     let newIndex = currentIndex;
-    for (let i = 0; i < presets.length; i++) {
+    // Loop until we find a preset that exists or we've looped through all slots
+    do {
         newIndex = (newIndex + direction + presets.length) % presets.length;
-        if (presets[newIndex]) return newIndex;
-    }
-    return currentIndex;
+    } while (!presets[newIndex] && newIndex !== currentIndex);
+    return newIndex;
 };
 
 /**
@@ -133,7 +133,7 @@ export default function Dashboard() {
                     gridDashboardRef.current.compact();
                     toast("Dash Compacted!", { type: "warning" });
                 }
-            } else if (e.code.startsWith("Digit")) {
+            } else if (e.code.startsWith("digit")) {
                 const digit = parseInt(e.code.replace("Digit", ""), 10);
                 if (digit === 0) {
                     window.location.reload();
@@ -152,10 +152,10 @@ export default function Dashboard() {
                         loadPreset(index);
                     }
                 }
-            } else if (e.key === "arrowleft") {
+            } else if (key === "arrowleft") {
                 const newIndex = findNextPresetIndex(presets, presetIndex, -1);
                 if (newIndex !== presetIndex) loadPreset(newIndex);
-            } else if (e.key === "arrowright") {
+            } else if (key === "arrowright") {
                 const newIndex = findNextPresetIndex(presets, presetIndex, 1);
                 if (newIndex !== presetIndex) loadPreset(newIndex);
             }
