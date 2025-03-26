@@ -70,6 +70,7 @@ export default function InventoryMovesLog() {
                 "recnum",
                 "lot",
             ],
+            filters: "user_id != 'AUTO'",
             sort: "trans_date DESC",
             limit: 20,
         }),
@@ -130,7 +131,7 @@ export default function InventoryMovesLog() {
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
                 title="Inventory Moves Log"
-                updateInterval={5000} // Refresh every 5 seconds
+                updateInterval={3000} // Refresh every 3 seconds
                 render={renderFunction}
             />
         </div>
