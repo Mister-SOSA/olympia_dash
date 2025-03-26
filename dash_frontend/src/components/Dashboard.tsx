@@ -17,7 +17,8 @@ import 'react-toastify/dist/ReactToastify.css';
 // Utility: deep clone an object using JSON serialization
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
-// Merge a preset (which may only define a subset of widgets) with the master widget list
+// Merge a preset (which may only define a subset of widgets) with the master widget list,
+// assuming any widget not present in the preset is disabled.
 const mergePreset = (preset: Widget[]): Widget[] =>
     masterWidgetList.map(widget => {
         const presetItem = preset.find(p => p.id === widget.id);
@@ -67,8 +68,8 @@ export default function Dashboard() {
         if (storedLayout) {
             setLayout(storedLayout);
         } else {
-            // Fallback: use enabled widgets from master list
-            setLayout(masterWidgetList.filter(w => w.enabled));
+            // Fallback: use disabled state for all widgets
+            setLayout(masterWidgetList.map(w => ({ ...w, enabled: false })));
         }
         setPresets(readPresetsFromStorage());
     }, []);

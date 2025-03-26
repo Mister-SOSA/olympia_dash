@@ -30,7 +30,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const layoutsEqual = (layout1: Widget[], layout2: Widget[]): boolean => {
             if (layout1.length !== layout2.length) return false;
             return layout1.every((w1) => {
-                const w2 = layout2.find(w => w.id === w1.id);
+                const w2 = layout2.find((w) => w.id === w1.id);
                 return !!w2 &&
                     w1.x === w2.x &&
                     w1.y === w2.y &&
@@ -49,19 +49,22 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 if (gridInstance.current) {
                     gridInstance.current.compact();
                     // Save the new positions.
-                    const updatedLayout = (gridInstance.current.save(false) as GridStackNode[]).map(
-                        (node) => ({
-                            id: node.id as string,
-                            x: node.x ?? 0,
-                            y: node.y ?? 0,
-                            w: node.w ?? 1,
-                            h: node.h ?? 1,
-                            // Preserve the enabled flag from our internal layout.
-                            enabled:
-                                layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
-                        })
-                    );
-                    const validated = validateLayout(updatedLayout, COLUMN_COUNT);
+                    const updatedNodes = gridInstance.current.save(false) as GridStackNode[];
+                    const updatedEnabledLayout = updatedNodes.map((node) => ({
+                        id: node.id as string,
+                        x: node.x ?? 0,
+                        y: node.y ?? 0,
+                        w: node.w ?? 1,
+                        h: node.h ?? 1,
+                        enabled: true,
+                    }));
+
+                    const mergedLayout = layoutRef.current.map((widget) => {
+                        const updated = updatedEnabledLayout.find((u) => u.id === widget.id);
+                        return updated ? updated : { ...widget, enabled: false };
+                    });
+
+                    const validated = validateLayout(mergedLayout, COLUMN_COUNT);
                     // Only update if the layout has actually changed.
                     if (!layoutsEqual(validated, layoutRef.current)) {
                         layoutRef.current = validated;
@@ -122,16 +125,22 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             renderWidgets(layoutRef.current);
 
             grid.on("change", () => {
-                const updatedLayout = (grid.save(false) as GridStackNode[]).map((node) => ({
+                const updatedNodes = grid.save(false) as GridStackNode[];
+                const updatedEnabledLayout = updatedNodes.map((node) => ({
                     id: node.id as string,
                     x: node.x ?? 0,
                     y: node.y ?? 0,
                     w: node.w ?? 1,
                     h: node.h ?? 1,
-                    enabled:
-                        layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
+                    enabled: true,
                 }));
-                const validated = validateLayout(updatedLayout, COLUMN_COUNT);
+
+                const mergedLayout = layoutRef.current.map((widget) => {
+                    const updated = updatedEnabledLayout.find((u) => u.id === widget.id);
+                    return updated ? updated : { ...widget, enabled: false };
+                });
+
+                const validated = validateLayout(mergedLayout, COLUMN_COUNT);
                 layoutRef.current = validated;
                 saveLayoutToStorage(validated);
             });
@@ -171,7 +180,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     `[gs-id="${widget.id}"]`
                 ) as GridItemHTMLElement | null;
                 if (element) {
-                    // Defer unmounting the React component if it exists.
+                    // Defer unmounting of the React component if it exists.
                     const root = widgetRoots.current.get(widget.id);
                     if (root) {
                         setTimeout(() => root.unmount(), 0);
@@ -226,6 +235,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Finally, update our internal layout reference.
             layoutRef.current = layout;
+            saveLayoutToStorage(layout); // Note: external layout changes are assumed to include all widgets.
         }, [layout]);
 
         return <div ref={gridRef} className="grid-stack"></div>;
