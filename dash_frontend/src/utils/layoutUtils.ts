@@ -2,29 +2,33 @@ import { Widget } from "@/types";
 import { LOCAL_STORAGE_KEY, COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
 
-/** 
- * Reads the current layout from localStorage and merges it with the master widget list.
- * For any widget not found in the saved layout, it is assumed to be disabled.
+/**
+ * Reads the saved layout from localStorage.
+ * Falls back to the master widget list with all widgets disabled.
  */
 export const readLayoutFromStorage = (): Widget[] => {
     const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (savedLayout) {
-        const parsedLayout: Widget[] = JSON.parse(savedLayout);
-        return masterWidgetList.map((widget) => {
-            const saved = parsedLayout.find((s) => s.id === widget.id);
-            return saved ? { ...widget, ...saved } : { ...widget, enabled: false };
-        });
+        try {
+            const parsedLayout: Widget[] = JSON.parse(savedLayout);
+            return parsedLayout;
+        } catch (error) {
+            console.error("Error parsing saved layout:", error);
+        }
     }
-    return masterWidgetList.map(widget => ({ ...widget, enabled: false }));
+    return masterWidgetList.map((widget) => ({ ...widget, enabled: false }));
 };
 
-/** Saves only enabled widgets from the layout into localStorage */
+/**
+ * Saves the full layout to localStorage.
+ */
 export const saveLayoutToStorage = (layout: Widget[]) => {
-    const enabledLayout = layout.filter(widget => widget.enabled);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(enabledLayout));
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
 };
 
-/** Ensures that each widget fits within the given column count */
+/**
+ * Ensures that each widget fits within the given column count.
+ */
 export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_COUNT): Widget[] =>
     layout.map((widget) => ({
         ...widget,
@@ -55,13 +59,9 @@ export const readPresetsFromStorage = (): Array<Widget[] | null> => {
     return new Array(9).fill(null);
 };
 
-/** Saves an array of 9 preset layouts into localStorage, each preset only storing enabled widgets */
+/**
+ * Saves an array of 9 preset layouts into localStorage.
+ */
 export const savePresetsToStorage = (presets: Array<Widget[] | null>) => {
-    const filteredPresets = presets.map(preset => {
-        if (preset) {
-            return preset.filter(widget => widget.enabled);
-        }
-        return preset;
-    });
-    localStorage.setItem(PRESETS_KEY, JSON.stringify(filteredPresets));
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
 };

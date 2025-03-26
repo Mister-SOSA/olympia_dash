@@ -8,24 +8,28 @@ import {
     readLayoutFromStorage,
     saveLayoutToStorage,
     readPresetsFromStorage,
-    savePresetsToStorage
+    savePresetsToStorage,
 } from "@/utils/layoutUtils";
 import { masterWidgetList } from "@/constants/widgets";
 import { Flip, toast, ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 
-// Utility: deep clone an object using JSON serialization
+// Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
-// Merge a preset (which may only define a subset of widgets) with the master widget list,
-// assuming any widget not present in the preset is disabled.
+/**
+ * Merges a preset layout (which might define only a subset of widgets)
+ * with the master widget list.
+ */
 const mergePreset = (preset: Widget[]): Widget[] =>
-    masterWidgetList.map(widget => {
-        const presetItem = preset.find(p => p.id === widget.id);
+    masterWidgetList.map((widget) => {
+        const presetItem = preset.find((p) => p.id === widget.id);
         return presetItem ? { ...widget, ...presetItem } : { ...widget, enabled: false };
     });
 
-// Find the next available preset index given a direction (+1 for right, -1 for left)
+/**
+ * Finds the next available preset index given a direction.
+ */
 const findNextPresetIndex = (
     presets: Array<Widget[] | null>,
     currentIndex: number,
@@ -39,22 +43,25 @@ const findNextPresetIndex = (
     return currentIndex;
 };
 
-// Compare two layouts deeply
+/**
+ * Deep comparison of two layouts.
+ */
 const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
     if (l1.length !== l2.length) return false;
-    return l1.every(widget1 => {
-        const widget2 = l2.find(w => w.id === widget1.id);
-        return widget2 &&
+    return l1.every((widget1) => {
+        const widget2 = l2.find((w) => w.id === widget1.id);
+        return (
+            widget2 &&
             widget1.x === widget2.x &&
             widget1.y === widget2.y &&
             widget1.w === widget2.w &&
             widget1.h === widget2.h &&
-            widget1.enabled === widget2.enabled;
+            widget1.enabled === widget2.enabled
+        );
     });
 };
 
 export default function Dashboard() {
-    // State variables
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -62,88 +69,92 @@ export default function Dashboard() {
     const [presetIndex, setPresetIndex] = useState<number>(0);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
-    // On mount, initialize layout and presets
+    // On mount, initialize layout and presets.
     useEffect(() => {
         const storedLayout = readLayoutFromStorage();
         if (storedLayout) {
             setLayout(storedLayout);
         } else {
-            // Fallback: use disabled state for all widgets
-            setLayout(masterWidgetList.map(w => ({ ...w, enabled: false })));
+            setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
         }
         setPresets(readPresetsFromStorage());
     }, []);
 
-    // Update tempLayout by merging the current layout with the master widget list
+    // Update temporary layout for the widget menu.
     const updateTempLayout = useCallback(() => {
         setTempLayout(
-            masterWidgetList.map(widget => {
-                const existing = layout.find(w => w.id === widget.id);
+            masterWidgetList.map((widget) => {
+                const existing = layout.find((w) => w.id === widget.id);
                 return existing || { ...widget, enabled: false };
             })
         );
     }, [layout]);
 
-    // Load a preset by index
-    const loadPreset = useCallback((index: number) => {
-        const preset = presets[index];
-        if (!preset) {
-            toast(`Dash ${index + 1} is empty`, { type: "error" });
-            return;
-        }
-        const merged = mergePreset(deepClone(preset));
-        setLayout(merged);
-        setTempLayout(merged);
-        setPresetIndex(index);
-        toast(`Loaded Dash ${index + 1}`, { type: "info" });
-    }, [presets]);
+    // Load a preset layout.
+    const loadPreset = useCallback(
+        (index: number) => {
+            const preset = presets[index];
+            if (!preset) {
+                toast(`Dash ${index + 1} is empty`, { type: "error" });
+                return;
+            }
+            const merged = mergePreset(deepClone(preset));
+            setLayout(merged);
+            setTempLayout(merged);
+            setPresetIndex(index);
+            toast(`Loaded Dash ${index + 1}`, { type: "info" });
+        },
+        [presets]
+    );
 
-    // Handle keydown events for menu toggle, grid compaction, saving/loading presets
-    const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        console.log(`Key pressed: ${e.key}`);
-        const key = e.key.toLowerCase();
-        if (key === "f") {
-            setMenuOpen(prev => !prev);
-            updateTempLayout();
-        } else if (key === "x") {
-            if (gridDashboardRef.current) {
-                gridDashboardRef.current.compact();
-                toast("Dash Compacted!", { type: "warning" });
-            }
-        } else if (e.code.startsWith("Digit")) {
-            const digit = parseInt(e.code.replace("Digit", ""), 10);
-            if (digit === 0) {
-                window.location.reload();
-            } else if (digit >= 1 && digit <= 9) {
-                const index = digit - 1;
-                if (e.shiftKey) {
-                    const liveLayout = readLayoutFromStorage();
-                    if (liveLayout) {
-                        const newPresets = [...presets];
-                        newPresets[index] = deepClone(liveLayout);
-                        setPresets(newPresets);
-                        savePresetsToStorage(newPresets);
-                        toast(`Saved Layout ${index + 1}`, { type: "success" });
-                    }
-                } else {
-                    loadPreset(index);
+    // Handle keydown events for toggling the menu, compacting the grid, and preset management.
+    const handleKeyDown = useCallback(
+        (e: KeyboardEvent) => {
+            const key = e.key.toLowerCase();
+            if (key === "f") {
+                setMenuOpen((prev) => !prev);
+                updateTempLayout();
+            } else if (key === "x") {
+                if (gridDashboardRef.current) {
+                    gridDashboardRef.current.compact();
+                    toast("Dash Compacted!", { type: "warning" });
                 }
+            } else if (e.code.startsWith("Digit")) {
+                const digit = parseInt(e.code.replace("Digit", ""), 10);
+                if (digit === 0) {
+                    window.location.reload();
+                } else if (digit >= 1 && digit <= 9) {
+                    const index = digit - 1;
+                    if (e.shiftKey) {
+                        const liveLayout = readLayoutFromStorage();
+                        if (liveLayout) {
+                            const newPresets = [...presets];
+                            newPresets[index] = deepClone(liveLayout);
+                            setPresets(newPresets);
+                            savePresetsToStorage(newPresets);
+                            toast(`Saved Layout ${index + 1}`, { type: "success" });
+                        }
+                    } else {
+                        loadPreset(index);
+                    }
+                }
+            } else if (e.key === "arrowleft") {
+                const newIndex = findNextPresetIndex(presets, presetIndex, -1);
+                if (newIndex !== presetIndex) loadPreset(newIndex);
+            } else if (e.key === "arrowright") {
+                const newIndex = findNextPresetIndex(presets, presetIndex, 1);
+                if (newIndex !== presetIndex) loadPreset(newIndex);
             }
-        } else if (e.key === "arrowleft") {
-            const newIndex = findNextPresetIndex(presets, presetIndex, -1);
-            if (newIndex !== presetIndex) loadPreset(newIndex);
-        } else if (e.key === "arrowright") {
-            const newIndex = findNextPresetIndex(presets, presetIndex, 1);
-            if (newIndex !== presetIndex) loadPreset(newIndex);
-        }
-    }, [layout, presets, presetIndex, loadPreset, updateTempLayout]);
+        },
+        [layout, presets, presetIndex, loadPreset, updateTempLayout]
+    );
 
     useEffect(() => {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    // Save changes from the widget menu
+    // Save changes from the widget menu.
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
@@ -169,7 +180,7 @@ export default function Dashboard() {
                     </tr>
                 </thead>
                 <tbody>
-                    {layout.filter(widget => widget.enabled).map(widget => (
+                    {layout.filter((widget) => widget.enabled).map((widget) => (
                         <tr key={widget.id}>
                             <td>{widget.id}</td>
                             <td>{widget.x}</td>
@@ -189,11 +200,7 @@ export default function Dashboard() {
                     handleCancel={handleCancel}
                 />
             )}
-            <GridDashboard
-                ref={gridDashboardRef}
-                layout={layout}
-                onExternalLayoutChange={setLayout}
-            />
+            <GridDashboard ref={gridDashboardRef} layout={layout.filter(widget => widget.enabled)} onExternalLayoutChange={setLayout} />
             <ToastContainer
                 position="bottom-center"
                 autoClose={1000}
