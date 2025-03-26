@@ -6,184 +6,143 @@ import Menu from "./WidgetMenu";
 import { Widget } from "@/types";
 import {
     readLayoutFromStorage,
-    validateLayout,
     saveLayoutToStorage,
     readPresetsFromStorage,
-    savePresetsToStorage,
+    savePresetsToStorage
 } from "@/utils/layoutUtils";
-import { COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
-import { Flip, toast, ToastContainer } from 'react-toastify';
+import { Flip, toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
-// Helper: deep-clone an object (using JSON serialization for simplicity)
-const deepClone = (obj: any) => JSON.parse(JSON.stringify(obj));
+// Utility: deep clone an object using JSON serialization
+const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
-// Helper: Merge a preset (which may contain only some widgets) with the full master list.
-// For each widget in masterWidgetList, if a matching entry exists in the preset, use its values;
-// otherwise, include the widget with enabled set to false.
+// Merge a preset (which may only define a subset of widgets) with the master widget list
 const mergePreset = (preset: Widget[]): Widget[] =>
-    masterWidgetList.map((widget) => {
-        const presetItem = preset.find((p) => p.id === widget.id);
+    masterWidgetList.map(widget => {
+        const presetItem = preset.find(p => p.id === widget.id);
         return presetItem ? { ...widget, ...presetItem } : { ...widget, enabled: false };
     });
 
-// Helper: Find the next available preset index given the current index and a direction.
-// Direction should be +1 (arrow right) or -1 (arrow left). If no other preset is found,
-// return the current index.
+// Find the next available preset index given a direction (+1 for right, -1 for left)
 const findNextPresetIndex = (
     presets: Array<Widget[] | null>,
     currentIndex: number,
     direction: number
 ): number => {
     let newIndex = currentIndex;
-    // Try up to presets.length steps (to cover all slots).
     for (let i = 0; i < presets.length; i++) {
         newIndex = (newIndex + direction + presets.length) % presets.length;
-        if (presets[newIndex] != null) {
-            return newIndex;
-        }
+        if (presets[newIndex]) return newIndex;
     }
     return currentIndex;
 };
 
+// Compare two layouts deeply
+const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
+    if (l1.length !== l2.length) return false;
+    return l1.every(widget1 => {
+        const widget2 = l2.find(w => w.id === widget1.id);
+        return widget2 &&
+            widget1.x === widget2.x &&
+            widget1.y === widget2.y &&
+            widget1.w === widget2.w &&
+            widget1.h === widget2.h &&
+            widget1.enabled === widget2.enabled;
+    });
+};
+
 export default function Dashboard() {
-    // Live layout state used by GridDashboard.
+    // State variables
     const [layout, setLayout] = useState<Widget[]>([]);
-    // tempLayout is used by the widget menu so that you can add/remove widgets.
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
-    // menuOpen controls whether the widget menu is visible.
     const [menuOpen, setMenuOpen] = useState(false);
-    // presets holds up to 9 preset layouts.
     const [presets, setPresets] = useState<Array<Widget[] | null>>(new Array(9).fill(null));
-    // presetIndex is the currently active preset (0-based).
     const [presetIndex, setPresetIndex] = useState<number>(0);
-
-    // Helper function for deep comparison
-    const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
-        if (l1.length !== l2.length) return false;
-        return l1.every(widget1 => {
-            const widget2 = l2.find(w => w.id === widget1.id);
-            return widget2 &&
-                widget1.x === widget2.x &&
-                widget1.y === widget2.y &&
-                widget1.w === widget2.w &&
-                widget1.h === widget2.h &&
-                widget1.enabled === widget2.enabled;
-        });
-    };
-
-    // Ref to access GridDashboard's imperative API.
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
-    // On mount, initialize the layout and presets.
+    // On mount, initialize layout and presets
     useEffect(() => {
-        // Use the live layout from localStorage (written by GridDashboard via grid.save(false))
-        const storedLayoutStr = localStorage.getItem("dashboard_layout");
-        if (storedLayoutStr) {
-            setLayout(JSON.parse(storedLayoutStr));
+        const storedLayout = readLayoutFromStorage();
+        if (storedLayout) {
+            setLayout(storedLayout);
         } else {
-            // Fallback: use the enabled widgets from the master list.
-            setLayout(masterWidgetList.filter((w) => w.enabled));
+            // Fallback: use enabled widgets from master list
+            setLayout(masterWidgetList.filter(w => w.enabled));
         }
-
-        const storedPresets = readPresetsFromStorage();
-        setPresets(storedPresets);
+        setPresets(readPresetsFromStorage());
     }, []);
 
-    // Function to load a preset from presets state.
-    const loadPreset = useCallback(
-        (index: number) => {
-            if (!presets[index]) {
-                toast(`Dash ${index + 1} is empty`, { type: "error" });
-                return;
-            }
-            // Deep clone the preset so that we have a fresh copy.
-            const clonedPreset = deepClone(presets[index]!);
-            // Merge with the full master list.
-            const merged = mergePreset(clonedPreset);
-            // Force new object references.
-            setLayout([...merged]);
-            setTempLayout([...merged]);
-            setPresetIndex(index);
-            toast(`Loaded Dash ${index + 1}`, { type: "info" });
-        },
-        [presets]
-    );
+    // Update tempLayout by merging the current layout with the master widget list
+    const updateTempLayout = useCallback(() => {
+        setTempLayout(
+            masterWidgetList.map(widget => {
+                const existing = layout.find(w => w.id === widget.id);
+                return existing || { ...widget, enabled: false };
+            })
+        );
+    }, [layout]);
 
-    // Keydown handler for toggling the menu, saving/loading presets, and compacting.
-    const handleKeyDown = useCallback(
-        (e: KeyboardEvent) => {
-            console.log(`Key pressed: ${e.key}`);
-            // Toggle widget menu with "F"
-            if (e.key.toLowerCase() === "f") {
-                setMenuOpen((prev) => !prev);
-                // Instead of copying just the current layout, merge the master list with the current layout.
-                setTempLayout(
-                    masterWidgetList.map((widget) => {
-                        const existing = layout.find((w) => w.id === widget.id);
-                        return existing ? existing : { ...widget, enabled: false };
-                    })
-                );
-            }
-            // Compact grid with "X"
-            else if (e.key.toLowerCase() === "x") {
-                if (gridDashboardRef.current) {
-                    gridDashboardRef.current.compact();
-                    toast("Dash Compacted!", { type: "warning" });
-                }
-            }
-            // Use e.code so that Shift+Digit still gives "DigitX".
-            else if (e.code.startsWith("Digit")) {
-                const digit = parseInt(e.code.replace("Digit", ""), 10);
-                if (digit === 0) {
-                    // trigger a hard reload of the page
-                    window.location.reload();
-                }
+    // Load a preset by index
+    const loadPreset = useCallback((index: number) => {
+        const preset = presets[index];
+        if (!preset) {
+            toast(`Dash ${index + 1} is empty`, { type: "error" });
+            return;
+        }
+        const merged = mergePreset(deepClone(preset));
+        setLayout(merged);
+        setTempLayout(merged);
+        setPresetIndex(index);
+        toast(`Loaded Dash ${index + 1}`, { type: "info" });
+    }, [presets]);
 
-                else if (digit >= 1 && digit <= 9) {
-                    const index = digit - 1;
-                    // If Shift is pressed, save the current live layout as a preset.
-                    if (e.shiftKey) {
-                        const liveLayoutStr = localStorage.getItem("dashboard_layout");
-                        if (liveLayoutStr) {
-                            const liveLayout = JSON.parse(liveLayoutStr);
-                            const newPresets = [...presets];
-                            newPresets[index] = deepClone(liveLayout);
-                            setPresets(newPresets);
-                            savePresetsToStorage(newPresets);
-                            toast(`Saved Layout ${index + 1}`, { type: "success" });
-                        }
+    // Handle keydown events for menu toggle, grid compaction, saving/loading presets
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        console.log(`Key pressed: ${e.key}`);
+        const key = e.key.toLowerCase();
+        if (key === "f") {
+            setMenuOpen(prev => !prev);
+            updateTempLayout();
+        } else if (key === "x") {
+            if (gridDashboardRef.current) {
+                gridDashboardRef.current.compact();
+                toast("Dash Compacted!", { type: "warning" });
+            }
+        } else if (e.code.startsWith("Digit")) {
+            const digit = parseInt(e.code.replace("Digit", ""), 10);
+            if (digit === 0) {
+                window.location.reload();
+            } else if (digit >= 1 && digit <= 9) {
+                const index = digit - 1;
+                if (e.shiftKey) {
+                    const liveLayout = readLayoutFromStorage();
+                    if (liveLayout) {
+                        const newPresets = [...presets];
+                        newPresets[index] = deepClone(liveLayout);
+                        setPresets(newPresets);
+                        savePresetsToStorage(newPresets);
+                        toast(`Saved Layout ${index + 1}`, { type: "success" });
                     }
-                    // Otherwise, load the preset (if it exists)
-                    else {
-                        loadPreset(index);
-                    }
+                } else {
+                    loadPreset(index);
                 }
             }
-            // Cycle through presets with left/right arrow keys.
-            else if (e.key === "ArrowLeft") {
-                const newIndex = findNextPresetIndex(presets, presetIndex, -1);
-                if (newIndex !== presetIndex) {
-                    loadPreset(newIndex);
-                }
-            } else if (e.key === "ArrowRight") {
-                const newIndex = findNextPresetIndex(presets, presetIndex, +1);
-                if (newIndex !== presetIndex) {
-                    loadPreset(newIndex);
-                }
-            }
-        },
-        [layout, presets, presetIndex, loadPreset]
-    );
+        } else if (e.key === "arrowleft") {
+            const newIndex = findNextPresetIndex(presets, presetIndex, -1);
+            if (newIndex !== presetIndex) loadPreset(newIndex);
+        } else if (e.key === "arrowright") {
+            const newIndex = findNextPresetIndex(presets, presetIndex, 1);
+            if (newIndex !== presetIndex) loadPreset(newIndex);
+        }
+    }, [layout, presets, presetIndex, loadPreset, updateTempLayout]);
 
-    // Register the keydown handler.
     useEffect(() => {
-        window.addEventListener("keydown", handleKeyDown as EventListener);
-        return () => window.removeEventListener("keydown", handleKeyDown as EventListener);
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    // Callback for saving changes made in the widget menu.
+    // Save changes from the widget menu
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
@@ -198,6 +157,28 @@ export default function Dashboard() {
 
     return (
         <div>
+            <table className="grid-layout-debug w-50 text-center">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>W</th>
+                        <th>H</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {layout.filter(widget => widget.enabled).map(widget => (
+                        <tr key={widget.id}>
+                            <td>{widget.id}</td>
+                            <td>{widget.x}</td>
+                            <td>{widget.y}</td>
+                            <td>{widget.w}</td>
+                            <td>{widget.h}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
             {menuOpen && (
                 <Menu
                     masterWidgetList={masterWidgetList}
@@ -210,7 +191,7 @@ export default function Dashboard() {
             <GridDashboard
                 ref={gridDashboardRef}
                 layout={layout}
-                onExternalLayoutChange={setLayout} // For updates from GridDashboard.
+                onExternalLayoutChange={setLayout}
             />
             <ToastContainer
                 position="bottom-center"
