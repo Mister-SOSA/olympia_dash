@@ -8,6 +8,7 @@ import { Widget } from "@/types";
 import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
 import { saveLayoutToStorage } from "@/utils/layoutUtils";
 import widgetMap from "@/components/widgets/widgetMap";
+import { motion } from "framer-motion"; // Added import for motion
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)

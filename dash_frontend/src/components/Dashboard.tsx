@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import Menu from "./WidgetMenu";
 import { Widget } from "@/types";
@@ -67,6 +68,8 @@ export default function Dashboard() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [presets, setPresets] = useState<Array<Widget[] | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
+    // transitionPhase can be 'none', 'fadeIn', or 'fadeOut'
+    const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
     // On mount, initialize layout and presets.
@@ -90,19 +93,30 @@ export default function Dashboard() {
         );
     }, [layout]);
 
-    // Load a preset layout.
+    // Load a preset layout with a full-page overlay transition.
     const loadPreset = useCallback(
         (index: number) => {
-            const preset = presets[index];
-            if (!preset) {
-                toast(`Dash ${index + 1} is empty`, { type: "error" });
-                return;
-            }
-            const merged = mergePreset(deepClone(preset));
-            setLayout(merged);
-            setTempLayout(merged);
-            setPresetIndex(index);
-            toast(`Loaded Dash ${index + 1}`, { type: "info" });
+            // Trigger toast instantly when preset button is pressed
+            toast(`Loaded Dash ${index + 1}`, { type: "info", delay: 0 });
+            // Start fade in (overlay goes to full black) with quicker delay
+            setTransitionPhase("fadeIn");
+            setTimeout(() => {
+                const preset = presets[index];
+                if (!preset) {
+                    toast(`Dash ${index + 1} is empty`, { type: "error", delay: 0 });
+                    setTransitionPhase("none");
+                    return;
+                }
+                const merged = mergePreset(deepClone(preset));
+                setLayout(merged);
+                setTempLayout(merged);
+                setPresetIndex(index);
+                // Start fade out after preset switch with quicker delay
+                setTransitionPhase("fadeOut");
+                setTimeout(() => {
+                    setTransitionPhase("none");
+                }, 300);
+            }, 300);
         },
         [presets]
     );
@@ -200,7 +214,27 @@ export default function Dashboard() {
                     handleCancel={handleCancel}
                 />
             )}
-            <GridDashboard ref={gridDashboardRef} layout={layout.filter(widget => widget.enabled)} onExternalLayoutChange={setLayout} />
+            <GridDashboard
+                ref={gridDashboardRef}
+                layout={layout.filter((widget) => widget.enabled)}
+                onExternalLayoutChange={setLayout}
+            />
+            {transitionPhase !== "none" && (
+                <motion.div
+                    initial={{ opacity: transitionPhase === "fadeIn" ? 0 : 1 }}
+                    animate={{ opacity: transitionPhase === "fadeIn" ? 1 : 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100vw",
+                        height: "100vh",
+                        backgroundColor: "black",
+                        zIndex: 9999,
+                    }}
+                />
+            )}
             <ToastContainer
                 position="bottom-center"
                 autoClose={1000}
