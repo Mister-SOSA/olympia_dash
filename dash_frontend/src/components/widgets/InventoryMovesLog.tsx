@@ -85,7 +85,7 @@ export default function InventoryMovesLog() {
         previousDocsRef.current = new Set(tableData.map((row) => row.docNumber));
 
         return (
-            <ScrollArea className="h-[95%] rounded-md border mt-2">
+            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
                 <Table className="text-left text-white inventory-moves-log-table text-[1rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>

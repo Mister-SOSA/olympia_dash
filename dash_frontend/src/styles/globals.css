@@ -62,8 +62,8 @@ body {
   width: 100%;
   text-align: center;
   margin-top: 0rem;
-  height: 4%;
-  overflow: visible;
+  position: sticky;
+  top: 0;
 }
 
 .widget-content {
