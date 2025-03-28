@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
@@ -196,6 +195,18 @@ export default function Dashboard() {
                     handleSave={handleSave}
                     handleCancel={handleCancel}
                 />
+            )}
+            {!menuOpen && (
+                <button
+                    onClick={() => {
+                        setMenuOpen(true);
+                        updateTempLayout();
+                    }}
+                    className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 md:hidden"
+                    aria-label="Open Widget Menu"
+                >
+                    ⚙️
+                </button>
             )}
             <GridDashboard
                 ref={gridDashboardRef}
