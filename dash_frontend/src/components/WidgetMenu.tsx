@@ -2,6 +2,7 @@ import { Widget } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label"
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -106,10 +107,10 @@ const Menu: React.FC<MenuProps> = ({
                                                         }
                                                         className="widget-menu-checkbox"
                                                     />
-                                                    <label className="text-sm font-medium flex items-center ">
+                                                    <Label className="text-sm font-medium flex items-center">
                                                         {widget.icon && <span className="mr-2">{widget.icon}</span>}
                                                         {widget.displayName || widget.id}
-                                                    </label>
+                                                    </Label>
                                                 </div>
                                             ))}
                                         </motion.div>
