@@ -152,7 +152,8 @@ body {
 
 .widget-menu {
   position: fixed;
-  width: 40%;
+  width: 30rem;
+  max-height: 80vh;
   background-color: var(--background-dark);
   border-radius: 8px;
   padding: 16px;
@@ -161,12 +162,21 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  overflow-y: scroll;
+}
+
+.widget-menu-content {
+  max-height: 60vh;
+  overflow-y: scroll;
 }
 
 .widget-menu-footer {
   display: flex;
   justify-content: space-between;
   margin-top: 16px;
+  padding-top: 16px;
+  padding-left: 3rem;
+  padding-right: 3rem;
 }
 
 .shade {
@@ -357,4 +367,25 @@ tbody>tr:nth-child(odd) {
   background-color: #ef4444;
   /* equivalent to Tailwind bg-red-500 */
   color: white;
+}
+
+.widget-category-dropdown:hover {
+  background-color: var(--background-highlight);
+  transition: background-color 0.3s ease;
+}
+
+.widget-category-dropdown {
+  transition: background-color 0.3s ease;
+}
+
+.category-expand-icon {
+  color: var(--text-primary);
+  background-color: var(--background-dark);
+  border-radius: .5rem;
+  padding: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

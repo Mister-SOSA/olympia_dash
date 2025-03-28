@@ -56,6 +56,7 @@ const Menu: React.FC<MenuProps> = ({
     };
 
     const clearDashboard = () => {
+
         setTempLayout((prev) => prev.map((widget) => ({ ...widget, enabled: false })));
     };
 
@@ -65,7 +66,7 @@ const Menu: React.FC<MenuProps> = ({
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-center">⚙️ Manage Widgets</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="widget-menu-content">
                     {/* Search Input */}
                     <input
                         type="text"
@@ -84,11 +85,11 @@ const Menu: React.FC<MenuProps> = ({
                         return (
                             <div key={category} className="mb-4 align-items-center">
                                 <div
-                                    className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border-light] rounded-lg"
+                                    className="flex items-center bg-[--background-light] justify-between cursor-pointer p-2 border border-[--border-light] rounded-lg widget-category-dropdown"
                                     onClick={() => toggleCategory(category)}
                                 >
                                     <h3 className="text-lg font-semibold">{category}</h3>
-                                    <span className="font-black text-xl">{isExpanded ? "-" : "+"}</span>
+                                    <span className="font-black text-xl category-expand-icon">{isExpanded ? "-" : "+"}</span>
                                 </div>
                                 <AnimatePresence>
                                     {isExpanded && (
