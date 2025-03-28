@@ -2,7 +2,7 @@ import { Widget } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label"
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -77,8 +77,10 @@ const Menu: React.FC<MenuProps> = ({
 
                     {/* Group widgets by category */}
                     {Object.keys(groupedWidgets).map((category) => {
+                        // If there's a search term, force the dropdown to be expanded.
                         const isExpanded =
-                            expandedCategories[category] !== undefined ? expandedCategories[category] : false;
+                            searchTerm.length > 0 ||
+                            (expandedCategories[category] !== undefined ? expandedCategories[category] : false);
                         return (
                             <div key={category} className="mb-4 align-items-center">
                                 <div
