@@ -117,6 +117,18 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
         useEffect(() => {
             if (gridInstance.current) {
+                // Create a set of widget IDs from the new layout
+                const newWidgetIds = new Set(layout.map(widget => widget.id));
+
+                // Iterate over existing widget roots and unmount those that are not in the new layout
+                widgetRoots.current.forEach((root, widgetId) => {
+                    if (!newWidgetIds.has(widgetId)) {
+                        root.unmount();
+                        widgetRoots.current.delete(widgetId);
+                    }
+                });
+
+                // Load the new layout into GridStack
                 gridInstance.current.load(layout);
             }
         }, [layout]);
