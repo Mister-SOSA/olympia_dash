@@ -1,8 +1,9 @@
-"use client"
+"use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import Menu from "./WidgetMenu";
+import PresetMenu from "./PresetMenu";
 import { Widget } from "@/types";
 import {
     readLayoutFromStorage,
@@ -36,7 +37,6 @@ const findNextPresetIndex = (
     direction: number
 ): number => {
     let newIndex = currentIndex;
-    // Loop until we find a preset that exists or we've looped through all slots
     do {
         newIndex = (newIndex + direction + presets.length) % presets.length;
     } while (!presets[newIndex] && newIndex !== currentIndex);
@@ -67,11 +67,11 @@ export default function Dashboard() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [presets, setPresets] = useState<Array<Widget[] | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
-    // transitionPhase can be 'none', 'fadeIn', or 'fadeOut'
+    const [presetsOpen, setPresetsOpen] = useState<boolean>(false);
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
-    // On mount, initialize layout and presets.
+    // Initialize layout and presets on mount
     useEffect(() => {
         const storedLayout = readLayoutFromStorage();
         if (storedLayout) {
@@ -82,7 +82,7 @@ export default function Dashboard() {
         setPresets(readPresetsFromStorage());
     }, []);
 
-    // Update temporary layout for the widget menu.
+    // Prepare a temporary layout for the widget menu
     const updateTempLayout = useCallback(() => {
         setTempLayout(
             masterWidgetList.map((widget) => {
@@ -92,12 +92,10 @@ export default function Dashboard() {
         );
     }, [layout]);
 
-    // Load a preset layout with a full-page overlay transition.
+    // Load a preset with fade transition
     const loadPreset = useCallback(
         (index: number) => {
-            // Trigger toast instantly when preset button is pressed
             toast(`Loaded Dash ${index + 1}`, { type: "info", delay: 0 });
-            // Start fade in (overlay goes to full black) with quicker delay
             setTransitionPhase("fadeIn");
             setTimeout(() => {
                 const preset = presets[index];
@@ -110,17 +108,14 @@ export default function Dashboard() {
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
-                // Start fade out after preset switch with quicker delay
                 setTransitionPhase("fadeOut");
-                setTimeout(() => {
-                    setTransitionPhase("none");
-                }, 300);
+                setTimeout(() => setTransitionPhase("none"), 300);
             }, 300);
         },
         [presets]
     );
 
-    // Handle keydown events for toggling the menu, compacting the grid, and preset management.
+    // Global keybindings: F = menu, X = compact, P = toggle presets, 1–9 / Shift+1–9
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
@@ -132,7 +127,12 @@ export default function Dashboard() {
                     gridDashboardRef.current.compact();
                     toast("Dash Compacted!", { type: "warning" });
                 }
-            } else if ((!e.shiftKey && key >= "0" && key <= "9") || (e.shiftKey && e.code.startsWith("Digit"))) {
+            } else if (key === "p") {
+                setPresetsOpen((prev) => !prev);
+            } else if (
+                (!e.shiftKey && key >= "0" && key <= "9") ||
+                (e.shiftKey && e.code.startsWith("Digit"))
+            ) {
                 let digit: number;
                 if (e.shiftKey) {
                     digit = parseInt(e.code.replace("Digit", ""), 10);
@@ -172,7 +172,7 @@ export default function Dashboard() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
-    // Save changes from the widget menu.
+    // Save/cancel from widget menu
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
@@ -196,6 +196,7 @@ export default function Dashboard() {
                     handleCancel={handleCancel}
                 />
             )}
+
             {!menuOpen && (
                 <button
                     onClick={() => {
@@ -208,11 +209,20 @@ export default function Dashboard() {
                     ⚙️
                 </button>
             )}
+
+            <PresetMenu
+                presets={presets}
+                loadPreset={loadPreset}
+                presetsOpen={presetsOpen}
+                setPresetsOpen={setPresetsOpen}
+            />
+
             <GridDashboard
                 ref={gridDashboardRef}
                 layout={layout.filter((widget) => widget.enabled)}
                 onExternalLayoutChange={setLayout}
             />
+
             {transitionPhase !== "none" && (
                 <motion.div
                     initial={{ opacity: transitionPhase === "fadeIn" ? 0 : 1 }}
@@ -229,6 +239,7 @@ export default function Dashboard() {
                     }}
                 />
             )}
+
             <ToastContainer
                 position="bottom-center"
                 autoClose={1000}
