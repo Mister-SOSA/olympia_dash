@@ -13,6 +13,7 @@ import { dailyMovesByUserMeta } from "@/components/widgets/DailyMovesByUser";
 import { inventoryMovesLogMeta } from "@/components/widgets/InventoryMovesLog";
 import { dailyDueInHiddenVendTableMeta } from "@/components/widgets/DailyDueInHiddenVendTable";
 import { topProductUnitSalesMeta } from "@/components/widgets/TopProductUnitSales";
+import { dailyProductionPutawaysBarMeta } from "@/components/widgets/DailyProductionPutawaysBar";
 
 export const masterWidgetList: Widget[] = [
     overviewWidgetMeta,
@@ -29,4 +30,5 @@ export const masterWidgetList: Widget[] = [
     inventoryMovesLogMeta,
     dailyDueInHiddenVendTableMeta,
     topProductUnitSalesMeta,
+    dailyProductionPutawaysBarMeta,
 ];

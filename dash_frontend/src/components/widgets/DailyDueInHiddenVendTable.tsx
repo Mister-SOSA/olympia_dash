@@ -283,7 +283,7 @@ export default function DailyDueInTable() {
         const tableData = mapToTableData(mergedData, timeZone);
 
         return (
-            <ScrollArea className="h-[97%] rounded-md border mt-2">
+            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
                 <Table
                     className="text-left text-white outstanding-orders-table text-[.95rem]"
                     wrapperClassName="overflow-clip"

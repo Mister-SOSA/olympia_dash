@@ -70,6 +70,7 @@ export default function InventoryMovesLog() {
                 "recnum",
                 "lot",
             ],
+            filters: "user_id != 'AUTO'",
             sort: "trans_date DESC",
             limit: 20,
         }),
@@ -85,7 +86,7 @@ export default function InventoryMovesLog() {
         previousDocsRef.current = new Set(tableData.map((row) => row.docNumber));
 
         return (
-            <ScrollArea className="h-[95%] rounded-md border mt-2">
+            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
                 <Table className="text-left text-white inventory-moves-log-table text-[1rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>
@@ -130,7 +131,7 @@ export default function InventoryMovesLog() {
                 apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
                 payload={widgetPayload}
                 title="Inventory Moves Log"
-                updateInterval={5000} // Refresh every 5 seconds
+                updateInterval={3000} // Refresh every 3 seconds
                 render={renderFunction}
             />
         </div>

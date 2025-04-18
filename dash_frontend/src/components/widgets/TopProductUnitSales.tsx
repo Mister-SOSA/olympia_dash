@@ -26,12 +26,31 @@ export const topProductUnitSalesMeta = {
 /* Constants & Helper Functions           */
 /* -------------------------------------- */
 const PRODUCTS = [
-    "1130", "1220", "1140", "1210", "270", "270C", "260",
-    "H1410", "H1220", "H1140", "H405", "H00132", "1001",
-    "402", "502", "504", "407",
-    "1410-C", "1220-C",
-    "10906", "10907", "286", "287",
-    "100", "104"
+    "1130",
+    "1220",
+    "1140",
+    "1210",
+    "270",
+    "270C",
+    "1040",
+    "H1410",
+    "H1220",
+    "H1140",
+    "H405",
+    "H00132",
+    "1001",
+    "402",
+    "502",
+    "504",
+    "407",
+    "1410-C",
+    "1220-C",
+    "10906",
+    "10907",
+    "286",
+    "287",
+    "100",
+    "104"
 ];
 
 // Raw data type for each record from the API
@@ -152,7 +171,7 @@ export default function TopProductUnitSalesTable() {
         });
 
         return (
-            <ScrollArea className="h-[99%] rounded-md border mt-2">
+            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
                 <Table className="text-left text-white outstanding-orders-table text-[.9rem]" wrapperClassName="overflow-clip">
                     <TableHeader>
                         <TableRow>

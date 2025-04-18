@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
-import { GridStack, GridStackNode, GridItemHTMLElement } from "gridstack";
+import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
 import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
-import { saveLayoutToStorage, validateLayout } from "@/utils/layoutUtils";
+import { saveLayoutToStorage } from "@/utils/layoutUtils";
 import widgetMap from "@/components/widgets/widgetMap";
+import { motion } from "framer-motion"; // Added import for motion
 
 export interface GridDashboardProps {
-    // Live layout passed down from Dashboard.
+    // The current serialized layout (list of widgets)
     layout: Widget[];
-    // Callback for external layout updates.
+    // Callback to notify parent of layout changes
     onExternalLayoutChange?: (layout: Widget[]) => void;
 }
 
@@ -24,207 +25,112 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
     ({ layout, onExternalLayoutChange }, ref) => {
         const gridRef = useRef<HTMLDivElement>(null);
         const gridInstance = useRef<GridStack | null>(null);
-        // Internal layout reference to avoid unnecessary re-renders.
-        const layoutRef = useRef<Widget[]>(layout);
-
-        // Store widget roots to allow proper unmounting.
+        // Keep track of React roots for proper unmounting of widget components.
         const widgetRoots = useRef<Map<string, Root>>(new Map());
 
-        // Helper function to compare two layouts.
-        const layoutsEqual = (layout1: Widget[], layout2: Widget[]): boolean => {
-            if (layout1.length !== layout2.length) return false;
-            return layout1.every((w1) => {
-                const w2 = layout2.find((w) => w.id === w1.id);
-                return (
-                    !!w2 &&
-                    w1.x === w2.x &&
-                    w1.y === w2.y &&
-                    w1.w === w2.w &&
-                    w1.h === w2.h
-                );
-            });
-        };
-
-        // Expose the "compact" method to the parent.
+        // Expose the "compact" method to parent components.
         useImperativeHandle(ref, () => ({
             compact: () => {
                 if (gridInstance.current) {
                     gridInstance.current.compact();
-                    // Save the new positions.
-                    const updatedLayout = (gridInstance.current.save(false) as GridStackNode[]).map(
-                        (node) => ({
-                            id: node.id as string,
-                            x: node.x ?? 0,
-                            y: node.y ?? 0,
-                            w: node.w ?? 1,
-                            h: node.h ?? 1,
-                            // Preserve the enabled flag from our internal layout.
-                            enabled:
-                                layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
-                        })
-                    );
-                    const validated = validateLayout(updatedLayout, COLUMN_COUNT);
-                    // Only update if the layout has actually changed.
-                    if (!layoutsEqual(validated, layoutRef.current)) {
-                        layoutRef.current = validated;
-                        saveLayoutToStorage(validated);
-                        if (onExternalLayoutChange) {
-                            onExternalLayoutChange(validated);
-                        }
+                    const updatedNodes = gridInstance.current.save() as GridStackNode[];
+                    const updatedLayout = updatedNodes.map((node) => ({
+                        id: node.id as string,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        w: node.w || 1,
+                        h: node.h || 1,
+                        enabled: true,
+                    }));
+                    if (onExternalLayoutChange) {
+                        onExternalLayoutChange(updatedLayout);
                     }
+                    saveLayoutToStorage(updatedLayout);
                 }
             },
         }));
 
-        // Initialize GridStack.
         useEffect(() => {
-            if (!gridRef.current || gridInstance.current) return;
+            if (!gridRef.current) return;
+            if (gridInstance.current) return; // Prevent reinitialization
 
+            // Initialize GridStack with production-friendly options.
             gridInstance.current = GridStack.init(
-                { cellHeight: CELL_HEIGHT, column: COLUMN_COUNT, float: false },
+                {
+                    cellHeight: CELL_HEIGHT,
+                    column: COLUMN_COUNT,
+                    float: false,
+                    // Other production options can be added here
+                },
                 gridRef.current
             );
-            const grid = gridInstance.current;
 
-            // Function to render all widgets.
-            const renderWidgets = (widgets: Widget[]) => {
-                if (!grid || !grid.engine) return;
-
-                // Defer unmounting of existing React roots.
-                widgetRoots.current.forEach((root) => {
-                    setTimeout(() => root.unmount(), 0);
-                });
-                widgetRoots.current.clear();
-
-                grid.removeAll();
-
-                widgets
-                    .filter((widget) => widget.enabled)
-                    .forEach((widget) => {
-                        const el = grid.addWidget({
-                            x: widget.x,
-                            y: widget.y,
-                            w: widget.w,
-                            h: widget.h,
-                            id: widget.id,
-                            content: '<div class="grid-stack-item-content"></div>',
-                        });
-                        const contentDiv = el.querySelector(".grid-stack-item-content");
-                        if (contentDiv) {
-                            const WidgetComponent = widgetMap[widget.id];
-                            if (WidgetComponent) {
-                                const root = createRoot(contentDiv);
-                                root.render(<WidgetComponent />);
-                                widgetRoots.current.set(widget.id, root);
-                            }
-                        }
-                    });
+            // Set the render callback – each time a widget is added/loaded,
+            // this function will mount the corresponding React component.
+            GridStack.renderCB = (el, node) => {
+                const widgetId = node.id as string;
+                // Clean up any previous content.
+                el.innerHTML = "";
+                const WidgetComponent = widgetMap[widgetId];
+                if (WidgetComponent) {
+                    const root = createRoot(el);
+                    root.render(<WidgetComponent />);
+                    widgetRoots.current.set(widgetId, root);
+                } else {
+                    // Fallback: if no React component is mapped, render provided content.
+                    el.innerHTML = node.content || "";
+                }
             };
 
-            renderWidgets(layoutRef.current);
+            // Load the initial layout using GridStack’s built‑in load method.
+            gridInstance.current.load(layout);
 
-            grid.on("change", () => {
-                const updatedLayout = (grid.save(false) as GridStackNode[]).map((node) => ({
-                    id: node.id as string,
-                    x: node.x ?? 0,
-                    y: node.y ?? 0,
-                    w: node.w ?? 1,
-                    h: node.h ?? 1,
-                    enabled:
-                        layoutRef.current.find((w) => w.id === node.id)?.enabled ?? true,
-                }));
-                const validated = validateLayout(updatedLayout, COLUMN_COUNT);
-                layoutRef.current = validated;
-                saveLayoutToStorage(validated);
+            // Listen to layout changes – on any change, grab the new state
+            // and propagate it to the parent and local storage.
+            gridInstance.current.on("change", () => {
+                if (gridInstance.current) {
+                    const nodes = gridInstance.current.save() as GridStackNode[];
+                    const updatedLayout = nodes.map((node) => ({
+                        id: node.id as string,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        w: node.w || 1,
+                        h: node.h || 1,
+                        enabled: true,
+                    }));
+                    if (onExternalLayoutChange) {
+                        onExternalLayoutChange(updatedLayout);
+                    }
+                    saveLayoutToStorage(updatedLayout);
+                }
             });
 
             return () => {
-                // On cleanup, defer unmounting of all widget roots.
-                widgetRoots.current.forEach((root) => {
-                    setTimeout(() => root.unmount(), 0);
-                });
+                // Clean up React roots and destroy the grid instance.
+                widgetRoots.current.forEach((root) => root.unmount());
                 widgetRoots.current.clear();
-
-                grid.destroy(false);
+                gridInstance.current!.destroy(false);
                 gridInstance.current = null;
             };
-        }, [layout, onExternalLayoutChange]);
+        }, []);
 
-        // Handle external layout changes.
+        // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
         useEffect(() => {
-            if (!gridInstance.current) return;
-            const grid = gridInstance.current;
+            if (gridInstance.current) {
+                // Create a set of widget IDs from the new layout
+                const newWidgetIds = new Set(layout.map(widget => widget.id));
 
-            // Only consider enabled widgets for rendering.
-            const newWidgets = layout.filter((w) => w.enabled);
-            const oldWidgets = layoutRef.current.filter((w) => w.enabled);
-
-            // Build sets of widget IDs for easy comparison.
-            const newIds = new Set(newWidgets.map((w) => w.id));
-            const oldIds = new Set(oldWidgets.map((w) => w.id));
-
-            // --- 1. Remove widgets that are no longer enabled ---
-            const widgetsToRemove = oldWidgets.filter((w) => !newIds.has(w.id));
-            widgetsToRemove.forEach((widget) => {
-                const element = grid.el.querySelector(
-                    `[gs-id="${widget.id}"]`
-                ) as GridItemHTMLElement | null;
-                if (element) {
-                    // Defer unmounting the React component if it exists.
-                    const root = widgetRoots.current.get(widget.id);
-                    if (root) {
-                        setTimeout(() => root.unmount(), 0);
-                        widgetRoots.current.delete(widget.id);
+                // Iterate over existing widget roots and unmount those that are not in the new layout
+                widgetRoots.current.forEach((root, widgetId) => {
+                    if (!newWidgetIds.has(widgetId)) {
+                        root.unmount();
+                        widgetRoots.current.delete(widgetId);
                     }
-                    grid.removeWidget(element, true);
-                }
-            });
-
-            // --- 2. Add new widgets that weren’t present before ---
-            const widgetsToAdd = newWidgets.filter((w) => !oldIds.has(w.id));
-            widgetsToAdd.forEach((widget) => {
-                const el = grid.addWidget({
-                    x: widget.x,
-                    y: widget.y,
-                    w: widget.w,
-                    h: widget.h,
-                    id: widget.id,
-                    content: '<div class="grid-stack-item-content"></div>',
                 });
-                const contentDiv = el.querySelector(".grid-stack-item-content");
-                if (contentDiv) {
-                    const WidgetComponent = widgetMap[widget.id];
-                    if (WidgetComponent) {
-                        const root = createRoot(contentDiv);
-                        root.render(<WidgetComponent />);
-                        widgetRoots.current.set(widget.id, root);
-                    }
-                }
-            });
 
-            // --- 3. Update existing widgets if their position/size has changed ---
-            const widgetsToUpdate = newWidgets.filter((w) => oldIds.has(w.id));
-            widgetsToUpdate.forEach((widget) => {
-                const node = grid.engine.nodes.find((n) => n.id === widget.id);
-                if (node) {
-                    if (
-                        node.x !== widget.x ||
-                        node.y !== widget.y ||
-                        node.w !== widget.w ||
-                        node.h !== widget.h
-                    ) {
-                        grid.update(widget.id, {
-                            x: widget.x,
-                            y: widget.y,
-                            w: widget.w,
-                            h: widget.h,
-                        });
-                    }
-                }
-            });
-
-            // Finally, update our internal layout reference.
-            layoutRef.current = layout;
+                // Load the new layout into GridStack
+                gridInstance.current.load(layout);
+            }
         }, [layout]);
 
         return <div ref={gridRef} className="grid-stack"></div>;

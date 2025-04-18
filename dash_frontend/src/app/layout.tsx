@@ -9,7 +9,7 @@ const inter = Inter({
 
 
 export const metadata = {
-  title: "Olympia Dash",
+  title: "OlyDash",
   description: "Customizable Dashboard",
 };
 

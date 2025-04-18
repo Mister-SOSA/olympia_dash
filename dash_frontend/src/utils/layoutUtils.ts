@@ -2,25 +2,33 @@ import { Widget } from "@/types";
 import { LOCAL_STORAGE_KEY, COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
 
-/** Reads the current layout from localStorage and merges it with the master widget list */
+/**
+ * Reads the saved layout from localStorage.
+ * Falls back to the master widget list with all widgets disabled.
+ */
 export const readLayoutFromStorage = (): Widget[] => {
     const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (savedLayout) {
-        const parsedLayout: Widget[] = JSON.parse(savedLayout);
-        return masterWidgetList.map((widget) => ({
-            ...widget,
-            ...parsedLayout.find((saved) => saved.id === widget.id),
-        }));
+        try {
+            const parsedLayout: Widget[] = JSON.parse(savedLayout);
+            return parsedLayout;
+        } catch (error) {
+            console.error("Error parsing saved layout:", error);
+        }
     }
-    return masterWidgetList;
+    return masterWidgetList.map((widget) => ({ ...widget, enabled: false }));
 };
 
-/** Saves the current layout into localStorage */
+/**
+ * Saves the full layout to localStorage.
+ */
 export const saveLayoutToStorage = (layout: Widget[]) => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
 };
 
-/** Ensures that each widget fits within the given column count */
+/**
+ * Ensures that each widget fits within the given column count.
+ */
 export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_COUNT): Widget[] =>
     layout.map((widget) => ({
         ...widget,
@@ -51,7 +59,9 @@ export const readPresetsFromStorage = (): Array<Widget[] | null> => {
     return new Array(9).fill(null);
 };
 
-/** Saves an array of 9 preset layouts into localStorage */
+/**
+ * Saves an array of 9 preset layouts into localStorage.
+ */
 export const savePresetsToStorage = (presets: Array<Widget[] | null>) => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
 };
