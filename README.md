@@ -18,12 +18,18 @@ A full-stack dashboard application with a Flask backend and Next.js frontend, fe
 git clone <repository-url>
 cd olympia_dash
 
+# Set up your database configuration
+cp env.example api/.env
+# Edit api/.env with your actual database credentials
+
 # Start all services
 docker-compose up --build
 ```
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:5001
+
+**Note:** The dashboard will work without database configuration, but data widgets will show connection errors until you configure your SQL Server connection.
 
 ### Manual Setup
 

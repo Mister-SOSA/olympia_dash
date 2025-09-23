@@ -3,6 +3,8 @@ services:
     build: ./dash_frontend
     ports:
       - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5001
     networks:
       - custom_network
     depends_on:
@@ -13,6 +15,12 @@ services:
     build: ./api
     ports:
       - "5001:5001"
+    env_file:
+      - ./api/.env
+    environment:
+      - FLASK_DEBUG=False
+      - FLASK_PORT=5001
+      - FLASK_HOST=0.0.0.0
     networks:
       - custom_network
     restart: always

@@ -1,5 +1,5 @@
 const config = {
-    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://172.19.1.95:5001",
+    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001",
     PARENT_COMPANY_MAPPING: {
         "GORDON FOOD": "GORDON FOOD",
         "RESTAURANT DEPOT": "RESTAURANT DEPOT",
