@@ -87,7 +87,6 @@ export default function DailyProductionPutawaysBar() {
 
     // Compute today's date as an ISO string (YYYY-MM-DD)
     const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);
-    console.log(currentDate);
 
     // Memoize the widget payload to keep it stable between renders.
     const widgetPayload = useMemo(

@@ -78,7 +78,6 @@ export default function Widget({
                     intervalRef.current = setInterval(() => fetchData(), updateInterval);
                 }
 
-                console.log(`Module ${title} fetched data:`, result.data);
             } catch (err: any) {
                 // Only log errors that are not due to the fetch being aborted.
                 if (err.name !== "AbortError") {
