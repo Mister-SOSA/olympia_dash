@@ -168,7 +168,7 @@ export default function SalesByMonthComparisonBar() {
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No sales data available</div>;
                     }
-                    return renderFunction(data);
+                    return renderSalesComparison(data);
                 }}
             </Widget>
         </div>
