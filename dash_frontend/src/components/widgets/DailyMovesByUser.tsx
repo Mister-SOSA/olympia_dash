@@ -10,24 +10,7 @@ import {
     Tooltip,
 } from "recharts";
 import { nFormatter } from "@/utils/helpers";
-import config from "@/config";
-import { MdMoveToInbox } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const dailyMovesByUserMeta = {
-    id: "DailyMovesByUser",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Daily Moves By User",
-    category: "📦 Logistics",
-    description: "Displays the number of moves made by each user today.",
-    icon: <MdMoveToInbox size={24} />,
-};
 
 
 interface MovesByUserData {
@@ -96,11 +79,18 @@ export default function DailyMovesByUser() {
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Daily Moves By User"
-                updateInterval={5000}
-                render={(data: MovesByUserData[]) => {
+                refreshInterval={5000}
+            >
+                {(data: MovesByUserData[], loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading user moves...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No user moves data available</div>;
+                    }
                     // Transform the data to match the chart's expected keys.
                     const transformedData = data.map((item) => ({
                         user: item.user_id,
@@ -108,7 +98,7 @@ export default function DailyMovesByUser() {
                     }));
                     return <WidgetChart data={transformedData.slice(0, visibleCategories)} />;
                 }}
-            />
+            </Widget>
         </div>
     );
 }

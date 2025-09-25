@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
-import config from "@/config";
-import { IoWater, IoWaterSharp } from "react-icons/io5";
-
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const humidityWidgetMeta = {
-    id: "Humidity",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Humidity",
-    category: "🔧 Utilities",
-    description: "Displays the current humidity.",
-    icon: <IoWater size={24} />,
-};
+import { IoWaterSharp } from "react-icons/io5";
 
 interface HumidityData {
     [x: string]: any;
@@ -55,12 +38,18 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
 const HumidityWidget: React.FC = () => {
     return (
         <Widget
-            apiEndpoint={`${config.API_BASE_URL}/api/humidity`} // API endpoint for humidity data
-            payload={null} // No payload needed for this endpoint
+            endpoint="/api/humidity" // API endpoint for humidity data
+            payload={undefined} // No payload needed for this endpoint
             title="Humidity" // Widget title
-            updateInterval={60000} // Update every 60 seconds
-            render={(data: HumidityData | null) => <HumidityContent data={data} />} // Pass the API response data to HumidityContent
-        />
+            refreshInterval={60000} // Update every 60 seconds
+        >
+            {(data: HumidityData | null, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading humidity data...</div>;
+                }
+                return <HumidityContent data={data} />;
+            }}
+        </Widget>
     );
 };
 

@@ -19,25 +19,8 @@ import {
     prepareChartData,
     nFormatter,
 } from "@/utils/helpers";
-import config from "@/config";
 import { SalesData, ProcessedSalesData } from "@/types";
-import { MdAttachMoney } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const salesByMonthComparisonBarMeta = {
-    id: "SalesByMonthComparisonBar",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Sales by Month (Comparison)",
-    category: "💸 Sales",
-    description: "Displays sales dollars by month for the current and last year.",
-    icon: <MdAttachMoney size={24} />,
-};
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
@@ -173,12 +156,21 @@ export default function SalesByMonthComparisonBar() {
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Sales by Month (Comparison)"
-                updateInterval={300000}
-                render={renderSalesComparison}
-            />
+                refreshInterval={300000}
+            >
+                {(data, loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading sales data...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No sales data available</div>;
+                    }
+                    return renderFunction(data);
+                }}
+            </Widget>
         </div>
     );
 }

@@ -1,26 +1,9 @@
 import React, { useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import config from "@/config";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
-import { MdOutbox } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const topProductUnitSalesMeta = {
-    id: "TopProductUnitSales",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Top Product Unit Sales",
-    category: "💸 Sales",
-    description: "Displays the top product unit sales.",
-    icon: <MdOutbox size={24} />,
-};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -224,12 +207,21 @@ export default function TopProductUnitSalesTable() {
     return (
         <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Top Product Unit Sales"
-                updateInterval={30000}
-                render={renderFunction}
-            />
+                refreshInterval={30000}
+            >
+                {(data, loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading product data...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No product data available</div>;
+                    }
+                    return renderFunction(data);
+                }}
+            </Widget>
         </div>
     );
 }

@@ -10,24 +10,7 @@ import {
     Tooltip,
 } from "recharts";
 import { nFormatter } from "@/utils/helpers";
-import config from "@/config";
-import { MdFactory } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const dailyProductionPutawaysBarMeta = {
-    id: "DailyProductionPutawaysBar",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Daily Putaways by Product",
-    category: "🏭 Manufacturing",
-    description: "Displays the number of production putaways made by each product today.",
-    icon: <MdFactory size={24} />,
-};
 
 interface PutawayData {
     part_code: string;
@@ -108,11 +91,18 @@ export default function DailyProductionPutawaysBar() {
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%" }}>
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Daily Production Putaways"
-                updateInterval={15000}
-                render={(data: PutawayData[]) => {
+                refreshInterval={15000}
+            >
+                {(data: PutawayData[], loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading putaway data...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No putaway data available</div>;
+                    }
                     // Transform the data to match the chart's expected keys.
                     const transformedData = data.map((item) => ({
                         product: item.part_code,
@@ -120,7 +110,7 @@ export default function DailyProductionPutawaysBar() {
                     }));
                     return <WidgetChart data={transformedData.slice(0, visibleCategories)} />;
                 }}
-            />
+            </Widget>
         </div>
     );
 }

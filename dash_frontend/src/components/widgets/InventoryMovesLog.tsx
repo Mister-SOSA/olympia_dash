@@ -1,26 +1,9 @@
 import React, { useCallback, useRef, useMemo } from "react";
 import Widget from "./Widget";
-import config from "@/config";
 import { InventoryMove, InventoryMoveRaw } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MdMoveToInbox } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const inventoryMovesLogMeta = {
-    id: "InventoryMovesLog",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Inventory Moves Log",
-    category: "📦 Logistics",
-    description: "Displays the latest inventory moves.",
-    icon: <MdMoveToInbox size={24} />,
-};
 
 
 /* -------------------------------------- */
@@ -128,12 +111,21 @@ export default function InventoryMovesLog() {
     return (
         <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Inventory Moves Log"
-                updateInterval={3000} // Refresh every 3 seconds
-                render={renderFunction}
-            />
+                refreshInterval={3000} // Refresh every 3 seconds
+            >
+                {(data, loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading inventory data...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No inventory moves found</div>;
+                    }
+                    return renderFunction(data);
+                }}
+            </Widget>
         </div>
     );
 }

@@ -189,7 +189,6 @@ export default function Dashboard() {
         <div>
             {menuOpen && (
                 <Menu
-                    masterWidgetList={masterWidgetList}
                     tempLayout={tempLayout}
                     setTempLayout={setTempLayout}
                     handleSave={handleSave}

@@ -7,8 +7,8 @@ import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
 import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
 import { saveLayoutToStorage } from "@/utils/layoutUtils";
-import widgetMap from "@/components/widgets/widgetMap";
-import { motion } from "framer-motion"; // Added import for motion
+import { getWidgetById } from "@/constants/widgets";
+import { Suspense } from "react";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -69,16 +69,22 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // this function will mount the corresponding React component.
             GridStack.renderCB = (el, node) => {
                 const widgetId = node.id as string;
-                // Clean up any previous content.
                 el.innerHTML = "";
-                const WidgetComponent = widgetMap[widgetId];
-                if (WidgetComponent) {
+
+                const widgetDef = getWidgetById(widgetId);
+                if (widgetDef) {
                     const root = createRoot(el);
-                    root.render(<WidgetComponent />);
+                    const WidgetComponent = widgetDef.component;
+
+                    root.render(
+                        <Suspense fallback={<div className="widget-loading">Loading...</div>}>
+                            <WidgetComponent />
+                        </Suspense>
+                    );
+
                     widgetRoots.current.set(widgetId, root);
                 } else {
-                    // Fallback: if no React component is mapped, render provided content.
-                    el.innerHTML = node.content || "";
+                    el.innerHTML = `<div class="widget-error">Widget "${widgetId}" not found</div>`;
                 }
             };
 

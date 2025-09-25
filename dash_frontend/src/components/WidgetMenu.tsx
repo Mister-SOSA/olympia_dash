@@ -5,9 +5,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getWidgetsByCategory } from "@/constants/widgets";
 
 interface MenuProps {
-    masterWidgetList: Widget[];
     tempLayout: Widget[];
     setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
     handleSave: () => void;
@@ -15,7 +15,6 @@ interface MenuProps {
 }
 
 const Menu: React.FC<MenuProps> = ({
-    masterWidgetList,
     tempLayout,
     setTempLayout,
     handleSave,
@@ -23,6 +22,7 @@ const Menu: React.FC<MenuProps> = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+    const widgetsByCategory = getWidgetsByCategory();
 
     const toggleCategory = (category: string) => {
         setExpandedCategories((prev) => ({
@@ -31,28 +31,50 @@ const Menu: React.FC<MenuProps> = ({
         }));
     };
 
-    const filteredWidgets = masterWidgetList.filter((widget) => {
-        const term = searchTerm.toLowerCase();
-        return (
-            (widget.displayName && widget.displayName.toLowerCase().includes(term)) ||
-            (widget.category && widget.category.toLowerCase().includes(term)) ||
-            widget.id.toLowerCase().includes(term)
+    const filteredCategories = Object.entries(widgetsByCategory).reduce((acc, [category, widgets]) => {
+        const filtered = widgets.filter(widget =>
+            widget.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            widget.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            category.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    });
 
-    const groupedWidgets = filteredWidgets.reduce((acc: Record<string, Widget[]>, widget) => {
-        const category = widget.category || "Other";
-        if (!acc[category]) {
-            acc[category] = [];
+        if (filtered.length > 0) {
+            acc[category] = filtered;
         }
-        acc[category].push(widget);
+
         return acc;
-    }, {} as Record<string, Widget[]>);
+    }, {} as Record<string, typeof widgetsByCategory[string]>);
 
     const toggleWidgetEnabled = (id: string, newEnabled: boolean) => {
-        setTempLayout((prev: Widget[]) =>
-            prev.map((widget: Widget) => (widget.id === id ? { ...widget, enabled: newEnabled } : widget))
-        );
+        const widgetDef = Object.values(widgetsByCategory)
+            .flat()
+            .find(w => w.id === id);
+
+        if (!widgetDef) return;
+
+        const existingWidget = tempLayout.find(w => w.id === id);
+
+        if (existingWidget) {
+            // Update existing widget
+            setTempLayout((prev: Widget[]) =>
+                prev.map((widget: Widget) => (widget.id === id ? { ...widget, enabled: newEnabled } : widget))
+            );
+        } else if (newEnabled) {
+            // Add new widget
+            const newWidget: Widget = {
+                id: id,
+                x: 0,
+                y: 0,
+                w: widgetDef.defaultSize.w,
+                h: widgetDef.defaultSize.h,
+                enabled: newEnabled,
+                displayName: widgetDef.title,
+                category: widgetDef.category,
+                description: widgetDef.description
+            };
+
+            setTempLayout(prev => [...prev, newWidget]);
+        }
     };
 
     const clearDashboard = () => {
@@ -77,7 +99,7 @@ const Menu: React.FC<MenuProps> = ({
                     />
 
                     {/* Group widgets by category */}
-                    {Object.keys(groupedWidgets).map((category) => {
+                    {Object.entries(filteredCategories).map(([category, widgets]) => {
                         // If there's a search term, force the dropdown to be expanded.
                         const isExpanded =
                             searchTerm.length > 0 ||
@@ -99,7 +121,7 @@ const Menu: React.FC<MenuProps> = ({
                                             exit={{ height: 0, opacity: 0 }}
                                             transition={{ duration: 0.3 }}
                                         >
-                                            {groupedWidgets[category].map((widget) => (
+                                            {widgets.map((widget) => (
                                                 <div key={widget.id} className="flex items-center space-x-2 m-1 p-1">
                                                     <Checkbox
                                                         checked={
@@ -112,7 +134,7 @@ const Menu: React.FC<MenuProps> = ({
                                                     />
                                                     <Label className="text-sm font-medium flex items-center">
                                                         {widget.icon && <span className="mr-2">{widget.icon}</span>}
-                                                        {widget.displayName || widget.id}
+                                                        {widget.title}
                                                     </Label>
                                                 </div>
                                             ))}
