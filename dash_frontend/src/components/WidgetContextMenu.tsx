@@ -161,16 +161,15 @@ export default function WidgetContextMenu({
         }
     ];
 
-    if (!isVisible) return null;
-
     return (
         <AnimatePresence>
-            <motion.div
+            {isVisible && (
+                <motion.div
                 ref={menuRef}
                 initial={{ opacity: 0, scale: 0.95, y: -10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ duration: 0.15 }}
+                transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.2 }}
                 // NOTE: was `overflow-hidden` which prevented the resize submenu (absolutely positioned with left-full) from being visible.
                 // Using overflow-visible so the submenu can extend outside the main menu bounds.
                 className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-visible"
@@ -236,6 +235,7 @@ export default function WidgetContextMenu({
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         exit={{ opacity: 0, x: -10 }}
+                                        transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.15 }}
                                         className="absolute left-full top-0 ml-2 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl overflow-hidden min-w-[200px] z-[10000]"
                                         style={{
                                             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
@@ -276,7 +276,7 @@ export default function WidgetContextMenu({
                     </p>
                 </div>
             </motion.div>
-
+            )}
         </AnimatePresence>
     );
 }

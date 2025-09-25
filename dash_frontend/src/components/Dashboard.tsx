@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetMenu from "./PresetMenu";
@@ -187,14 +187,16 @@ export default function Dashboard() {
 
     return (
         <div>
-            {menuOpen && (
-                <ImprovedWidgetMenu
-                    tempLayout={tempLayout}
-                    setTempLayout={setTempLayout}
-                    handleSave={handleSave}
-                    handleCancel={handleCancel}
-                />
-            )}
+            <AnimatePresence>
+                {menuOpen && (
+                    <ImprovedWidgetMenu
+                        tempLayout={tempLayout}
+                        setTempLayout={setTempLayout}
+                        handleSave={handleSave}
+                        handleCancel={handleCancel}
+                    />
+                )}
+            </AnimatePresence>
 
             {!menuOpen && (
                 <button

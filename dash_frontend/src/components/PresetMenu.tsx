@@ -77,8 +77,6 @@ export default function PresetMenu({
         };
     }, [presetsOpen, setPresetsOpen]);
 
-    if (!presetsOpen) return null;
-
     const getPresetIcon = (preset: Widget[] | null, index: number) => {
         if (!preset) return <MdBookmarkBorder className="w-6 h-6" />;
 
@@ -131,12 +129,13 @@ export default function PresetMenu({
 
     return (
         <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            >
+            {presetsOpen && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                >
                 <motion.div
                     ref={menuRef}
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -428,12 +427,15 @@ export default function PresetMenu({
                 </motion.div>
 
                 {/* Context Menu */}
-                {contextMenu && (
-                    <motion.div
-                        ref={contextMenuRef}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="fixed bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[60] min-w-[200px]"
+                <AnimatePresence>
+                    {contextMenu && (
+                        <motion.div
+                            ref={contextMenuRef}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.2 }}
+                            className="fixed bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-[60] min-w-[200px]"
                         style={{
                             left: Math.min(contextMenu.x, window.innerWidth - 220),
                             top: Math.min(contextMenu.y, window.innerHeight - 200),
@@ -475,8 +477,10 @@ export default function PresetMenu({
                             )}
                         </div>
                     </motion.div>
-                )}
+                    )}
+                </AnimatePresence>
             </motion.div>
+            )}
         </AnimatePresence>
     );
 }
