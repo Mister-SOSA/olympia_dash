@@ -214,6 +214,21 @@ export default function Dashboard() {
                 loadPreset={loadPreset}
                 presetsOpen={presetsOpen}
                 setPresetsOpen={setPresetsOpen}
+                currentLayout={layout}
+                onSavePreset={(index, layoutToSave) => {
+                    const newPresets = [...presets];
+                    newPresets[index] = deepClone(layoutToSave);
+                    setPresets(newPresets);
+                    savePresetsToStorage(newPresets);
+                    toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
+                }}
+                onClearPreset={(index) => {
+                    const newPresets = [...presets];
+                    newPresets[index] = null;
+                    setPresets(newPresets);
+                    savePresetsToStorage(newPresets);
+                    toast(`Cleared Preset ${index + 1}`, { type: "warning", delay: 0 });
+                }}
             />
 
             <GridDashboard
