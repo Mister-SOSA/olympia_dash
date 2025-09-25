@@ -19,6 +19,21 @@ nextjs-portal {
   overflow: hidden;
 }
 
+/* Context Menu Styles */
+.widget-context-menu {
+  backdrop-filter: blur(12px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Disable context menu on grid-stack handles to prevent conflicts */
+.grid-stack-item .ui-resizable-handle {
+  pointer-events: none;
+}
+
+.grid-stack-item:hover .ui-resizable-handle {
+  pointer-events: auto;
+}
+
 body {
   background-color: var(--background-dark);
   color: var(--text-primary);

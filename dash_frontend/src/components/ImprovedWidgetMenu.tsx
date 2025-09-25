@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useMemo } from "react";
 import { Widget } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -175,8 +177,8 @@ export default function ImprovedWidgetMenu({
                             <button
                                 onClick={() => setSelectedCategory("all")}
                                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedCategory === "all"
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                                     }`}
                             >
                                 All
@@ -186,8 +188,8 @@ export default function ImprovedWidgetMenu({
                                     key={category}
                                     onClick={() => setSelectedCategory(category)}
                                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedCategory === category
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                                         }`}
                                 >
                                     {category}
@@ -240,8 +242,8 @@ export default function ImprovedWidgetMenu({
                         </div>
                     ) : (
                         <div className={`grid gap-4 ${viewMode === "grid"
-                                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                                : "grid-cols-1"
+                            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                            : "grid-cols-1"
                             }`}>
                             {filteredWidgets.map((widget) => (
                                 <WidgetCard
@@ -295,8 +297,8 @@ function WidgetCard({ widget, isEnabled, onToggle, viewMode }: WidgetCardProps) 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`relative cursor-pointer transition-all duration-200 ${isEnabled
-                    ? "bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30"
-                    : "bg-gray-800 border-gray-600 hover:border-gray-500"
+                ? "bg-blue-600/20 border-blue-500 ring-2 ring-blue-500/30"
+                : "bg-gray-800 border-gray-600 hover:border-gray-500"
                 } border rounded-lg p-4 ${viewMode === "list" ? "flex items-center" : ""}`}
             onClick={onToggle}
         >
@@ -340,8 +342,8 @@ function WidgetCard({ widget, isEnabled, onToggle, viewMode }: WidgetCardProps) 
                 {/* Action Button */}
                 <div className="mt-3">
                     <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-medium transition-all ${isEnabled
-                            ? "bg-red-600/20 text-red-400 border border-red-500/30"
-                            : "bg-green-600/20 text-green-400 border border-green-500/30"
+                        ? "bg-red-600/20 text-red-400 border border-red-500/30"
+                        : "bg-green-600/20 text-green-400 border border-green-500/30"
                         }`}>
                         {isEnabled ? (
                             <>
