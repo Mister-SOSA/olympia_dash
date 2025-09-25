@@ -81,10 +81,10 @@ export default function PresetMenu({
 
     const getPresetIcon = (preset: Widget[] | null, index: number) => {
         if (!preset) return <MdBookmarkBorder className="w-6 h-6" />;
-        
+
         const enabledWidgets = preset.filter(w => w.enabled);
         if (enabledWidgets.length === 0) return <MdBookmarkBorder className="w-6 h-6" />;
-        
+
         // Different icons based on widget count
         if (enabledWidgets.length <= 3) return <MdApps className="w-6 h-6" />;
         if (enabledWidgets.length <= 6) return <MdDashboard className="w-6 h-6" />;
@@ -159,8 +159,8 @@ export default function PresetMenu({
                                 <div>
                                     <h2 className="text-xl font-bold text-white">Dashboard Presets</h2>
                                     <p className="text-gray-400 text-sm">
-                                        {copySource !== null ? 
-                                            `Click a slot to copy Preset ${copySource + 1}` : 
+                                        {copySource !== null ?
+                                            `Click a slot to copy Preset ${copySource + 1}` :
                                             "Save and load your favorite layouts"
                                         }
                                     </p>
@@ -219,20 +219,19 @@ export default function PresetMenu({
                                     const stats = getPresetStats(preset);
                                     const isEmpty = !preset || stats.enabled === 0;
                                     const isCopyTarget = copySource !== null && copySource !== i;
-                                    
+
                                     return (
                                         <motion.div
                                             key={i}
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: i * 0.05 }}
-                                            className={`group relative rounded-xl border-2 transition-all duration-300 ${
-                                                isCopyTarget
+                                            className={`group relative rounded-xl border-2 transition-all duration-300 ${isCopyTarget
                                                     ? "border-yellow-500/50 bg-yellow-900/20"
                                                     : isEmpty
-                                                    ? "border-gray-700 bg-gray-800/30"
-                                                    : "border-gray-600 bg-gray-800/50 hover:border-blue-500/50 hover:bg-gray-700/50 hover:shadow-lg hover:shadow-blue-500/10"
-                                            } min-h-[120px] flex flex-col`}
+                                                        ? "border-gray-700 bg-gray-800/30"
+                                                        : "border-gray-600 bg-gray-800/50 hover:border-blue-500/50 hover:bg-gray-700/50 hover:shadow-lg hover:shadow-blue-500/10"
+                                                } min-h-[120px] flex flex-col`}
                                         >
                                             {/* Main Action Button */}
                                             <motion.button
@@ -254,22 +253,20 @@ export default function PresetMenu({
                                             >
                                                 {/* Preset Number & Icon */}
                                                 <div className="flex justify-between items-start mb-3">
-                                                    <div className={`text-2xl font-bold ${
-                                                        isCopyTarget
+                                                    <div className={`text-2xl font-bold ${isCopyTarget
                                                             ? "text-yellow-400"
-                                                            : isEmpty 
-                                                            ? "text-gray-600" 
-                                                            : "text-blue-400 group-hover:text-blue-300"
-                                                    }`}>
+                                                            : isEmpty
+                                                                ? "text-gray-600"
+                                                                : "text-blue-400 group-hover:text-blue-300"
+                                                        }`}>
                                                         {i + 1}
                                                     </div>
-                                                    <div className={`${
-                                                        isCopyTarget
+                                                    <div className={`${isCopyTarget
                                                             ? "text-yellow-400"
-                                                            : isEmpty 
-                                                            ? "text-gray-600" 
-                                                            : "text-blue-400 group-hover:text-blue-300"
-                                                    }`}>
+                                                            : isEmpty
+                                                                ? "text-gray-600"
+                                                                : "text-blue-400 group-hover:text-blue-300"
+                                                        }`}>
                                                         {isCopyTarget ? (
                                                             <MdContentCopy className="w-6 h-6" />
                                                         ) : (
@@ -302,7 +299,7 @@ export default function PresetMenu({
                                                             <div className="text-xs text-gray-400 mb-2">
                                                                 Saved Layout
                                                             </div>
-                                                            
+
                                                             {/* Widget preview dots */}
                                                             <div className="flex justify-center gap-1">
                                                                 {Array.from({ length: Math.min(stats.enabled, 8) }).map((_, idx) => (
@@ -339,11 +336,10 @@ export default function PresetMenu({
 
                                             {/* Hover effect overlay */}
                                             {(!isEmpty || isCopyTarget) && (
-                                                <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ${
-                                                    isCopyTarget 
+                                                <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ${isCopyTarget
                                                         ? "bg-gradient-to-br from-yellow-500/5 to-orange-500/5"
                                                         : "bg-gradient-to-br from-blue-500/5 to-purple-500/5"
-                                                }`} />
+                                                    }`} />
                                             )}
                                         </motion.div>
                                     );
@@ -452,7 +448,7 @@ export default function PresetMenu({
                                 <MdSave className="w-4 h-4" />
                                 Save Current Layout Here
                             </button>
-                            
+
                             {presets[contextMenu.index] && (
                                 <>
                                     <button
@@ -465,9 +461,9 @@ export default function PresetMenu({
                                         <MdContentCopy className="w-4 h-4" />
                                         Copy This Preset
                                     </button>
-                                    
+
                                     <div className="border-t border-gray-700 my-1"></div>
-                                    
+
                                     <button
                                         onClick={() => handleClearSlot(contextMenu.index)}
                                         className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors flex items-center gap-3"
