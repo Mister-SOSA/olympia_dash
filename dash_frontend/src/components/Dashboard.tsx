@@ -105,7 +105,7 @@ export default function Dashboard() {
                     setTransitionPhase("none");
                     return;
                 }
-                
+
                 const merged = mergePreset(deepClone(preset.layout));
                 setLayout(merged);
                 setTempLayout(merged);
@@ -255,12 +255,12 @@ export default function Dashboard() {
                     {(() => {
                         const enabledWidget = layout.find(w => w.enabled);
                         if (!enabledWidget) return null;
-                        
+
                         const widgetDef = getWidgetById(enabledWidget.id);
                         if (!widgetDef) return null;
-                        
+
                         const WidgetComponent = widgetDef.component;
-                        
+
                         return (
                             <div className="w-full h-full overflow-auto">
                                 <WidgetComponent />

@@ -392,14 +392,13 @@ export default function PresetMenu({
                                                             ) : (
                                                                 <MdGridView className="w-4 h-4 text-blue-400" />
                                                             )}
-                                                            <span className={`text-sm font-medium ${
-                                                                presets[activePreview]!.type === "fullscreen" ? "text-purple-400" : "text-blue-400"
-                                                            }`}>
+                                                            <span className={`text-sm font-medium ${presets[activePreview]!.type === "fullscreen" ? "text-purple-400" : "text-blue-400"
+                                                                }`}>
                                                                 {presets[activePreview]!.type === "fullscreen" ? "Fullscreen" : "Grid"} Layout
                                                             </span>
                                                         </div>
                                                         <div className="text-xs text-gray-500">
-                                                            {presets[activePreview]!.type === "fullscreen" 
+                                                            {presets[activePreview]!.type === "fullscreen"
                                                                 ? "Single widget takes full screen"
                                                                 : "Multiple widgets in a grid"
                                                             }
@@ -549,20 +548,17 @@ export default function PresetMenu({
                                     <div className="space-y-3 mb-6">
                                         <button
                                             onClick={() => setSelectedPresetType("grid")}
-                                            className={`w-full p-4 rounded-xl border-2 transition-all ${
-                                                selectedPresetType === "grid"
+                                            className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPresetType === "grid"
                                                     ? "border-blue-500 bg-blue-500/20"
                                                     : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-4">
-                                                <MdGridView className={`w-8 h-8 ${
-                                                    selectedPresetType === "grid" ? "text-blue-400" : "text-gray-500"
-                                                }`} />
+                                                <MdGridView className={`w-8 h-8 ${selectedPresetType === "grid" ? "text-blue-400" : "text-gray-500"
+                                                    }`} />
                                                 <div className="flex-1 text-left">
-                                                    <div className={`font-medium ${
-                                                        selectedPresetType === "grid" ? "text-white" : "text-gray-300"
-                                                    }`}>
+                                                    <div className={`font-medium ${selectedPresetType === "grid" ? "text-white" : "text-gray-300"
+                                                        }`}>
                                                         Grid Layout
                                                     </div>
                                                     <div className="text-xs text-gray-500">
@@ -574,20 +570,17 @@ export default function PresetMenu({
 
                                         <button
                                             onClick={() => setSelectedPresetType("fullscreen")}
-                                            className={`w-full p-4 rounded-xl border-2 transition-all ${
-                                                selectedPresetType === "fullscreen"
+                                            className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPresetType === "fullscreen"
                                                     ? "border-purple-500 bg-purple-500/20"
                                                     : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
-                                            }`}
+                                                }`}
                                         >
                                             <div className="flex items-center gap-4">
-                                                <MdFullscreen className={`w-8 h-8 ${
-                                                    selectedPresetType === "fullscreen" ? "text-purple-400" : "text-gray-500"
-                                                }`} />
+                                                <MdFullscreen className={`w-8 h-8 ${selectedPresetType === "fullscreen" ? "text-purple-400" : "text-gray-500"
+                                                    }`} />
                                                 <div className="flex-1 text-left">
-                                                    <div className={`font-medium ${
-                                                        selectedPresetType === "fullscreen" ? "text-white" : "text-gray-300"
-                                                    }`}>
+                                                    <div className={`font-medium ${selectedPresetType === "fullscreen" ? "text-white" : "text-gray-300"
+                                                        }`}>
                                                         Fullscreen Widget
                                                     </div>
                                                     <div className="text-xs text-gray-500">
