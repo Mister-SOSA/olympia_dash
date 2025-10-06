@@ -39,6 +39,21 @@ export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_CO
 // --- Preset Functions ---
 
 const PRESETS_KEY = "dashboard_presets";
+const CURRENT_PRESET_TYPE_KEY = "dashboard_current_preset_type";
+
+/**
+ * Saves the current preset type to localStorage.
+ */
+export const saveCurrentPresetType = (type: string) => {
+    localStorage.setItem(CURRENT_PRESET_TYPE_KEY, type);
+};
+
+/**
+ * Reads the current preset type from localStorage.
+ */
+export const readCurrentPresetType = (): string => {
+    return localStorage.getItem(CURRENT_PRESET_TYPE_KEY) || "grid";
+};
 
 /**
  * Reads an array of 9 preset layouts from localStorage.

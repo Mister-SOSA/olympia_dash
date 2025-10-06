@@ -10,6 +10,8 @@ import {
     saveLayoutToStorage,
     readPresetsFromStorage,
     savePresetsToStorage,
+    saveCurrentPresetType,
+    readCurrentPresetType,
 } from "@/utils/layoutUtils";
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { Flip, toast, ToastContainer } from "react-toastify";
@@ -81,6 +83,10 @@ export default function Dashboard() {
             setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
         }
         setPresets(readPresetsFromStorage());
+        
+        // Restore the last used preset type
+        const storedPresetType = readCurrentPresetType();
+        setCurrentPresetType(storedPresetType as PresetType);
     }, []);
 
     // Prepare a temporary layout for the widget menu
@@ -105,20 +111,22 @@ export default function Dashboard() {
                     setTransitionPhase("none");
                     return;
                 }
-
+                
                 const merged = mergePreset(deepClone(preset.layout));
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
+                
+                // Save the preset type so it persists across page reloads
+                saveCurrentPresetType(preset.type);
+                
                 setTransitionPhase("fadeOut");
                 setTimeout(() => setTransitionPhase("none"), 300);
             }, 300);
         },
         [presets]
-    );
-
-    // Global keybindings: F = menu, X = compact, P = toggle presets, 1–9 / Shift+1–9
+    );    // Global keybindings: F = menu, X = compact, P = toggle presets, 1–9 / Shift+1–9
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
@@ -185,6 +193,9 @@ export default function Dashboard() {
         setMenuOpen(false);
         if (!layoutsEqual(layout, tempLayout)) {
             setLayout([...tempLayout]);
+            // When manually editing widgets, switch to grid mode
+            setCurrentPresetType("grid");
+            saveCurrentPresetType("grid");
         }
     }, [tempLayout, layout]);
 
