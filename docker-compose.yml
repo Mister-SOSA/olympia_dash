@@ -5,14 +5,13 @@ services:
       dockerfile: Dockerfile
     container_name: olympia_frontend
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     environment:
       # IMPORTANT: This URL is used by the browser (client-side), not the container
       # Must use the server's IP address so devices on the network can reach the API
       # Replace 172.19.1.95 with your server's actual IP if different
       - NEXT_PUBLIC_API_BASE_URL=http://172.19.1.95:5001
       - NODE_ENV=production
-    network_mode: host
     depends_on:
       - backend
     restart: unless-stopped
@@ -22,7 +21,8 @@ services:
       context: ./api
       dockerfile: Dockerfile
     container_name: olympia_backend
-    network_mode: host
+    ports:
+      - "0.0.0.0:5001:5001"
     env_file:
       - ./api/.env
     environment:
