@@ -8,9 +8,9 @@ services:
       - "3000:3000"
     environment:
       # IMPORTANT: This URL is used by the browser (client-side), not the container
-      # Use 'localhost' when accessing from the same machine
-      # Use your machine's IP (e.g., 192.168.1.x) when accessing from other devices on the network
-      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5001
+      # Must use the server's IP address so devices on the network can reach the API
+      # Replace 172.19.1.95 with your server's actual IP if different
+      - NEXT_PUBLIC_API_BASE_URL=http://172.19.1.95:5001
       - NODE_ENV=production
     networks:
       - olympia_network

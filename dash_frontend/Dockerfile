@@ -18,5 +18,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "run", "start"]
+# Start the app and bind to 0.0.0.0 to accept connections from any IP
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0"]
