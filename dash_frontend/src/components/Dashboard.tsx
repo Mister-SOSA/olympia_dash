@@ -83,7 +83,7 @@ export default function Dashboard() {
             setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
         }
         setPresets(readPresetsFromStorage());
-        
+
         // Restore the last used preset type
         const storedPresetType = readCurrentPresetType();
         setCurrentPresetType(storedPresetType as PresetType);
@@ -111,16 +111,16 @@ export default function Dashboard() {
                     setTransitionPhase("none");
                     return;
                 }
-                
+
                 const merged = mergePreset(deepClone(preset.layout));
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
-                
+
                 // Save the preset type so it persists across page reloads
                 saveCurrentPresetType(preset.type);
-                
+
                 setTransitionPhase("fadeOut");
                 setTimeout(() => setTransitionPhase("none"), 300);
             }, 300);
