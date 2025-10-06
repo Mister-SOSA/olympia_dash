@@ -1,5 +1,7 @@
 const config = {
-    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001",
+    // Use empty string to make API calls relative (proxied through Next.js)
+    // This ensures the API URL is always relative to where the user accesses the app
+    API_BASE_URL: "",
     PARENT_COMPANY_MAPPING: {
         "GORDON FOOD": "GORDON FOOD",
         "RESTAURANT DEPOT": "RESTAURANT DEPOT",

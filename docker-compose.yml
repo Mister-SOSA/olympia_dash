@@ -7,10 +7,9 @@ services:
     ports:
       - "0.0.0.0:3000:3000"
     environment:
-      # IMPORTANT: This URL is used by the browser (client-side), not the container
-      # Must use the server's IP address so devices on the network can reach the API
-      # Replace 172.19.1.95 with your server's actual IP if different
-      - NEXT_PUBLIC_API_BASE_URL=http://172.19.1.95:5001
+      # Backend URL for server-side API calls (Next.js rewrites)
+      # Uses Docker internal network name 'backend' to reach the API container
+      - NEXT_PUBLIC_API_BASE_URL=http://backend:5001
       - NODE_ENV=production
     depends_on:
       - backend
