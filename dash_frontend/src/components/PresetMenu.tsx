@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Widget } from "@/types";
+import { Widget, DashboardPreset, PresetType } from "@/types";
 import {
     MdBookmark,
     MdBookmarkBorder,
@@ -16,16 +16,18 @@ import {
     MdVisibility,
     MdMoreVert,
     MdAdd,
-    MdInfoOutline
+    MdInfoOutline,
+    MdFullscreen,
+    MdGridView
 } from "react-icons/md";
 
 interface PresetMenuProps {
-    presets: Array<Widget[] | null>;
+    presets: Array<DashboardPreset | null>;
     loadPreset: (index: number) => void;
     presetsOpen: boolean;
     setPresetsOpen: (open: boolean) => void;
     currentLayout: Widget[];
-    onSavePreset: (index: number, layout: Widget[]) => void;
+    onSavePreset: (index: number, layout: Widget[], type: PresetType) => void;
     onClearPreset: (index: number) => void;
 }
 
@@ -43,6 +45,9 @@ export default function PresetMenu({
     const [activePreview, setActivePreview] = useState<number | null>(null);
     const [contextMenu, setContextMenu] = useState<{ index: number; x: number; y: number } | null>(null);
     const [copySource, setCopySource] = useState<number | null>(null);
+    const [saveModalOpen, setSaveModalOpen] = useState<boolean>(false);
+    const [saveModalIndex, setSaveModalIndex] = useState<number | null>(null);
+    const [selectedPresetType, setSelectedPresetType] = useState<PresetType>("grid");
 
     // Close on escape key or click outside
     useEffect(() => {
@@ -77,24 +82,6 @@ export default function PresetMenu({
         };
     }, [presetsOpen, setPresetsOpen]);
 
-    const getPresetIcon = (preset: Widget[] | null, index: number) => {
-        if (!preset) return <MdBookmarkBorder className="w-6 h-6" />;
-
-        const enabledWidgets = preset.filter(w => w.enabled);
-        if (enabledWidgets.length === 0) return <MdBookmarkBorder className="w-6 h-6" />;
-
-        // Different icons based on widget count
-        if (enabledWidgets.length <= 3) return <MdApps className="w-6 h-6" />;
-        if (enabledWidgets.length <= 6) return <MdDashboard className="w-6 h-6" />;
-        return <MdLayers className="w-6 h-6" />;
-    };
-
-    const getPresetStats = (preset: Widget[] | null) => {
-        if (!preset) return { enabled: 0, total: 0 };
-        const enabled = preset.filter(w => w.enabled).length;
-        return { enabled, total: preset.length };
-    };
-
     const handleContextMenu = (e: React.MouseEvent, index: number) => {
         e.preventDefault();
         e.stopPropagation();
@@ -102,8 +89,17 @@ export default function PresetMenu({
     };
 
     const handleSaveToSlot = (index: number) => {
-        onSavePreset(index, currentLayout);
+        setSaveModalIndex(index);
+        setSaveModalOpen(true);
         setContextMenu(null);
+    };
+
+    const confirmSaveToSlot = () => {
+        if (saveModalIndex !== null) {
+            onSavePreset(saveModalIndex, currentLayout, selectedPresetType);
+        }
+        setSaveModalOpen(false);
+        setSaveModalIndex(null);
     };
 
     const handleClearSlot = (index: number) => {
@@ -113,15 +109,39 @@ export default function PresetMenu({
 
     const handleCopyToSlot = (targetIndex: number) => {
         if (copySource !== null && presets[copySource]) {
-            onSavePreset(targetIndex, presets[copySource]!);
+            const sourcePreset = presets[copySource]!;
+            onSavePreset(targetIndex, sourcePreset.layout, sourcePreset.type);
         }
         setCopySource(null);
         setContextMenu(null);
     };
 
-    const getWidgetPreview = (preset: Widget[] | null) => {
+    const getPresetIcon = (preset: DashboardPreset | null, index: number) => {
+        if (!preset) return <MdBookmarkBorder className="w-6 h-6" />;
+
+        // Different icon for fullscreen presets
+        if (preset.type === "fullscreen") {
+            return <MdFullscreen className="w-6 h-6" />;
+        }
+
+        const enabledWidgets = preset.layout.filter(w => w.enabled);
+        if (enabledWidgets.length === 0) return <MdBookmarkBorder className="w-6 h-6" />;
+
+        // Different icons based on widget count for grid layouts
+        if (enabledWidgets.length <= 3) return <MdApps className="w-6 h-6" />;
+        if (enabledWidgets.length <= 6) return <MdDashboard className="w-6 h-6" />;
+        return <MdLayers className="w-6 h-6" />;
+    };
+
+    const getPresetStats = (preset: DashboardPreset | null) => {
+        if (!preset) return { enabled: 0, total: 0, type: "grid" as PresetType };
+        const enabled = preset.layout.filter(w => w.enabled).length;
+        return { enabled, total: preset.layout.length, type: preset.type };
+    };
+
+    const getWidgetPreview = (preset: DashboardPreset | null) => {
         if (!preset) return [];
-        return preset
+        return preset.layout
             .filter(w => w.enabled)
             .slice(0, 5)
             .map(w => w.displayName || w.id.replace(/-/g, ' '));
@@ -296,7 +316,7 @@ export default function PresetMenu({
                                                                     {stats.enabled} Widget{stats.enabled !== 1 ? 's' : ''}
                                                                 </div>
                                                                 <div className="text-xs text-gray-400 mb-2">
-                                                                    Saved Layout
+                                                                    {stats.type === "fullscreen" ? "Fullscreen" : "Grid"} Layout
                                                                 </div>
 
                                                                 {/* Widget preview dots */}
@@ -365,6 +385,26 @@ export default function PresetMenu({
 
                                             {presets[activePreview] ? (
                                                 <div>
+                                                    <div className="mb-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            {presets[activePreview]!.type === "fullscreen" ? (
+                                                                <MdFullscreen className="w-4 h-4 text-purple-400" />
+                                                            ) : (
+                                                                <MdGridView className="w-4 h-4 text-blue-400" />
+                                                            )}
+                                                            <span className={`text-sm font-medium ${
+                                                                presets[activePreview]!.type === "fullscreen" ? "text-purple-400" : "text-blue-400"
+                                                            }`}>
+                                                                {presets[activePreview]!.type === "fullscreen" ? "Fullscreen" : "Grid"} Layout
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {presets[activePreview]!.type === "fullscreen" 
+                                                                ? "Single widget takes full screen"
+                                                                : "Multiple widgets in a grid"
+                                                            }
+                                                        </div>
+                                                    </div>
                                                     <div className="text-sm text-gray-400 mb-2">
                                                         {getPresetStats(presets[activePreview]).enabled} enabled widgets:
                                                     </div>
@@ -476,6 +516,103 @@ export default function PresetMenu({
                                         </>
                                     )}
                                 </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Save Preset Type Modal */}
+                    <AnimatePresence>
+                        {saveModalOpen && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex items-center justify-center"
+                                onClick={() => setSaveModalOpen(false)}
+                            >
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <MdSave className="w-6 h-6 text-blue-400" />
+                                        <h3 className="text-xl font-bold text-white">Save Preset</h3>
+                                    </div>
+
+                                    <p className="text-gray-400 text-sm mb-6">
+                                        Choose how to save this preset to slot {saveModalIndex !== null ? saveModalIndex + 1 : ''}
+                                    </p>
+
+                                    <div className="space-y-3 mb-6">
+                                        <button
+                                            onClick={() => setSelectedPresetType("grid")}
+                                            className={`w-full p-4 rounded-xl border-2 transition-all ${
+                                                selectedPresetType === "grid"
+                                                    ? "border-blue-500 bg-blue-500/20"
+                                                    : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <MdGridView className={`w-8 h-8 ${
+                                                    selectedPresetType === "grid" ? "text-blue-400" : "text-gray-500"
+                                                }`} />
+                                                <div className="flex-1 text-left">
+                                                    <div className={`font-medium ${
+                                                        selectedPresetType === "grid" ? "text-white" : "text-gray-300"
+                                                    }`}>
+                                                        Grid Layout
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Multiple widgets in a grid
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => setSelectedPresetType("fullscreen")}
+                                            className={`w-full p-4 rounded-xl border-2 transition-all ${
+                                                selectedPresetType === "fullscreen"
+                                                    ? "border-purple-500 bg-purple-500/20"
+                                                    : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <MdFullscreen className={`w-8 h-8 ${
+                                                    selectedPresetType === "fullscreen" ? "text-purple-400" : "text-gray-500"
+                                                }`} />
+                                                <div className="flex-1 text-left">
+                                                    <div className={`font-medium ${
+                                                        selectedPresetType === "fullscreen" ? "text-white" : "text-gray-300"
+                                                    }`}>
+                                                        Fullscreen Widget
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        Single widget takes full screen
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => setSaveModalOpen(false)}
+                                            className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmSaveToSlot}
+                                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                                        >
+                                            Save Preset
+                                        </button>
+                                    </div>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>

@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetMenu from "./PresetMenu";
-import { Widget } from "@/types";
+import { Widget, DashboardPreset, PresetType } from "@/types";
 import {
     readLayoutFromStorage,
     saveLayoutToStorage,
     readPresetsFromStorage,
     savePresetsToStorage,
 } from "@/utils/layoutUtils";
-import { masterWidgetList } from "@/constants/widgets";
+import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { Flip, toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -32,7 +32,7 @@ const mergePreset = (preset: Widget[]): Widget[] =>
  * Finds the next available preset index given a direction.
  */
 const findNextPresetIndex = (
-    presets: Array<Widget[] | null>,
+    presets: Array<DashboardPreset | null>,
     currentIndex: number,
     direction: number
 ): number => {
@@ -65,8 +65,9 @@ export default function Dashboard() {
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [presets, setPresets] = useState<Array<Widget[] | null>>(new Array(9).fill(null));
+    const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
+    const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
     const [presetsOpen, setPresetsOpen] = useState<boolean>(false);
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
@@ -104,10 +105,12 @@ export default function Dashboard() {
                     setTransitionPhase("none");
                     return;
                 }
-                const merged = mergePreset(deepClone(preset));
+                
+                const merged = mergePreset(deepClone(preset.layout));
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
+                setCurrentPresetType(preset.type);
                 setTransitionPhase("fadeOut");
                 setTimeout(() => setTransitionPhase("none"), 300);
             }, 300);
@@ -147,7 +150,11 @@ export default function Dashboard() {
                         const liveLayout = readLayoutFromStorage();
                         if (liveLayout) {
                             const newPresets = [...presets];
-                            newPresets[index] = deepClone(liveLayout);
+                            // Save as grid preset by default when using keyboard shortcut
+                            newPresets[index] = {
+                                type: "grid",
+                                layout: deepClone(liveLayout)
+                            };
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
                             toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
@@ -217,12 +224,15 @@ export default function Dashboard() {
                 presetsOpen={presetsOpen}
                 setPresetsOpen={setPresetsOpen}
                 currentLayout={layout}
-                onSavePreset={(index, layoutToSave) => {
+                onSavePreset={(index, layoutToSave, presetType) => {
                     const newPresets = [...presets];
-                    newPresets[index] = deepClone(layoutToSave);
+                    newPresets[index] = {
+                        type: presetType,
+                        layout: deepClone(layoutToSave)
+                    };
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
-                    toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
+                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Layout ${index + 1}`, { type: "success", delay: 0 });
                 }}
                 onClearPreset={(index) => {
                     const newPresets = [...presets];
@@ -238,6 +248,27 @@ export default function Dashboard() {
                 layout={layout.filter((widget) => widget.enabled)}
                 onExternalLayoutChange={setLayout}
             />
+
+            {/* Fullscreen Widget Overlay */}
+            {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
+                <div className="fixed inset-0 z-40 bg-gray-950">
+                    {(() => {
+                        const enabledWidget = layout.find(w => w.enabled);
+                        if (!enabledWidget) return null;
+                        
+                        const widgetDef = getWidgetById(enabledWidget.id);
+                        if (!widgetDef) return null;
+                        
+                        const WidgetComponent = widgetDef.component;
+                        
+                        return (
+                            <div className="w-full h-full overflow-auto">
+                                <WidgetComponent />
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
 
             {transitionPhase !== "none" && (
                 <motion.div

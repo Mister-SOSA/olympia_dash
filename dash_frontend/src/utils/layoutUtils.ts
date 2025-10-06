@@ -1,4 +1,4 @@
-import { Widget } from "@/types";
+import { Widget, DashboardPreset } from "@/types";
 import { LOCAL_STORAGE_KEY, COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
 
@@ -43,14 +43,27 @@ const PRESETS_KEY = "dashboard_presets";
 /**
  * Reads an array of 9 preset layouts from localStorage.
  * If nothing is saved yet, returns an array with 9 null entries.
+ * Now supports both old format (Widget[]) and new format (DashboardPreset).
  */
-export const readPresetsFromStorage = (): Array<Widget[] | null> => {
+export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
     const saved = localStorage.getItem(PRESETS_KEY);
     if (saved) {
         try {
             const presets = JSON.parse(saved);
             if (Array.isArray(presets) && presets.length === 9) {
-                return presets;
+                // Convert old format to new format
+                return presets.map(preset => {
+                    if (!preset) return null;
+                    // Check if it's already in the new format
+                    if (preset.type && preset.layout) {
+                        return preset as DashboardPreset;
+                    }
+                    // Convert old format (Widget[]) to new format
+                    return {
+                        type: "grid" as const,
+                        layout: preset
+                    };
+                });
             }
         } catch (e) {
             console.error("Error parsing presets", e);
@@ -62,6 +75,6 @@ export const readPresetsFromStorage = (): Array<Widget[] | null> => {
 /**
  * Saves an array of 9 preset layouts into localStorage.
  */
-export const savePresetsToStorage = (presets: Array<Widget[] | null>) => {
+export const savePresetsToStorage = (presets: Array<DashboardPreset | null>) => {
     localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
 };
