@@ -3,6 +3,9 @@ services:
     build: 
       context: ./dash_frontend
       dockerfile: Dockerfile
+      args:
+        # Pass the API URL as a build argument so it's available during Next.js build
+        NEXT_PUBLIC_API_BASE_URL: http://backend:5001
     container_name: olympia_frontend
     ports:
       - "0.0.0.0:3000:3000"

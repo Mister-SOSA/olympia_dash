@@ -12,6 +12,9 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Build the Next.js app
+# Accept build argument for API URL (for docker builds)
+ARG NEXT_PUBLIC_API_BASE_URL=http://backend:5001
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
