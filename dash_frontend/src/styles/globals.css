@@ -61,6 +61,7 @@ body {
 
 .grid-stack-item-content {
   padding: 1rem;
+  padding-top: 0.7rem;
   background-color: var(--background-light);
   color: var(--text-primary);
   border-radius: 1rem;
@@ -74,13 +75,16 @@ body {
   width: 100%;
   color: var(--text-primary);
   position: relative;
+  padding: 0;
+  margin: 0;
 }
 
 .widget-header {
   font-size: 1.2rem;
   font-weight: 800;
   text-align: center;
-  padding: 0.5rem 0;
+  padding: 0;
+  margin: 0;
   flex-shrink: 0;
 }
 
@@ -318,8 +322,8 @@ tbody>tr:nth-child(odd) {
 
 .timer-container {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 0;
+  right: 0;
   height: 2rem;
   width: 2rem;
   z-index: 10;

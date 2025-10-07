@@ -58,7 +58,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
 
-    const padding = { top: 40, right: 15, bottom: 50, left: 15 };
+    const padding = { top: 32, right: 5, bottom: 32, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
 
@@ -103,15 +103,15 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                 {data.map((item, index) => {
                     const isLast = index === data.length - 1;
                     const isHovered = hoveredIndex === index;
-                    
+
                     // Calculate projection for the last month
                     const projectedTotal = isLast ? item.currentPeriodSales / monthProgressRatio : 0;
                     const projectedRemaining = isLast ? projectedTotal - item.currentPeriodSales : 0;
-                    
+
                     const barHeight = (item.currentPeriodSales / maxValue) * chartHeight;
                     const projectedHeight = isLast ? (projectedTotal / maxValue) * chartHeight : 0;
                     const projectedRemainingHeight = isLast ? (projectedRemaining / maxValue) * chartHeight : 0;
-                    
+
                     const x = padding.left + index * barWidth + barGap / 2;
                     const y = padding.top + chartHeight - barHeight;
 
@@ -209,7 +209,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                             ${nFormatter(item.currentPeriodSales, 2)}
                                         </text>
                                     )}
-                                    
+
                                     {/* Projected value label (always above) */}
                                     <text
                                         x={x + actualBarWidth / 2}

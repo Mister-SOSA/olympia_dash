@@ -57,7 +57,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
 
-    const padding = { top: 40, right: 15, bottom: 60, left: 15 };
+    const padding = { top: 32, right: 5, bottom: 38, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
 
