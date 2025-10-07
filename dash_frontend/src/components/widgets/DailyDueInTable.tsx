@@ -267,11 +267,8 @@ export default function DailyDueInTable() {
         const tableData = mapToTableData(mergedData, timeZone);
 
         return (
-            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
-                <Table
-                    className="text-left text-white outstanding-orders-table text-[.95rem]"
-                    wrapperClassName="overflow-clip"
-                >
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                <Table className="text-left text-white outstanding-orders-table">
                     <TableHeader>
                         <TableRow>
                             <TableHead>PO Number</TableHead>
@@ -325,23 +322,21 @@ export default function DailyDueInTable() {
     }, []);
 
     return (
-        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
-            <Widget
-                endpoint="/api/widgets"
-                payload={widgetPayload}
-                title="Daily Due In"
-                refreshInterval={8000}
-            >
-                {(data, loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading orders...</div>;
-                    }
-                    if (!data || data.length === 0) {
-                        return <div className="widget-empty">No orders found</div>;
-                    }
-                    return renderFunction(data);
-                }}
-            </Widget>
-        </div>
+        <Widget
+            endpoint="/api/widgets"
+            payload={widgetPayload}
+            title="Daily Due In"
+            refreshInterval={8000}
+        >
+            {(data, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading orders...</div>;
+                }
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No orders found</div>;
+                }
+                return renderFunction(data);
+            }}
+        </Widget>
     );
 }

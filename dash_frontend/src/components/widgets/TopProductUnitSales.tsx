@@ -154,8 +154,8 @@ export default function TopProductUnitSalesTable() {
         });
 
         return (
-            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
-                <Table className="text-left text-white outstanding-orders-table text-[.9rem]" wrapperClassName="overflow-clip">
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                <Table className="text-left text-white outstanding-orders-table">
                     <TableHeader>
                         <TableRow>
                             <TableHead>Part Code</TableHead>
@@ -205,23 +205,21 @@ export default function TopProductUnitSalesTable() {
     }, []);
 
     return (
-        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
-            <Widget
-                endpoint="/api/widgets"
-                payload={widgetPayload}
-                title="Top Product Unit Sales"
-                refreshInterval={30000}
-            >
-                {(data, loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading product data...</div>;
-                    }
-                    if (!data || data.length === 0) {
-                        return <div className="widget-empty">No product data available</div>;
-                    }
-                    return renderFunction(data);
-                }}
-            </Widget>
-        </div>
+        <Widget
+            endpoint="/api/widgets"
+            payload={widgetPayload}
+            title="Top Product Unit Sales"
+            refreshInterval={30000}
+        >
+            {(data, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading product data...</div>;
+                }
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No product data available</div>;
+                }
+                return renderFunction(data);
+            }}
+        </Widget>
     );
 }

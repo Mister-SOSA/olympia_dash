@@ -70,31 +70,48 @@ body {
 .widget {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--text-primary);
-  border-radius: 1rem;
-  width: 100%;
   height: 100%;
-  font-size: 1rem;
+  width: 100%;
+  color: var(--text-primary);
+  position: relative;
 }
 
 .widget-header {
   font-size: 1.2rem;
   font-weight: 800;
-  width: 100%;
   text-align: center;
-  margin-top: 0rem;
-  position: sticky;
-  top: 0;
+  padding: 0.5rem 0;
+  flex-shrink: 0;
 }
 
 .widget-content {
-  font-size: 1.2rem;
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.widget-data-container {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+
+/* Center-aligned content for simple widgets (charts, loaders, errors) */
+.widget-loading,
+.widget-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  opacity: 0.7;
 }
 
 .overview-widget {
@@ -232,18 +249,37 @@ body {
 th {
   color: white !important;
   font-weight: 800 !important;
-  font-size: 1.1rem;
-  padding: .5rem;
+  font-size: 1rem;
+  padding: 0.75rem 0.5rem;
   background-color: var(--background-dark) !important;
+  white-space: nowrap;
 }
 
 tbody {
-  font-size: 1.1;
+  font-size: 1rem;
 }
 
 tbody>tr:nth-child(odd) {
-  background-color: var(--background-highlight);
   background-color: rgb(0, 0, 0, 0.1);
+}
+
+/* Table widget specific styles */
+.outstanding-orders-table,
+.inventory-moves-log-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.outstanding-orders-table td,
+.outstanding-orders-table th,
+.inventory-moves-log-table td,
+.inventory-moves-log-table th {
+  border-bottom: 1px solid var(--border-light);
+}
+
+.outstanding-orders-table tbody tr:last-child td,
+.inventory-moves-log-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 ::-webkit-scrollbar {
@@ -269,10 +305,11 @@ tbody>tr:nth-child(odd) {
 
 .timer-container {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 0.5rem;
+  right: 0.5rem;
   height: 2rem;
   width: 2rem;
+  z-index: 10;
 }
 
 .timer-container>* {
