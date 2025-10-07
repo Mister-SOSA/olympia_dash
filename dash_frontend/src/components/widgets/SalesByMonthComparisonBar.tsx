@@ -63,7 +63,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
     const padding = { top: 50, right: 15, bottom: 50, left: 15 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
-    
+
     const maxValue = Math.max(...data.map(d => Math.max(d.currentPeriodSales, d.previousPeriodSales)));
     const groupWidth = chartWidth / data.length;
     const groupGap = Math.max(groupWidth * 0.15, 8);
@@ -106,16 +106,16 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                 {data.map((item, index) => {
                     const isLast = index === data.length - 1;
                     const isHovered = hoveredIndex === index;
-                    
+
                     const groupX = padding.left + index * groupWidth + groupGap / 2;
                     const prevX = groupX;
                     const currX = groupX + barWidth + barGap;
-                    
+
                     // For last month: calculate partial vs remaining
                     const partialPrevious = isLast ? item.previousPeriodSales * monthProgressRatio : 0;
                     const remainingPrevious = isLast ? item.previousPeriodSales * (1 - monthProgressRatio) : 0;
                     const fullPrevious = item.previousPeriodSales;
-                    
+
                     const currentHeight = (item.currentPeriodSales / maxValue) * chartHeight;
                     const currY = padding.top + chartHeight - currentHeight;
 
@@ -152,7 +152,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                     >
                                         ${nFormatter(fullPrevious, 2)}
                                     </text>
-                                    
+
                                     {/* Current year bar for completed months */}
                                     <rect
                                         x={currX}
@@ -191,7 +191,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                         const projectedHeight = (projectedTotal / maxValue) * chartHeight;
                                         const currentBarHeight = currentHeight;
                                         const projectedRemainingHeight = (projectedRemaining / maxValue) * chartHeight;
-                                        
+
                                         return (
                                             <>
                                                 {/* Bottom part: Partial (up to current day) */}
@@ -447,9 +447,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             <div style={{ color: "var(--chart-bar)", fontSize: "15px", fontWeight: 700, marginBottom: "4px" }}>
                                 This Year (MTD): ${nFormatter(data[hoveredIndex].currentPeriodSales, 2)}
                             </div>
-                            <div style={{ 
-                                color: "rgba(255, 255, 255, 0.7)", 
-                                fontSize: "13px", 
+                            <div style={{
+                                color: "rgba(255, 255, 255, 0.7)",
+                                fontSize: "13px",
                                 fontWeight: 500,
                                 fontStyle: "italic",
                                 borderTop: "1px solid rgba(255, 255, 255, 0.2)",

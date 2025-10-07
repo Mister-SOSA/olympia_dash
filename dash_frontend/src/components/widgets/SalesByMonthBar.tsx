@@ -61,7 +61,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
     const padding = { top: 40, right: 15, bottom: 50, left: 15 };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
-    
+
     const maxValue = Math.max(...data.map(d => d.currentPeriodSales));
     const barWidth = chartWidth / data.length;
     const barGap = Math.max(barWidth * 0.2, 8);
