@@ -228,7 +228,7 @@ export default function DailyDueInHiddenVendTable() {
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
-    
+
     // Test row state (toggle between status 12 and 14)
     const [testRowStatus, setTestRowStatus] = useState<string>("12");
 

@@ -358,10 +358,13 @@ tbody>tr:nth-child(odd) {
 }
 
 @keyframes newStatusVPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     outline: 4px solid rgba(34, 197, 94, 0);
     outline-offset: -4px;
   }
+
   50% {
     outline: 4px solid rgba(34, 197, 94, 1);
     outline-offset: -4px;
