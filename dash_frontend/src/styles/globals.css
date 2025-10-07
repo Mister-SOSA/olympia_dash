@@ -274,12 +274,25 @@ tbody>tr:nth-child(odd) {
 .outstanding-orders-table th,
 .inventory-moves-log-table td,
 .inventory-moves-log-table th {
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .outstanding-orders-table tbody tr:last-child td,
 .inventory-moves-log-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* Ensure borders are visible even on colored backgrounds */
+.cancelled-po td,
+.received-po td,
+.grouped-po td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.cancelled-po:last-child td,
+.received-po:last-child td,
+.grouped-po:last-child td {
+  border-bottom: none !important;
 }
 
 ::-webkit-scrollbar {
