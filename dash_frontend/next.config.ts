@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://backend:5001'}/api/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001'}/api/:path*`,
       },
     ];
   },
