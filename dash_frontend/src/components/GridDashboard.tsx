@@ -15,10 +15,16 @@
  * - ✅ Auto-Compact: Removes gaps after widget deletion while preserving order
  *   (Uses 'list' mode to maintain visual consistency)
  * 
- * - Square Cell Aspect Ratio: Calculates cell height to maintain 1:1 aspect ratio
- *   (Ensures 2x2 widgets are actual squares, not rectangles)
+ * - ✅ Viewport-Aware Cell Height: Dynamically calculates cell height to:
+ *   1. Maintain square aspect ratio (1:1) based on container width
+ *   2. Fit grid within viewport (targets 8-9 rows visible)
+ *   3. Balance between square cells and screen fit
+ *   (Ensures 2x2 widgets are squares while grid fits reasonably on screen)
  * 
- * - Persistent Layout: Saves to localStorage and propagates to parent on any change
+ * - ✅ Minimum Widget Size: Enforces minimum widget dimensions (2×2)
+ *   to prevent users from creating unusably small widgets
+ * 
+ * - ✅ Persistent Layout: Saves to localStorage and propagates to parent on any change
  * 
  * @see https://github.com/gridstack/gridstack.js for GridStack documentation
  */
@@ -28,7 +34,7 @@ import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
-import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
+import { COLUMN_COUNT, CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "@/constants/dashboard";
 import { saveLayoutToStorage } from "@/utils/layoutUtils";
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
@@ -239,11 +245,22 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             if (!gridRef.current) return;
             if (gridInstance.current) return; // Prevent reinitialization
 
-            // Calculate initial cell height to make square cells
+            // Calculate initial cell height to make square cells while fitting viewport
             const calculateCellHeight = () => {
                 if (!gridRef.current) return CELL_HEIGHT;
+                
                 const containerWidth = gridRef.current.clientWidth;
-                return containerWidth / COLUMN_COUNT;
+                const viewportHeight = window.innerHeight;
+                
+                // Calculate cell height based on width (for square cells)
+                const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
+                
+                // Calculate max cell height that would fit approximately 8-9 rows in viewport
+                // Accounting for padding, margins, and other UI elements (~120px overhead)
+                const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
+                
+                // Use the smaller value to ensure grid fits reasonably in viewport
+                return Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
             };
 
             // Initialize GridStack with square cells and responsive features
@@ -252,6 +269,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     cellHeight: calculateCellHeight(),
                     column: COLUMN_COUNT,
                     float: false,
+                    minRow: 1,  // Minimum number of rows
 
                     // ✅ HIGH PRIORITY: Responsive breakpoints for mobile/tablet support
                     columnOpts: {
@@ -307,7 +325,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             };
 
             // Load the initial layout using GridStack's built‑in load method.
-            gridInstance.current.load(layout);
+            // Enforce minimum widget dimensions to prevent over-shrinking
+            const layoutWithMinimums = layout.map(widget => ({
+                ...widget,
+                w: Math.max(widget.w, MIN_WIDGET_WIDTH),
+                h: Math.max(widget.h, MIN_WIDGET_HEIGHT),
+                minW: MIN_WIDGET_WIDTH,
+                minH: MIN_WIDGET_HEIGHT,
+            }));
+            gridInstance.current.load(layoutWithMinimums);
 
             // Listen to layout changes – on any change, grab the new state
             // and propagate it to the parent and local storage.
@@ -335,12 +361,23 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             };
         }, []);
 
-        // Update cell height on window resize to maintain square cells
+        // Update cell height on window resize to maintain square cells while fitting viewport
         useEffect(() => {
             const handleResize = () => {
                 if (!gridRef.current || !gridInstance.current) return;
+                
                 const containerWidth = gridRef.current.clientWidth;
-                const newCellHeight = containerWidth / COLUMN_COUNT;
+                const viewportHeight = window.innerHeight;
+                
+                // Calculate cell height based on width (for square cells)
+                const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
+                
+                // Calculate max cell height that would fit approximately 8-9 rows in viewport
+                const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
+                
+                // Use the smaller value to ensure grid fits reasonably in viewport
+                const newCellHeight = Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
+                
                 // @ts-ignore - GridStack has this method but it's not in the types
                 gridInstance.current.cellHeight(newCellHeight);
             };
@@ -373,8 +410,17 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     }
                 });
 
+                // Enforce minimum widget dimensions before loading
+                const layoutWithMinimums = layout.map(widget => ({
+                    ...widget,
+                    w: Math.max(widget.w, MIN_WIDGET_WIDTH),
+                    h: Math.max(widget.h, MIN_WIDGET_HEIGHT),
+                    minW: MIN_WIDGET_WIDTH,
+                    minH: MIN_WIDGET_HEIGHT,
+                }));
+
                 // Load the new layout into GridStack
-                gridInstance.current.load(layout);
+                gridInstance.current.load(layoutWithMinimums);
             }
         }, [layout]);
 
