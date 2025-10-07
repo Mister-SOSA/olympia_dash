@@ -357,6 +357,21 @@ tbody>tr:nth-child(odd) {
   animation: flashAnim .5s ease-out;
 }
 
+@keyframes newStatusVPulse {
+  0%, 100% {
+    outline: 4px solid rgba(34, 197, 94, 0);
+    outline-offset: -4px;
+  }
+  50% {
+    outline: 4px solid rgba(34, 197, 94, 1);
+    outline-offset: -4px;
+  }
+}
+
+.new-status-v-row {
+  animation: newStatusVPulse 0.8s ease-in-out 5 !important;
+}
+
 .badge {
   background-color: var(--shadow-dark);
   color: white;

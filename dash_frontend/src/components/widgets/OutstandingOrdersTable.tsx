@@ -1,10 +1,11 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useRef, useState } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { playNotificationSound } from "@/utils/soundUtils";
 
 
 /* -------------------------------------- */
@@ -38,6 +39,13 @@ const adjustDateByOneDay = (dateStr?: string): Date | null =>
 /* OutstandingOrdersTable Component       */
 /* -------------------------------------- */
 export default function OutstandingOrdersTable() {
+    // Track previous order statuses to detect changes
+    const previousStatusesRef = useRef<Map<string, string>>(new Map());
+    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+    
+    // Test row state (toggle between status 12 and 14)
+    const [testRowStatus, setTestRowStatus] = useState<string>("12");
+
     // Memoize hidden vendor codes string for query filtering.
     const hiddenVendorCodes = useMemo(
         () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map(code => `'${code}'`).join(", "),
@@ -111,7 +119,8 @@ export default function OutstandingOrdersTable() {
                 date_prom_user,
                 part_type,
                 qty_ord,
-                uom
+                uom,
+                item_no
             FROM
                 FilteredOrders
             WHERE
@@ -133,6 +142,7 @@ export default function OutstandingOrdersTable() {
             ro.part_type,
             ro.qty_ord,
             ro.uom,
+            ro.item_no,
             lo.last_order_date,
             lo.last_order_unit_price
         FROM
@@ -163,7 +173,24 @@ export default function OutstandingOrdersTable() {
 
     // Transform raw data into table row data.
     const renderFunction = useCallback((data: POItemData[]) => {
-        const tableData = data.map((item) => {
+        // Add test row at the beginning
+        const testRow = {
+            poNumber: "TEST-001",
+            poStatus: testRowStatus,
+            vendName: "TEST VENDOR",
+            partCode: "TEST-PART",
+            qtyOrdered: "10 EA",
+            dateOrdered: format(new Date(), "MMM d, yyyy"),
+            vendorPromiseDate: format(new Date(), "MMM d, yyyy"),
+            lastOrderDate: "N/A",
+            recentUnitPrice: "12.5000",
+            lastOrderUnitPrice: "N/A",
+            overdueDays: 0,
+            isGrouped: false,
+            itemNo: "TEST-001-1",
+        };
+
+        const tableData = [testRow, ...data.map((item) => {
             const adjustedOrderDate = adjustDateByOneDay(item.recent_date_orderd ?? undefined);
             const adjustedVendPromDate = adjustDateByOneDay(item.vend_prom_date ?? undefined);
 
@@ -196,8 +223,36 @@ export default function OutstandingOrdersTable() {
                     : "N/A",
                 overdueDays,
                 isGrouped: false, // Outstanding orders don't use grouping, default to false.
+                itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
             };
+        })];
+
+        // Check for status changes to "V" (status code "14")
+        const newStatusVSet = new Set<string>();
+        tableData.forEach((row) => {
+            const itemKey = row.itemNo;
+            const currentStatus = row.poStatus;
+            const previousStatus = previousStatusesRef.current.get(itemKey);
+
+            // If status changed to "14" (V) and wasn't "14" before
+            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+                newStatusVSet.add(itemKey);
+            }
+
+            // Update the status tracking
+            previousStatusesRef.current.set(itemKey, currentStatus);
         });
+
+        // Update the state with new status V rows and play sound once
+        if (newStatusVSet.size > 0) {
+            playNotificationSound(); // Play once for all status changes
+            setNewStatusVRows(newStatusVSet);
+
+            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
+            setTimeout(() => {
+                setNewStatusVRows(new Set());
+            }, 4000);
+        }
 
         // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
         tableData.sort((a, b) => {
@@ -229,15 +284,32 @@ export default function OutstandingOrdersTable() {
                     <TableBody>
                         {tableData.map((row, index) => (
                             <TableRow
-                                key={index}
+                                key={row.itemNo}
                                 className={`
                   ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
                   ${row.isGrouped ? "grouped-po" : ""} 
                   ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
+                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
+                  ${row.itemNo === "TEST-001-1" ? "opacity-70" : ""}
                 `}
                             >
-                                <TableCell className="font-black">{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{renderStatusBadge(row.poStatus)}</TableCell>
+                                <TableCell className="font-black">
+                                    {row.poNumber}
+                                    {row.itemNo === "TEST-001-1" && (
+                                        <span className="text-xs ml-2 text-yellow-400">(TEST)</span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="font-black">
+                                    {renderStatusBadge(row.poStatus)}
+                                    {row.itemNo === "TEST-001-1" && (
+                                        <button
+                                            onClick={() => setTestRowStatus(prev => prev === "12" ? "14" : "12")}
+                                            className="ml-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded text-white"
+                                        >
+                                            Toggle Status
+                                        </button>
+                                    )}
+                                </TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
@@ -265,7 +337,7 @@ export default function OutstandingOrdersTable() {
                 </Table>
             </ScrollArea>
         );
-    }, []);
+    }, [newStatusVRows, testRowStatus]);
 
     return (
         <Widget

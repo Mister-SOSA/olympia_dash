@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState, useCallback } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
+import { playNotificationSound } from "@/utils/soundUtils";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -153,6 +154,7 @@ interface TableRowData {
     lastOrderUnitPrice: string;
     qtyOrdered: string;
     qtyRecvd: string;
+    itemNo: string; // Add unique identifier
 }
 
 /**
@@ -214,14 +216,22 @@ function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
                 item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
                     ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
                     : "-",
+            itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
         };
     });
 }
 
 /* -------------------------------------- */
-/* DailyDueInTable Component              */
+/* DailyDueInHiddenVendTable Component    */
 /* -------------------------------------- */
-export default function DailyDueInTable() {
+export default function DailyDueInHiddenVendTable() {
+    // Track previous order statuses to detect changes
+    const previousStatusesRef = useRef<Map<string, string>>(new Map());
+    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+    
+    // Test row state (toggle between status 12 and 14)
+    const [testRowStatus, setTestRowStatus] = useState<string>("12");
+
     // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
@@ -254,6 +264,136 @@ export default function DailyDueInTable() {
         []
     );
 
+    // Process and transform data for the table.
+    const renderFunction = useCallback((data: POItemData[]) => {
+        let processedData = deduplicateData(data);
+        processedData = computePreviousOrderDetails(processedData);
+        const recentOrders = filterRecentOrders(processedData);
+        let mergedData = removeHiddenVendors(recentOrders);
+        mergedData = sortOrders(mergedData);
+
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tableData = mapToTableData(mergedData, timeZone);
+
+        // Add test row at the beginning
+        const testRow = {
+            isGrouped: false,
+            poNumber: "TEST-001",
+            poStatus: testRowStatus,
+            vendName: "TEST VENDOR",
+            partCode: "TEST-PART",
+            partDescription: "Test Part Description",
+            recentUnitPrice: "12.5000",
+            dateOrdered: format(new Date(), "MMM d, yyyy"),
+            vendorPromiseDate: format(new Date(), "MMM d, yyyy"),
+            lastOrderDate: "N/A",
+            lastOrderUnitPrice: "N/A",
+            qtyOrdered: "10 EA",
+            qtyRecvd: "-",
+            itemNo: "TEST-001-1",
+        };
+
+        const fullTableData = [testRow, ...tableData];
+
+        // Check for status changes to "V" (status code "14")
+        const newStatusVSet = new Set<string>();
+        fullTableData.forEach((row) => {
+            const itemKey = row.itemNo;
+            const currentStatus = row.poStatus;
+            const previousStatus = previousStatusesRef.current.get(itemKey);
+
+            // If status changed to "14" (V) and wasn't "14" before
+            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+                newStatusVSet.add(itemKey);
+            }
+
+            // Update the status tracking
+            previousStatusesRef.current.set(itemKey, currentStatus);
+        });
+
+        // Update the state with new status V rows and play sound once
+        if (newStatusVSet.size > 0) {
+            playNotificationSound(); // Play once for all status changes
+            setNewStatusVRows(newStatusVSet);
+
+            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
+            setTimeout(() => {
+                setNewStatusVRows(new Set());
+            }, 4000);
+        }
+
+        return (
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                <Table className="text-left text-white outstanding-orders-table">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>PO Number</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Vendor</TableHead>
+                            <TableHead>Part Code</TableHead>
+                            <TableHead className="text-right">Qty Ordered</TableHead>
+                            <TableHead className="text-right">Qty Received</TableHead>
+                            <TableHead className="text-right">Date Ordered</TableHead>
+                            <TableHead className="text-right">Prev. Order</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Prev. Price</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {fullTableData.map((row, index) => (
+                            <TableRow
+                                key={row.itemNo}
+                                className={`
+                              ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
+                              ${row.isGrouped ? "grouped-po" : ""}
+                              ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
+                              ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
+                              ${row.itemNo === "TEST-001-1" ? "opacity-70" : ""}
+                            `}
+                            >
+                                <TableCell className="font-black">
+                                    {row.poNumber}
+                                    {row.itemNo === "TEST-001-1" && (
+                                        <span className="text-xs ml-2 text-yellow-400">(TEST)</span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="font-black">
+                                    {statusBadge(row.poStatus)}
+                                    {row.itemNo === "TEST-001-1" && (
+                                        <button
+                                            onClick={() => setTestRowStatus(prev => prev === "12" ? "14" : "12")}
+                                            className="ml-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded text-white"
+                                        >
+                                            Toggle Status
+                                        </button>
+                                    )}
+                                </TableCell>
+                                <TableCell>{row.vendName}</TableCell>
+                                <TableCell>{row.partCode}</TableCell>
+                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </ScrollArea>
+        );
+    }, [newStatusVRows, testRowStatus]);
+
     return (
         <Widget
             endpoint="/api/widgets"
@@ -261,7 +401,7 @@ export default function DailyDueInTable() {
             title="Daily Due In (Maintenance Only)"
             refreshInterval={15000}
         >
-            {(data: POItemData[], loading) => {
+            {(data, loading) => {
                 if (loading) {
                     return <div className="widget-loading">Loading purchase orders...</div>;
                 }
@@ -270,69 +410,7 @@ export default function DailyDueInTable() {
                     return <div className="widget-empty">No purchase orders found</div>;
                 }
 
-                // Process and transform data for the table
-                let processedData = deduplicateData(data);
-                processedData = computePreviousOrderDetails(processedData);
-                const recentOrders = filterRecentOrders(processedData);
-                let mergedData = removeHiddenVendors(recentOrders);
-                mergedData = sortOrders(mergedData);
-
-                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const tableData = mapToTableData(mergedData, timeZone);
-
-                return (
-                    <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                        <Table className="text-left text-white outstanding-orders-table">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>PO Number</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Vendor</TableHead>
-                                    <TableHead>Part Code</TableHead>
-                                    <TableHead className="text-right">Qty Ordered</TableHead>
-                                    <TableHead className="text-right">Qty Received</TableHead>
-                                    <TableHead className="text-right">Date Ordered</TableHead>
-                                    <TableHead className="text-right">Prev. Order</TableHead>
-                                    <TableHead className="text-right">Unit Price</TableHead>
-                                    <TableHead className="text-right">Prev. Price</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {tableData.map((row, index) => (
-                                    <TableRow
-                                        key={index}
-                                        className={`
-                              ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
-                              ${row.isGrouped ? "grouped-po" : ""}
-                              ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
-                            `}
-                                    >
-                                        <TableCell className="font-black">{row.poNumber}</TableCell>
-                                        <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
-                                        <TableCell>{row.vendName}</TableCell>
-                                        <TableCell>{row.partCode}</TableCell>
-                                        <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                        <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                        <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                        <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                        <TableCell className="text-right row-secondary">
-                                            <div className="table-dollars">
-                                                <span className="dollar-sign">$</span>
-                                                <span className="dollar-value">{row.recentUnitPrice}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-right row-secondary">
-                                            <div className="table-dollars">
-                                                <span className="dollar-sign">$</span>
-                                                <span className="dollar-value">{row.lastOrderUnitPrice}</span>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-                );
+                return renderFunction(data);
             }}
         </Widget>
     );
