@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     // Use environment variable for Docker/production, fallback to localhost for local dev
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';
     console.log('[Next.js Config] API Base URL for rewrites:', apiBaseUrl);
-    
+
     return [
       {
         source: '/api/:path*',
