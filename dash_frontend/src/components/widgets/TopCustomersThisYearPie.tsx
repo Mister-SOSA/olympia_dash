@@ -155,7 +155,14 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const orientation = useContainerOrientation(containerRef);
 
-    const processedData = useMemo(() => processCustomerData(data), [data]);
+    const processedData = useMemo(() =>
+        processCustomerData(data).map((item) => ({
+            name: item.businessName,
+            value: item.totalSales,
+            color: item.color,
+        })),
+        [data]
+    );
 
     if (!processedData.length) {
         return <div>No data available for chart</div>;
