@@ -5,23 +5,7 @@ import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
-import { MdLocalShipping } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const outstandingOrdersTableMeta = {
-    id: "OutstandingOrdersTable",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Outstanding Orders",
-    category: "🧾 Purchasing",
-    description: "Displays overdue incoming orders.",
-    icon: <MdLocalShipping size={24} />,
-};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -286,12 +270,23 @@ export default function OutstandingOrdersTable() {
     return (
         <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Outstanding Due In"
-                updateInterval={30000}
-                render={renderFunction}
-            />
+                refreshInterval={30000}
+            >
+                {(data, loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading orders...</div>;
+                    }
+
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No orders found</div>;
+                    }
+
+                    return renderFunction(data);
+                }}
+            </Widget>
         </div>
     );
 }

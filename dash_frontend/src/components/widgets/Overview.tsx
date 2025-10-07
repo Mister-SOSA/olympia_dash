@@ -1,25 +1,7 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo } from "react";
 import Widget from "./Widget";
 import { nFormatter, calculatePercentageChange } from "@/utils/helpers";
-import config from "@/config";
 import { SalesData } from "@/types";
-import { MdAttachMoney } from "react-icons/md";
-
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const overviewWidgetMeta = {
-    id: "Overview",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Sales Overview",
-    category: "💸 Sales",
-    description: "Displays an overview of sales metrics.",
-    icon: <MdAttachMoney size={24} />,
-};
 
 /* -------------------------------------- */
 /* 📊 OverviewWidget Component            */
@@ -227,17 +209,24 @@ export default function Overview() {
         [sevenDaysAgoDate, currentDate, previousYearStart]
     );
 
-    const renderOverview = useCallback((data: SalesData[]) => {
-        return <OverviewWidget data={data} />;
-    }, []);
-
     return (
         <Widget
-            apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+            endpoint="/api/widgets"
             payload={widgetPayload}
             title=""
-            updateInterval={300000}
-            render={renderOverview}
-        />
+            refreshInterval={300000}
+        >
+            {(data: SalesData[], loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading sales data...</div>;
+                }
+
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No sales data available</div>;
+                }
+
+                return <OverviewWidget data={data} />;
+            }}
+        </Widget>
     );
 }

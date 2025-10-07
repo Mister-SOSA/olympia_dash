@@ -6,6 +6,7 @@ This application provides two endpoints:
 2. GET /api/humidity: Retrieves current relative humidity data from the Open-Meteo API.
 """
 
+import os
 import logging
 import colorlog
 from flask import Flask, request, jsonify
@@ -141,5 +142,9 @@ def get_humidity():
 
 
 if __name__ == "__main__":
-    # DISABLE DEBUG FOR PROD
-    app.run(debug=True, port=5001, host='172.19.1.95')
+    # Get configuration from environment variables
+    debug_mode = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    port = int(os.getenv('FLASK_PORT', '5001'))
+    host = os.getenv('FLASK_HOST', '0.0.0.0')  # 0.0.0.0 allows external connections
+    
+    app.run(debug=debug_mode, port=port, host=host)

@@ -48,6 +48,13 @@ export interface Widget {
     description?: string;
     icon?: ReactNode;
 }
+
+export type PresetType = "grid" | "fullscreen";
+
+export interface DashboardPreset {
+    type: PresetType;
+    layout: Widget[];
+}
 // Type for the raw data returned from the API
 export interface POItemData {
     po_number: string; // Purchase order number

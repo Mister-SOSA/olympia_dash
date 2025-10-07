@@ -1,5 +1,5 @@
 # Use Node.js as base image
-FROM node:22.14.0
+FROM public.ecr.aws/docker/library/node:22-alpine
 
 # Set working directory
 WORKDIR /app
@@ -11,11 +11,12 @@ RUN npm install --legacy-peer-deps
 # Copy the rest of the app
 COPY . .
 
-# Build the Next.js app while ignoring TypeScript and ESLint errors
-RUN npm run build || true
+# Build the Next.js app
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
 
 # Expose port
 EXPOSE 3000
 
-# Start the app
-CMD ["npm", "run", "start"]
+# Start the app and bind to 0.0.0.0 to accept connections from any IP
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0"]

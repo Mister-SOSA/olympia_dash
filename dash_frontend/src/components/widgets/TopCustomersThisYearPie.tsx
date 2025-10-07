@@ -16,23 +16,7 @@ import {
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
-import { MdMoney } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const topCustomersThisYearPieMeta = {
-    id: "TopCustomersThisYearPie",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Top Customers This Year",
-    category: "💸 Sales",
-    description: "Displays the top customers this year.",
-    icon: <MdMoney size={24} />
-};
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
@@ -251,11 +235,22 @@ export default function TopCustomersThisYearPie() {
 
     return (
         <Widget
-            apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+            endpoint="/api/widgets"
             payload={widgetPayload}
             title={`Top Customers - ${currentYear}`}
-            updateInterval={300000}
-            render={renderChart}
-        />
+            refreshInterval={300000}
+        >
+            {(data, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading customer data...</div>;
+                }
+
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No customer data available</div>;
+                }
+
+                return renderChart(data);
+            }}
+        </Widget>
     );
 }

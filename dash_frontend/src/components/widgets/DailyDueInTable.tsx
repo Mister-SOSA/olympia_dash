@@ -12,23 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
-import { MdLocalShipping } from "react-icons/md";
 
-/* -------------------------------------- */
-/* Widget Metadata                        */
-/* -------------------------------------- */
-export const dailyDueInTableMeta = {
-    id: "DailyDueInTable",
-    x: 0,
-    y: 0,
-    w: 4,
-    h: 4,
-    enabled: true,
-    displayName: "Daily Due In",
-    category: "🧾 Purchasing",
-    description: "Displays daily due-in orders.",
-    icon: <MdLocalShipping size={24} />,
-};
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -343,12 +327,21 @@ export default function DailyDueInTable() {
     return (
         <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
             <Widget
-                apiEndpoint={`${config.API_BASE_URL}/api/widgets`}
+                endpoint="/api/widgets"
                 payload={widgetPayload}
                 title="Daily Due In"
-                updateInterval={8000}
-                render={renderFunction}
-            />
+                refreshInterval={8000}
+            >
+                {(data, loading) => {
+                    if (loading) {
+                        return <div className="widget-loading">Loading orders...</div>;
+                    }
+                    if (!data || data.length === 0) {
+                        return <div className="widget-empty">No orders found</div>;
+                    }
+                    return renderFunction(data);
+                }}
+            </Widget>
         </div>
     );
 }

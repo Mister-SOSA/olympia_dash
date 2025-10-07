@@ -1,186 +1,122 @@
-"use client";
-
-import { JSX, useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { MdError, MdRefresh } from "react-icons/md";
 import PropogateLoader from "react-spinners/PropagateLoader";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
-import { MdError } from "react-icons/md";
+import config from "@/config";
 
 interface WidgetProps {
-    apiEndpoint?: string | null; // The API endpoint to fetch data from (optional)
-    payload?: object | null; // The payload for the API request (optional)
-    render: (data: any) => JSX.Element; // A render function to define how the widget displays its data
-    updateInterval?: number; // How often to update the data (default: 30 seconds)
-    title: string; // The widget title
+    title?: string;
+    endpoint?: string;
+    payload?: object;
+    refreshInterval?: number;
+    children: (data: any, loading: boolean, error?: string) => React.ReactNode;
 }
 
 export default function Widget({
-    apiEndpoint,
-    payload,
-    render,
-    updateInterval = 30000,
     title,
+    endpoint,
+    payload,
+    refreshInterval = 30000,
+    children
 }: WidgetProps) {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(!!endpoint);
     const [error, setError] = useState<string | null>(null);
-    const [fetchTrigger, setFetchTrigger] = useState<number>(0); // Used to reset the timer
-    const [retryTime, setRetryTime] = useState<number | null>(null);
-    const retryIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [fetchTrigger, setFetchTrigger] = useState<number>(0);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const fetchData = async () => {
+        if (!endpoint) return;
+
+        // Cancel previous request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
+                method: payload ? "POST" : "GET",
+                headers: { "Content-Type": "application/json" },
+                body: payload ? JSON.stringify(payload) : undefined,
+                signal: abortControllerRef.current.signal,
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || "API request failed");
+            }
+
+            setData(result.data);
+            setError(null);
+        } catch (err: any) {
+            if (err.name !== "AbortError") {
+                setError(err.message);
+                console.error(`Widget fetch error:`, err);
+            }
+        } finally {
+            setLoading(false);
+            setFetchTrigger((prev) => prev + 1); // Trigger timer reset
+        }
+    };
 
     useEffect(() => {
-        if (!apiEndpoint) {
-            // Skip fetching if apiEndpoint is null or undefined
-            setLoading(false);
-            return;
+        fetchData();
+
+        if (refreshInterval && endpoint) {
+            intervalRef.current = setInterval(fetchData, refreshInterval);
         }
 
-        const controller = new AbortController();
-
-        async function fetchData(retries = 3, delay = 2000) {
-            try {
-                if (updateInterval && intervalRef.current) {
-                    clearInterval(intervalRef.current as NodeJS.Timeout); // Pause normal updates
-                    intervalRef.current = null;
-                }
-
-                const response = await fetch(apiEndpoint as string, {
-                    method: payload ? "POST" : "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: payload ? JSON.stringify(payload) : undefined,
-                    signal: controller.signal, // Attach the abort signal to the fetch request.
-                });
-
-                if (!response.ok) {
-                    console.error(`Error fetching data for module ${title}:`, response.statusText);
-                }
-
-                const result = await response.json();
-
-                // If the API signals an error, throw an error to trigger retry logic.
-                if (!result.success) {
-                    throw new Error(result.error);
-                }
-
-                setData(result.data);
-                setError(null); // Clear previous errors
-                setRetryTime(null); // Reset retry time
-
-                // Resume normal interval after successful fetch
-                if (retryTimeoutRef.current) {
-                    clearTimeout(retryTimeoutRef.current);
-                    retryTimeoutRef.current = null;
-                }
-                if (!intervalRef.current && updateInterval) {
-                    intervalRef.current = setInterval(() => fetchData(), updateInterval);
-                }
-
-                console.log(`Module ${title} fetched data:`, result.data);
-            } catch (err: any) {
-                // Only log errors that are not due to the fetch being aborted.
-                if (err.name !== "AbortError") {
-                    console.error(`Error fetching data for module ${title}:`, err);
-                    setError(err.message);
-
-                    let nextDelay = Math.min(delay * 2, 60000); // Cap at 60 seconds
-                    setRetryTime(nextDelay / 1000);
-
-                    if (retryIntervalRef.current) {
-                        clearInterval(retryIntervalRef.current);
-                    }
-
-                    retryIntervalRef.current = setInterval(() => {
-                        setRetryTime((prev) => {
-                            if (prev === null || prev <= 1) {
-                                clearInterval(retryIntervalRef.current!);
-                                retryIntervalRef.current = null;
-                                return null;
-                            }
-                            return prev - 1;
-                        });
-                    }, 1000);
-
-                    if (retryTimeoutRef.current) {
-                        clearTimeout(retryTimeoutRef.current);
-                    }
-
-                    retryTimeoutRef.current = setTimeout(() => {
-                        if (retryIntervalRef.current) {
-                            clearInterval(retryIntervalRef.current);
-                            retryIntervalRef.current = null;
-                        }
-                        fetchData(retries > 0 ? retries - 1 : retries, nextDelay);
-                    }, nextDelay);
-                }
-            } finally {
-                setLoading(false);
-                setFetchTrigger((prev) => prev + 1); // Trigger timer reset.
-            }
-        }
-
-        fetchData(); // Initial fetch
-
-        if (updateInterval) {
-            intervalRef.current = setInterval(() => fetchData(), updateInterval);
-        }
-
-        // Cleanup: clear the interval and abort any ongoing fetch.
         return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-            if (retryIntervalRef.current) {
-                clearInterval(retryIntervalRef.current);
-            }
-            if (retryTimeoutRef.current) {
-                clearTimeout(retryTimeoutRef.current);
-            }
-            controller.abort();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (abortControllerRef.current) abortControllerRef.current.abort();
         };
-    }, [apiEndpoint, payload, updateInterval]);
+    }, [endpoint, refreshInterval]);
 
-    if (loading)
-        return (
-            <div>
-                <h2 className="widget-header">{title}</h2>
-                <div className="widget-content">
-                    <div className="loader-container">
-                        <PropogateLoader className="loader" color="white" />
-                    </div>
-                </div>
-            </div>
-        );
-
-    if (error)
-        return (
-            <div className="widget">
-                <h2 className="widget-header">{title}</h2>
-                <div className="widget-content">
-                    <div className="widget-error-container text-[1rem] flex flex-col items-center justify-center">
-                        <MdError size={48} />
-                        <p className="font-[consolas] bg-black p-2 rounded-md m-2 text-center">{error}</p>
-                        {retryTime !== null && <p className="text-[1rem]">Retrying in {retryTime} seconds...</p>}
-                    </div>
-                </div>
-            </div>
-        );
+    const handleRetry = () => {
+        setLoading(true);
+        setError(null);
+        fetchData();
+    };
 
     return (
         <div className="widget">
-            <h2 className="widget-header">{title}</h2>
+            {title && (
+                <div className="widget-header">
+                    <h2>{title}</h2>
+                    {error && (
+                        <button onClick={handleRetry} className="retry-button">
+                            <MdRefresh size={16} />
+                        </button>
+                    )}
+                </div>
+            )}
             <div className="widget-content">
-                {render(data)}
-                {apiEndpoint && ( // Conditionally render the countdown timer only if apiEndpoint is truthy.
+                {error ? (
+                    <div className="widget-error-container text-[1rem] flex flex-col items-center justify-center">
+                        <MdError size={48} />
+                        <p className="font-[consolas] bg-black p-2 rounded-md m-2 text-center">{error}</p>
+                    </div>
+                ) : loading ? (
+                    <div className="loader-container">
+                        <PropogateLoader className="loader" color="white" />
+                    </div>
+                ) : (
+                    children(data, loading, error)
+                )}
+
+                {/* Countdown timer for widgets with refresh intervals */}
+                {endpoint && refreshInterval && (
                     <div className="timer-container absolute">
                         <CountdownCircleTimer
-                            key={fetchTrigger} // Reset the timer when fetchTrigger changes.
+                            key={fetchTrigger} // Reset the timer when fetchTrigger changes
                             isPlaying
-                            duration={updateInterval / 1000}
+                            duration={refreshInterval / 1000}
                             colors={["#000", "#000", "#000", "#000"]}
-                            colorsTime={[updateInterval / 1000, updateInterval / 2000, 0, 0]}
+                            colorsTime={[refreshInterval / 1000, refreshInterval / 2000, 0, 0]}
                             strokeWidth={25}
                         >
                             {({ remainingTime }) => ""}
