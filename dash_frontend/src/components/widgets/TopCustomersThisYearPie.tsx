@@ -11,23 +11,22 @@ import {
     ChartContainer,
     ChartTooltip,
     ChartTooltipContent,
-    ChartLegend,
 } from "@/components/ui/chart";
 import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
-
+import { PieChartLegend } from "./PieChartLegend";
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
 const CHART_COLORS = [
-    "var(--chart-1)",
-    "var(--chart-2)",
-    "var(--chart-3)",
-    "var(--chart-4)",
-    "var(--chart-5)",
-    "var(--chart-6)",
-    "var(--chart-other)",
+    "#4CAF50", // Green
+    "#2196F3", // Blue
+    "#FFC107", // Amber
+    "#FF5722", // Deep Orange
+    "#9C27B0", // Purple
+    "#E91E63", // Pink
+    "#78909C", // Blue Grey (Other)
 ];
 
 // Map a business name to its parent company using the config mapping.
@@ -95,112 +94,254 @@ const processCustomerData = (data: CustomerData[]): CustomerData[] => {
     }));
 };
 
-// Custom hook to determine the container's orientation.
-function useContainerOrientation(
-    ref: React.RefObject<HTMLElement | null>
-): "portrait" | "landscape" {
-    const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
+// Hook to track container dimensions
+function useContainerDimensions(ref: React.RefObject<HTMLElement | null>) {
+    const [dimensions, setDimensions] = useState({
+        width: 0,
+        height: 0,
+    });
 
     useEffect(() => {
         if (!ref.current) return;
 
-        const updateOrientation = () => {
+        const updateDimensions = () => {
             const { width, height } = ref.current!.getBoundingClientRect();
-            setOrientation(width / 1.1 > height ? "landscape" : "portrait");
+            setDimensions({ width, height });
         };
 
-        updateOrientation();
-
-        const resizeObserver = new ResizeObserver(updateOrientation);
+        updateDimensions();
+        const resizeObserver = new ResizeObserver(updateDimensions);
         resizeObserver.observe(ref.current);
 
-        return () => {
-            resizeObserver.disconnect();
-        };
+        return () => resizeObserver.disconnect();
     }, [ref]);
 
-    return orientation;
+    return dimensions;
 }
 
-// Custom label component for the Pie chart.
-const CustomLabel = (props: any) => {
-    const { cx, cy, midAngle, outerRadius, value, fill } = props;
-    const RADIAN = Math.PI / 180;
-    const offset = 30;
-    const x = cx + (outerRadius + offset) * Math.cos(-midAngle * RADIAN);
-    const y = cy + (outerRadius + offset) * Math.sin(-midAngle * RADIAN);
-    const epsilon = 10;
-    const textAnchor = Math.abs(x - cx) < epsilon ? "middle" : x > cx ? "start" : "end";
+// Intelligent layout calculator
+function calculateOptimalLayout(width: number, height: number, itemCount: number) {
+    const aspectRatio = width / height;
+    
+    // Calculate space requirements for each layout option
+    const minPieSize = 180; // Minimum acceptable pie diameter
+    
+    // Option 1: Legend on right (vertical)
+    const rightLegendWidth = 200; // Fixed width for vertical legend
+    const rightLayoutPieSpace = width - rightLegendWidth - 32; // 32px for gaps/padding
+    const rightLayoutPieHeight = height - 16;
+    const rightLayoutPieSize = Math.min(rightLayoutPieSpace, rightLayoutPieHeight);
+    const rightLayoutScore = rightLayoutPieSize >= minPieSize ? rightLayoutPieSize : 0;
+    
+    // Option 2: Legend on bottom (horizontal)
+    const bottomLegendHeight = 100; // Fixed height for horizontal wrapped legend
+    const bottomLayoutPieWidth = width - 16;
+    const bottomLayoutPieSpace = height - bottomLegendHeight - 32; // 32px for gaps/padding
+    const bottomLayoutPieSize = Math.min(bottomLayoutPieSpace, bottomLayoutPieWidth);
+    const bottomLayoutScore = bottomLayoutPieSize >= minPieSize ? bottomLayoutPieSize : 0;
+    
+    // Choose layout with largest pie size
+    if (rightLayoutScore > bottomLayoutScore && aspectRatio > 1.2 && width > 500) {
+        return {
+            position: "right" as const,
+            legendSize: rightLegendWidth,
+            pieSize: rightLayoutPieSize,
+        };
+    } else {
+        return {
+            position: "bottom" as const,
+            legendSize: bottomLegendHeight,
+            pieSize: bottomLayoutPieSize,
+        };
+    }
+}
 
-    return (
-        <text
-            x={x}
-            y={y}
-            fill={fill}
-            fontSize="20"
-            textAnchor={textAnchor}
-            dominantBaseline="middle"
-        >
-            ${nFormatter(value, 1)}
-        </text>
-    );
-};
+interface ProcessedCustomerData {
+    name: string;
+    value: number;
+    color: string;
+    percent: number;
+}
 
 interface CustomerPieChartProps {
     data: CustomerData[];
 }
 
-// Component that renders the Pie chart.
+// Main chart component with intelligent layout
 const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const orientation = useContainerOrientation(containerRef);
+    const { width, height } = useContainerDimensions(containerRef);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-    const processedData = useMemo(() =>
-        processCustomerData(data).map((item) => ({
+    const processedData = useMemo(() => {
+        const transformed = processCustomerData(data).map((item) => ({
             name: item.businessName,
             value: item.totalSales,
             color: item.color,
-        })),
-        [data]
+            percent: 0,
+        }));
+
+        const total = transformed.reduce((sum, item) => sum + item.value, 0);
+        return transformed.map((item) => ({
+            ...item,
+            percent: (item.value / total) * 100,
+        }));
+    }, [data]);
+
+    // Calculate optimal layout
+    const layout = useMemo(
+        () => calculateOptimalLayout(width, height, processedData.length),
+        [width, height, processedData.length]
     );
 
     if (!processedData.length) {
         return <div>No data available for chart</div>;
     }
 
-    const legendProps: {
-        align: "center" | "right";
-        layout: "horizontal" | "vertical";
-        verticalAlign: "bottom" | "middle";
-    } =
-        orientation === "portrait"
-            ? { align: "center", layout: "horizontal", verticalAlign: "bottom" }
-            : { align: "right", layout: "vertical", verticalAlign: "middle" };
+    const onPieEnter = (_: any, index: number) => {
+        setActiveIndex(index);
+    };
+
+    const onPieLeave = () => {
+        setActiveIndex(null);
+    };
+
+    const handleLegendClick = (index: number) => {
+        setActiveIndex(activeIndex === index ? null : index);
+    };
+
+    const isRightLayout = layout.position === "right";
+    
+    // Calculate pie radius based on available space
+    const pieRadius = layout.pieSize > 350 ? "75%" : layout.pieSize > 250 ? "72%" : "68%";
 
     return (
-        <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-            <ResponsiveContainer width="100%" height="100%">
-                <ChartContainer config={{}} className="font-bold customer-pie">
-                    <PieChart>
-                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                        <Pie
-                            data={processedData}
-                            dataKey="totalSales"
-                            nameKey="businessName"
-                            innerRadius="35%"
-                            outerRadius="55%"
-                            paddingAngle={8}
-                            label={<CustomLabel />}
-                            isAnimationActive={false}
-                        >
-                            {processedData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Pie>
-                        <ChartLegend {...legendProps} />
-                    </PieChart>
-                </ChartContainer>
-            </ResponsiveContainer>
+        <div
+            ref={containerRef}
+            style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: isRightLayout ? "row" : "column",
+                gap: "1rem",
+                padding: "0.5rem",
+            }}
+        >
+            {/* Pie Chart Container */}
+            <div
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                }}
+            >
+                <ResponsiveContainer width="100%" height="100%">
+                    <ChartContainer config={{}} className="font-bold customer-pie">
+                        <PieChart>
+                            <ChartTooltip
+                                animationDuration={0}
+                                isAnimationActive={false}
+                                content={({ active, payload }) => {
+                                    if (!active || !payload || !payload.length) return null;
+                                    const data = payload[0].payload;
+                                    return (
+                                        <div
+                                            style={{
+                                                backgroundColor: "rgba(22, 30, 40, 0.96)",
+                                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                                borderRadius: "0.5rem",
+                                                padding: "0.875rem",
+                                                backdropFilter: "blur(12px)",
+                                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                                            }}
+                                        >
+                                            <div style={{ 
+                                                fontWeight: 700, 
+                                                marginBottom: "0.375rem",
+                                                fontSize: "0.9375rem",
+                                                color: "rgba(255, 255, 255, 0.95)",
+                                            }}>
+                                                {data.name}
+                                            </div>
+                                            <div style={{ 
+                                                color: "rgba(255, 255, 255, 0.85)", 
+                                                fontSize: "1rem",
+                                                fontWeight: 600,
+                                                marginBottom: "0.25rem",
+                                            }}>
+                                                ${nFormatter(data.value, 2)}
+                                            </div>
+                                            <div
+                                                style={{
+                                                    color: "rgba(255, 255, 255, 0.6)",
+                                                    fontSize: "0.8125rem",
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                {data.percent.toFixed(1)}% of total sales
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            />
+                            <Pie
+                                data={processedData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius="42%"
+                                outerRadius={pieRadius}
+                                paddingAngle={1}
+                                dataKey="value"
+                                onMouseEnter={onPieEnter}
+                                onMouseLeave={onPieLeave}
+                                isAnimationActive={false}
+                            >
+                                {processedData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.color}
+                                        opacity={
+                                            activeIndex === null || activeIndex === index ? 1 : 0.3
+                                        }
+                                        style={{
+                                            filter:
+                                                activeIndex === index
+                                                    ? "brightness(1.15) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))"
+                                                    : "none",
+                                            transition: "opacity 0.2s ease, filter 0.2s ease",
+                                            cursor: "pointer",
+                                            stroke: "var(--background-light)",
+                                            strokeWidth: 2,
+                                        }}
+                                    />
+                                ))}
+                            </Pie>
+                        </PieChart>
+                    </ChartContainer>
+                </ResponsiveContainer>
+            </div>
+
+            {/* Legend Container */}
+            <div
+                style={{
+                    width: isRightLayout ? `${layout.legendSize}px` : "100%",
+                    height: isRightLayout ? "100%" : `${layout.legendSize}px`,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: isRightLayout ? "stretch" : "center",
+                    minHeight: 0,
+                }}
+            >
+                <PieChartLegend
+                    data={processedData}
+                    activeIndex={activeIndex}
+                    onItemClick={handleLegendClick}
+                    position={layout.position}
+                />
+            </div>
         </div>
     );
 };
