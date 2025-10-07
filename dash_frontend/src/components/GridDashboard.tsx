@@ -261,7 +261,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 }
             };
 
-                        // Load the initial layout using GridStack's built‑in load method.
+            // Load the initial layout using GridStack's built‑in load method.
             gridInstance.current.load(layout);
 
             // Listen to layout changes – on any change, grab the new state
