@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState, useCallback } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
+import { playNotificationSound } from "@/utils/soundUtils";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -153,6 +154,7 @@ interface TableRowData {
     lastOrderUnitPrice: string;
     qtyOrdered: string;
     qtyRecvd: string;
+    itemNo: string; // Add unique identifier
 }
 
 /**
@@ -214,14 +216,19 @@ function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
                 item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
                     ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
                     : "-",
+            itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
         };
     });
 }
 
 /* -------------------------------------- */
-/* DailyDueInTable Component              */
+/* DailyDueInHiddenVendTable Component    */
 /* -------------------------------------- */
-export default function DailyDueInTable() {
+export default function DailyDueInHiddenVendTable() {
+    // Track previous order statuses to detect changes
+    const previousStatusesRef = useRef<Map<string, string>>(new Map());
+    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+
     // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
@@ -254,91 +261,118 @@ export default function DailyDueInTable() {
         []
     );
 
-    return (
-        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
-            <Widget
-                endpoint="/api/widgets"
-                payload={widgetPayload}
-                title="Daily Due In (Maintenance Only)"
-                refreshInterval={15000}
-            >
-                {(data: POItemData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading purchase orders...</div>;
-                    }
+    // Process and transform data for the table.
+    const renderFunction = useCallback((data: POItemData[]) => {
+        let processedData = deduplicateData(data);
+        processedData = computePreviousOrderDetails(processedData);
+        const recentOrders = filterRecentOrders(processedData);
+        let mergedData = removeHiddenVendors(recentOrders);
+        mergedData = sortOrders(mergedData);
 
-                    if (!data || data.length === 0) {
-                        return <div className="widget-empty">No purchase orders found</div>;
-                    }
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tableData = mapToTableData(mergedData, timeZone);
 
-                    // Process and transform data for the table
-                    let processedData = deduplicateData(data);
-                    processedData = computePreviousOrderDetails(processedData);
-                    const recentOrders = filterRecentOrders(processedData);
-                    let mergedData = removeHiddenVendors(recentOrders);
-                    mergedData = sortOrders(mergedData);
+        // Check for status changes to "V" (status code "14")
+        const newStatusVSet = new Set<string>();
+        tableData.forEach((row) => {
+            const itemKey = row.itemNo;
+            const currentStatus = row.poStatus;
+            const previousStatus = previousStatusesRef.current.get(itemKey);
 
-                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    const tableData = mapToTableData(mergedData, timeZone);
+            // If status changed to "14" (V) and wasn't "14" before
+            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+                newStatusVSet.add(itemKey);
+            }
 
-                    return (
-                        <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
-                            <Table
-                                className="text-left text-white outstanding-orders-table text-[.95rem]"
-                                wrapperClassName="overflow-clip"
-                            >
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>PO Number</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Vendor</TableHead>
-                                        <TableHead>Part Code</TableHead>
-                                        <TableHead className="text-right">Qty Ordered</TableHead>
-                                        <TableHead className="text-right">Qty Received</TableHead>
-                                        <TableHead className="text-right">Date Ordered</TableHead>
-                                        <TableHead className="text-right">Prev. Order</TableHead>
-                                        <TableHead className="text-right">Unit Price</TableHead>
-                                        <TableHead className="text-right">Prev. Price</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {tableData.map((row, index) => (
-                                        <TableRow
-                                            key={index}
-                                            className={`
+            // Update the status tracking
+            previousStatusesRef.current.set(itemKey, currentStatus);
+        });
+
+        // Update the state with new status V rows and play sound once
+        if (newStatusVSet.size > 0) {
+            playNotificationSound(); // Play once for all status changes
+            setNewStatusVRows(newStatusVSet);
+
+            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
+            setTimeout(() => {
+                setNewStatusVRows(new Set());
+            }, 4000);
+        }
+
+        return (
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                <Table className="text-left text-white outstanding-orders-table">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>PO Number</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Vendor</TableHead>
+                            <TableHead>Part Code</TableHead>
+                            <TableHead className="text-right">Qty Ordered</TableHead>
+                            <TableHead className="text-right">Qty Received</TableHead>
+                            <TableHead className="text-right">Date Ordered</TableHead>
+                            <TableHead className="text-right">Prev. Order</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Prev. Price</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {tableData.map((row, index) => (
+                            <TableRow
+                                key={row.itemNo}
+                                className={`
                               ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
                               ${row.isGrouped ? "grouped-po" : ""}
                               ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
+                              ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
                             `}
-                                        >
-                                            <TableCell className="font-black">{row.poNumber}</TableCell>
-                                            <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
-                                            <TableCell>{row.vendName}</TableCell>
-                                            <TableCell>{row.partCode}</TableCell>
-                                            <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                            <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                            <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                            <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                            <TableCell className="text-right row-secondary">
-                                                <div className="table-dollars">
-                                                    <span className="dollar-sign">$</span>
-                                                    <span className="dollar-value">{row.recentUnitPrice}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right row-secondary">
-                                                <div className="table-dollars">
-                                                    <span className="dollar-sign">$</span>
-                                                    <span className="dollar-value">{row.lastOrderUnitPrice}</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
-                    );
-                }}
-            </Widget>
-        </div>
+                            >
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
+                                <TableCell>{row.vendName}</TableCell>
+                                <TableCell>{row.partCode}</TableCell>
+                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
+                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary">
+                                    <div className="table-dollars">
+                                        <span className="dollar-sign">$</span>
+                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </ScrollArea>
+        );
+    }, [newStatusVRows]);
+
+    return (
+        <Widget
+            endpoint="/api/widgets"
+            payload={widgetPayload}
+            title="Daily Due In (Maintenance Only)"
+            refreshInterval={15000}
+        >
+            {(data, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading purchase orders...</div>;
+                }
+
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No purchase orders found</div>;
+                }
+
+                return renderFunction(data);
+            }}
+        </Widget>
     );
 }

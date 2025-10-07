@@ -4,15 +4,13 @@ import { cn } from "@/lib/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement> & { wrapperClassName?: string }
->(({ className, wrapperClassName, ...props }, ref) => (
-  <div className={cn('relative w-full overflow-auto', wrapperClassName)}>
-    <table
-      ref={ref}
-      className={cn('w-full caption-bottom text-sm', className)}
-      {...props}
-    />
-  </div>
+  React.HTMLAttributes<HTMLTableElement>
+>(({ className, ...props }, ref) => (
+  <table
+    ref={ref}
+    className={cn('w-full caption-bottom text-sm', className)}
+    {...props}
+  />
 ))
 Table.displayName = 'Table'
 
@@ -22,8 +20,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    // Manually added sticky top-0 to fix header not sticking to top of table
-    className={cn("sticky top-0 bg-secondary [&_tr]:border-b", className)}
+    className={cn("sticky top-0 z-10 [&_tr]:border-b", className)}
     {...props}
   />
 ));

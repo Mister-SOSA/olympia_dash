@@ -84,6 +84,22 @@ export default function Widget({
 
     return (
         <div className="widget">
+            {/* Countdown timer for widgets with refresh intervals */}
+            {endpoint && refreshInterval && (
+                <div className="timer-container">
+                    <CountdownCircleTimer
+                        key={fetchTrigger} // Reset the timer when fetchTrigger changes
+                        isPlaying
+                        duration={refreshInterval / 1000}
+                        colors={["#000", "#000", "#000", "#000"]}
+                        colorsTime={[refreshInterval / 1000, refreshInterval / 2000, 0, 0]}
+                        strokeWidth={25}
+                    >
+                        {({ remainingTime }) => ""}
+                    </CountdownCircleTimer>
+                </div>
+            )}
+
             {title && (
                 <div className="widget-header">
                     <h2>{title}</h2>
@@ -105,22 +121,8 @@ export default function Widget({
                         <PropogateLoader className="loader" color="white" />
                     </div>
                 ) : (
-                    children(data, loading, error)
-                )}
-
-                {/* Countdown timer for widgets with refresh intervals */}
-                {endpoint && refreshInterval && (
-                    <div className="timer-container absolute">
-                        <CountdownCircleTimer
-                            key={fetchTrigger} // Reset the timer when fetchTrigger changes
-                            isPlaying
-                            duration={refreshInterval / 1000}
-                            colors={["#000", "#000", "#000", "#000"]}
-                            colorsTime={[refreshInterval / 1000, refreshInterval / 2000, 0, 0]}
-                            strokeWidth={25}
-                        >
-                            {({ remainingTime }) => ""}
-                        </CountdownCircleTimer>
+                    <div className="widget-data-container">
+                        {children(data, loading, error ?? undefined)}
                     </div>
                 )}
             </div>

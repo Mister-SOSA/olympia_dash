@@ -1,10 +1,11 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useRef, useState } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { playNotificationSound } from "@/utils/soundUtils";
 
 
 /* -------------------------------------- */
@@ -38,6 +39,10 @@ const adjustDateByOneDay = (dateStr?: string): Date | null =>
 /* OutstandingOrdersTable Component       */
 /* -------------------------------------- */
 export default function OutstandingOrdersTable() {
+    // Track previous order statuses to detect changes
+    const previousStatusesRef = useRef<Map<string, string>>(new Map());
+    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+
     // Memoize hidden vendor codes string for query filtering.
     const hiddenVendorCodes = useMemo(
         () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map(code => `'${code}'`).join(", "),
@@ -111,7 +116,8 @@ export default function OutstandingOrdersTable() {
                 date_prom_user,
                 part_type,
                 qty_ord,
-                uom
+                uom,
+                item_no
             FROM
                 FilteredOrders
             WHERE
@@ -133,6 +139,7 @@ export default function OutstandingOrdersTable() {
             ro.part_type,
             ro.qty_ord,
             ro.uom,
+            ro.item_no,
             lo.last_order_date,
             lo.last_order_unit_price
         FROM
@@ -196,8 +203,36 @@ export default function OutstandingOrdersTable() {
                     : "N/A",
                 overdueDays,
                 isGrouped: false, // Outstanding orders don't use grouping, default to false.
+                itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
             };
         });
+
+        // Check for status changes to "V" (status code "14")
+        const newStatusVSet = new Set<string>();
+        tableData.forEach((row) => {
+            const itemKey = row.itemNo;
+            const currentStatus = row.poStatus;
+            const previousStatus = previousStatusesRef.current.get(itemKey);
+
+            // If status changed to "14" (V) and wasn't "14" before
+            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+                newStatusVSet.add(itemKey);
+            }
+
+            // Update the status tracking
+            previousStatusesRef.current.set(itemKey, currentStatus);
+        });
+
+        // Update the state with new status V rows and play sound once
+        if (newStatusVSet.size > 0) {
+            playNotificationSound(); // Play once for all status changes
+            setNewStatusVRows(newStatusVSet);
+
+            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
+            setTimeout(() => {
+                setNewStatusVRows(new Set());
+            }, 4000);
+        }
 
         // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
         tableData.sort((a, b) => {
@@ -210,8 +245,8 @@ export default function OutstandingOrdersTable() {
 
         // Render the table within a scrollable container.
         return (
-            <ScrollArea className="h-[calc(100%-2.75rem)] rounded-md border mt-6">
-                <Table className="text-left text-white outstanding-orders-table text-[.95rem]" wrapperClassName="overflow-clip">
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                <Table className="text-left text-white outstanding-orders-table">
                     <TableHeader>
                         <TableRow>
                             <TableHead>PO Number</TableHead>
@@ -229,11 +264,12 @@ export default function OutstandingOrdersTable() {
                     <TableBody>
                         {tableData.map((row, index) => (
                             <TableRow
-                                key={index}
+                                key={row.itemNo}
                                 className={`
                   ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
                   ${row.isGrouped ? "grouped-po" : ""} 
                   ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
+                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
                 `}
                             >
                                 <TableCell className="font-black">{row.poNumber}</TableCell>
@@ -265,28 +301,26 @@ export default function OutstandingOrdersTable() {
                 </Table>
             </ScrollArea>
         );
-    }, []);
+    }, [newStatusVRows]);
 
     return (
-        <div style={{ height: "100%", width: "100%" }} className="overflow-hidden">
-            <Widget
-                endpoint="/api/widgets"
-                payload={widgetPayload}
-                title="Outstanding Due In"
-                refreshInterval={30000}
-            >
-                {(data, loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading orders...</div>;
-                    }
+        <Widget
+            endpoint="/api/widgets"
+            payload={widgetPayload}
+            title="Outstanding Due In"
+            refreshInterval={30000}
+        >
+            {(data, loading) => {
+                if (loading) {
+                    return <div className="widget-loading">Loading orders...</div>;
+                }
 
-                    if (!data || data.length === 0) {
-                        return <div className="widget-empty">No orders found</div>;
-                    }
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No orders found</div>;
+                }
 
-                    return renderFunction(data);
-                }}
-            </Widget>
-        </div>
+                return renderFunction(data);
+            }}
+        </Widget>
     );
 }
