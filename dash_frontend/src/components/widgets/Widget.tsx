@@ -105,7 +105,7 @@ export default function Widget({
                         <PropogateLoader className="loader" color="white" />
                     </div>
                 ) : (
-                    children(data, loading, error)
+                    children(data, loading, error ?? undefined)
                 )}
 
                 {/* Countdown timer for widgets with refresh intervals */}
