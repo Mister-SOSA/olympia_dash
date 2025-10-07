@@ -122,24 +122,24 @@ function useContainerDimensions(ref: React.RefObject<HTMLElement | null>) {
 // Intelligent layout calculator
 function calculateOptimalLayout(width: number, height: number, itemCount: number) {
     const aspectRatio = width / height;
-    
+
     // Calculate space requirements for each layout option
     const minPieSize = 180; // Minimum acceptable pie diameter
-    
+
     // Option 1: Legend on right (vertical)
     const rightLegendWidth = 200; // Fixed width for vertical legend
     const rightLayoutPieSpace = width - rightLegendWidth - 32; // 32px for gaps/padding
     const rightLayoutPieHeight = height - 16;
     const rightLayoutPieSize = Math.min(rightLayoutPieSpace, rightLayoutPieHeight);
     const rightLayoutScore = rightLayoutPieSize >= minPieSize ? rightLayoutPieSize : 0;
-    
+
     // Option 2: Legend on bottom (horizontal)
     const bottomLegendHeight = 100; // Fixed height for horizontal wrapped legend
     const bottomLayoutPieWidth = width - 16;
     const bottomLayoutPieSpace = height - bottomLegendHeight - 32; // 32px for gaps/padding
     const bottomLayoutPieSize = Math.min(bottomLayoutPieSpace, bottomLayoutPieWidth);
     const bottomLayoutScore = bottomLayoutPieSize >= minPieSize ? bottomLayoutPieSize : 0;
-    
+
     // Choose layout with largest pie size
     if (rightLayoutScore > bottomLayoutScore && aspectRatio > 1.2 && width > 500) {
         return {
@@ -211,7 +211,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
     };
 
     const isRightLayout = layout.position === "right";
-    
+
     // Calculate pie radius based on available space
     const pieRadius = layout.pieSize > 350 ? "75%" : layout.pieSize > 250 ? "72%" : "68%";
 
@@ -258,16 +258,16 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
                                             }}
                                         >
-                                            <div style={{ 
-                                                fontWeight: 700, 
+                                            <div style={{
+                                                fontWeight: 700,
                                                 marginBottom: "0.375rem",
                                                 fontSize: "0.9375rem",
                                                 color: "rgba(255, 255, 255, 0.95)",
                                             }}>
                                                 {data.name}
                                             </div>
-                                            <div style={{ 
-                                                color: "rgba(255, 255, 255, 0.85)", 
+                                            <div style={{
+                                                color: "rgba(255, 255, 255, 0.85)",
                                                 fontSize: "1rem",
                                                 fontWeight: 600,
                                                 marginBottom: "0.25rem",

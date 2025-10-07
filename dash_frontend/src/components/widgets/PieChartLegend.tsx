@@ -78,7 +78,7 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
                             borderRadius: "0.1875rem",
                             backgroundColor: entry.color,
                             flexShrink: 0,
-                            boxShadow: activeIndex === index 
+                            boxShadow: activeIndex === index
                                 ? `0 0 0 2px ${entry.color}40`
                                 : "none",
                             transition: "box-shadow 0.2s ease",
