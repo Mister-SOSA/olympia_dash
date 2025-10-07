@@ -42,6 +42,7 @@ export default function PresetMenu({
 }: PresetMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
     const contextMenuRef = useRef<HTMLDivElement>(null);
+    const saveModalRef = useRef<HTMLDivElement>(null);
     const [activePreview, setActivePreview] = useState<number | null>(null);
     const [contextMenu, setContextMenu] = useState<{ index: number; x: number; y: number } | null>(null);
     const [copySource, setCopySource] = useState<number | null>(null);
@@ -63,8 +64,9 @@ export default function PresetMenu({
             const target = event.target as Node;
             const clickedInsideMenu = menuRef.current?.contains(target);
             const clickedInsideContextMenu = contextMenuRef.current?.contains(target);
+            const clickedInsideSaveModal = saveModalRef.current?.contains(target);
 
-            if (!clickedInsideMenu && !clickedInsideContextMenu) {
+            if (!clickedInsideMenu && !clickedInsideContextMenu && !clickedInsideSaveModal) {
                 setPresetsOpen(false);
                 setContextMenu(null);
                 setCopySource(null);
@@ -530,6 +532,7 @@ export default function PresetMenu({
                                 onClick={() => setSaveModalOpen(false)}
                             >
                                 <motion.div
+                                    ref={saveModalRef}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
@@ -549,8 +552,8 @@ export default function PresetMenu({
                                         <button
                                             onClick={() => setSelectedPresetType("grid")}
                                             className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPresetType === "grid"
-                                                    ? "border-blue-500 bg-blue-500/20"
-                                                    : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
+                                                ? "border-blue-500 bg-blue-500/20"
+                                                : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
                                                 }`}
                                         >
                                             <div className="flex items-center gap-4">
@@ -571,8 +574,8 @@ export default function PresetMenu({
                                         <button
                                             onClick={() => setSelectedPresetType("fullscreen")}
                                             className={`w-full p-4 rounded-xl border-2 transition-all ${selectedPresetType === "fullscreen"
-                                                    ? "border-purple-500 bg-purple-500/20"
-                                                    : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
+                                                ? "border-purple-500 bg-purple-500/20"
+                                                : "border-gray-700 bg-gray-800/30 hover:border-gray-600"
                                                 }`}
                                         >
                                             <div className="flex items-center gap-4">
