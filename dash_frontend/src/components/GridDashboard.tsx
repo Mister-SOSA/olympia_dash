@@ -5,7 +5,7 @@ import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
-import { COLUMN_COUNT, CELL_HEIGHT, MIN_CELL_SIZE } from "@/constants/dashboard";
+import { COLUMN_COUNT, CELL_HEIGHT } from "@/constants/dashboard";
 import { saveLayoutToStorage } from "@/utils/layoutUtils";
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
@@ -211,13 +211,19 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             if (!gridRef.current) return;
             if (gridInstance.current) return; // Prevent reinitialization
 
-            // Initialize GridStack with production-friendly options.
+            // Calculate initial cell height to make square cells
+            const calculateCellHeight = () => {
+                if (!gridRef.current) return CELL_HEIGHT;
+                const containerWidth = gridRef.current.clientWidth;
+                return containerWidth / COLUMN_COUNT;
+            };
+
+            // Initialize GridStack with square cells
             gridInstance.current = GridStack.init(
                 {
-                    cellHeight: CELL_HEIGHT,
+                    cellHeight: calculateCellHeight(),
                     column: COLUMN_COUNT,
                     float: false,
-                    // Other production options can be added here
                 },
                 gridRef.current
             );
@@ -255,13 +261,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 }
             };
 
-            // Load the initial layout using GridStack’s built‑in load method.
+                        // Load the initial layout using GridStack's built‑in load method.
             gridInstance.current.load(layout);
-
-            // After initial load, compute dynamic square cell sizing
-            requestAnimationFrame(() => {
-                recomputeCellSize();
-            });
 
             // Listen to layout changes – on any change, grab the new state
             // and propagate it to the parent and local storage.
@@ -278,8 +279,6 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 }));
                 if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
                 saveLayoutToStorage(updatedLayout);
-                // Recompute sizing after structural change
-                requestAnimationFrame(() => recomputeCellSize());
             });
 
             return () => {
@@ -291,75 +290,29 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             };
         }, []);
 
-        // Helper: recompute cell dimensions with production constraints
-        const recomputeCellSize = () => {
-            if (!gridRef.current || !gridInstance.current) return;
-
-            const container = gridRef.current;
-            const rect = container.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const topOffset = rect.top;
-            const availableHeight = viewportHeight - topOffset - 8; // small bottom padding
-
-            // Collect nodes
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nodes: any[] = (gridInstance.current as any).engine?.nodes || (gridInstance.current.save() as GridStackNode[]);
-            let maxRow = 0;
-            nodes.forEach(n => {
-                const bottom = (n.y || 0) + (n.h || 0);
-                if (bottom > maxRow) maxRow = bottom;
-            });
-            if (maxRow === 0) maxRow = 1;
-
-            const colWidth = container.clientWidth / COLUMN_COUNT;
-            const sizeToFillHeight = availableHeight / maxRow;
-            let cellSize = Math.min(colWidth, sizeToFillHeight);
-
-            // Enforce minimum cell size; if violated, allow vertical scroll instead of shrinking further
-            const scrollMode = cellSize < MIN_CELL_SIZE;
-            if (scrollMode) {
-                cellSize = Math.max(colWidth, MIN_CELL_SIZE); // prioritize width-based square while enabling scroll
-                container.style.overflowY = 'auto';
-            } else {
-                container.style.overflowY = 'hidden';
-            }
-
-            // Apply new cell height
-            // @ts-ignore gridstack dynamic method
-            gridInstance.current.cellHeight(cellSize);
-            container.style.minHeight = `${cellSize * maxRow}px`;
-        };
-
-        // Recompute on window resize or layout changes
-        // Debounced resize listener
+        // Update cell height on window resize to maintain square cells
         useEffect(() => {
-            let frame: number | null = null;
-            let last = 0;
-            const interval = 100; // throttle interval
             const handleResize = () => {
-                const now = performance.now();
-                if (now - last > interval) {
-                    last = now;
-                    recomputeCellSize();
-                } else {
-                    if (frame) cancelAnimationFrame(frame);
-                    frame = requestAnimationFrame(() => {
-                        last = performance.now();
-                        recomputeCellSize();
-                    });
-                }
+                if (!gridRef.current || !gridInstance.current) return;
+                const containerWidth = gridRef.current.clientWidth;
+                const newCellHeight = containerWidth / COLUMN_COUNT;
+                // @ts-ignore - GridStack has this method but it's not in the types
+                gridInstance.current.cellHeight(newCellHeight);
             };
-            window.addEventListener('resize', handleResize);
+
+            // Debounce resize events
+            let resizeTimer: NodeJS.Timeout;
+            const debouncedResize = () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(handleResize, 150);
+            };
+
+            window.addEventListener('resize', debouncedResize);
             return () => {
-                if (frame) cancelAnimationFrame(frame);
-                window.removeEventListener('resize', handleResize);
+                clearTimeout(resizeTimer);
+                window.removeEventListener('resize', debouncedResize);
             };
         }, []);
-
-        // Recompute whenever layout prop changes (new widgets, rows, etc.)
-        useEffect(() => {
-            recomputeCellSize();
-        }, [layout]);
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
         useEffect(() => {
