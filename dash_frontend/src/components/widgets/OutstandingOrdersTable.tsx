@@ -43,9 +43,6 @@ export default function OutstandingOrdersTable() {
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
 
-    // Test row state (toggle between status 12 and 14)
-    const [testRowStatus, setTestRowStatus] = useState<string>("12");
-
     // Memoize hidden vendor codes string for query filtering.
     const hiddenVendorCodes = useMemo(
         () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map(code => `'${code}'`).join(", "),
@@ -173,24 +170,7 @@ export default function OutstandingOrdersTable() {
 
     // Transform raw data into table row data.
     const renderFunction = useCallback((data: POItemData[]) => {
-        // Add test row at the beginning
-        const testRow = {
-            poNumber: "TEST-001",
-            poStatus: testRowStatus,
-            vendName: "TEST VENDOR",
-            partCode: "TEST-PART",
-            qtyOrdered: "10 EA",
-            dateOrdered: format(new Date(), "MMM d, yyyy"),
-            vendorPromiseDate: format(new Date(), "MMM d, yyyy"),
-            lastOrderDate: "N/A",
-            recentUnitPrice: "12.5000",
-            lastOrderUnitPrice: "N/A",
-            overdueDays: 0,
-            isGrouped: false,
-            itemNo: "TEST-001-1",
-        };
-
-        const tableData = [testRow, ...data.map((item) => {
+        const tableData = data.map((item) => {
             const adjustedOrderDate = adjustDateByOneDay(item.recent_date_orderd ?? undefined);
             const adjustedVendPromDate = adjustDateByOneDay(item.vend_prom_date ?? undefined);
 
@@ -225,7 +205,7 @@ export default function OutstandingOrdersTable() {
                 isGrouped: false, // Outstanding orders don't use grouping, default to false.
                 itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
             };
-        })];
+        });
 
         // Check for status changes to "V" (status code "14")
         const newStatusVSet = new Set<string>();
@@ -290,26 +270,10 @@ export default function OutstandingOrdersTable() {
                   ${row.isGrouped ? "grouped-po" : ""} 
                   ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
                   ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                  ${row.itemNo === "TEST-001-1" ? "opacity-70" : ""}
                 `}
                             >
-                                <TableCell className="font-black">
-                                    {row.poNumber}
-                                    {row.itemNo === "TEST-001-1" && (
-                                        <span className="text-xs ml-2 text-yellow-400">(TEST)</span>
-                                    )}
-                                </TableCell>
-                                <TableCell className="font-black">
-                                    {renderStatusBadge(row.poStatus)}
-                                    {row.itemNo === "TEST-001-1" && (
-                                        <button
-                                            onClick={() => setTestRowStatus(prev => prev === "12" ? "14" : "12")}
-                                            className="ml-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded text-white"
-                                        >
-                                            Toggle Status
-                                        </button>
-                                    )}
-                                </TableCell>
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{renderStatusBadge(row.poStatus)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
@@ -337,7 +301,7 @@ export default function OutstandingOrdersTable() {
                 </Table>
             </ScrollArea>
         );
-    }, [newStatusVRows, testRowStatus]);
+    }, [newStatusVRows]);
 
     return (
         <Widget

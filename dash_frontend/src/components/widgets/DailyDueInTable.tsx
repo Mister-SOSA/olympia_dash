@@ -230,9 +230,6 @@ export default function DailyDueInTable() {
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
 
-    // Test row state (toggle between status 12 and 14)
-    const [testRowStatus, setTestRowStatus] = useState<string>("12");
-
     // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
@@ -276,29 +273,9 @@ export default function DailyDueInTable() {
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         const tableData = mapToTableData(mergedData, timeZone);
 
-        // Add test row at the beginning
-        const testRow = {
-            isGrouped: false,
-            poNumber: "TEST-001",
-            poStatus: testRowStatus,
-            vendName: "TEST VENDOR",
-            partCode: "TEST-PART",
-            partDescription: "Test Part Description",
-            recentUnitPrice: "12.5000",
-            dateOrdered: format(new Date(), "MMM d, yyyy"),
-            vendorPromiseDate: format(new Date(), "MMM d, yyyy"),
-            lastOrderDate: "N/A",
-            lastOrderUnitPrice: "N/A",
-            qtyOrdered: "10 EA",
-            qtyRecvd: "-",
-            itemNo: "TEST-001-1",
-        };
-
-        const fullTableData = [testRow, ...tableData];
-
         // Check for status changes to "V" (status code "14")
         const newStatusVSet = new Set<string>();
-        fullTableData.forEach((row) => {
+        tableData.forEach((row) => {
             const itemKey = row.itemNo;
             const currentStatus = row.poStatus;
             const previousStatus = previousStatusesRef.current.get(itemKey);
@@ -341,7 +318,7 @@ export default function DailyDueInTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {fullTableData.map((row, index) => (
+                        {tableData.map((row, index) => (
                             <TableRow
                                 key={row.itemNo}
                                 className={`
@@ -349,26 +326,10 @@ export default function DailyDueInTable() {
                   ${row.isGrouped ? "grouped-po" : ""}
                   ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
                   ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                  ${row.itemNo === "TEST-001-1" ? "opacity-70" : ""}
                 `}
                             >
-                                <TableCell className="font-black">
-                                    {row.poNumber}
-                                    {row.itemNo === "TEST-001-1" && (
-                                        <span className="text-xs ml-2 text-yellow-400">(TEST)</span>
-                                    )}
-                                </TableCell>
-                                <TableCell className="font-black">
-                                    {statusBadge(row.poStatus)}
-                                    {row.itemNo === "TEST-001-1" && (
-                                        <button
-                                            onClick={() => setTestRowStatus(prev => prev === "12" ? "14" : "12")}
-                                            className="ml-2 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded text-white"
-                                        >
-                                            Toggle Status
-                                        </button>
-                                    )}
-                                </TableCell>
+                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
@@ -393,7 +354,7 @@ export default function DailyDueInTable() {
                 </Table>
             </ScrollArea>
         );
-    }, [newStatusVRows, testRowStatus]);
+    }, [newStatusVRows]);
 
     return (
         <Widget
