@@ -1,5 +1,28 @@
 "use client";
 
+/**
+ * GridDashboard Component
+ * 
+ * A responsive, feature-rich dashboard grid using GridStack.js
+ * 
+ * Key Features:
+ * - ✅ Responsive Breakpoints: Automatically adjusts columns based on screen size
+ *   (11 cols desktop → 1 col mobile for optimal viewing on all devices)
+ * 
+ * - ✅ Manual Widget Resizing: Users can resize widgets vertically and horizontally
+ *   (Removed global sizeToContent to preserve user control)
+ * 
+ * - ✅ Auto-Compact: Removes gaps after widget deletion while preserving order
+ *   (Uses 'list' mode to maintain visual consistency)
+ * 
+ * - Square Cell Aspect Ratio: Calculates cell height to maintain 1:1 aspect ratio
+ *   (Ensures 2x2 widgets are actual squares, not rectangles)
+ * 
+ * - Persistent Layout: Saves to localStorage and propagates to parent on any change
+ * 
+ * @see https://github.com/gridstack/gridstack.js for GridStack documentation
+ */
+
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from "react";
 import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
@@ -20,7 +43,7 @@ export interface GridDashboardProps {
 }
 
 export interface GridDashboardHandle {
-    compact: () => void;
+    compact: (mode?: 'list' | 'compact') => void;
 }
 
 const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
@@ -56,6 +79,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     console.log(`Removing widget from GridStack`);
                     gridInstance.current.removeWidget(widgetElement);
 
+                    // ✅ NEW: Auto-compact after removal to fill gaps
+                    gridInstance.current.compact('list');  // Preserves order while filling gaps
+
                     // Update layout state by filtering out the removed widget
                     const currentLayout = layout.filter(widget => widget.id !== widgetId);
                     console.log(`Updated layout:`, currentLayout);
@@ -65,7 +91,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     }
                     saveLayoutToStorage(currentLayout);
 
-                    console.log(`Widget ${widgetId} successfully removed`);
+                    console.log(`Widget ${widgetId} successfully removed and layout compacted`);
                 } else {
                     console.error(`Widget element not found for ID: ${widgetId}`);
                 }
@@ -186,10 +212,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         };
 
         // Expose the "compact" method to parent components.
+        // ✅ ENHANCED: Now supports compact modes for better control
         useImperativeHandle(ref, () => ({
-            compact: () => {
+            compact: (mode: 'list' | 'compact' = 'list') => {
                 if (gridInstance.current) {
-                    gridInstance.current.compact();
+                    // 'list' preserves order, 'compact' optimizes for space
+                    gridInstance.current.compact(mode);
                     const updatedNodes = gridInstance.current.save() as GridStackNode[];
                     const updatedLayout = updatedNodes.map((node) => ({
                         id: node.id as string,
@@ -218,12 +246,29 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 return containerWidth / COLUMN_COUNT;
             };
 
-            // Initialize GridStack with square cells
+            // Initialize GridStack with square cells and responsive features
             gridInstance.current = GridStack.init(
                 {
                     cellHeight: calculateCellHeight(),
                     column: COLUMN_COUNT,
                     float: false,
+
+                    // ✅ HIGH PRIORITY: Responsive breakpoints for mobile/tablet support
+                    columnOpts: {
+                        breakpoints: [
+                            { w: 1400, c: 11 },      // Desktop: Full 11 columns
+                            { w: 1200, c: 8 },       // Laptop: 8 columns
+                            { w: 900, c: 6 },        // Tablet landscape: 6 columns
+                            { w: 700, c: 4 },        // Tablet portrait: 4 columns
+                            { w: 500, c: 2 },        // Mobile landscape: 2 columns
+                            { w: 0, c: 1 }           // Mobile portrait: 1 column (stacked)
+                        ],
+                        breakpointForWindow: true,   // Use window size, not container
+                        layout: 'moveScale'          // Scale widgets proportionally on column change
+                    },
+
+                    // Note: sizeToContent removed to allow manual vertical resizing
+                    // Widgets can still set it individually via their config if needed
                 },
                 gridRef.current
             );
