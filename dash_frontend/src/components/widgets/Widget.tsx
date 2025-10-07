@@ -99,7 +99,7 @@ export default function Widget({
                     </CountdownCircleTimer>
                 </div>
             )}
-            
+
             {title && (
                 <div className="widget-header">
                     <h2>{title}</h2>

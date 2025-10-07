@@ -262,78 +262,78 @@ export default function DailyDueInTable() {
             refreshInterval={15000}
         >
             {(data: POItemData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading purchase orders...</div>;
-                    }
+                if (loading) {
+                    return <div className="widget-loading">Loading purchase orders...</div>;
+                }
 
-                    if (!data || data.length === 0) {
-                        return <div className="widget-empty">No purchase orders found</div>;
-                    }
+                if (!data || data.length === 0) {
+                    return <div className="widget-empty">No purchase orders found</div>;
+                }
 
-                    // Process and transform data for the table
-                    let processedData = deduplicateData(data);
-                    processedData = computePreviousOrderDetails(processedData);
-                    const recentOrders = filterRecentOrders(processedData);
-                    let mergedData = removeHiddenVendors(recentOrders);
-                    mergedData = sortOrders(mergedData);
+                // Process and transform data for the table
+                let processedData = deduplicateData(data);
+                processedData = computePreviousOrderDetails(processedData);
+                const recentOrders = filterRecentOrders(processedData);
+                let mergedData = removeHiddenVendors(recentOrders);
+                mergedData = sortOrders(mergedData);
 
-                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    const tableData = mapToTableData(mergedData, timeZone);
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const tableData = mapToTableData(mergedData, timeZone);
 
-                    return (
-                        <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                            <Table className="text-left text-white outstanding-orders-table">
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>PO Number</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Vendor</TableHead>
-                                        <TableHead>Part Code</TableHead>
-                                        <TableHead className="text-right">Qty Ordered</TableHead>
-                                        <TableHead className="text-right">Qty Received</TableHead>
-                                        <TableHead className="text-right">Date Ordered</TableHead>
-                                        <TableHead className="text-right">Prev. Order</TableHead>
-                                        <TableHead className="text-right">Unit Price</TableHead>
-                                        <TableHead className="text-right">Prev. Price</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {tableData.map((row, index) => (
-                                        <TableRow
-                                            key={index}
-                                            className={`
+                return (
+                    <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+                        <Table className="text-left text-white outstanding-orders-table">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>PO Number</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Vendor</TableHead>
+                                    <TableHead>Part Code</TableHead>
+                                    <TableHead className="text-right">Qty Ordered</TableHead>
+                                    <TableHead className="text-right">Qty Received</TableHead>
+                                    <TableHead className="text-right">Date Ordered</TableHead>
+                                    <TableHead className="text-right">Prev. Order</TableHead>
+                                    <TableHead className="text-right">Unit Price</TableHead>
+                                    <TableHead className="text-right">Prev. Price</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {tableData.map((row, index) => (
+                                    <TableRow
+                                        key={index}
+                                        className={`
                               ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
                               ${row.isGrouped ? "grouped-po" : ""}
                               ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
                             `}
-                                        >
-                                            <TableCell className="font-black">{row.poNumber}</TableCell>
-                                            <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
-                                            <TableCell>{row.vendName}</TableCell>
-                                            <TableCell>{row.partCode}</TableCell>
-                                            <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                            <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                            <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                            <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                            <TableCell className="text-right row-secondary">
-                                                <div className="table-dollars">
-                                                    <span className="dollar-sign">$</span>
-                                                    <span className="dollar-value">{row.recentUnitPrice}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right row-secondary">
-                                                <div className="table-dollars">
-                                                    <span className="dollar-sign">$</span>
-                                                    <span className="dollar-value">{row.lastOrderUnitPrice}</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
-                    );
-                }}
+                                    >
+                                        <TableCell className="font-black">{row.poNumber}</TableCell>
+                                        <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
+                                        <TableCell>{row.vendName}</TableCell>
+                                        <TableCell>{row.partCode}</TableCell>
+                                        <TableCell className="text-right">{row.qtyOrdered}</TableCell>
+                                        <TableCell className="text-right">{row.qtyRecvd}</TableCell>
+                                        <TableCell className="text-right">{row.dateOrdered}</TableCell>
+                                        <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                        <TableCell className="text-right row-secondary">
+                                            <div className="table-dollars">
+                                                <span className="dollar-sign">$</span>
+                                                <span className="dollar-value">{row.recentUnitPrice}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right row-secondary">
+                                            <div className="table-dollars">
+                                                <span className="dollar-sign">$</span>
+                                                <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                );
+            }}
         </Widget>
     );
 }
