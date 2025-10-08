@@ -567,8 +567,8 @@ tbody>tr:nth-child(odd) {
   position: absolute;
   top: 0;
   right: 0;
-  height: 2rem;
-  width: 2rem;
+  height: 1rem;
+  width: 1rem;
   z-index: 10;
 }
 
@@ -581,7 +581,7 @@ tbody>tr:nth-child(odd) {
   display: flex;
   align-items: baseline;
   justify-content: end;
-  padding: 0.5rem;
+  padding-right: .5rem;
   height: 2rem;
   width: 2rem;
   position: absolute;
