@@ -38,6 +38,33 @@ nextjs-portal {
 body {
   background-color: var(--background-dark);
   color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* Prevent body scroll, let grid handle it if needed */
+}
+
+/* Main container and grid stack height management */
+main {
+  height: 100vh;
+  width: 100vw;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+}
+
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+}
+
+.grid-stack {
+  min-height: 100vh;
+  height: auto;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .last-blinking>.recharts-bar-rectangles>.recharts-bar-rectangle:last-child>path {
@@ -61,6 +88,7 @@ body {
 
 .grid-stack-item-content {
   padding: 1rem;
+  padding-top: 0.7rem;
   background-color: var(--background-light);
   color: var(--text-primary);
   border-radius: 1rem;
@@ -74,13 +102,16 @@ body {
   width: 100%;
   color: var(--text-primary);
   position: relative;
+  padding: 0;
+  margin: 0;
 }
 
 .widget-header {
   font-size: 1.2rem;
   font-weight: 800;
   text-align: center;
-  padding: 0.5rem 0;
+  padding: 0;
+  margin: 0;
   flex-shrink: 0;
 }
 
@@ -114,70 +145,286 @@ body {
   opacity: 0.7;
 }
 
-.overview-widget {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  width: 100%;
-  height: 100%;
-}
+/* ================================== */
+/* Overview Widget - Production Ready */
+/* ================================== */
 
-.overview-subwidget {
+.overview-widget-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 1rem;
-  background-color: var(--background-highlight);
-  color: var(--text-primary);
-  border-radius: 1rem;
-  width: 20rem;
+  width: 100%;
   height: 100%;
-  margin: 0 1rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.overview-header-container {
+.overview-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Metric Card */
+.overview-metric-card {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  justify-content: center;
+  background-color: var(--background-highlight);
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--border-light);
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Metric Header */
+.overview-metric-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  height: 100%;
+  margin-bottom: 1rem;
+  gap: 0.75rem;
 }
 
-.overview-subwidget-subtitle {
+.overview-metric-title {
   font-size: 1rem;
-  font-weight: 800;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   margin: 0;
-  padding: 0;
-  background-color: var(--border-dark);
-  margin-left: 0.5rem;
+  line-height: 1.3;
+}
+
+/* Metric Content */
+.overview-metric-content {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.overview-metric-value {
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Change Indicator with Arrow */
+.overview-metric-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  padding: 0.4rem 0.65rem;
   border-radius: 0.5rem;
-  padding: 0.25rem;
-  opacity: 100%;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.negative {
-  background-color: var(--error);
+.overview-metric-change:hover {
+  transform: translateY(-1px);
 }
 
-.positive {
+/* Tooltip styling */
+.overview-tooltip {
+  font-size: 0.875rem;
+  font-weight: 500;
+  max-width: 250px;
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.overview-tooltip p {
+  margin: 0;
+}
+
+.overview-arrow-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.overview-metric-change--positive {
   background-color: var(--success);
+  color: var(--text-primary);
 }
 
-.overview-subwidget-title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  width: 100%;
-  text-align: left;
+.overview-metric-change--negative {
+  background-color: var(--error);
+  color: var(--text-primary);
 }
 
-.overview-subwidget-value {
-  font-size: 2.2rem;
-  font-weight: 800;
-  text-align: left;
+.overview-metric-change--neutral {
+  background-color: var(--border-dark);
+  color: var(--text-secondary);
+}
+
+/* ================================== */
+/* Responsive Design                  */
+/* ================================== */
+
+/* Extra Large screens: Enhanced readability for distance viewing */
+@media (min-width: 1920px) {
+  .overview-metrics-grid {
+    gap: 1.25rem;
+  }
+
+  .overview-metric-card {
+    padding: 2.5rem 2rem;
+  }
+
+  .overview-metric-title {
+    font-size: 1.125rem;
+  }
+
+  .overview-metric-value {
+    font-size: 2.75rem;
+  }
+
+  .overview-metric-change {
+    font-size: 1.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .overview-arrow-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .overview-metric-header {
+    margin-bottom: 1.25rem;
+  }
+}
+
+/* Large screens: Optimized for 1440p+ displays */
+@media (min-width: 1400px) and (max-width: 1919px) {
+  .overview-metrics-grid {
+    gap: 1rem;
+  }
+
+  .overview-metric-card {
+    padding: 2rem 1.75rem;
+  }
+
+  .overview-metric-value {
+    font-size: 2.5rem;
+  }
+
+  .overview-metric-title {
+    font-size: 1rem;
+  }
+
+  .overview-metric-change {
+    font-size: 1.375rem;
+  }
+
+  .overview-arrow-icon {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+}
+
+/* Medium-large screens: 2x2 grid */
+@media (max-width: 1399px) and (min-width: 900px) {
+  .overview-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .overview-metric-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .overview-metric-value {
+    font-size: 2.25rem;
+  }
+
+  .overview-metric-title {
+    font-size: 0.875rem;
+  }
+
+  .overview-metric-change {
+    font-size: 1.125rem;
+  }
+
+  .overview-arrow-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+}
+
+/* Medium screens: 2 columns */
+@media (max-width: 899px) and (min-width: 600px) {
+  .overview-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .overview-metric-card {
+    padding: 1rem;
+  }
+
+  .overview-metric-value {
+    font-size: 1.75rem;
+  }
+
+  .overview-metric-title {
+    font-size: 0.75rem;
+  }
+}
+
+/* Small screens: single column */
+@media (max-width: 599px) {
+  .overview-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .overview-metric-card {
+    padding: 1rem;
+  }
+
+  .overview-metric-value {
+    font-size: 1.5rem;
+  }
+
+  .overview-metric-title {
+    font-size: 0.75rem;
+  }
+
+  .overview-metric-change {
+    font-size: 0.75rem;
+  }
+}
+
+/* Compact mode for very short widgets */
+@media (max-height: 200px) {
+  .overview-metric-card {
+    padding: 0.75rem;
+  }
+
+  .overview-metric-header {
+    margin-bottom: 0.5rem;
+  }
+
+  .overview-metric-value {
+    font-size: 1.5rem;
+  }
+
+  .overview-metric-title {
+    font-size: 0.75rem;
+  }
 }
 
 .time,
@@ -318,10 +565,10 @@ tbody>tr:nth-child(odd) {
 
 .timer-container {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  height: 2rem;
-  width: 2rem;
+  top: 0;
+  right: 0;
+  height: 1rem;
+  width: 1rem;
   z-index: 10;
 }
 
@@ -334,7 +581,7 @@ tbody>tr:nth-child(odd) {
   display: flex;
   align-items: baseline;
   justify-content: end;
-  padding: 0.5rem;
+  padding-right: .5rem;
   height: 2rem;
   width: 2rem;
   position: absolute;
@@ -480,4 +727,45 @@ tbody>tr:nth-child(odd) {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Enhanced Customer Pie Chart Styles */
+.customer-pie {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.customer-pie text {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.customer-pie .recharts-pie-sector {
+  transition: all 0.2s ease;
+}
+
+.customer-pie .recharts-pie-sector:hover {
+  filter: brightness(1.15) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+/* Pie Chart Legend Styles */
+.pie-chart-legend {
+  transition: all 0.2s ease;
+}
+
+.pie-chart-legend::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.pie-chart-legend::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pie-chart-legend::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.pie-chart-legend::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
