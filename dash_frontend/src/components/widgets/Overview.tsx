@@ -74,11 +74,11 @@ const calculateMetrics = (data: SalesData[], todayGMT: Date): OverviewMetrics =>
 
     // Rolling 7-Day Sales
     const rolling7DaysStartGMT = new Date(todayGMT);
-    rolling7DaysStartGMT.setUTCDate(todayGMT.getUTCDate() - 8);
+    rolling7DaysStartGMT.setUTCDate(todayGMT.getUTCDate() - 7);
     const rolling7DaysEndGMT = todayGMT;
 
     const previousRolling7DaysStartGMT = new Date(rolling7DaysStartGMT);
-    previousRolling7DaysStartGMT.setUTCDate(previousRolling7DaysStartGMT.getUTCDate() - 8);
+    previousRolling7DaysStartGMT.setUTCDate(previousRolling7DaysStartGMT.getUTCDate() - 7);
     const previousRolling7DaysEndGMT = new Date(rolling7DaysStartGMT);
     previousRolling7DaysEndGMT.setUTCDate(rolling7DaysStartGMT.getUTCDate() - 1);
 
