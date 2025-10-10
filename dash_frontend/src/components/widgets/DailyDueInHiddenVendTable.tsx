@@ -24,13 +24,23 @@ const STATUS_CODES: { [key: string]: string } = {
     "14": "V", // Received from Vendor
     "16": "C", // Closed
     "18": "I", // Vendor Invoice Received
+    X: "X",
+    E: "E",
+    R: "R",
+    V: "V",
+    C: "C",
+    I: "I",
 };
+
+const RECEIVED_STATUSES = new Set(["V", "C"]);
+
+const normalizeStatus = (statusCode: string): string => STATUS_CODES[statusCode] ?? statusCode;
 
 const RECENT_ORDER_THRESHOLD_DAYS = 30;
 const YESTERDAY_OFFSET = 1;
 
 const statusBadge = (statusCode: string) => {
-    const status = STATUS_CODES[statusCode];
+    const status = normalizeStatus(statusCode);
     const badgeClass =
         status === "X"
             ? "badge-danger"
@@ -143,7 +153,7 @@ function formatDate(date: any): string {
 interface TableRowData {
     isGrouped: boolean;
     poNumber: string;
-    poStatus: string;
+    poStatusLabel: string;
     vendName: string;
     partCode: string;
     partDescription: string;
@@ -160,7 +170,7 @@ interface TableRowData {
 /**
  * Map the processed data into the format expected by the table.
  */
-function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
+function mapToTableData(data: POItemData[]): TableRowData[] {
     return data.map((item) => {
         // Adjust vendor promise date: add one day before formatting.
         const correctedVendPromDate = item.vend_prom_date
@@ -175,7 +185,7 @@ function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
         return {
             isGrouped: item.isGrouped,
             poNumber: item.po_number,
-            poStatus: item.po_status,
+            poStatusLabel: normalizeStatus(item.po_status),
             vendName: item.vend_name,
             partCode: item.part_code,
             partDescription: item.part_desc,
@@ -269,18 +279,20 @@ export default function DailyDueInHiddenVendTable() {
         let mergedData = removeHiddenVendors(recentOrders);
         mergedData = sortOrders(mergedData);
 
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tableData = mapToTableData(mergedData, timeZone);
+        const tableData = mapToTableData(mergedData);
 
-        // Check for status changes to "V" (status code "14")
+        // Check for status changes into a received state
         const newStatusVSet = new Set<string>();
         tableData.forEach((row) => {
             const itemKey = row.itemNo;
-            const currentStatus = row.poStatus;
+            const currentStatus = row.poStatusLabel;
             const previousStatus = previousStatusesRef.current.get(itemKey);
 
-            // If status changed to "14" (V) and wasn't "14" before
-            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+            if (
+                RECEIVED_STATUSES.has(currentStatus) &&
+                previousStatus &&
+                !RECEIVED_STATUSES.has(previousStatus)
+            ) {
                 newStatusVSet.add(itemKey);
             }
 
@@ -321,14 +333,14 @@ export default function DailyDueInHiddenVendTable() {
                             <TableRow
                                 key={row.itemNo}
                                 className={`
-                              ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
+                                                            ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
                               ${row.isGrouped ? "grouped-po" : ""}
-                              ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
+                                                            ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
                               ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
                             `}
                             >
                                 <TableCell className="font-black">{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
+                                                                <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
