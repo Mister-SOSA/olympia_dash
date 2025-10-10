@@ -340,7 +340,7 @@ export default function DailyDueInHiddenVendTable() {
                             `}
                             >
                                 <TableCell className="font-black">{row.poNumber}</TableCell>
-                                                                <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
+                                <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
                                 <TableCell>{row.vendName}</TableCell>
                                 <TableCell>{row.partCode}</TableCell>
                                 <TableCell className="text-right">{row.qtyOrdered}</TableCell>
