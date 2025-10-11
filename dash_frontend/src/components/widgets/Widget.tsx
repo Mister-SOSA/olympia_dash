@@ -24,6 +24,7 @@ export default function Widget({
     const [showLoader, setShowLoader] = useState(!!endpoint);
     const [error, setError] = useState<string | null>(null);
     const [refreshProgress, setRefreshProgress] = useState(0);
+    const [isResetting, setIsResetting] = useState(false);
     const isInitialLoadRef = useRef(true);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,7 +127,12 @@ export default function Widget({
             }
 
             lastFetchTimeRef.current = Date.now();
+
+            // Reset progress instantly (no transition)
+            setIsResetting(true);
             setRefreshProgress(0);
+            // Re-enable transition after reset
+            setTimeout(() => setIsResetting(false), 50);
         }
     };
 
@@ -183,7 +189,7 @@ export default function Widget({
                             strokeDasharray={`${2 * Math.PI * 8}`}
                             strokeDashoffset={`${2 * Math.PI * 8 * (1 - refreshProgress / 100)}`}
                             strokeLinecap="round"
-                            className="refresh-ring-progress"
+                            className={`refresh-ring-progress ${isResetting ? 'no-transition' : ''}`}
                         />
                     </svg>
                 </div>
