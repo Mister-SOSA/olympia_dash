@@ -113,7 +113,8 @@ main {
   padding: 0;
   margin: 0;
   flex-shrink: 0;
-  min-height: 2rem; /* reserve space to avoid loader reflow when title appears */
+  min-height: 2rem;
+  /* reserve space to avoid loader reflow when title appears */
 }
 
 .widget-content {
@@ -156,7 +157,7 @@ main {
   max-height: 480px;
   min-width: 480px;
   animation: fadeIn 0.3s ease-in;
-  color: var(--loader-color, #6f8191); /* change this CSS var to recolor the loader */
+  color: var(--loader-color, #2ed891);
 }
 
 /* ================================== */
