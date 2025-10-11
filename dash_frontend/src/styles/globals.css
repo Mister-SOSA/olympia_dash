@@ -579,33 +579,27 @@ tbody>tr:nth-child(odd) {
   background-color: var(--success-light) !important;
 }
 
-.timer-container {
+/* Persistent Widget Refresh Indicator */
+.widget-refresh-indicator {
   position: absolute;
-  top: 0;
-  right: 0;
-  height: 1rem;
-  width: 1rem;
+  top: 0.5rem;
+  right: 0.5rem;
   z-index: 10;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-.timer-container>* {
-  height: 2rem !important;
-  width: 2rem !important;
+.widget-refresh-indicator:hover {
+  opacity: 0.9;
 }
 
-.timer-container>div {
-  display: flex;
-  align-items: baseline;
-  justify-content: end;
-  padding-right: .5rem;
-  height: 2rem;
-  width: 2rem;
-  position: absolute;
+.refresh-ring {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.3));
 }
 
-.timer-container>div>svg {
-  height: 1rem;
-  width: 1rem;
+.refresh-ring-progress {
+  transition: stroke-dashoffset 0.2s linear;
 }
 
 .Toastify__toast-container {

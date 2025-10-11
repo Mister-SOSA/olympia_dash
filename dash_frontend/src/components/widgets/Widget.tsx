@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MdError, MdRefresh } from "react-icons/md";
-import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { Loader } from "@/components/ui/loader";
 import config from "@/config";
 
@@ -24,12 +23,15 @@ export default function Widget({
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [showLoader, setShowLoader] = useState(!!endpoint);
     const [error, setError] = useState<string | null>(null);
-    const [fetchTrigger, setFetchTrigger] = useState<number>(0);
+    const [refreshProgress, setRefreshProgress] = useState(0);
+    const isInitialLoadRef = useRef(true);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const loaderDelayRef = useRef<NodeJS.Timeout | null>(null);
     const loaderHideRef = useRef<NodeJS.Timeout | null>(null);
     const loaderShownAtRef = useRef<number | null>(null);
+    const lastFetchTimeRef = useRef<number>(Date.now());
 
     // Tunables for buttery-smooth UX
     const LOADER_DELAY_MS = 150; // don't flash loader for super-fast fetches
@@ -114,7 +116,8 @@ export default function Widget({
                 finish();
             }
 
-            setFetchTrigger((prev) => prev + 1); // Trigger timer reset
+            lastFetchTimeRef.current = Date.now();
+            setRefreshProgress(0);
         }
     };
 
@@ -123,17 +126,24 @@ export default function Widget({
 
         if (refreshInterval && endpoint) {
             intervalRef.current = setInterval(fetchData, refreshInterval);
+            
+            // Update progress smoothly
+            const progressUpdateInterval = 200; // Update every 200ms
+            progressIntervalRef.current = setInterval(() => {
+                const elapsed = Date.now() - lastFetchTimeRef.current;
+                const progress = Math.min((elapsed / refreshInterval) * 100, 100);
+                setRefreshProgress(progress);
+            }, progressUpdateInterval);
         }
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
+            if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
             if (abortControllerRef.current) abortControllerRef.current.abort();
             if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
-    }, [endpoint, refreshInterval]);
-
-    const handleRetry = () => {
+    }, [endpoint, refreshInterval]);    const handleRetry = () => {
         setLoading(true);
         setError(null);
         fetchData();
@@ -141,19 +151,31 @@ export default function Widget({
 
     return (
         <div className="widget">
-            {/* Countdown timer for widgets with refresh intervals */}
+            {/* Persistent refresh indicator */}
             {endpoint && refreshInterval && (
-                <div className="timer-container">
-                    <CountdownCircleTimer
-                        key={fetchTrigger} // Reset the timer when fetchTrigger changes
-                        isPlaying
-                        duration={refreshInterval / 1000}
-                        colors={["#000", "#000", "#000", "#000"]}
-                        colorsTime={[refreshInterval / 1000, refreshInterval / 2000, 0, 0]}
-                        strokeWidth={25}
-                    >
-                        {({ remainingTime }) => ""}
-                    </CountdownCircleTimer>
+                <div className="widget-refresh-indicator">
+                    <svg width="20" height="20" viewBox="0 0 20 20" className="refresh-ring">
+                        <circle
+                            cx="10"
+                            cy="10"
+                            r="8"
+                            fill="none"
+                            stroke="rgba(255, 255, 255, 0.1)"
+                            strokeWidth="2"
+                        />
+                        <circle
+                            cx="10"
+                            cy="10"
+                            r="8"
+                            fill="none"
+                            stroke="rgba(59, 130, 246, 0.5)"
+                            strokeWidth="2"
+                            strokeDasharray={`${2 * Math.PI * 8}`}
+                            strokeDashoffset={`${2 * Math.PI * 8 * (1 - refreshProgress / 100)}`}
+                            strokeLinecap="round"
+                            className="refresh-ring-progress"
+                        />
+                    </svg>
                 </div>
             )}
 
