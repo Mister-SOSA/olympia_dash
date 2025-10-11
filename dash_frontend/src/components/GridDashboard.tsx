@@ -40,6 +40,7 @@ import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import { ConfirmModal, InfoModal } from "./ui/modal";
+import { Loader } from "./ui/loader";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -123,7 +124,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     const WidgetComponent = widgetDef.component;
 
                     newRoot.render(
-                        <Suspense fallback={<div className="widget-loading">Refreshing...</div>}>
+                        <Suspense fallback={<div className="flex items-center justify-center h-full w-full"><Loader /></div>}>
                             <WidgetComponent key={`refresh-${Date.now()}`} />
                         </Suspense>
                     );
@@ -248,17 +249,17 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Calculate initial cell height to make square cells while fitting viewport
             const calculateCellHeight = () => {
                 if (!gridRef.current) return CELL_HEIGHT;
-                
+
                 const containerWidth = gridRef.current.clientWidth;
                 const viewportHeight = window.innerHeight;
-                
+
                 // Calculate cell height based on width (for square cells)
                 const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
-                
+
                 // Calculate max cell height that would fit approximately 8-9 rows in viewport
                 // Accounting for padding, margins, and other UI elements (~120px overhead)
                 const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
-                
+
                 // Use the smaller value to ensure grid fits reasonably in viewport
                 return Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
             };
@@ -314,7 +315,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     });
 
                     root.render(
-                        <Suspense fallback={<div className="widget-loading">Loading...</div>}>
+                        <Suspense fallback={<div className="flex items-center justify-center h-full w-full"><Loader /></div>}>
                             <WidgetComponent />
                         </Suspense>
                     );
@@ -365,19 +366,19 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         useEffect(() => {
             const handleResize = () => {
                 if (!gridRef.current || !gridInstance.current) return;
-                
+
                 const containerWidth = gridRef.current.clientWidth;
                 const viewportHeight = window.innerHeight;
-                
+
                 // Calculate cell height based on width (for square cells)
                 const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
-                
+
                 // Calculate max cell height that would fit approximately 8-9 rows in viewport
                 const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
-                
+
                 // Use the smaller value to ensure grid fits reasonably in viewport
                 const newCellHeight = Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
-                
+
                 // @ts-ignore - GridStack has this method but it's not in the types
                 gridInstance.current.cellHeight(newCellHeight);
             };

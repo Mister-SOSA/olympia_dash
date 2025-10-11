@@ -389,10 +389,6 @@ export default function TopCustomersThisYearPie() {
             refreshInterval={300000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading customer data...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No customer data available</div>;
                 }

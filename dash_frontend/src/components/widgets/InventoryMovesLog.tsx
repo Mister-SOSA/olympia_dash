@@ -116,9 +116,6 @@ export default function InventoryMovesLog() {
             refreshInterval={3000} // Refresh every 3 seconds
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading inventory data...</div>;
-                }
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No inventory moves found</div>;
                 }

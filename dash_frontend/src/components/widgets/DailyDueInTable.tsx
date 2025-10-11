@@ -376,9 +376,6 @@ export default function DailyDueInTable() {
             refreshInterval={8000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading orders...</div>;
-                }
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No orders found</div>;
                 }

@@ -291,10 +291,6 @@ export default function Overview() {
             refreshInterval={300000}
         >
             {(data: SalesData[], loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading sales data...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No sales data available</div>;
                 }

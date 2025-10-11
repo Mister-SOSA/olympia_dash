@@ -212,9 +212,6 @@ export default function TopProductUnitSalesTable() {
             refreshInterval={30000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading product data...</div>;
-                }
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No product data available</div>;
                 }

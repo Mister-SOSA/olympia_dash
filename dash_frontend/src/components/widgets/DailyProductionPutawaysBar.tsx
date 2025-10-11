@@ -197,9 +197,6 @@ export default function DailyProductionPutawaysBar() {
                 refreshInterval={15000}
             >
                 {(data: PutawayData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading putaway data...</div>;
-                    }
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No putaway data available</div>;
                     }

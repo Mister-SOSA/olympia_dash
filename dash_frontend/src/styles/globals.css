@@ -129,10 +129,10 @@ main {
   width: 100%;
   overflow: hidden;
   padding: 0.5rem;
+  animation: fadeIn 0.4s ease-in;
 }
 
-/* Center-aligned content for simple widgets (charts, loaders, errors) */
-.widget-loading,
+/* Center-aligned content for empty state */
 .widget-empty {
   display: flex;
   align-items: center;
@@ -143,6 +143,18 @@ main {
   font-weight: 600;
   color: var(--text-primary);
   opacity: 0.7;
+}
+
+/* ================================== */
+/* Loader                             */
+/* ================================== */
+
+.loader {
+  height: 20vh;
+  width: 20vh;
+  max-height: 480px;
+  min-width: 480px;
+  animation: fadeIn 0.3s ease-in;
 }
 
 /* ================================== */
@@ -488,6 +500,16 @@ main {
   }
 }
 
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
 .widget-menu-checkbox {
   background-color: var(--background-dark);
   border: 1px solid var(--border-light);
@@ -552,15 +574,6 @@ tbody>tr:nth-child(odd) {
 
 .received-po {
   background-color: var(--success-light) !important;
-}
-
-.loader-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 5rem;
 }
 
 .timer-container {

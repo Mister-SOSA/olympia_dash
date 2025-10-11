@@ -311,10 +311,6 @@ export default function OutstandingOrdersTable() {
             refreshInterval={30000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading orders...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No orders found</div>;
                 }

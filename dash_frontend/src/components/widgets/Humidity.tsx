@@ -29,7 +29,7 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
         <div ref={containerRef} className="widget-container" style={{ width: "100%", height: "100%" }}>
             <div className="humidity" style={{ fontSize, textAlign: "center", whiteSpace: "nowrap", fontWeight: "bold", flexDirection: "row", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IoWaterSharp size={parseInt(fontSize) / 1.2} className="p-4" />
-                {data ? `${data.toFixed(0)}%` : "Loading..."}
+                {data ? `${data.toFixed(0)}%` : "--"}
             </div>
         </div>
     );
@@ -44,9 +44,6 @@ const HumidityWidget: React.FC = () => {
             refreshInterval={60000} // Update every 60 seconds
         >
             {(data: HumidityData | null, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading humidity data...</div>;
-                }
                 return <HumidityContent data={data} />;
             }}
         </Widget>

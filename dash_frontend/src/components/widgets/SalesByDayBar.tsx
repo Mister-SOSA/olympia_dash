@@ -250,10 +250,6 @@ export default function SalesByDayBar() {
                 refreshInterval={60000}
             >
                 {(data: SalesData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading sales data...</div>;
-                    }
-
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No sales data available</div>;
                     }

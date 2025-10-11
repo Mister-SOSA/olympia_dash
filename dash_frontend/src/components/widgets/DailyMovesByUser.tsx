@@ -223,10 +223,6 @@ export default function DailyMovesByUser() {
                 refreshInterval={5000}
             >
                 {(data: MovesByUserData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading user moves...</div>;
-                    }
-
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No user moves data available</div>;
                     }

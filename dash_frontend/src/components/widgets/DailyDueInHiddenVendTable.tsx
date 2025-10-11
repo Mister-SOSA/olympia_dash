@@ -375,10 +375,6 @@ export default function DailyDueInHiddenVendTable() {
             refreshInterval={15000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading purchase orders...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No purchase orders found</div>;
                 }

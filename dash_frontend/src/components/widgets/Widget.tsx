@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MdError, MdRefresh } from "react-icons/md";
-import PropogateLoader from "react-spinners/PropagateLoader";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { Loader } from "@/components/ui/loader";
 import config from "@/config";
 
 interface WidgetProps {
@@ -21,6 +21,7 @@ export default function Widget({
 }: WidgetProps) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(!!endpoint);
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fetchTrigger, setFetchTrigger] = useState<number>(0);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,7 +59,12 @@ export default function Widget({
                 console.error(`Widget fetch error:`, err);
             }
         } finally {
-            setLoading(false);
+            // Start fade-out transition
+            setIsTransitioning(true);
+            setTimeout(() => {
+                setLoading(false);
+                setIsTransitioning(false);
+            }, 300); // Match the fade-out duration
             setFetchTrigger((prev) => prev + 1); // Trigger timer reset
         }
     };
@@ -117,8 +123,13 @@ export default function Widget({
                         <p className="font-[consolas] bg-black p-2 rounded-md m-2 text-center">{error}</p>
                     </div>
                 ) : loading ? (
-                    <div className="loader-container">
-                        <PropogateLoader className="loader" color="white" />
+                    <div
+                        className="flex items-center justify-center h-full w-full"
+                        style={{
+                            animation: isTransitioning ? 'fadeOut 0.3s ease-out forwards' : undefined
+                        }}
+                    >
+                        <Loader />
                     </div>
                 ) : (
                     <div className="widget-data-container">
