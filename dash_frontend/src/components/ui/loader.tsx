@@ -11,10 +11,10 @@ export function Loader() {
                 </filter>
             </defs>
             <g filter="url(#goo)">
-                <circle cx="119" cy="74" r="20" stroke="#6f8191" strokeWidth="8"></circle>
-                <circle cx="79" cy="141" r="20" stroke="#6f8191" strokeWidth="8"></circle>
-                <circle cx="157" cy="141" r="20" stroke="#6f8191" strokeWidth="8"></circle>
-                <circle cx="0" cy="0" r="14" fill="#6f8191">
+                <circle cx="119" cy="74" r="20" stroke="currentColor" strokeWidth="8"></circle>
+                <circle cx="79" cy="141" r="20" stroke="currentColor" strokeWidth="8"></circle>
+                <circle cx="157" cy="141" r="20" stroke="currentColor" strokeWidth="8"></circle>
+                <circle cx="0" cy="0" r="14" fill="currentColor">
                     <animateMotion path="M102.546 83.5C109.859 70.8333 128.141 70.8333 135.454 83.5L157.971 122.5C165.284 135.167 156.143 151 141.517 151H96.4833C81.8571 151 72.7158 135.167 80.0289 122.5L102.546 83.5Z" dur="2s" repeatCount="indefinite"></animateMotion>
                 </circle>
             </g>

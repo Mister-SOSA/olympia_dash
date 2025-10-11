@@ -40,7 +40,6 @@ import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import { ConfirmModal, InfoModal } from "./ui/modal";
-import { Loader } from "./ui/loader";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -124,7 +123,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     const WidgetComponent = widgetDef.component;
 
                     newRoot.render(
-                        <Suspense fallback={<div className="flex items-center justify-center h-full w-full"><Loader /></div>}>
+                        <Suspense fallback={null}>
                             <WidgetComponent key={`refresh-${Date.now()}`} />
                         </Suspense>
                     );
@@ -315,7 +314,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     });
 
                     root.render(
-                        <Suspense fallback={<div className="flex items-center justify-center h-full w-full"><Loader /></div>}>
+                        <Suspense fallback={null}>
                             <WidgetComponent />
                         </Suspense>
                     );

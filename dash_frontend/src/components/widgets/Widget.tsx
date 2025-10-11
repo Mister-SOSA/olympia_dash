@@ -22,10 +22,19 @@ export default function Widget({
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(!!endpoint);
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const [showLoader, setShowLoader] = useState(!!endpoint);
     const [error, setError] = useState<string | null>(null);
     const [fetchTrigger, setFetchTrigger] = useState<number>(0);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+    const loaderDelayRef = useRef<NodeJS.Timeout | null>(null);
+    const loaderHideRef = useRef<NodeJS.Timeout | null>(null);
+    const loaderShownAtRef = useRef<number | null>(null);
+
+    // Tunables for buttery-smooth UX
+    const LOADER_DELAY_MS = 150; // don't flash loader for super-fast fetches
+    const LOADER_MIN_MS = 250;   // keep loader visible briefly once shown
+    const FADE_OUT_MS = 300;     // CSS fade-out duration
 
     const fetchData = async () => {
         if (!endpoint) return;
@@ -36,6 +45,22 @@ export default function Widget({
         }
 
         abortControllerRef.current = new AbortController();
+
+        // Start loading and schedule delayed loader appearance
+        setLoading(true);
+        setIsTransitioning(false);
+        setShowLoader(false);
+        if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
+        loaderDelayRef.current = setTimeout(() => {
+            // Only show loader if we're still loading
+            setShowLoader((prev) => {
+                if (loading) {
+                    loaderShownAtRef.current = Date.now();
+                    return true;
+                }
+                return prev;
+            });
+        }, LOADER_DELAY_MS);
 
         try {
             const response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
@@ -59,12 +84,36 @@ export default function Widget({
                 console.error(`Widget fetch error:`, err);
             }
         } finally {
-            // Start fade-out transition
-            setIsTransitioning(true);
-            setTimeout(() => {
+            // Clear delayed show timer if still pending
+            if (loaderDelayRef.current) {
+                clearTimeout(loaderDelayRef.current);
+                loaderDelayRef.current = null;
+            }
+
+            const finish = () => {
                 setLoading(false);
                 setIsTransitioning(false);
-            }, 300); // Match the fade-out duration
+                setShowLoader(false);
+            };
+
+            if (showLoader && loaderShownAtRef.current) {
+                // Ensure loader stayed visible for minimum time, then fade out
+                const elapsed = Date.now() - loaderShownAtRef.current;
+                const remaining = Math.max(LOADER_MIN_MS - elapsed, 0);
+                // Begin fade-out after remaining time
+                if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
+                loaderHideRef.current = setTimeout(() => {
+                    setIsTransitioning(true);
+                    // Wait for CSS fade-out to complete
+                    loaderHideRef.current = setTimeout(() => {
+                        finish();
+                    }, FADE_OUT_MS);
+                }, remaining);
+            } else {
+                // Loader never showed (fast fetch) → finish immediately
+                finish();
+            }
+
             setFetchTrigger((prev) => prev + 1); // Trigger timer reset
         }
     };
@@ -79,6 +128,8 @@ export default function Widget({
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
             if (abortControllerRef.current) abortControllerRef.current.abort();
+            if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
+            if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
     }, [endpoint, refreshInterval]);
 
@@ -126,10 +177,10 @@ export default function Widget({
                     <div
                         className="flex items-center justify-center h-full w-full"
                         style={{
-                            animation: isTransitioning ? 'fadeOut 0.3s ease-out forwards' : undefined
+                            animation: isTransitioning ? 'fadeOut 0.3s ease-out forwards' : undefined,
                         }}
                     >
-                        <Loader />
+                        {showLoader ? <Loader /> : null}
                     </div>
                 ) : (
                     <div className="widget-data-container">
