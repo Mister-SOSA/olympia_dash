@@ -48,21 +48,25 @@ export default function Widget({
 
         abortControllerRef.current = new AbortController();
 
-        // Start loading and schedule delayed loader appearance
-        setLoading(true);
-        setIsTransitioning(false);
-        setShowLoader(false);
-        if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
-        loaderDelayRef.current = setTimeout(() => {
-            // Only show loader if we're still loading
-            setShowLoader((prev) => {
-                if (loading) {
-                    loaderShownAtRef.current = Date.now();
-                    return true;
-                }
-                return prev;
-            });
-        }, LOADER_DELAY_MS);
+        // Only show loader on initial load, not on auto-refresh
+        const shouldShowLoader = isInitialLoadRef.current;
+
+        if (shouldShowLoader) {
+            setLoading(true);
+            setIsTransitioning(false);
+            setShowLoader(false);
+            if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
+            loaderDelayRef.current = setTimeout(() => {
+                // Only show loader if we're still loading
+                setShowLoader((prev) => {
+                    if (loading) {
+                        loaderShownAtRef.current = Date.now();
+                        return true;
+                    }
+                    return prev;
+                });
+            }, LOADER_DELAY_MS);
+        }
 
         try {
             const response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
@@ -86,6 +90,11 @@ export default function Widget({
                 console.error(`Widget fetch error:`, err);
             }
         } finally {
+            // Mark initial load as complete
+            if (isInitialLoadRef.current) {
+                isInitialLoadRef.current = false;
+            }
+
             // Clear delayed show timer if still pending
             if (loaderDelayRef.current) {
                 clearTimeout(loaderDelayRef.current);
@@ -98,7 +107,7 @@ export default function Widget({
                 setShowLoader(false);
             };
 
-            if (showLoader && loaderShownAtRef.current) {
+            if (shouldShowLoader && showLoader && loaderShownAtRef.current) {
                 // Ensure loader stayed visible for minimum time, then fade out
                 const elapsed = Date.now() - loaderShownAtRef.current;
                 const remaining = Math.max(LOADER_MIN_MS - elapsed, 0);
@@ -126,7 +135,7 @@ export default function Widget({
 
         if (refreshInterval && endpoint) {
             intervalRef.current = setInterval(fetchData, refreshInterval);
-            
+
             // Update progress smoothly
             const progressUpdateInterval = 200; // Update every 200ms
             progressIntervalRef.current = setInterval(() => {
@@ -143,7 +152,8 @@ export default function Widget({
             if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
-    }, [endpoint, refreshInterval]);    const handleRetry = () => {
+    }, [endpoint, refreshInterval]); const handleRetry = () => {
+        isInitialLoadRef.current = true; // Treat manual retry as initial load
         setLoading(true);
         setError(null);
         fetchData();
