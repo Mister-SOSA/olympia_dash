@@ -1,34 +1,5 @@
 "use client";
 
-/**
- * GridDashboard Component
- * 
- * A responsive, feature-rich dashboard grid using GridStack.js
- * 
- * Key Features:
- * - ✅ Responsive Breakpoints: Automatically adjusts columns based on screen size
- *   (11 cols desktop → 1 col mobile for optimal viewing on all devices)
- * 
- * - ✅ Manual Widget Resizing: Users can resize widgets vertically and horizontally
- *   (Removed global sizeToContent to preserve user control)
- * 
- * - ✅ Auto-Compact: Removes gaps after widget deletion while preserving order
- *   (Uses 'list' mode to maintain visual consistency)
- * 
- * - ✅ Viewport-Aware Cell Height: Dynamically calculates cell height to:
- *   1. Maintain square aspect ratio (1:1) based on container width
- *   2. Fit grid within viewport (targets 8-9 rows visible)
- *   3. Balance between square cells and screen fit
- *   (Ensures 2x2 widgets are squares while grid fits reasonably on screen)
- * 
- * - ✅ Minimum Widget Size: Enforces minimum widget dimensions (2×2)
- *   to prevent users from creating unusably small widgets
- * 
- * - ✅ Persistent Layout: Saves to localStorage and propagates to parent on any change
- * 
- * @see https://github.com/gridstack/gridstack.js for GridStack documentation
- */
-
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from "react";
 import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
