@@ -117,6 +117,14 @@ export const WIDGETS: WidgetDefinition[] = [
         description: "Shows top selling products by units",
         defaultSize: { w: 4, h: 4 }
     },
+    {
+        id: "MachineStockStatus",
+        component: React.lazy(() => import("@/components/widgets/MachineStockStatus")),
+        title: "Machine Stock Status",
+        category: "📦 Inventory",
+        description: "Shows stock status for machines",
+        defaultSize: { w: 6, h: 4 }
+    },
 
     // Utility widgets
     {
