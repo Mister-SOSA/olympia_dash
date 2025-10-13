@@ -1,6 +1,5 @@
 import React, { useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 /* -------------------------------------- */
@@ -33,14 +32,10 @@ interface MachineStockData {
     on_hold: number;
 }
 
-interface TableRowData {
-    partCode: string;
-    partDescription: string;
-    costCenter: string;
-    available: string;
-    onHand: string;
-    onHold: string;
-    stockPercentage: number;
+interface MachineByStatus {
+    available: MachineStockData[];
+    queueForRepair: MachineStockData[];
+    atRepairShop: MachineStockData[];
 }
 
 /* -------------------------------------- */
@@ -48,39 +43,118 @@ interface TableRowData {
 /* -------------------------------------- */
 
 /**
- * Calculate stock percentage based on available vs on_hand
- * Available should be close to on_hand for good stock levels
+ * Group machines by their cost center status
+ * Cost Center 1: Available & Ready
+ * Cost Center 2: Queue for Repair
+ * Cost Center 5: At Repair Shop
  */
-const calculateStockPercentage = (available: number, onHand: number): number => {
-    if (onHand === 0) return 0;
-    return (available / onHand) * 100;
+const groupMachinesByStatus = (data: MachineStockData[]): MachineByStatus => {
+    return data.reduce(
+        (acc, machine) => {
+            const costCenter = machine.cost_ctr;
+
+            if (costCenter === "1") {
+                acc.available.push(machine);
+            } else if (costCenter === "2") {
+                acc.queueForRepair.push(machine);
+            } else if (costCenter === "5") {
+                acc.atRepairShop.push(machine);
+            }
+            // Ignore other cost centers
+
+            return acc;
+        },
+        { available: [], queueForRepair: [], atRepairShop: [] } as MachineByStatus
+    );
 };
 
-/**
- * Get status badge class based on stock percentage
- */
-const getStockStatusClass = (percentage: number): string => {
-    if (percentage >= 80) return "badge-success";
-    if (percentage >= 50) return "badge-warning";
-    return "badge-danger";
-};
+/* -------------------------------------- */
+/* 🎨 Status Card Component               */
+/* -------------------------------------- */
 
-/**
- * Map raw data to table row format
- */
-const mapToTableData = (data: MachineStockData[]): TableRowData[] => {
-    return data.map((item) => {
-        const stockPercentage = calculateStockPercentage(item.available, item.on_hand);
-        return {
-            partCode: item.part_code,
-            partDescription: item.part_desc,
-            costCenter: item.cost_ctr || "N/A",
-            available: new Intl.NumberFormat("en-US").format(item.available),
-            onHand: new Intl.NumberFormat("en-US").format(item.on_hand),
-            onHold: new Intl.NumberFormat("en-US").format(item.on_hold),
-            stockPercentage,
-        };
-    });
+interface StatusCardProps {
+    title: string;
+    machines: MachineStockData[];
+    statusColor: 'success' | 'warning' | 'error';
+    icon: string;
+}
+
+const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon }) => {
+    const bgColorClass = statusColor === 'success' ? 'bg-[#4CAF50]' :
+        statusColor === 'warning' ? 'bg-[#ff8307]' :
+            'bg-[#F44336]';
+    const borderColorClass = statusColor === 'success' ? 'border-[#4CAF50]' :
+        statusColor === 'warning' ? 'border-[#ff8307]' :
+            'border-[#F44336]';
+    const bgLightClass = statusColor === 'success' ? 'bg-[#4CAF50]/10' :
+        statusColor === 'warning' ? 'bg-[#ff8307]/10' :
+            'bg-[#F44336]/10';
+
+    return (
+        <div className="flex-1 min-w-[280px] flex flex-col">
+            <div className={`rounded-lg border-2 ${borderColorClass} flex flex-col h-full bg-[#161e28]`}>
+                {/* Header */}
+                <div className={`${bgLightClass} px-4 py-3 border-b-2 ${borderColorClass} flex-shrink-0`}>
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+                            <span className="text-2xl">{icon}</span>
+                            {title}
+                        </h3>
+                        <span className={`${bgColorClass} text-white font-bold px-3 py-1 rounded-full text-sm`}>
+                            {machines.length}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Machine List */}
+                <div className="p-3 space-y-2 overflow-y-auto flex-1">
+                    {machines.length === 0 ? (
+                        <div className="text-center py-8 text-[#757575]">
+                            No machines in this status
+                        </div>
+                    ) : (
+                        machines.map((machine) => {
+                            // Highlight green if in cost center 1 (success status) and has available units
+                            const isAvailable = statusColor === 'success' && machine.available > 0;
+                            const bgClass = isAvailable
+                                ? 'bg-[#4CAF50]/20 border-[#4CAF50]'
+                                : 'bg-[#23303d] border-[#202D3C]';
+                            const hoverClass = isAvailable
+                                ? 'hover:bg-[#4CAF50]/30'
+                                : 'hover:bg-[#23303d]/80';
+
+                            return (
+                                <div
+                                    key={machine.part_code}
+                                    className={`${bgClass} rounded-md p-2 border ${hoverClass} transition-colors`}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        {/* Machine Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-bold text-base text-white truncate">{machine.part_code}</div>
+                                            <div className="text-xs text-[#B0B0B0] truncate">{machine.part_desc}</div>
+                                        </div>
+
+                                        {/* Metrics */}
+                                        <div className="flex gap-2 flex-shrink-0">
+                                            <div className="text-center bg-[#08121a] rounded px-3 py-1">
+                                                <div className="text-xs text-[#B0B0B0]">Avail</div>
+                                                <div className="font-semibold text-[#4CAF50]">{machine.available}</div>
+                                            </div>
+                                            <div className="text-center bg-[#08121a] rounded px-3 py-1">
+                                                <div className="text-xs text-[#B0B0B0]">Hold</div>
+                                                <div className="font-semibold text-[#ff8307]">{machine.on_hold}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 };
 
 /* -------------------------------------- */
@@ -100,41 +174,31 @@ export default function MachineStockStatus() {
         []
     );
 
-    // Render function for the table
+    // Render function for the status cards
     const renderFunction = useCallback((data: MachineStockData[]) => {
-        const tableData = mapToTableData(data);
+        const groupedMachines = groupMachinesByStatus(data);
 
         return (
-            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left text-white machine-stock-table">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="font-semibold">Cost Center</TableHead>
-                            <TableHead className="font-semibold">Machine Code</TableHead>
-                            <TableHead className="font-semibold">Description</TableHead>
-                            <TableHead className="font-semibold text-center">Available</TableHead>
-                            <TableHead className="font-semibold text-center">On Hand</TableHead>
-                            <TableHead className="font-semibold text-center">On Hold</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {tableData.map((row) => (
-                            <TableRow key={row.partCode}>
-                                <TableCell className="font-medium">{row.costCenter}</TableCell>
-                                <TableCell className="font-black">{row.partCode}</TableCell>
-                                <TableCell className="text-sm opacity-90">{row.partDescription}</TableCell>
-                                <TableCell className="text-center">
-                                    <span className={`badge ${getStockStatusClass(row.stockPercentage)} font-semibold`}>
-                                        {row.available}
-                                    </span>
-                                </TableCell>
-                                <TableCell className="text-center font-medium">{row.onHand}</TableCell>
-                                <TableCell className="text-center font-medium opacity-75">{row.onHold}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </ScrollArea>
+            <div className="h-full w-full flex gap-4 p-4">
+                <StatusCard
+                    title="Cost Center 1"
+                    machines={groupedMachines.available}
+                    statusColor="success"
+                    icon="✅"
+                />
+                <StatusCard
+                    title="Cost Center 2"
+                    machines={groupedMachines.queueForRepair}
+                    statusColor="warning"
+                    icon="⏳"
+                />
+                <StatusCard
+                    title="Cost Center 5"
+                    machines={groupedMachines.atRepairShop}
+                    statusColor="error"
+                    icon="🔧"
+                />
+            </div>
         );
     }, []);
 
