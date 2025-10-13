@@ -646,7 +646,7 @@ tbody>tr:nth-child(odd) {
 }
 
 .new-status-v-row {
-  animation: newStatusVPulse 0.8s ease-in-out 5 !important;
+  animation: newStatusVPulse 0.8s ease-in-out 9 !important;
 }
 
 .badge {

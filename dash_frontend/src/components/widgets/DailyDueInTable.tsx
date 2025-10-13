@@ -306,10 +306,10 @@ export default function DailyDueInTable() {
             playNotificationSound(); // Play once for all status changes
             setNewStatusVRows(newStatusVSet);
 
-            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
+            // Clear the highlight after animation completes (9 pulses * 0.8s = 7.2 seconds)
             setTimeout(() => {
                 setNewStatusVRows(new Set());
-            }, 4000);
+            }, 7200);
         }
 
         return (
