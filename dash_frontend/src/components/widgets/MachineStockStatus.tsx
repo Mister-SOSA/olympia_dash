@@ -219,7 +219,7 @@ export default function MachineStockStatus() {
             endpoint="/api/widgets"
             payload={widgetPayload}
             title="Machine Stock Status"
-            refreshInterval={30000}
+            refreshInterval={10000}
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {
