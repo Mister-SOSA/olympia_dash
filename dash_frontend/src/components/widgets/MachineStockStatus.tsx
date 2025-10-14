@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import Widget from "./Widget";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// import { ScrollArea } from "@/components/ui/scroll-area";
 
 /* -------------------------------------- */
 /* 📊 Types & Interfaces                  */
@@ -21,6 +21,18 @@ const MACHINE_CODES = [
     "TITAN-2",
     "SPARTAN",
     "SPARTAN-2",
+    "XL-ELECTRICMACHINE",
+    "XL-ELECTRICMACHINE 240V USED",
+    "XL-ELECTRICMACHINE208V-USED",
+    "XL-ELECTRICMACHINE240V",
+    "XL-LPMACHINE",
+    "XL-LPMACHINE USED",
+    "XL-MINIMACHINE",
+    "XL-MINIMACHINE USED",
+    "XL-NEW 4LG NEW 2K",
+    "XL-NEWMACHINE",
+    "XL-USED 4LG NAT",
+    "XL-USED 4LG NAT 2K"
 ];
 
 interface MachineStockData {
