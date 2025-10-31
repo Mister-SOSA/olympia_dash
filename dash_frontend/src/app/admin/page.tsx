@@ -9,6 +9,8 @@ import { Loader } from '@/components/ui/loader';
 import { MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices, MdHistory, MdArrowBack } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 
+export const dynamic = 'force-dynamic';
+
 interface ExtendedUser extends User {
   permissions?: string[];
   is_active?: boolean;

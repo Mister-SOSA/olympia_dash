@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { FaMicrosoft } from 'react-icons/fa';
 import { MdDevices, MdRefresh } from 'react-icons/md';
 import { IoTimeOutline } from 'react-icons/io5';
 
-export default function LoginPage() {
+export const dynamic = 'force-dynamic';
+
+function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
@@ -257,5 +259,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+                <Loader />
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }

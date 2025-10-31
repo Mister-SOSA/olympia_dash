@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader } from '@/components/ui/loader';
 
+export const dynamic = 'force-dynamic';
+
 export default function PairPage() {
     const router = useRouter();
     const [userCode, setUserCode] = useState('');

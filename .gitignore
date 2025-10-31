@@ -62,6 +62,12 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Auth database
+auth.db
+auth.db-journal
+auth.db-wal
+auth.db-shm
+
 # Gunicorn
 .cache.sqlite
 .DS_Store

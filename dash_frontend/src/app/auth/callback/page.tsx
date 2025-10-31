@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Loader } from '@/components/ui/loader';
 
-export default function AuthCallbackPage() {
+export const dynamic = 'force-dynamic';
+
+function CallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [error, setError] = useState('');
@@ -65,5 +67,18 @@ export default function AuthCallbackPage() {
             <Loader />
             <p className="text-slate-300 mt-4">Completing authentication...</p>
         </div>
+    );
+}
+
+export default function AuthCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950">
+                <Loader />
+                <p className="text-slate-300 mt-4">Loading...</p>
+            </div>
+        }>
+            <CallbackContent />
+        </Suspense>
     );
 }
