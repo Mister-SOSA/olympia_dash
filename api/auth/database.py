@@ -140,10 +140,18 @@ def init_db():
 
 # User management functions
 def create_user(email, name, microsoft_id, role='user'):
-    """Create a new user."""
+    """Create a new user. First user becomes admin automatically."""
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Check if this is the first user
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+        
+        # First user gets admin role
+        if user_count == 0:
+            role = 'admin'
+        
         cursor.execute('''
             INSERT INTO users (email, name, microsoft_id, role)
             VALUES (?, ?, ?, ?)

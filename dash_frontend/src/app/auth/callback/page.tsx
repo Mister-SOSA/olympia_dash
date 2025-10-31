@@ -15,6 +15,7 @@ function CallbackContent() {
     useEffect(() => {
         const handleCallback = async () => {
             const code = searchParams.get('code');
+            const state = searchParams.get('state');
             const error = searchParams.get('error');
             const errorDescription = searchParams.get('error_description');
 
@@ -34,8 +35,9 @@ function CallbackContent() {
                 const response = await authService.handleCallback(code);
 
                 if (response.success) {
-                    // Redirect to dashboard
-                    router.push('/');
+                    // Redirect to state parameter or dashboard
+                    const redirectTo = state || '/';
+                    router.push(redirectTo);
                 } else {
                     setError(response.error || 'Authentication failed');
                     setTimeout(() => router.push('/login'), 3000);
