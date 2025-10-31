@@ -9,5 +9,5 @@ gunicorn==23.0.0
 colorlog==6.9.0
 msal==1.26.0
 PyJWT==2.8.0
-cryptography==41.0.7
+cryptography==44.0.1
 requests==2.31.0
