@@ -18,8 +18,7 @@ import {
     readCurrentPresetType,
 } from "@/utils/layoutUtils";
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
-import { Flip, toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "sonner";
 import { authService } from "@/lib/auth";
 import { Loader } from "./ui/loader";
 import { Button } from "./ui/button";
@@ -141,16 +140,18 @@ export default function Dashboard() {
     // Load a preset with fade transition
     const loadPreset = useCallback(
         (index: number) => {
-            toast(`Loaded Dash ${index + 1}`, { type: "info", delay: 0 });
-            setTransitionPhase("fadeIn");
-            setTimeout(() => {
-                const preset = presets[index];
-                if (!preset) {
-                    toast(`Dash ${index + 1} is empty`, { type: "error", delay: 0 });
-                    setTransitionPhase("none");
-                    return;
-                }
+            const preset = presets[index];
 
+            // Check if preset exists and has widgets before doing anything
+            if (!preset || preset.layout.filter(w => w.enabled).length === 0) {
+                toast.error(`Preset ${index + 1} is empty`);
+                return;
+            }
+
+            toast.info(`Loaded Preset ${index + 1}`);
+            setTransitionPhase("fadeIn");
+
+            setTimeout(() => {
                 const merged = mergePreset(deepClone(preset.layout));
                 setLayout(merged);
                 setTempLayout(merged);
@@ -179,7 +180,7 @@ export default function Dashboard() {
             } else if (key === "x") {
                 if (gridDashboardRef.current) {
                     gridDashboardRef.current.compact();
-                    toast("Dash Compacted!", { type: "warning" });
+                    toast.success("Dashboard Compacted");
                 }
             } else if (
                 (!e.shiftKey && key >= "0" && key <= "9") ||
@@ -205,7 +206,7 @@ export default function Dashboard() {
                             };
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
-                            toast(`Saved Preset ${index + 1}`, { type: "success", delay: 0 });
+                            toast.success(`Saved Preset ${index + 1}`);
                         }
                     } else {
                         loadPreset(index);
@@ -296,14 +297,14 @@ export default function Dashboard() {
                     };
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
-                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`, { type: "success", delay: 0 });
+                    toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
                 }}
                 onClearPreset={(index) => {
                     const newPresets = [...presets];
                     newPresets[index] = null;
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
-                    toast(`Cleared Preset ${index + 1}`, { type: "warning", delay: 0 });
+                    toast.warning(`Cleared Preset ${index + 1}`);
                 }}
                 currentLayout={layout}
             />
@@ -322,7 +323,7 @@ export default function Dashboard() {
                     };
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
-                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`, { type: "success", delay: 0 });
+                    toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
                 }}
             />
 
@@ -393,14 +394,6 @@ export default function Dashboard() {
                     }}
                 />
             )}
-
-            <ToastContainer
-                position="bottom-center"
-                autoClose={1000}
-                pauseOnHover
-                theme="colored"
-                transition={Flip}
-            />
         </div>
     );
 }
