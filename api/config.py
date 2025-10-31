@@ -12,3 +12,11 @@ class Config:
         'driver': os.getenv('SQL_DRIVER', ''),
         'trust_server_certificate': os.getenv('SQL_TRUST_CERT', '')
     }
+    
+    # Authentication configuration
+    JWT_SECRET = os.getenv('JWT_SECRET', os.urandom(32).hex())
+    MICROSOFT_CLIENT_ID = os.getenv('MICROSOFT_CLIENT_ID')
+    MICROSOFT_CLIENT_SECRET = os.getenv('MICROSOFT_CLIENT_SECRET')
+    MICROSOFT_TENANT_ID = os.getenv('MICROSOFT_TENANT_ID')
+    MICROSOFT_REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI')
+    ALLOWED_DOMAINS = os.getenv('ALLOWED_DOMAINS', '')

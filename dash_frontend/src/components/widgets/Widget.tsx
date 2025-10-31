@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { MdError, MdRefresh } from "react-icons/md";
 import { Loader } from "@/components/ui/loader";
 import config from "@/config";
+import { authService } from "@/lib/auth";
 
 interface WidgetProps {
     title?: string;
@@ -70,7 +71,7 @@ export default function Widget({
         }
 
         try {
-            const response = await fetch(`${config.API_BASE_URL}${endpoint}`, {
+            const response = await authService.fetchWithAuth(`${config.API_BASE_URL}${endpoint}`, {
                 method: payload ? "POST" : "GET",
                 headers: { "Content-Type": "application/json" },
                 body: payload ? JSON.stringify(payload) : undefined,

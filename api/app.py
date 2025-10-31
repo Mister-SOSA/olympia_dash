@@ -15,6 +15,10 @@ import requests_cache
 import openmeteo_requests
 from retry_requests import retry
 from database.queries import QueryBuilder
+from auth.routes import auth_bp
+from auth.device_routes import device_bp
+from auth.admin_routes import admin_bp
+from auth.middleware import require_auth
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -51,7 +55,13 @@ OPEN_METEO_PARAMS = {
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Register authentication blueprints with /api/auth prefix
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(device_bp, url_prefix='/api/auth/device')
+app.register_blueprint(admin_bp, url_prefix='/api/auth/admin')
+
 @app.route('/api/widgets', methods=['POST'])
+@require_auth
 def get_widgets_post():
     """
     Handle POST requests to retrieve widget data.
@@ -122,6 +132,7 @@ def get_widgets_post():
 
 
 @app.route('/api/humidity', methods=['GET'])
+@require_auth
 def get_humidity():
     """
     Retrieve current relative humidity data from the Open-Meteo API.

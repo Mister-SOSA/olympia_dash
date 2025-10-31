@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         destination: `${apiBaseUrl}/api/:path*`,
       },
+      {
+        source: '/auth/:path*',
+        destination: `${apiBaseUrl}/auth/:path*`,
+      },
+      {
+        source: '/admin/:path((?!_next).*)',
+        destination: '/admin/page',
+      },
     ];
   },
   // Increase timeout for API routes in production

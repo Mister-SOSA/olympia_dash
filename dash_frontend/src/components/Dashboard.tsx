@@ -1,9 +1,11 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetMenu from "./PresetMenu";
+import SettingsMenu from "./SettingsMenu";
 import { Widget, DashboardPreset, PresetType } from "@/types";
 import {
     readLayoutFromStorage,
@@ -16,6 +18,9 @@ import {
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { Flip, toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { authService } from "@/lib/auth";
+import { Loader } from "./ui/loader";
+import { Button } from "./ui/button";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -64,9 +69,14 @@ const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
 };
 
 export default function Dashboard() {
+    const router = useRouter();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
+    const [user, setUser] = useState(authService.getUser());
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
     const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
@@ -74,8 +84,33 @@ export default function Dashboard() {
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
+    // Check authentication on mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            if (!authService.isAuthenticated()) {
+                router.push('/login');
+                return;
+            }
+            
+            // Verify token is still valid
+            const currentUser = await authService.getCurrentUser();
+            if (!currentUser) {
+                router.push('/login');
+                return;
+            }
+            
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            setCheckingAuth(false);
+        };
+        
+        checkAuth();
+    }, [router]);
+
     // Initialize layout and presets on mount
     useEffect(() => {
+        if (!isAuthenticated) return;
+        
         const storedLayout = readLayoutFromStorage();
         if (storedLayout) {
             setLayout(storedLayout);
@@ -87,7 +122,7 @@ export default function Dashboard() {
         // Restore the last used preset type
         const storedPresetType = readCurrentPresetType();
         setCurrentPresetType(storedPresetType as PresetType);
-    }, []);
+    }, [isAuthenticated]);
 
     // Prepare a temporary layout for the widget menu
     const updateTempLayout = useCallback(() => {
@@ -133,6 +168,8 @@ export default function Dashboard() {
             if (key === "f") {
                 setMenuOpen((prev) => !prev);
                 updateTempLayout();
+            } else if (key === "s") {
+                setSettingsOpen((prev) => !prev);
             } else if (key === "x") {
                 if (gridDashboardRef.current) {
                     gridDashboardRef.current.compact();
@@ -203,6 +240,23 @@ export default function Dashboard() {
         setMenuOpen(false);
     }, []);
 
+    const handleLogout = async () => {
+        await authService.logout();
+        router.push('/login');
+    };
+
+    if (checkingAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+                <Loader />
+            </div>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return null;
+    }
+
     return (
         <div className="dashboard-container">
             <AnimatePresence>
@@ -212,6 +266,17 @@ export default function Dashboard() {
                         setTempLayout={setTempLayout}
                         handleSave={handleSave}
                         handleCancel={handleCancel}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {settingsOpen && (
+                    <SettingsMenu
+                        user={user}
+                        onLogout={handleLogout}
+                        onClose={() => setSettingsOpen(false)}
+                        onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
                     />
                 )}
             </AnimatePresence>
