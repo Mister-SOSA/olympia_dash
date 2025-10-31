@@ -3,8 +3,10 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
+import DashboardDock from "./DashboardDock";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetMenu from "./PresetMenu";
+import PresetManagerMenu from "./PresetManagerMenu";
 import SettingsMenu from "./SettingsMenu";
 import { Widget, DashboardPreset, PresetType } from "@/types";
 import {
@@ -77,10 +79,12 @@ export default function Dashboard() {
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [presetManagerOpen, setPresetManagerOpen] = useState(false);
+    const [presetSaveOpen, setPresetSaveOpen] = useState(false);
+    const [presetSaveIndex, setPresetSaveIndex] = useState<number>(0);
     const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
     const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
-    const [presetsOpen, setPresetsOpen] = useState<boolean>(false);
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
@@ -161,13 +165,15 @@ export default function Dashboard() {
             }, 300);
         },
         [presets]
-    );    // Global keybindings: F = menu, X = compact, P = toggle presets, 1–9 / Shift+1–9
+    );    // Global keybindings: F = menu, P = presets, S = settings, X = compact, 1–9 = load/save presets
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             const key = e.key.toLowerCase();
             if (key === "f") {
                 setMenuOpen((prev) => !prev);
                 updateTempLayout();
+            } else if (key === "p") {
+                setPresetManagerOpen((prev) => !prev);
             } else if (key === "s") {
                 setSettingsOpen((prev) => !prev);
             } else if (key === "x") {
@@ -175,8 +181,6 @@ export default function Dashboard() {
                     gridDashboardRef.current.compact();
                     toast("Dash Compacted!", { type: "warning" });
                 }
-            } else if (key === "p") {
-                setPresetsOpen((prev) => !prev);
             } else if (
                 (!e.shiftKey && key >= "0" && key <= "9") ||
                 (e.shiftKey && e.code.startsWith("Digit"))
@@ -195,14 +199,13 @@ export default function Dashboard() {
                         const liveLayout = readLayoutFromStorage();
                         if (liveLayout) {
                             const newPresets = [...presets];
-                            // Save as grid preset by default when using keyboard shortcut
                             newPresets[index] = {
                                 type: "grid",
                                 layout: deepClone(liveLayout)
                             };
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
-                            toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
+                            toast(`Saved Preset ${index + 1}`, { type: "success", delay: 0 });
                         }
                     } else {
                         loadPreset(index);
@@ -259,6 +262,71 @@ export default function Dashboard() {
 
     return (
         <div className="dashboard-container">
+            {/* Dock - Auto-hides at bottom */}
+            <DashboardDock
+                presets={presets}
+                onWidgetsClick={() => {
+                    setMenuOpen(true);
+                    updateTempLayout();
+                }}
+                onPresetManagerClick={() => setPresetManagerOpen(true)}
+                onPresetClick={(index) => {
+                    if (presets[index] && presets[index]!.layout.filter(w => w.enabled).length > 0) {
+                        loadPreset(index);
+                    }
+                }}
+                onPresetSave={(index) => {
+                    setPresetSaveIndex(index);
+                    setPresetSaveOpen(true);
+                }}
+                onSettingsClick={() => setSettingsOpen(true)}
+            />
+
+            {/* Preset Manager */}
+            <PresetManagerMenu
+                isOpen={presetManagerOpen}
+                onClose={() => setPresetManagerOpen(false)}
+                presets={presets}
+                onLoadPreset={loadPreset}
+                onSavePreset={(index, layoutToSave, presetType) => {
+                    const newPresets = [...presets];
+                    newPresets[index] = {
+                        type: presetType,
+                        layout: deepClone(layoutToSave)
+                    };
+                    setPresets(newPresets);
+                    savePresetsToStorage(newPresets);
+                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`, { type: "success", delay: 0 });
+                }}
+                onClearPreset={(index) => {
+                    const newPresets = [...presets];
+                    newPresets[index] = null;
+                    setPresets(newPresets);
+                    savePresetsToStorage(newPresets);
+                    toast(`Cleared Preset ${index + 1}`, { type: "warning", delay: 0 });
+                }}
+                currentLayout={layout}
+            />
+
+            {/* Quick Save Preset Type Modal */}
+            <PresetMenu
+                isOpen={presetSaveOpen}
+                onClose={() => setPresetSaveOpen(false)}
+                presetIndex={presetSaveIndex}
+                currentLayout={layout}
+                onSavePreset={(index, layoutToSave, presetType) => {
+                    const newPresets = [...presets];
+                    newPresets[index] = {
+                        type: presetType,
+                        layout: deepClone(layoutToSave)
+                    };
+                    setPresets(newPresets);
+                    savePresetsToStorage(newPresets);
+                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`, { type: "success", delay: 0 });
+                }}
+            />
+
+            {/* Widget Menu Modal */}
             <AnimatePresence>
                 {menuOpen && (
                     <ImprovedWidgetMenu
@@ -270,6 +338,7 @@ export default function Dashboard() {
                 )}
             </AnimatePresence>
 
+            {/* Settings Menu Modal */}
             <AnimatePresence>
                 {settingsOpen && (
                     <SettingsMenu
@@ -280,44 +349,6 @@ export default function Dashboard() {
                     />
                 )}
             </AnimatePresence>
-
-            {!menuOpen && (
-                <button
-                    onClick={() => {
-                        setMenuOpen(true);
-                        updateTempLayout();
-                    }}
-                    className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 md:hidden"
-                    aria-label="Open Widget Menu"
-                >
-                    ⚙️
-                </button>
-            )}
-
-            <PresetMenu
-                presets={presets}
-                loadPreset={loadPreset}
-                presetsOpen={presetsOpen}
-                setPresetsOpen={setPresetsOpen}
-                currentLayout={layout}
-                onSavePreset={(index, layoutToSave, presetType) => {
-                    const newPresets = [...presets];
-                    newPresets[index] = {
-                        type: presetType,
-                        layout: deepClone(layoutToSave)
-                    };
-                    setPresets(newPresets);
-                    savePresetsToStorage(newPresets);
-                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Layout ${index + 1}`, { type: "success", delay: 0 });
-                }}
-                onClearPreset={(index) => {
-                    const newPresets = [...presets];
-                    newPresets[index] = null;
-                    setPresets(newPresets);
-                    savePresetsToStorage(newPresets);
-                    toast(`Cleared Preset ${index + 1}`, { type: "warning", delay: 0 });
-                }}
-            />
 
             <GridDashboard
                 ref={gridDashboardRef}

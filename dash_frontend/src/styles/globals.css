@@ -11,6 +11,19 @@ nextjs-portal {
   display: none;
 }
 
+/* Scrollbar utilities */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
 /* Improved Widget Menu Styles */
 .line-clamp-2 {
   display: -webkit-box;
