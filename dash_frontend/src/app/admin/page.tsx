@@ -307,8 +307,8 @@ export default function AdminPage() {
                       <td className="p-4">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-red-500/20 text-red-400'
                             }`}
                         >
                           {user.is_active ? 'Active' : 'Inactive'}

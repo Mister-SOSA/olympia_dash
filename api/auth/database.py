@@ -9,7 +9,12 @@ from datetime import datetime, timedelta
 import secrets
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / 'auth.db'
+# Use /app/data in Docker, local path otherwise
+DB_DIR = Path('/app/data') if os.path.exists('/app/data') else Path(__file__).parent.parent
+DB_PATH = DB_DIR / 'auth.db'
+
+# Ensure directory exists
+DB_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_db():
     """Get a database connection."""
