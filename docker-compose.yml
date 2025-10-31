@@ -34,4 +34,10 @@ services:
       - FLASK_HOST=0.0.0.0
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist SQLite auth database
+      - auth_data:/app/auth.db
     restart: unless-stopped
+
+volumes:
+  auth_data:
