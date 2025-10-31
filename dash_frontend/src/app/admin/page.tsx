@@ -161,9 +161,9 @@ export default function AdminPage() {
             <h1 className="text-3xl font-bold text-white mb-1">Admin Dashboard</h1>
             <p className="text-slate-400">Manage users and system settings</p>
           </div>
-          <Button 
-            onClick={() => router.push('/')} 
-            variant="outline" 
+          <Button
+            onClick={() => router.push('/')}
+            variant="outline"
             className="border-slate-700 hover:bg-slate-800 text-slate-300"
           >
             <MdArrowBack className="mr-2 h-4 w-4" />
@@ -193,7 +193,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -207,7 +207,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -235,7 +235,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -249,7 +249,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -304,11 +304,10 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            user.is_active
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active
                               ? 'bg-green-500/20 text-green-400'
                               : 'bg-red-500/20 text-red-400'
-                          }`}
+                            }`}
                         >
                           {user.is_active ? 'Active' : 'Inactive'}
                         </span>

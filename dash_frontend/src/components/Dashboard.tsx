@@ -91,26 +91,26 @@ export default function Dashboard() {
                 router.push('/login');
                 return;
             }
-            
+
             // Verify token is still valid
             const currentUser = await authService.getCurrentUser();
             if (!currentUser) {
                 router.push('/login');
                 return;
             }
-            
+
             setUser(currentUser);
             setIsAuthenticated(true);
             setCheckingAuth(false);
         };
-        
+
         checkAuth();
     }, [router]);
 
     // Initialize layout and presets on mount
     useEffect(() => {
         if (!isAuthenticated) return;
-        
+
         const storedLayout = readLayoutFromStorage();
         if (storedLayout) {
             setLayout(storedLayout);
