@@ -156,13 +156,13 @@ export default function TopProductUnitSalesTable() {
 
         // Helper function to get color classes based on percentage
         const getPercentageColor = (pct: number) => {
-            if (pct >= 10) return "bg-emerald-500/25 text-emerald-200 border-emerald-400/60";
-            if (pct >= 5) return "bg-green-500/25 text-green-200 border-green-400/60";
-            if (pct > 0) return "bg-lime-500/25 text-lime-200 border-lime-400/60";
-            if (pct === 0) return "bg-slate-500/25 text-slate-200 border-slate-400/60";
-            if (pct > -5) return "bg-yellow-500/25 text-yellow-200 border-yellow-400/60";
-            if (pct > -10) return "bg-orange-500/25 text-orange-200 border-orange-400/60";
-            return "bg-red-500/25 text-red-200 border-red-400/60";
+            if (pct >= 10) return "bg-emerald-500/40 text-emerald-100 border-emerald-400";
+            if (pct >= 5) return "bg-green-500/40 text-green-100 border-green-400";
+            if (pct > 0) return "bg-lime-500/40 text-lime-100 border-lime-400";
+            if (pct === 0) return "bg-slate-500/40 text-slate-100 border-slate-400";
+            if (pct > -5) return "bg-yellow-500/40 text-yellow-100 border-yellow-400";
+            if (pct > -10) return "bg-orange-500/40 text-orange-100 border-orange-400";
+            return "bg-red-500/40 text-red-100 border-red-400";
         };
 
         return (
