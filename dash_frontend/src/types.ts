@@ -96,27 +96,25 @@ export interface POItemTableData {
 }
 
 export interface InventoryMoveRaw {
-    trans_date: string;
-    user_id: string;
-    adj_type: string;
-    adj_status: string;
-    part_code: string;
-    lotqty: number;
-    uom: string;
-    location: string;
-    to_location: string;
-    recnum: string;
-    lot: string;
+    xfer_date: string;
+    xfer_time: string;
+    xfer_user: string;
+    xtype: string;
+    xfer_part_code: string;
+    xfer_qty: number;
+    fmid: string;
+    toid: string;
+    xfer_doc: string;
+    xfer_lot: string;
 }
 
 export interface InventoryMove {
     moveDate: string;
+    moveTime: string;
     moveUser: string;
-    adjustmentType: string;
-    adjustmentStatus: string;
+    transferType: string;
     partCode: string;
     quantity: number;
-    uom: string;
     fromLocation: string;
     toLocation: string;
     docNumber: string;

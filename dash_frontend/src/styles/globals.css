@@ -644,6 +644,44 @@ tbody>tr:nth-child(odd) {
   animation: flashAnim .5s ease-out;
 }
 
+/* New Inventory Move Row Animation */
+@keyframes newInventoryRow {
+  0% {
+    background-color: rgba(59, 130, 246, 0.25);
+    border-left-color: rgba(59, 130, 246, 1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+  15% {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-left-color: rgba(59, 130, 246, 0.9);
+  }
+  100% {
+    background-color: transparent;
+    border-left-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.inventory-new-row {
+  animation: newInventoryRow 6s ease-out forwards;
+  border-left: 4px solid rgba(59, 130, 246, 1);
+  position: relative;
+}
+
+/* Add a subtle pulse glow effect */
+@keyframes newRowGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.inventory-new-row-glow {
+  animation: newRowGlow 2s ease-in-out 3;
+}
+
 @keyframes newStatusVPulse {
 
   0%,
