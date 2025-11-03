@@ -19,7 +19,9 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                 onMouseMove={(e) => mouseX.set(e.pageX)}
                 onMouseLeave={() => mouseX.set(Infinity)}
                 className={cn(
-                    "flex h-16 gap-2 items-end rounded-2xl bg-gray-950/95 backdrop-blur-md border-2 border-gray-600 px-3 pb-2 shadow-2xl",
+                    "flex h-16 gap-2 items-end rounded-2xl backdrop-blur-xl px-3 pb-2",
+                    "bg-[#08121a]/95 border-2 border-[#2c3e50]/80",
+                    "shadow-[0_8px_32px_rgba(0,0,0,0.6)]",
                     className
                 )}
             >
@@ -72,8 +74,11 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
                 title={title}
                 className={cn(
                     "flex aspect-square items-center justify-center rounded-xl",
-                    "bg-gray-800/80 hover:bg-gray-700 transition-colors border border-gray-700",
-                    "text-gray-200 hover:text-white",
+                    "bg-[#161e28]/90 hover:bg-[#23303d]",
+                    "border-2 border-[#202D3C] hover:border-[#2c3e50]",
+                    "text-gray-300 hover:text-white",
+                    "shadow-lg hover:shadow-xl",
+                    "transition-[background-color,border-color,color,box-shadow] duration-200",
                     className
                 )}
             >
@@ -86,6 +91,6 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
 DockIcon.displayName = "DockIcon";
 
 export const DockDivider = () => {
-    return <div className="w-[1px] h-full bg-gray-700 mx-1" />;
+    return <div className="w-[2px] h-full bg-[#2c3e50] rounded-full mx-1 shadow-sm" />;
 };
 

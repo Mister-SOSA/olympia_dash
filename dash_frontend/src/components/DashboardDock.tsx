@@ -58,7 +58,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onWidgetsClick}
                             title="Widgets (F)"
-                            className="bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40"
+                            className="bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/60 hover:border-blue-400/80"
                         >
                             <MdWidgets className="w-6 h-6" />
                         </DockIcon>
@@ -67,7 +67,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onPresetManagerClick}
                             title="Manage Presets (P)"
-                            className="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40"
+                            className="bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 hover:border-purple-400/80"
                         >
                             <MdBookmarks className="w-6 h-6" />
                         </DockIcon>
@@ -90,13 +90,13 @@ export default function DashboardDock({
                                     }
                                     className={
                                         isFilled
-                                            ? "bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 relative"
-                                            : "bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700"
+                                            ? "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 hover:border-purple-400/80 relative"
+                                            : "bg-[#161e28]/90 hover:bg-[#23303d] border-[#202D3C] hover:border-[#2c3e50]"
                                     }
                                 >
                                     <span className="font-semibold text-sm">{index + 1}</span>
                                     {isFilled && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full" />
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
                                     )}
                                 </DockIcon>
                             );
@@ -108,7 +108,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onSettingsClick}
                             title="Settings (S)"
-                            className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600"
+                            className="bg-slate-600/30 hover:bg-slate-600/50 border-slate-500/60 hover:border-slate-400/80"
                         >
                             <MdSettings className="w-6 h-6" />
                         </DockIcon>
