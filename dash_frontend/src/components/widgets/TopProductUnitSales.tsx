@@ -3,6 +3,7 @@ import Widget from "./Widget";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
+import { Package, FileText, TrendingUp, Calendar, Award } from "lucide-react";
 
 
 /* -------------------------------------- */
@@ -153,51 +154,132 @@ export default function TopProductUnitSalesTable() {
             return parseInt(b.avg12.value.replace(/,/g, "")) - parseInt(a.avg12.value.replace(/,/g, ""));
         });
 
+        // Helper function to get color classes based on percentage
+        const getPercentageColor = (pct: number) => {
+            if (pct >= 10) return "bg-emerald-500/25 text-emerald-200 border-emerald-400/60";
+            if (pct >= 5) return "bg-green-500/25 text-green-200 border-green-400/60";
+            if (pct > 0) return "bg-lime-500/25 text-lime-200 border-lime-400/60";
+            if (pct === 0) return "bg-slate-500/25 text-slate-200 border-slate-400/60";
+            if (pct > -5) return "bg-yellow-500/25 text-yellow-200 border-yellow-400/60";
+            if (pct > -10) return "bg-orange-500/25 text-orange-200 border-orange-400/60";
+            return "bg-red-500/25 text-red-200 border-red-400/60";
+        };
+
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Part Code</TableHead>
-                            <TableHead>Part Description</TableHead>
-                            <TableHead className="text-right">Avg 3 Mo</TableHead>
-                            <TableHead className="text-right">Avg 6 Mo</TableHead>
-                            <TableHead className="text-right">Avg 9 Mo</TableHead>
-                            <TableHead className="text-right">Avg 12 Mo</TableHead>
+                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
+                        <TableRow className="border-border/50 hover:bg-transparent">
+                            <TableHead className="font-bold text-white py-2 w-12">
+                                <div className="flex items-center gap-1">
+                                    <Award className="h-3.5 w-3.5 text-amber-400" />
+                                    #
+                                </div>
+                            </TableHead>
+                            <TableHead className="font-bold text-white py-2 w-24">
+                                <div className="flex items-center gap-1">
+                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Part
+                                </div>
+                            </TableHead>
+                            <TableHead className="font-bold text-white py-2">
+                                <div className="flex items-center gap-1">
+                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Description
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                                <div className="flex items-center justify-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    3 Mo Avg
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                                <div className="flex items-center justify-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    6 Mo Avg
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                                <div className="flex items-center justify-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    9 Mo Avg
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-center font-bold text-white py-2 w-36 border-l border-border">
+                                <div className="flex items-center justify-center gap-1">
+                                    <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                                    12 Mo Avg
+                                </div>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tableData.map((row, i) => (
-                            <TableRow key={i}>
-                                <TableCell className="font-black">{row.partCode}</TableCell>
-                                <TableCell>{row.partDesc}</TableCell>
-                                <TableCell className="text-right">
-                                    {row.avg3.pct !== null && (
-                                        <span className={`percent-badge ${row.avg3.pct >= 0 ? "positive" : "negative"}`}>
-                                            {row.avg3.pct >= 0 ? "+" : ""}{row.avg3.pct.toFixed(1)}%
+                        {tableData.map((row, i) => {
+                            const rank = i + 1;
+                            const isTopThree = rank <= 3;
+                            const rankColors = {
+                                1: "text-amber-400 font-black",
+                                2: "text-slate-300 font-black",
+                                3: "text-amber-600 font-bold"
+                            };
+                            
+                            return (
+                                <TableRow 
+                                    key={i} 
+                                    className={`
+                                        border-border/30 transition-all duration-300 hover:bg-muted/50
+                                        ${isTopThree ? "bg-muted/20" : ""}
+                                        ${rank === 1 ? "bg-amber-500/5 border-l-2 border-l-amber-500/50" : ""}
+                                    `}
+                                >
+                                    <TableCell className="py-1.5 text-center">
+                                        <span className={`font-bold text-[15px] ${rankColors[rank as 1 | 2 | 3] || "text-muted-foreground"}`}>
+                                            {rank}
                                         </span>
-                                    )}
-                                    {row.avg3.value}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    {row.avg6.pct !== null && (
-                                        <span className={`percent-badge ${row.avg6.pct >= 0 ? "positive" : "negative"}`}>
-                                            {row.avg6.pct >= 0 ? "+" : ""}{row.avg6.pct.toFixed(1)}%
-                                        </span>
-                                    )}
-                                    {row.avg6.value}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    {row.avg9.pct !== null && (
-                                        <span className={`percent-badge ${row.avg9.pct >= 0 ? "positive" : "negative"}`}>
-                                            {row.avg9.pct >= 0 ? "+" : ""}{row.avg9.pct.toFixed(1)}%
-                                        </span>
-                                    )}
-                                    {row.avg9.value}
-                                </TableCell>
-                                <TableCell className="text-right font-black">{row.avg12.value}</TableCell>
-                            </TableRow>
-                        ))}
+                                    </TableCell>
+                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">
+                                        {row.partCode}
+                                    </TableCell>
+                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5">
+                                        {row.partDesc}
+                                    </TableCell>
+                                    <TableCell className="py-1.5 border-l border-border">
+                                        <div className="flex items-center justify-end gap-3 px-2">
+                                            {row.avg3.pct !== null && (
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg3.pct)}`}>
+                                                    {row.avg3.pct > 0 ? "+" : ""}{row.avg3.pct.toFixed(1)}%
+                                                </span>
+                                            )}
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg3.value}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 border-l border-border">
+                                        <div className="flex items-center justify-end gap-3 px-2">
+                                            {row.avg6.pct !== null && (
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg6.pct)}`}>
+                                                    {row.avg6.pct > 0 ? "+" : ""}{row.avg6.pct.toFixed(1)}%
+                                                </span>
+                                            )}
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg6.value}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-1.5 border-l border-border">
+                                        <div className="flex items-center justify-end gap-3 px-2">
+                                            {row.avg9.pct !== null && (
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg9.pct)}`}>
+                                                    {row.avg9.pct > 0 ? "+" : ""}{row.avg9.pct.toFixed(1)}%
+                                                </span>
+                                            )}
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg9.value}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className={`text-center py-1.5 border-l border-border ${rank === 1 ? "text-amber-300" : ""}`}>
+                                        <span className="font-black text-[16px] leading-tight">{row.avg12.value}</span>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </ScrollArea>

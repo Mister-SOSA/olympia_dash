@@ -13,6 +13,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
+import { Package, Calendar, DollarSign, Hash, FileText, TrendingUp } from "lucide-react";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -314,18 +315,68 @@ export default function DailyDueInHiddenVendTable() {
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>PO Number</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Part Code</TableHead>
-                            <TableHead className="text-right">Qty Ordered</TableHead>
-                            <TableHead className="text-right">Qty Received</TableHead>
-                            <TableHead className="text-right">Date Ordered</TableHead>
-                            <TableHead className="text-right">Prev. Order</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Prev. Price</TableHead>
+                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
+                        <TableRow className="border-border/50 hover:bg-transparent">
+                            <TableHead className="font-bold text-white py-2">
+                                <div className="flex items-center gap-1">
+                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                    PO Number
+                                </div>
+                            </TableHead>
+                            <TableHead className="font-bold text-white py-2">
+                                <div className="flex items-center gap-1">
+                                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Status
+                                </div>
+                            </TableHead>
+                            <TableHead className="font-bold text-white py-2">
+                                <div className="flex items-center gap-1">
+                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Vendor
+                                </div>
+                            </TableHead>
+                            <TableHead className="font-bold text-white py-2">
+                                <div className="flex items-center gap-1">
+                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Part Code
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Qty Ordered
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Qty Received
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Date Ordered
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Prev. Order
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Unit Price
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-right font-bold text-white py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                                    Prev. Price
+                                </div>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -333,30 +384,31 @@ export default function DailyDueInHiddenVendTable() {
                             <TableRow
                                 key={row.itemNo}
                                 className={`
-                                                            ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
-                              ${row.isGrouped ? "grouped-po" : ""}
-                                                            ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
-                              ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                            `}
+                  border-border/30 transition-all duration-300 hover:bg-muted/50
+                  ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
+                  ${row.isGrouped ? "grouped-po" : ""}
+                  ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
+                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
+                `}
                             >
-                                <TableCell className="font-black">{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
-                                <TableCell>{row.vendName}</TableCell>
-                                <TableCell>{row.partCode}</TableCell>
-                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                <TableCell className="text-right row-secondary">
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">{row.poNumber}</TableCell>
+                                <TableCell className="font-bold py-1.5">{statusBadge(row.poStatusLabel)}</TableCell>
+                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5">{row.vendName}</TableCell>
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">{row.partCode}</TableCell>
+                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5">{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5">{row.qtyRecvd}</TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5">{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary py-1.5">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                        <span className="dollar-sign text-xs">$</span>
+                                        <span className="dollar-value font-bold text-[15px] leading-tight">{row.recentUnitPrice}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right row-secondary">
+                                <TableCell className="text-right row-secondary py-1.5">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                        <span className="dollar-sign text-xs">$</span>
+                                        <span className="dollar-value font-bold text-[15px] leading-tight">{row.lastOrderUnitPrice}</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
