@@ -312,82 +312,166 @@ export default function InventoryMovesLog() {
         previousDocsRef.current = new Set(tableData.map((row) => row.docNumber));
 
         return (
-            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+            <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
                 <TooltipProvider delayDuration={200}>
-                    <div className="p-1">
+                    {/* Compact Card View for Small Sizes */}
+                    <div className="@xl:hidden p-2 space-y-2">
+                        {tableData.map((row, index) => {
+                            const timeData = formatTimeAgo(row.moveDate, row.moveTime);
+                            return (
+                                <div
+                                    key={`${row.docNumber}-${row.lotNumber}-${row.moveTime}-${index}`}
+                                    className={`
+                                        rounded-lg border border-border/50 p-3 space-y-2
+                                        transition-all duration-300 hover:bg-muted/30
+                                        ${row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
+                                    `}
+                                >
+                                    {/* Top Row: Time & Type */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="text-xs text-muted-foreground">
+                                            {timeData.isRelative && timeData.tooltip ? (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className="cursor-help underline decoration-dotted">
+                                                            {timeData.display}
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{timeData.tooltip}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            ) : timeData.display}
+                                        </div>
+                                        <span className={`
+                                            inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
+                                            ${getTransferTypeColor(row.transferType)}
+                                        `}>
+                                            {row.transferType || "—"}
+                                        </span>
+                                    </div>
+
+                                    {/* Main Info Row: Part & Quantity */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="font-mono text-sm font-semibold truncate">
+                                            {row.partCode || "—"}
+                                        </div>
+                                        <div className="text-right font-semibold text-sm shrink-0">
+                                            <span className={row.quantity > 0 ? "text-green-400" : "text-red-400"}>
+                                                {formatQuantity(row.quantity)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Location & User Row */}
+                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                        <div className="flex items-center gap-1">
+                                            {row.fromLocation && row.fromLocation !== "—" ? (
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.fromLocation, true)}`}>
+                                                    {row.fromLocation}
+                                                </span>
+                                            ) : <span className="text-muted-foreground">—</span>}
+                                            <span className="text-muted-foreground">→</span>
+                                            {row.toLocation && row.toLocation !== "—" ? (
+                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.toLocation, false)}`}>
+                                                    {row.toLocation}
+                                                </span>
+                                            ) : <span className="text-muted-foreground">—</span>}
+                                        </div>
+                                        <span className="text-blue-400 lowercase shrink-0">{row.moveUser || "—"}</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Table View for Medium+ Sizes */}
+                    <div className="hidden @xl:block p-1">
                         <Table className="text-left text-white inventory-moves-log-table">
                             <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
                                 <TableRow className="border-border/50 hover:bg-transparent">
-                                    <TableHead className="font-semibold">
+                                    {/* Date - Hidden below 7xl container */}
+                                    <TableHead className="font-semibold hidden @7xl:table-cell">
                                         <div className="flex items-center gap-1.5">
                                             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                                             Date
                                         </div>
                                     </TableHead>
+                                    {/* Time - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                                             Time
                                         </div>
                                     </TableHead>
+                                    {/* User - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <User className="h-3.5 w-3.5 text-muted-foreground" />
                                             User
                                         </div>
                                     </TableHead>
+                                    {/* Type - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
                                             Type
                                         </div>
                                     </TableHead>
+                                    {/* Part - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <Package className="h-3.5 w-3.5 text-muted-foreground" />
                                             Part
                                         </div>
                                     </TableHead>
+                                    {/* Quantity - Always visible in table */}
                                     <TableHead className="text-right font-semibold">
                                         <div className="flex items-center justify-end gap-1.5">
                                             <Hash className="h-3.5 w-3.5 text-muted-foreground" />
                                             Qty
                                         </div>
                                     </TableHead>
+                                    {/* From - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-orange-400">↗</span>
                                             From
                                         </div>
                                     </TableHead>
+                                    {/* To - Always visible in table */}
                                     <TableHead className="font-semibold">
                                         <div className="flex items-center gap-1.5">
                                             <span className="text-cyan-400">↘</span>
                                             To
                                         </div>
                                     </TableHead>
-                                    <TableHead className="font-semibold">
+                                    {/* Doc # - Hidden below 6xl container */}
+                                    <TableHead className="font-semibold hidden @6xl:table-cell">
                                         <div className="flex items-center gap-1.5">
                                             <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                                             Doc #
                                         </div>
                                     </TableHead>
-                                    <TableHead className="font-semibold">Lot</TableHead>
+                                    {/* Lot - Hidden below 6xl container */}
+                                    <TableHead className="font-semibold hidden @6xl:table-cell">Lot</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {tableData.map((row, index) => (
                                     <TableRow
-                                        key={row.docNumber || index}
+                                        key={`${row.docNumber}-${row.lotNumber}-${row.moveTime}-${index}`}
                                         className={`
                                         border-border/30 transition-all duration-300
                                         hover:bg-muted/50
                                         ${row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
                                     `}
                                     >
-                                        <TableCell className="font-medium text-sm">
+                                        {/* Date - Hidden below 7xl container */}
+                                        <TableCell className="font-medium text-sm hidden @7xl:table-cell">
                                             {formatDate(row.moveDate)}
                                         </TableCell>
+                                        {/* Time - Always visible in table */}
                                         <TableCell className="text-sm text-muted-foreground">
                                             {(() => {
                                                 const timeData = formatTimeAgo(row.moveDate, row.moveTime);
@@ -408,9 +492,11 @@ export default function InventoryMovesLog() {
                                                 return timeData.display;
                                             })()}
                                         </TableCell>
+                                        {/* User - Always visible in table */}
                                         <TableCell className="font-medium">
                                             <span className="text-blue-400 lowercase">{row.moveUser || "—"}</span>
                                         </TableCell>
+                                        {/* Type - Always visible in table */}
                                         <TableCell>
                                             <span className={`
                                             inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
@@ -419,14 +505,17 @@ export default function InventoryMovesLog() {
                                                 {row.transferType || "—"}
                                             </span>
                                         </TableCell>
+                                        {/* Part - Always visible in table */}
                                         <TableCell className="font-mono text-sm font-semibold">
                                             {row.partCode || "—"}
                                         </TableCell>
+                                        {/* Quantity - Always visible in table */}
                                         <TableCell className="text-right font-semibold text-sm">
                                             <span className={row.quantity > 0 ? "text-green-400" : "text-red-400"}>
                                                 {formatQuantity(row.quantity)}
                                             </span>
                                         </TableCell>
+                                        {/* From - Always visible in table */}
                                         <TableCell>
                                             {row.fromLocation && row.fromLocation !== "—" ? (
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.fromLocation, true)}`}>
@@ -436,6 +525,7 @@ export default function InventoryMovesLog() {
                                                 <span className="text-muted-foreground text-xs">—</span>
                                             )}
                                         </TableCell>
+                                        {/* To - Always visible in table */}
                                         <TableCell>
                                             {row.toLocation && row.toLocation !== "—" ? (
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.toLocation, false)}`}>
@@ -445,10 +535,12 @@ export default function InventoryMovesLog() {
                                                 <span className="text-muted-foreground text-xs">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs text-muted-foreground/80">
+                                        {/* Doc # - Hidden below 6xl container */}
+                                        <TableCell className="font-mono text-xs text-muted-foreground/80 hidden @6xl:table-cell">
                                             {row.docNumber || "—"}
                                         </TableCell>
-                                        <TableCell className="font-mono text-xs text-muted-foreground/80">
+                                        {/* Lot - Hidden below 6xl container */}
+                                        <TableCell className="font-mono text-xs text-muted-foreground/80 hidden @6xl:table-cell">
                                             {row.lotNumber || "—"}
                                         </TableCell>
                                     </TableRow>

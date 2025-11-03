@@ -8,6 +8,13 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',
+        'widget-sm': '640px',
+        'widget-md': '800px',
+        'widget-lg': '1024px',
+        'widget-xl': '1280px',
+      },
       fontFamily: {
         sans: [
           'Inter',
@@ -63,5 +70,8 @@ export default {
       }
     }
   },
-  plugins: [require("tailwindcss-animate")], // Adds animation utilities from shadcn
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/container-queries")
+  ], // Adds animation utilities from shadcn
 } satisfies Config;
