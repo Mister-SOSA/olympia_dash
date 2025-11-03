@@ -89,9 +89,10 @@ interface StatusCardProps {
     machines: MachineStockData[];
     statusColor: 'success' | 'warning' | 'error';
     icon: string;
+    compact?: boolean;
 }
 
-const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon }) => {
+const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon, compact = false }) => {
     const bgColorClass = statusColor === 'success' ? 'bg-[#4CAF50]' :
         statusColor === 'warning' ? 'bg-[#ff8307]' :
             'bg-[#F44336]';
@@ -106,22 +107,22 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
         <div className="flex flex-col h-full min-h-[200px]">
             <div className={`rounded-lg border-2 ${borderColorClass} flex flex-col h-full bg-[#161e28]`}>
                 {/* Header */}
-                <div className={`${bgLightClass} px-4 py-3 border-b-2 ${borderColorClass} flex-shrink-0`}>
+                <div className={`${bgLightClass} px-3 py-2 border-b-2 ${borderColorClass} flex-shrink-0`}>
                     <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-lg flex items-center gap-2 text-white">
-                            <span className="text-2xl">{icon}</span>
-                            {title}
+                        <h3 className="font-bold text-base flex items-center gap-1.5 text-white">
+                            <span className="text-xl">{icon}</span>
+                            <span className="truncate">{title}</span>
                         </h3>
-                        <span className={`${bgColorClass} text-white font-bold px-3 py-1 rounded-full text-sm`}>
+                        <span className={`${bgColorClass} text-white font-bold px-2 py-0.5 rounded-full text-xs flex-shrink-0`}>
                             {machines.length}
                         </span>
                     </div>
                 </div>
 
                 {/* Machine List */}
-                <div className="p-3 space-y-2 overflow-y-auto flex-1">
+                <div className="p-2 space-y-1.5 overflow-y-auto flex-1">
                     {machines.length === 0 ? (
-                        <div className="text-center py-8 text-[#757575]">
+                        <div className="text-center py-4 text-[#757575] text-sm">
                             No machines in this status
                         </div>
                     ) : (
@@ -135,7 +136,8 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                                 ? 'hover:bg-[#4CAF50]/30'
                                 : 'hover:bg-[#23303d]/80';
 
-                            return (
+                            return compact ? (
+                                // Compact view for tabbed mode
                                 <div
                                     key={machine.part_code}
                                     className={`${bgClass} rounded px-2 py-1.5 border ${hoverClass} transition-colors flex items-center justify-between gap-2`}
@@ -157,6 +159,32 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                                         </div>
                                     </div>
                                 </div>
+                            ) : (
+                                // Full detail view for full-screen mode
+                                <div
+                                    key={machine.part_code}
+                                    className={`${bgClass} rounded-md p-2.5 border ${hoverClass} transition-colors`}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        {/* Machine Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-bold text-sm text-white truncate">{machine.part_code}</div>
+                                            <div className="text-xs text-[#B0B0B0] truncate mt-0.5">{machine.part_desc}</div>
+                                        </div>
+
+                                        {/* Metrics with labels */}
+                                        <div className="flex gap-2 flex-shrink-0">
+                                            <div className="text-center bg-[#08121a] rounded px-2.5 py-1">
+                                                <div className="text-[10px] text-[#B0B0B0]">Avail</div>
+                                                <div className="font-bold text-sm text-[#4CAF50]">{machine.available}</div>
+                                            </div>
+                                            <div className="text-center bg-[#08121a] rounded px-2.5 py-1">
+                                                <div className="text-[10px] text-[#B0B0B0]">Hold</div>
+                                                <div className="font-bold text-sm text-[#ff8307]">{machine.on_hold}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             );
                         })
                     )}
@@ -172,7 +200,7 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
 
 export default function MachineStockStatus() {
     const [activeTab, setActiveTab] = useState<'cc1' | 'cc2' | 'cc5'>('cc1');
-    
+
     // Memoize the widget payload
     const widgetPayload = useMemo(
         () => ({
@@ -188,29 +216,28 @@ export default function MachineStockStatus() {
     // Render function for the status cards
     const renderFunction = useCallback((data: MachineStockData[]) => {
         const groupedMachines = groupMachinesByStatus(data);
-        
+
         // Calculate summary metrics
         const totalAvailable = groupedMachines.available.reduce((sum, m) => sum + m.available, 0);
         const totalInQueue = groupedMachines.queueForRepair.length;
         const totalAtRepair = groupedMachines.atRepairShop.length;
 
         return (
-            <div className="h-full w-full @container p-4">
+            <div className="h-full w-full @container p-0">
                 {/* 
                     Tabbed View for Small/Medium: < @5xl (1024px)
                     Interactive tabs to switch between cost centers
                 */}
-                <div className="@5xl:hidden h-full flex flex-col gap-3">
+                <div className="@5xl:hidden h-full flex flex-col gap-2">
                     {/* Tab Navigation */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                         {/* Cost Center 1 Tab */}
                         <button
                             onClick={() => setActiveTab('cc1')}
-                            className={`flex-1 rounded-lg px-4 py-3 font-bold text-sm transition-all ${
-                                activeTab === 'cc1'
-                                    ? 'bg-[#4CAF50] text-white border-2 border-[#4CAF50] shadow-lg'
-                                    : 'bg-[#4CAF50]/10 text-[#4CAF50] border-2 border-[#4CAF50]/50 hover:bg-[#4CAF50]/20'
-                            }`}
+                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc1'
+                                ? 'bg-[#4CAF50] text-white border-2 border-[#4CAF50] shadow-lg'
+                                : 'bg-[#4CAF50]/10 text-[#4CAF50] border-2 border-[#4CAF50]/50 hover:bg-[#4CAF50]/20'
+                                }`}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>✅</span>
@@ -224,11 +251,10 @@ export default function MachineStockStatus() {
                         {/* Cost Center 2 Tab */}
                         <button
                             onClick={() => setActiveTab('cc2')}
-                            className={`flex-1 rounded-lg px-4 py-3 font-bold text-sm transition-all ${
-                                activeTab === 'cc2'
-                                    ? 'bg-[#ff8307] text-white border-2 border-[#ff8307] shadow-lg'
-                                    : 'bg-[#ff8307]/10 text-[#ff8307] border-2 border-[#ff8307]/50 hover:bg-[#ff8307]/20'
-                            }`}
+                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc2'
+                                ? 'bg-[#ff8307] text-white border-2 border-[#ff8307] shadow-lg'
+                                : 'bg-[#ff8307]/10 text-[#ff8307] border-2 border-[#ff8307]/50 hover:bg-[#ff8307]/20'
+                                }`}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>⏳</span>
@@ -242,11 +268,10 @@ export default function MachineStockStatus() {
                         {/* Cost Center 5 Tab */}
                         <button
                             onClick={() => setActiveTab('cc5')}
-                            className={`flex-1 rounded-lg px-4 py-3 font-bold text-sm transition-all ${
-                                activeTab === 'cc5'
-                                    ? 'bg-[#F44336] text-white border-2 border-[#F44336] shadow-lg'
-                                    : 'bg-[#F44336]/10 text-[#F44336] border-2 border-[#F44336]/50 hover:bg-[#F44336]/20'
-                            }`}
+                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc5'
+                                ? 'bg-[#F44336] text-white border-2 border-[#F44336] shadow-lg'
+                                : 'bg-[#F44336]/10 text-[#F44336] border-2 border-[#F44336]/50 hover:bg-[#F44336]/20'
+                                }`}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>🔧</span>
@@ -262,26 +287,29 @@ export default function MachineStockStatus() {
                     <div className="flex-1 min-h-0">
                         {activeTab === 'cc1' && (
                             <StatusCard
-                                title="Cost Center 1 - Available & Ready"
+                                title="Cost Center 1"
                                 machines={groupedMachines.available}
                                 statusColor="success"
                                 icon="✅"
+                                compact={true}
                             />
                         )}
                         {activeTab === 'cc2' && (
                             <StatusCard
-                                title="Cost Center 2 - Queue for Repair"
+                                title="Cost Center 2"
                                 machines={groupedMachines.queueForRepair}
                                 statusColor="warning"
                                 icon="⏳"
+                                compact={true}
                             />
                         )}
                         {activeTab === 'cc5' && (
                             <StatusCard
-                                title="Cost Center 5 - At Repair Shop"
+                                title="Cost Center 5"
                                 machines={groupedMachines.atRepairShop}
                                 statusColor="error"
                                 icon="🔧"
+                                compact={true}
                             />
                         )}
                     </div>
@@ -291,24 +319,27 @@ export default function MachineStockStatus() {
                     Full View: > @5xl (1024px+)
                     Shows all 3 columns side-by-side
                 */}
-                <div className="hidden @5xl:grid h-full grid-cols-3 gap-4">
+                <div className="hidden @5xl:grid h-full grid-cols-3 gap-3">
                     <StatusCard
                         title="Cost Center 1"
                         machines={groupedMachines.available}
                         statusColor="success"
                         icon="✅"
+                        compact={false}
                     />
                     <StatusCard
                         title="Cost Center 2"
                         machines={groupedMachines.queueForRepair}
                         statusColor="warning"
                         icon="⏳"
+                        compact={false}
                     />
                     <StatusCard
                         title="Cost Center 5"
                         machines={groupedMachines.atRepairShop}
                         statusColor="error"
                         icon="🔧"
+                        compact={false}
                     />
                 </div>
             </div>
