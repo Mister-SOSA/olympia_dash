@@ -30,13 +30,22 @@ export default function DashboardDock({
         const handleMouseMove = (e: MouseEvent) => {
             setMouseY(e.clientY);
             const windowHeight = window.innerHeight;
-            const threshold = 100; // Show dock when mouse is within 100px of bottom
-            setIsVisible(e.clientY > windowHeight - threshold);
+            const showThreshold = 20; // Show dock when mouse is within 20px of bottom
+            const hideThreshold = 120; // Hide dock when mouse is more than 150px from bottom
+
+            // Use different thresholds based on current visibility state
+            if (isVisible) {
+                // When visible, use larger threshold to hide (prevents flickering)
+                setIsVisible(e.clientY > windowHeight - hideThreshold);
+            } else {
+                // When hidden, use smaller threshold to show
+                setIsVisible(e.clientY > windowHeight - showThreshold);
+            }
         };
 
         window.addEventListener("mousemove", handleMouseMove);
         return () => window.removeEventListener("mousemove", handleMouseMove);
-    }, []);
+    }, [isVisible]);
 
     const handlePresetRightClick = (e: React.MouseEvent, index: number) => {
         e.preventDefault();
