@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { Providers } from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,8 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <body>
-        {children}
-        <Toaster position="top-center" theme="dark" richColors className="preset-toast" />
+        <Providers>
+          {children}
+          <Toaster position="top-center" theme="dark" richColors className="preset-toast" />
+        </Providers>
       </body>
     </html>
   );

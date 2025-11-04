@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { User } from "@/lib/auth";
+import { useTheme, THEMES } from "@/contexts/ThemeContext";
+import { MdCheck } from "react-icons/md";
 
 interface SettingsMenuProps {
     user: User | null;
@@ -11,6 +13,8 @@ interface SettingsMenuProps {
 }
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
+    const { theme, setTheme } = useTheme();
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -53,6 +57,43 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                     {user.role.toUpperCase()}
                                 </span>
                             )}
+                        </div>
+
+                        {/* Theme Selector */}
+                        <div>
+                            <h3 className="text-ui-text-primary text-sm font-semibold mb-3">Theme</h3>
+                            <div className="grid grid-cols-1 gap-2">
+                                {THEMES.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => setTheme(t.id)}
+                                        className={`w-full p-3 rounded-lg border-2 transition-all text-left group ${
+                                            theme === t.id
+                                                ? 'border-ui-accent-primary bg-ui-accent-primary-bg'
+                                                : 'border-ui-border-primary bg-ui-bg-secondary/50 hover:bg-ui-bg-secondary hover:border-ui-border-secondary'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex gap-1">
+                                                {t.colors.map((color, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className="w-3 h-3 rounded-full"
+                                                        style={{ backgroundColor: color }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-ui-text-primary text-sm">{t.name}</div>
+                                                <div className="text-xs text-ui-text-secondary">{t.description}</div>
+                                            </div>
+                                            {theme === t.id && (
+                                                <MdCheck className="w-5 h-5 text-ui-accent-primary-text flex-shrink-0" />
+                                            )}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Actions */}

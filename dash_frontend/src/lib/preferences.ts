@@ -382,6 +382,22 @@ class PreferencesService {
 
 export const preferencesService = new PreferencesService();
 
+// Type-safe helper methods
+export const preferenceHelpers = {
+    getTheme(): string | undefined {
+        return preferencesService.get<string>('theme', 'slate');
+    },
+    setTheme(theme: string): void {
+        preferencesService.set('theme', theme);
+    },
+    getPreference(key: string): any {
+        return preferencesService.get(key);
+    },
+    setPreference(key: string, value: any): void {
+        preferencesService.set(key, value);
+    }
+};
+
 // Export helper functions for backward compatibility with existing localStorage code
 export const migrateFromLocalStorage = () => {
     if (typeof window === 'undefined') return;
