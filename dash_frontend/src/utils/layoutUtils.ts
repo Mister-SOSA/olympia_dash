@@ -1,17 +1,17 @@
 import { Widget, DashboardPreset } from "@/types";
-import { LOCAL_STORAGE_KEY, COLUMN_COUNT } from "@/constants/dashboard";
+import { COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
+import { preferencesService } from "@/lib/preferences";
 
 /**
- * Reads the saved layout from localStorage.
+ * Reads the saved layout from preferences service.
  * Falls back to the master widget list with all widgets disabled.
  */
 export const readLayoutFromStorage = (): Widget[] => {
-    const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const savedLayout = preferencesService.get<Widget[]>('dashboard.layout');
     if (savedLayout) {
         try {
-            const parsedLayout: Widget[] = JSON.parse(savedLayout);
-            return parsedLayout;
+            return savedLayout;
         } catch (error) {
             console.error("Error parsing saved layout:", error);
         }
@@ -20,10 +20,10 @@ export const readLayoutFromStorage = (): Widget[] => {
 };
 
 /**
- * Saves the full layout to localStorage.
+ * Saves the full layout to preferences service.
  */
 export const saveLayoutToStorage = (layout: Widget[]) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
+    preferencesService.set('dashboard.layout', layout);
 };
 
 /**
@@ -38,36 +38,32 @@ export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_CO
 
 // --- Preset Functions ---
 
-const PRESETS_KEY = "dashboard_presets";
-const CURRENT_PRESET_TYPE_KEY = "dashboard_current_preset_type";
-
 /**
- * Saves the current preset type to localStorage.
+ * Saves the current preset type to preferences service.
  */
 export const saveCurrentPresetType = (type: string) => {
-    localStorage.setItem(CURRENT_PRESET_TYPE_KEY, type);
+    preferencesService.set('dashboard.currentPresetType', type);
 };
 
 /**
- * Reads the current preset type from localStorage.
+ * Reads the current preset type from preferences service.
  */
 export const readCurrentPresetType = (): string => {
-    return localStorage.getItem(CURRENT_PRESET_TYPE_KEY) || "grid";
+    return preferencesService.get<string>('dashboard.currentPresetType', 'grid');
 };
 
 /**
- * Reads an array of 9 preset layouts from localStorage.
+ * Reads an array of 9 preset layouts from preferences service.
  * If nothing is saved yet, returns an array with 9 null entries.
  * Now supports both old format (Widget[]) and new format (DashboardPreset).
  */
 export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
-    const saved = localStorage.getItem(PRESETS_KEY);
+    const saved = preferencesService.get<Array<DashboardPreset | null>>('dashboard.presets');
     if (saved) {
         try {
-            const presets = JSON.parse(saved);
-            if (Array.isArray(presets) && presets.length === 9) {
-                // Convert old format to new format
-                return presets.map(preset => {
+            if (Array.isArray(saved) && saved.length === 9) {
+                // Convert old format to new format if needed
+                return saved.map(preset => {
                     if (!preset) return null;
                     // Check if it's already in the new format
                     if (preset.type && preset.layout) {
@@ -76,7 +72,7 @@ export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
                     // Convert old format (Widget[]) to new format
                     return {
                         type: "grid" as const,
-                        layout: preset
+                        layout: preset as any
                     };
                 });
             }
@@ -88,8 +84,8 @@ export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
 };
 
 /**
- * Saves an array of 9 preset layouts into localStorage.
+ * Saves an array of 9 preset layouts into preferences service.
  */
 export const savePresetsToStorage = (presets: Array<DashboardPreset | null>) => {
-    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    preferencesService.set('dashboard.presets', presets);
 };

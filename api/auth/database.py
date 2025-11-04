@@ -126,6 +126,18 @@ def init_db():
         )
     ''')
     
+    # User preferences table - flexible JSON storage for unlimited preferences
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id INTEGER PRIMARY KEY,
+            preferences TEXT NOT NULL DEFAULT '{}',
+            version INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
     # Create indexes for better performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON sessions(refresh_token)')
@@ -134,6 +146,7 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_permissions_user_id ON permissions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_rate_limits_identifier ON rate_limits(identifier, endpoint)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_preferences_updated_at ON user_preferences(updated_at)')
     
     conn.commit()
     conn.close()
@@ -480,6 +493,163 @@ def check_rate_limit(identifier, endpoint, max_requests=10, window_minutes=1):
         conn.commit()
         conn.close()
         return False
+
+# User preferences functions
+import json
+
+def get_user_preferences(user_id):
+    """Get all preferences for a user. Returns empty dict if no preferences exist."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT preferences, version, updated_at 
+        FROM user_preferences 
+        WHERE user_id = ?
+    ''', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        try:
+            prefs = json.loads(result[0])
+            return {
+                'preferences': prefs,
+                'version': result[1],
+                'updated_at': result[2]
+            }
+        except json.JSONDecodeError:
+            return {'preferences': {}, 'version': 1, 'updated_at': None}
+    
+    return {'preferences': {}, 'version': 0, 'updated_at': None}
+
+def set_user_preferences(user_id, preferences, expected_version=None):
+    """
+    Set all preferences for a user. 
+    Uses optimistic locking with version if expected_version is provided.
+    Returns the new version number, or None if version conflict occurred.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        preferences_json = json.dumps(preferences)
+        
+        # Check if preferences exist
+        cursor.execute('SELECT version FROM user_preferences WHERE user_id = ?', (user_id,))
+        result = cursor.fetchone()
+        
+        if result:
+            current_version = result[0]
+            
+            # Check for version conflict if expected_version provided
+            if expected_version is not None and current_version != expected_version:
+                conn.close()
+                return None  # Version conflict
+            
+            new_version = current_version + 1
+            cursor.execute('''
+                UPDATE user_preferences 
+                SET preferences = ?, version = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+            ''', (preferences_json, new_version, user_id))
+        else:
+            # Create new preferences record
+            new_version = 1
+            cursor.execute('''
+                INSERT INTO user_preferences (user_id, preferences, version)
+                VALUES (?, ?, ?)
+            ''', (user_id, preferences_json, new_version))
+        
+        conn.commit()
+        conn.close()
+        return new_version
+    except Exception as e:
+        conn.close()
+        raise e
+
+def update_user_preferences(user_id, preference_updates, expected_version=None):
+    """
+    Update specific preferences for a user (partial update).
+    Merges the updates with existing preferences.
+    Uses optimistic locking with version if expected_version is provided.
+    Returns the new version number, or None if version conflict occurred.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get current preferences
+        current = get_user_preferences(user_id)
+        current_prefs = current['preferences']
+        current_version = current['version']
+        
+        # Check for version conflict if expected_version provided
+        if expected_version is not None and current_version != expected_version:
+            conn.close()
+            return None  # Version conflict
+        
+        # Deep merge the preferences
+        def deep_merge(base, updates):
+            """Recursively merge updates into base."""
+            for key, value in updates.items():
+                if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                    deep_merge(base[key], value)
+                else:
+                    base[key] = value
+            return base
+        
+        merged_prefs = deep_merge(current_prefs, preference_updates)
+        
+        # Save merged preferences
+        return set_user_preferences(user_id, merged_prefs, current_version)
+    except Exception as e:
+        conn.close()
+        raise e
+
+def delete_user_preferences(user_id, preference_keys):
+    """
+    Delete specific preference keys for a user.
+    preference_keys can be a string (single key) or list of strings (multiple keys).
+    Supports dot notation for nested keys (e.g., 'dashboard.layout').
+    Returns the new version number.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get current preferences
+        current = get_user_preferences(user_id)
+        prefs = current['preferences']
+        current_version = current['version']
+        
+        # Ensure preference_keys is a list
+        if isinstance(preference_keys, str):
+            preference_keys = [preference_keys]
+        
+        # Delete each key
+        for key in preference_keys:
+            if '.' in key:
+                # Handle nested keys
+                parts = key.split('.')
+                obj = prefs
+                for part in parts[:-1]:
+                    if part in obj and isinstance(obj[part], dict):
+                        obj = obj[part]
+                    else:
+                        break
+                else:
+                    if parts[-1] in obj:
+                        del obj[parts[-1]]
+            else:
+                # Simple key
+                if key in prefs:
+                    del prefs[key]
+        
+        # Save updated preferences
+        return set_user_preferences(user_id, prefs, current_version)
+    except Exception as e:
+        conn.close()
+        raise e
 
 # Initialize database on import
 init_db()

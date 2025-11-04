@@ -18,6 +18,7 @@ from database.queries import QueryBuilder
 from auth.routes import auth_bp
 from auth.device_routes import device_bp
 from auth.admin_routes import admin_bp
+from auth.preferences_routes import preferences_bp
 from auth.middleware import require_auth
 
 # Configure colorized logging with uniform format
@@ -59,6 +60,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(device_bp, url_prefix='/api/auth/device')
 app.register_blueprint(admin_bp, url_prefix='/api/auth/admin')
+app.register_blueprint(preferences_bp, url_prefix='/api')
 
 @app.route('/api/widgets', methods=['POST'])
 @require_auth

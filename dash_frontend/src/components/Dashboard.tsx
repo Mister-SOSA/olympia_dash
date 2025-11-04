@@ -20,6 +20,7 @@ import {
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { toast } from "sonner";
 import { authService } from "@/lib/auth";
+import { preferencesService, migrateFromLocalStorage } from "@/lib/preferences";
 import { Loader } from "./ui/loader";
 import { Button } from "./ui/button";
 
@@ -110,21 +111,32 @@ export default function Dashboard() {
         checkAuth();
     }, [router]);
 
-    // Initialize layout and presets on mount
+    // Sync preferences from server and migrate old localStorage data
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        const storedLayout = readLayoutFromStorage();
-        if (storedLayout) {
-            setLayout(storedLayout);
-        } else {
-            setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
-        }
-        setPresets(readPresetsFromStorage());
+        const initPreferences = async () => {
+            // Migrate old localStorage preferences to new system
+            migrateFromLocalStorage();
 
-        // Restore the last used preset type
-        const storedPresetType = readCurrentPresetType();
-        setCurrentPresetType(storedPresetType as PresetType);
+            // Sync preferences from server
+            await preferencesService.syncOnLogin();
+
+            // Load preferences into state
+            const storedLayout = readLayoutFromStorage();
+            if (storedLayout) {
+                setLayout(storedLayout);
+            } else {
+                setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
+            }
+            setPresets(readPresetsFromStorage());
+
+            // Restore the last used preset type
+            const storedPresetType = readCurrentPresetType();
+            setCurrentPresetType(storedPresetType as PresetType);
+        };
+
+        initPreferences();
     }, [isAuthenticated]);
 
     // Prepare a temporary layout for the widget menu
