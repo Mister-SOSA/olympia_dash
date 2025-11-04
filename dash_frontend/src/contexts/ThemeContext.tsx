@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { preferencesService } from "@/lib/preferences";
 
-export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight";
+export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight" | "dawn" | "nordic" | "coral" | "crimson" | "neon";
 
 export const THEMES = [
     { id: "slate" as Theme, name: "Slate", description: "Modern gray with blue/purple accents", colors: ["#2563eb", "#9333ea", "#374151"] },
@@ -11,6 +11,11 @@ export const THEMES = [
     { id: "forest" as Theme, name: "Forest", description: "Greens and earth tones", colors: ["#4ade80", "#fbbf24", "#2e4a2e"] },
     { id: "sunset" as Theme, name: "Sunset", description: "Warm oranges and purples", colors: ["#f97316", "#ec4899", "#4d2f52"] },
     { id: "midnight" as Theme, name: "Midnight", description: "Very dark with cyan accents", colors: ["#06b6d4", "#8b5cf6", "#1c2438"] },
+    { id: "dawn" as Theme, name: "Dawn", description: "Light mode - Soft pinks and purples", colors: ["#db2777", "#a855f7", "#fbcfe8"] },
+    { id: "nordic" as Theme, name: "Nordic", description: "Light mode - Clean Scandinavian design", colors: ["#0ea5e9", "#3b82f6", "#cbd5e1"] },
+    { id: "coral" as Theme, name: "Coral", description: "Light mode - Warm coral and peach tones", colors: ["#f97316", "#f43f5e", "#fdba74"] },
+    { id: "crimson" as Theme, name: "Crimson", description: "Dark mode - Red and black intensity", colors: ["#dc2626", "#f97316", "#451a24"] },
+    { id: "neon" as Theme, name: "Neon", description: "Dark mode - Vibrant neon colors", colors: ["#00ffff", "#ff00ff", "#1e1e2e"] },
 ] as const;
 
 interface ThemeContextType {
@@ -37,7 +42,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const setTheme = async (newTheme: Theme) => {
         applyTheme(newTheme);
         setThemeState(newTheme);
-        
+
         // Save to preferences
         preferencesService.set("theme", newTheme);
     };
@@ -65,12 +70,12 @@ export function useTheme() {
 // Apply theme by adding/removing CSS classes on document element
 function applyTheme(theme: Theme) {
     if (typeof document === "undefined") return;
-    
+
     // Remove all theme classes
     THEMES.forEach(t => {
         document.documentElement.classList.remove(`theme-${t.id}`);
     });
-    
+
     // Add the new theme class
     document.documentElement.classList.add(`theme-${theme}`);
 }
