@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Widget } from "@/types";
 import { WIDGETS, getWidgetsByCategory } from "@/constants/widgets";
-import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
+import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert, MdDragIndicator } from "react-icons/md";
+import { GridStack } from "gridstack";
 
 interface ImprovedWidgetMenuProps {
     tempLayout: Widget[];
@@ -21,9 +22,27 @@ export default function ImprovedWidgetMenu({
 }: ImprovedWidgetMenuProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const [isDragging, setIsDragging] = useState(false);
 
     const widgetsByCategory = getWidgetsByCategory();
     const categories = Object.keys(widgetsByCategory);
+
+    // Setup drag-to-add functionality
+    useEffect(() => {
+        // Configure GridStack to accept dragged widgets from the menu
+        GridStack.setupDragIn('.draggable-widget-item', {
+            appendTo: 'body',
+            helper: 'clone',
+        });
+
+        return () => {
+            // Cleanup on unmount
+            const draggables = document.querySelectorAll('.draggable-widget-item');
+            draggables.forEach(el => {
+                // Remove any drag event listeners if needed
+            });
+        };
+    }, []);
 
     const filteredWidgets = useMemo(() => {
         let widgets = WIDGETS;
@@ -265,6 +284,14 @@ export default function ImprovedWidgetMenu({
 
                 {/* Widget List */}
                 <div className="flex-1 overflow-y-auto p-4">
+                    {/* Drag Instructions */}
+                    <div className="mb-3 p-3 bg-ui-accent-primary-bg border border-ui-accent-primary-border rounded-lg">
+                        <div className="flex items-center gap-2 text-xs text-ui-accent-primary-text">
+                            <MdDragIndicator className="w-4 h-4" />
+                            <span><strong>Tip:</strong> Drag widgets directly onto your dashboard or click to toggle</span>
+                        </div>
+                    </div>
+
                     {filteredWidgets.length === 0 ? (
                         <div className="text-center py-12 text-ui-text-muted">
                             <p>No widgets found</p>
@@ -274,41 +301,56 @@ export default function ImprovedWidgetMenu({
                             {filteredWidgets.map((widget) => {
                                 const isEnabled = isWidgetEnabled(widget.id);
                                 return (
-                                    <button
+                                    <div
                                         key={widget.id}
-                                        onClick={() => toggleWidget(widget.id)}
-                                        className={`w-full text-left p-3 rounded-lg border transition-all ${isEnabled
-                                            ? "bg-ui-accent-primary-bg border-ui-accent-primary-border hover:bg-ui-accent-primary-bg"
-                                            : "bg-ui-bg-secondary/50 border-ui-border-primary hover:bg-ui-bg-secondary"
+                                        className={`draggable-widget-item w-full text-left p-3 rounded-lg border transition-all cursor-move ${isEnabled
+                                                ? "bg-ui-accent-primary-bg border-ui-accent-primary-border hover:bg-ui-accent-primary-bg"
+                                                : "bg-ui-bg-secondary/50 border-ui-border-primary hover:bg-ui-bg-secondary hover:border-ui-accent-primary"
                                             }`}
+                                        // GridStack drag-in attributes
+                                        gs-id={widget.id}
+                                        gs-w={widget.defaultSize.w.toString()}
+                                        gs-h={widget.defaultSize.h.toString()}
+                                        onClick={() => toggleWidget(widget.id)}
+                                        onDragStart={() => setIsDragging(true)}
+                                        onDragEnd={() => {
+                                            setIsDragging(false);
+                                            // When widget is dragged onto dashboard, enable it
+                                            if (!isEnabled) {
+                                                toggleWidget(widget.id);
+                                            }
+                                        }}
                                     >
                                         <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-medium text-ui-text-primary text-sm mb-1">
-                                                    {widget.title}
-                                                </h3>
-                                                <p className="text-xs text-ui-text-secondary line-clamp-2">
-                                                    {widget.description || "No description"}
-                                                </p>
-                                                <div className="flex gap-2 mt-2">
-                                                    <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded">
-                                                        {widget.defaultSize.w}×{widget.defaultSize.h}
-                                                    </span>
-                                                    <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded capitalize">
-                                                        {widget.category}
-                                                    </span>
+                                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                                                <MdDragIndicator className="w-5 h-5 text-ui-text-secondary flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-medium text-ui-text-primary text-sm mb-1">
+                                                        {widget.title}
+                                                    </h3>
+                                                    <p className="text-xs text-ui-text-secondary line-clamp-2">
+                                                        {widget.description || "No description"}
+                                                    </p>
+                                                    <div className="flex gap-2 mt-2">
+                                                        <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded">
+                                                            {widget.defaultSize.w}×{widget.defaultSize.h}
+                                                        </span>
+                                                        <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded capitalize">
+                                                            {widget.category}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div
                                                 className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${isEnabled
-                                                    ? "bg-ui-accent-primary border-ui-accent-primary"
-                                                    : "border-ui-border-secondary"
+                                                        ? "bg-ui-accent-primary border-ui-accent-primary"
+                                                        : "border-ui-border-secondary"
                                                     }`}
                                             >
                                                 {isEnabled && <MdCheck className="w-4 h-4 text-white" />}
                                             </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 );
                             })}
                         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MdError, MdRefresh } from "react-icons/md";
+import { MdError, MdRefresh, MdDragIndicator } from "react-icons/md";
 import { Loader } from "@/components/ui/loader";
 import config from "@/config";
 import { authService } from "@/lib/auth";
@@ -168,6 +168,11 @@ export default function Widget({
 
     return (
         <div className="widget">
+            {/* Drag Handle - only this area triggers dragging */}
+            <div className="widget-drag-handle" title="Drag to move widget">
+                <MdDragIndicator className="drag-icon" />
+            </div>
+
             {/* Persistent refresh indicator */}
             {endpoint && refreshInterval && (
                 <div className="widget-refresh-indicator">

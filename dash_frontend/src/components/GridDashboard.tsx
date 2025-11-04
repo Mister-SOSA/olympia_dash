@@ -212,6 +212,29 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             },
         }));
 
+        // ✅ Helper function to restrict dragging to only the drag handle
+        // This intercepts mouse/touch events in the capture phase BEFORE GridStack can process them
+        const applyDragHandleRestriction = (element: HTMLElement) => {
+            const content = element.querySelector('.grid-stack-item-content');
+            if (!content) return;
+            
+            // Mark as already processed to avoid duplicate listeners
+            if ((content as any).__dragHandleRestricted) return;
+            (content as any).__dragHandleRestricted = true;
+            
+            const preventDragFromNonHandle = (e: Event) => {
+                const target = e.target as HTMLElement;
+                // Only allow drag to proceed if the event originated from the drag handle
+                if (!target.closest('.widget-drag-handle')) {
+                    e.stopPropagation();
+                }
+            };
+            
+            // Add listeners in capture phase (true) to intercept BEFORE GridStack
+            content.addEventListener('mousedown', preventDragFromNonHandle, true);
+            content.addEventListener('touchstart', preventDragFromNonHandle, true);
+        };
+
         useEffect(() => {
             if (!gridRef.current) return;
             if (gridInstance.current) return; // Prevent reinitialization
@@ -241,6 +264,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     column: COLUMN_COUNT,
                     float: false,
                     minRow: 1,  // Minimum number of rows
+                    
+                    // ✅ CRITICAL: Drag handle configuration for GridStack 12.x native drag
+                    // Must be at top level for GridStack 12+ (not inside draggable object)
+                    handle: '.widget-drag-handle',
+                    handleClass: 'widget-drag-handle',
 
                     // ✅ HIGH PRIORITY: Responsive breakpoints for mobile/tablet support
                     columnOpts: {
@@ -255,6 +283,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         breakpointForWindow: true,   // Use window size, not container
                         layout: 'moveScale'          // Scale widgets proportionally on column change
                     },
+
+                    // ✅ Accept widgets from external drag sources (widget menu)
+                    acceptWidgets: true,
 
                     // Note: sizeToContent removed to allow manual vertical resizing
                     // Widgets can still set it individually via their config if needed
@@ -305,6 +336,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 minH: MIN_WIDGET_HEIGHT,
             }));
             gridInstance.current.load(layoutWithMinimums);
+            
+            // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
+            gridInstance.current.el.querySelectorAll('.grid-stack-item').forEach((item: Element) => {
+                applyDragHandleRestriction(item as HTMLElement);
+            });
 
             // Listen to layout changes – on any change, grab the new state
             // and propagate it to the parent and local storage.
@@ -329,6 +365,17 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
                     saveLayoutToStorage(updatedLayout);
                 }, 200); // Wait 200ms after last change before saving
+            });
+
+            // ✅ Handle widgets dragged from external sources (widget menu)
+            gridInstance.current.on("added", (event, items) => {
+                console.log("Widget(s) added via drag:", items);
+                // Apply drag handle restriction to newly added widgets
+                items.forEach((item: GridStackNode) => {
+                    if (item.el) {
+                        applyDragHandleRestriction(item.el);
+                    }
+                });
             });
 
             return () => {
@@ -383,6 +430,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                 // Load the new layout into GridStack
                 gridInstance.current.load(layoutWithMinimums);
+                
+                // Re-apply drag handle restrictions after reload
+                setTimeout(() => {
+                    if (gridInstance.current) {
+                        gridInstance.current.el.querySelectorAll('.grid-stack-item').forEach((item: Element) => {
+                            applyDragHandleRestriction(item as HTMLElement);
+                        });
+                    }
+                }, 100); // Small delay to ensure DOM is ready
             }
             
             // Update the previous layout reference

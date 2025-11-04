@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 @import 'gridstack/dist/gridstack.css';
-@import 'gridstack/dist/gridstack-extra.css';
 @import './theme.css';
 
 /* Base styles */
@@ -46,6 +45,44 @@ nextjs-portal {
 
 .grid-stack-item:hover .ui-resizable-handle {
   pointer-events: auto;
+}
+
+/* Drag-to-Add Widget Styles */
+.draggable-widget-item {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.draggable-widget-item:active {
+  cursor: grabbing !important;
+}
+
+/* GridStack drag helper (clone) styling */
+.grid-stack-item.ui-draggable-dragging {
+  opacity: 0.8;
+  z-index: 1000;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  transform: scale(1.02);
+  transition: transform 0.2s ease;
+}
+
+/* Placeholder when dragging widget from menu */
+.grid-stack-placeholder {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.6) !important;
+  border-radius: 1rem !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 body {
@@ -117,6 +154,72 @@ main {
   position: relative;
   padding: 0;
   margin: 0;
+}
+
+/* Widget Drag Handle */
+.widget-drag-handle {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: move;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  border-radius: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.widget-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Ensure grid items don't show move cursor except on handle */
+.grid-stack-item {
+  cursor: default !important;
+}
+
+.grid-stack-item.ui-draggable-dragging {
+  cursor: grabbing !important;
+}
+
+.grid-stack-item .widget-drag-handle {
+  cursor: move !important;
+  cursor: grab !important;
+}
+
+.grid-stack-item .widget-drag-handle:active {
+  cursor: grabbing !important;
+}
+
+/* Prevent accidental text selection during drag */
+.grid-stack-item-content {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.widget-drag-handle .drag-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Show drag handle on widget hover */
+.grid-stack-item:hover .widget-drag-handle {
+  opacity: 1;
+}
+
+/* Always show drag handle when actively dragging */
+.grid-stack-item.ui-draggable-dragging .widget-drag-handle {
+  opacity: 1;
+  cursor: grabbing;
 }
 
 .widget-header {
