@@ -11,6 +11,7 @@ import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import { ConfirmModal, InfoModal } from "./ui/modal";
+import { LayoutDashboard, ArrowDown } from "lucide-react";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -455,6 +456,36 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     className="grid-stack"
                     onClick={hideContextMenu} // Close context menu when clicking on dashboard
                 />
+
+                {/* Empty state overlay when no widgets are added */}
+                {layout.length === 0 && (
+                    <div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <div className="text-center space-y-6 p-8 max-w-md">
+                            <div className="flex justify-center">
+                                <div className="relative">
+                                    <LayoutDashboard 
+                                        className="w-16 h-16 text-ui-text-tertiary opacity-40" 
+                                        strokeWidth={1.5}
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-xl font-medium text-ui-text-secondary">
+                                    No widgets yet
+                                </h2>
+                                <p className="text-sm text-ui-text-tertiary">
+                                    Add widgets from the dock below to get started
+                                </p>
+                            </div>
+                            <div className="flex justify-center pt-4">
+                                <ArrowDown 
+                                    className="w-6 h-6 text-ui-text-tertiary opacity-30 animate-bounce" 
+                                    strokeWidth={1.5}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <WidgetContextMenu
                     x={contextMenu.x}
