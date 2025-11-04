@@ -75,35 +75,52 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             }
         };
 
-        const handleRefreshWidget = (widgetId: string) => {
-            console.log(`Attempting to refresh widget: ${widgetId}`);
+    const handleRefreshWidget = (widgetId: string) => {
+        console.log(`Attempting to refresh widget: ${widgetId}`);
 
-            // Force re-render the widget by unmounting and remounting
-            const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`) as HTMLElement;
+        // Find the grid-stack-item (outer container)
+        const gridItem = document.querySelector(`.grid-stack-item[data-widget-id="${widgetId}"]`) as HTMLElement;
+        
+        if (!gridItem || !gridInstance.current) {
+            console.warn(`Grid item not found for widget: ${widgetId}`);
+            return;
+        }
 
-            if (widgetElement && gridInstance.current) {
-                const root = widgetRoots.current.get(widgetId);
-                const widgetDef = getWidgetById(widgetId);
+        // Find the inner content element
+        const contentElement = gridItem.querySelector('.grid-stack-item-content') as HTMLElement;
+        if (!contentElement) {
+            console.warn(`Content element not found for widget: ${widgetId}`);
+            return;
+        }
 
-                if (root && widgetDef) {
-                    console.log(`Force refreshing widget: ${widgetId}`);
+        const root = widgetRoots.current.get(widgetId);
+        const widgetDef = getWidgetById(widgetId);
 
-                    // Unmount and remount with new key to force refresh
-                    root.unmount();
-                    const newRoot = createRoot(widgetElement);
-                    const WidgetComponent = widgetDef.component;
+        if (root && widgetDef) {
+            console.log(`Refreshing widget: ${widgetId}`);
 
-                    newRoot.render(
-                        <Suspense fallback={null}>
-                            <WidgetComponent key={`refresh-${Date.now()}`} />
-                        </Suspense>
-                    );
+            // Unmount the old root
+            root.unmount();
+            
+            // Clear the content element
+            contentElement.innerHTML = '';
+            
+            // Create a new root on the content element
+            const newRoot = createRoot(contentElement);
+            const WidgetComponent = widgetDef.component;
 
-                    widgetRoots.current.set(widgetId, newRoot);
-                    console.log(`Widget ${widgetId} force refreshed`);
-                }
-            }
-        };
+            // Render with new key to force complete re-mount
+            newRoot.render(
+                <Suspense fallback={null}>
+                    <WidgetComponent key={`refresh-${Date.now()}`} />
+                </Suspense>
+            );
+
+            // Update the root reference
+            widgetRoots.current.set(widgetId, newRoot);
+            console.log(`Widget ${widgetId} successfully refreshed`);
+        }
+    };
 
         const handleResizeWidget = (widgetId: string, size: 'small' | 'medium' | 'large') => {
             if (!gridInstance.current) return;
