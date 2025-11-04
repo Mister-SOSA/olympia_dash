@@ -67,7 +67,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onWidgetsClick}
                             title="Widgets (F)"
-                            className="bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/60 hover:border-blue-400/80"
+                            className="bg-ui-accent-primary-bg hover:bg-ui-accent-primary-bg border-ui-accent-primary-border hover:border-ui-accent-primary"
                         >
                             <MdWidgets className="w-6 h-6" />
                         </DockIcon>
@@ -76,7 +76,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onPresetManagerClick}
                             title="Manage Presets (P)"
-                            className="bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 hover:border-purple-400/80"
+                            className="bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary"
                         >
                             <MdBookmarks className="w-6 h-6" />
                         </DockIcon>
@@ -99,13 +99,13 @@ export default function DashboardDock({
                                     }
                                     className={
                                         isFilled
-                                            ? "bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/60 hover:border-purple-400/80 relative"
-                                            : "bg-[#161e28]/90 hover:bg-[#23303d] border-[#202D3C] hover:border-[#2c3e50]"
+                                            ? "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary relative"
+                                            : "bg-ui-bg-secondary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
                                     }
                                 >
                                     <span className="font-semibold text-sm">{index + 1}</span>
                                     {isFilled && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-secondary-text rounded-full shadow-[0_0_8px_rgba(147,51,234,0.6)]" />
                                     )}
                                 </DockIcon>
                             );
@@ -117,7 +117,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={onSettingsClick}
                             title="Settings (S)"
-                            className="bg-slate-600/30 hover:bg-slate-600/50 border-slate-500/60 hover:border-slate-400/80"
+                            className="bg-ui-bg-tertiary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
                         >
                             <MdSettings className="w-6 h-6" />
                         </DockIcon>

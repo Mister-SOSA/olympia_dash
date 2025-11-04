@@ -211,6 +211,7 @@
 
 /* Theme: Forest - Greens and earth tones */
 .theme-forest {
+    /* UI Colors */
     --ui-bg-primary: #1a2f1a;
     --ui-bg-secondary: #243b24;
     --ui-bg-tertiary: #2e4a2e;
@@ -251,10 +252,35 @@
     --ui-danger-text: #f87171;
     --ui-danger-bg: rgba(239, 68, 68, 0.2);
     --ui-danger-border: rgba(239, 68, 68, 0.5);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #0f1f0f;
+    --background-light: #1a2f1a;
+    --background-highlight: #243b24;
+    --border-light: #2e4a2e;
+    --border-dark: #172817;
+    
+    --text-primary: #ffffff;
+    --text-secondary: #a8d5a8;
+    --text-muted: #6b9b6b;
+    
+    --success: #4ade80;
+    --success-light: rgba(74, 222, 128, 0.2);
+    --warning: #fb923c;
+    --error: #ef4444;
+    --error-light: rgba(239, 68, 68, 0.4);
+    
+    --chart-bar: #4ade80;
+    --chart-1: #4ade80;
+    --chart-2: #86efac;
+    --chart-3: #fbbf24;
+    --chart-4: #ef4444;
+    --chart-5: #fb923c;
 }
 
 /* Theme: Sunset - Warm oranges and purples */
 .theme-sunset {
+    /* UI Colors */
     --ui-bg-primary: #2d1b2e;
     --ui-bg-secondary: #3d2540;
     --ui-bg-tertiary: #4d2f52;
@@ -295,10 +321,35 @@
     --ui-danger-text: #f87171;
     --ui-danger-bg: rgba(239, 68, 68, 0.2);
     --ui-danger-border: rgba(239, 68, 68, 0.5);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #1e0f1f;
+    --background-light: #2d1b2e;
+    --background-highlight: #3d2540;
+    --border-light: #4d2f52;
+    --border-dark: #251628;
+    
+    --text-primary: #ffffff;
+    --text-secondary: #e9b8f0;
+    --text-muted: #b687be;
+    
+    --success: #10b981;
+    --success-light: rgba(16, 185, 129, 0.2);
+    --warning: #fbbf24;
+    --error: #ef4444;
+    --error-light: rgba(239, 68, 68, 0.4);
+    
+    --chart-bar: #f97316;
+    --chart-1: #ec4899;
+    --chart-2: #f97316;
+    --chart-3: #fbbf24;
+    --chart-4: #ef4444;
+    --chart-5: #f472b6;
 }
 
 /* Theme: Midnight - Very dark with cyan accents */
 .theme-midnight {
+    /* UI Colors */
     --ui-bg-primary: #0a0e1a;
     --ui-bg-secondary: #131829;
     --ui-bg-tertiary: #1c2438;
@@ -339,4 +390,28 @@
     --ui-danger-text: #f87171;
     --ui-danger-bg: rgba(239, 68, 68, 0.2);
     --ui-danger-border: rgba(239, 68, 68, 0.5);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #050810;
+    --background-light: #0a0e1a;
+    --background-highlight: #131829;
+    --border-light: #1c2438;
+    --border-dark: #0d1120;
+    
+    --text-primary: #ffffff;
+    --text-secondary: #a5b4d4;
+    --text-muted: #6b7a9a;
+    
+    --success: #10b981;
+    --success-light: rgba(16, 185, 129, 0.2);
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --error-light: rgba(239, 68, 68, 0.4);
+    
+    --chart-bar: #06b6d4;
+    --chart-1: #06b6d4;
+    --chart-2: #8b5cf6;
+    --chart-3: #f59e0b;
+    --chart-4: #ef4444;
+    --chart-5: #22d3ee;
 }
