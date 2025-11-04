@@ -834,3 +834,23 @@ tbody>tr:nth-child(odd) {
 .pie-chart-legend::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Preset Change Toast Styling - Larger and positioned away from dock */
+[data-sonner-toast] {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  padding: 1rem 1.5rem !important;
+  min-width: 280px !important;
+  border-radius: 0.75rem !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
