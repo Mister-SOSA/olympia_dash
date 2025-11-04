@@ -17,7 +17,7 @@ preferences_bp = Blueprint('preferences', __name__)
 
 @preferences_bp.route('/preferences', methods=['GET'])
 @require_auth
-@rate_limit(max_requests=100, window_minutes=1)
+@rate_limit(max_requests=300, window_minutes=1)
 def get_preferences():
     """
     Get all user preferences.
@@ -41,7 +41,7 @@ def get_preferences():
 
 @preferences_bp.route('/preferences', methods=['PUT'])
 @require_auth
-@rate_limit(max_requests=100, window_minutes=1)
+@rate_limit(max_requests=300, window_minutes=1)
 def replace_preferences():
     """
     Replace all user preferences.
@@ -90,7 +90,7 @@ def replace_preferences():
 
 @preferences_bp.route('/preferences', methods=['PATCH'])
 @require_auth
-@rate_limit(max_requests=100, window_minutes=1)
+@rate_limit(max_requests=300, window_minutes=1)
 def update_preferences():
     """
     Update specific preferences (partial update).

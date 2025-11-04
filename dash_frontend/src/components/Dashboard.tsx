@@ -116,8 +116,8 @@ export default function Dashboard() {
         if (!isAuthenticated) return;
 
         const initPreferences = async () => {
-            // Migrate old localStorage preferences to new system
-            migrateFromLocalStorage();
+            // Migrate old localStorage preferences to new system (await to ensure it completes)
+            await migrateFromLocalStorage();
 
             // Sync preferences from server
             await preferencesService.syncOnLogin();

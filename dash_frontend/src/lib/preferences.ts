@@ -33,9 +33,11 @@ class PreferencesService {
     private version: number = 0;
     private saveTimers: Map<string, NodeJS.Timeout> = new Map();
     private syncInProgress: boolean = false;
+    private lastSaveTime: number = 0;
     private readonly CACHE_KEY = 'user_preferences';
     private readonly VERSION_KEY = 'user_preferences_version';
     private readonly DEBOUNCE_MS = 1000; // 1 second debounce for saves
+    private readonly MIN_SAVE_INTERVAL_MS = 500; // Minimum time between saves
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -119,12 +121,18 @@ class PreferencesService {
             if (fetchSuccess) {
                 const serverVersion = this.version;
 
-                // If local version is newer or same, we might have offline changes
-                if (localVersion >= serverVersion && Object.keys(localPrefs).length > 0) {
-                    // Merge local changes into server preferences
-                    this.preferences = { ...this.preferences, ...localPrefs };
-                    // Push merged preferences to server
-                    await this.saveToServer(false); // Don't use version check for initial sync
+                // Only save if local version is newer (indicating offline changes)
+                // AND the local preferences are actually different from server
+                if (localVersion > serverVersion && Object.keys(localPrefs).length > 0) {
+                    // Check if local preferences are actually different
+                    const hasChanges = JSON.stringify(localPrefs) !== JSON.stringify(this.preferences);
+                    
+                    if (hasChanges) {
+                        // Merge local changes into server preferences
+                        this.preferences = { ...this.preferences, ...localPrefs };
+                        // Push merged preferences to server
+                        await this.saveToServer(false); // Don't use version check for initial sync
+                    }
                 }
             }
         } finally {
@@ -291,7 +299,17 @@ class PreferencesService {
             return false;
         }
 
+        // Prevent rapid-fire saves
+        const now = Date.now();
+        const timeSinceLastSave = now - this.lastSaveTime;
+        if (timeSinceLastSave < this.MIN_SAVE_INTERVAL_MS) {
+            console.log(`Skipping save - too soon (${timeSinceLastSave}ms since last save)`);
+            return false;
+        }
+
         try {
+            this.lastSaveTime = now;
+
             const body: any = {
                 preferences: this.preferences
             };
@@ -399,7 +417,7 @@ export const preferenceHelpers = {
 };
 
 // Export helper functions for backward compatibility with existing localStorage code
-export const migrateFromLocalStorage = () => {
+export const migrateFromLocalStorage = async () => {
     if (typeof window === 'undefined') return;
 
     const keysToMigrate = [
@@ -412,6 +430,7 @@ export const migrateFromLocalStorage = () => {
 
     keysToMigrate.forEach(({ localStorage: lsKey, preference: prefKey }) => {
         const value = localStorage.getItem(lsKey);
+        // Only migrate if the old localStorage key exists AND the new preference doesn't exist
         if (value && !preferencesService.get(prefKey)) {
             try {
                 const parsed = JSON.parse(value);
@@ -427,12 +446,15 @@ export const migrateFromLocalStorage = () => {
 
     // If we migrated anything, sync to server and clean up old localStorage keys
     if (hasChanges) {
-        preferencesService.forceSync().then(() => {
+        try {
+            await preferencesService.forceSync();
             keysToMigrate.forEach(({ localStorage: lsKey }) => {
                 localStorage.removeItem(lsKey);
             });
             console.log('Successfully migrated preferences from localStorage to server');
-        });
+        } catch (error) {
+            console.error('Failed to migrate preferences:', error);
+        }
     }
 };
 
