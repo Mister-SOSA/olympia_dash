@@ -264,7 +264,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     column: COLUMN_COUNT,
                     float: false,
                     minRow: 1,  // Minimum number of rows
-                    
+
                     // ✅ CRITICAL: Drag handle configuration for GridStack 12.x native drag
                     // Must be at top level for GridStack 12+ (not inside draggable object)
                     handle: '.widget-drag-handle',
@@ -283,9 +283,6 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         breakpointForWindow: true,   // Use window size, not container
                         layout: 'moveScale'          // Scale widgets proportionally on column change
                     },
-
-                    // ✅ Accept widgets from external drag sources (widget menu)
-                    acceptWidgets: true,
 
                     // Note: sizeToContent removed to allow manual vertical resizing
                     // Widgets can still set it individually via their config if needed
@@ -365,17 +362,6 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
                     saveLayoutToStorage(updatedLayout);
                 }, 200); // Wait 200ms after last change before saving
-            });
-
-            // ✅ Handle widgets dragged from external sources (widget menu)
-            gridInstance.current.on("added", (event, items) => {
-                console.log("Widget(s) added via drag:", items);
-                // Apply drag handle restriction to newly added widgets
-                items.forEach((item: GridStackNode) => {
-                    if (item.el) {
-                        applyDragHandleRestriction(item.el);
-                    }
-                });
             });
 
             return () => {
