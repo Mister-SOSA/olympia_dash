@@ -56,17 +56,17 @@ export default function PresetManagerMenu({
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-4xl"
+                    className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary w-full max-w-4xl"
                 >
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                    <div className="flex items-center justify-between p-4 border-b border-ui-border-primary">
                         <div>
-                            <h2 className="text-lg font-semibold text-white">Preset Manager</h2>
-                            <p className="text-xs text-gray-400">Manage your dashboard layouts</p>
+                            <h2 className="text-lg font-semibold text-ui-text-primary">Preset Manager</h2>
+                            <p className="text-xs text-ui-text-secondary">Manage your dashboard layouts</p>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+                            className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
                         >
                             <MdClose className="w-5 h-5" />
                         </button>
@@ -75,7 +75,7 @@ export default function PresetManagerMenu({
                     {/* Table */}
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-800/50 text-xs text-gray-400 uppercase">
+                            <thead className="bg-ui-bg-secondary/50 text-xs text-ui-text-secondary uppercase">
                                 <tr>
                                     <th className="px-4 py-3 text-left w-16">#</th>
                                     <th className="px-4 py-3 text-left w-20">Type</th>
@@ -84,21 +84,21 @@ export default function PresetManagerMenu({
                                     <th className="px-4 py-3 text-right w-64">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-700">
+                            <tbody className="divide-y divide-ui-border-primary">
                                 {presets.map((preset, index) => {
                                     const info = getPresetInfo(preset);
                                     const isEmpty = info.count === 0;
 
                                     return (
-                                        <tr key={index} className={`${isEmpty ? "opacity-50" : "hover:bg-gray-800/30"} transition-colors`}>
+                                        <tr key={index} className={`${isEmpty ? "opacity-50" : "hover:bg-ui-bg-secondary/30"} transition-colors`}>
                                             <td className="px-4 py-3">
-                                                <span className="text-lg font-bold text-blue-400">{index + 1}</span>
+                                                <span className="text-lg font-bold text-ui-accent-primary-text">{index + 1}</span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 {!isEmpty && (
                                                     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${info.type === "fullscreen"
-                                                            ? "bg-purple-600/20 text-purple-400"
-                                                            : "bg-blue-600/20 text-blue-400"
+                                                            ? "bg-ui-accent-secondary-bg text-ui-accent-secondary-text"
+                                                            : "bg-ui-accent-primary-bg text-ui-accent-primary-text"
                                                         }`}>
                                                         {info.type === "fullscreen" ? (
                                                             <>
@@ -115,15 +115,15 @@ export default function PresetManagerMenu({
                                                 )}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className="text-sm text-white">
+                                                <span className="text-sm text-ui-text-primary">
                                                     {isEmpty ? "—" : info.count}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 {isEmpty ? (
-                                                    <span className="text-xs text-gray-500">Empty slot</span>
+                                                    <span className="text-xs text-ui-text-muted">Empty slot</span>
                                                 ) : (
-                                                    <div className="text-xs text-gray-400 truncate">
+                                                    <div className="text-xs text-ui-text-secondary truncate">
                                                         {info.widgets.slice(0, 3).join(", ")}
                                                         {info.count > 3 && ` +${info.count - 3} more`}
                                                     </div>
@@ -137,21 +137,21 @@ export default function PresetManagerMenu({
                                                                 onLoadPreset(index);
                                                                 onClose();
                                                             }}
-                                                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
+                                                            className="px-3 py-1.5 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded text-xs font-medium transition-colors"
                                                         >
                                                             Load
                                                         </button>
                                                     )}
                                                     <button
                                                         onClick={() => handleSaveClick(index)}
-                                                        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                                                        className="px-3 py-1.5 bg-ui-bg-tertiary hover:bg-ui-bg-secondary text-white rounded text-xs transition-colors"
                                                     >
                                                         {isEmpty ? "Save" : "Overwrite"}
                                                     </button>
                                                     {!isEmpty && (
                                                         <button
                                                             onClick={() => onClearPreset(index)}
-                                                            className="p-1.5 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded transition-colors"
+                                                            className="p-1.5 bg-ui-danger-bg hover:bg-ui-danger-bg border border-ui-danger-border text-ui-danger-text rounded transition-colors"
                                                             title="Delete"
                                                         >
                                                             <MdDelete className="w-4 h-4" />
@@ -167,15 +167,15 @@ export default function PresetManagerMenu({
                     </div>
 
                     {/* Footer */}
-                    <div className="p-3 border-t border-gray-700 bg-gray-800/30">
-                        <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="p-3 border-t border-ui-border-primary bg-ui-bg-secondary/30">
+                        <div className="flex items-center justify-between text-xs text-ui-text-muted">
                             <div className="flex gap-4">
                                 <span>⌨️ Press 1-9 to load</span>
                                 <span>⌨️ Shift+1-9 to save</span>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs font-medium transition-colors"
+                                className="px-3 py-1.5 bg-ui-bg-secondary hover:bg-ui-bg-tertiary text-white rounded text-xs font-medium transition-colors"
                             >
                                 Close
                             </button>
@@ -192,49 +192,49 @@ export default function PresetManagerMenu({
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md"
+                            className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary w-full max-w-md"
                         >
-                            <div className="p-4 border-b border-gray-700">
-                                <h3 className="text-lg font-semibold text-white">Save Preset {saveIndex + 1}</h3>
-                                <p className="text-sm text-gray-400">Choose display mode</p>
+                            <div className="p-4 border-b border-ui-border-primary">
+                                <h3 className="text-lg font-semibold text-ui-text-primary">Save Preset {saveIndex + 1}</h3>
+                                <p className="text-sm text-ui-text-secondary">Choose display mode</p>
                             </div>
 
                             <div className="p-4 space-y-3">
                                 <button
                                     onClick={() => handleSave("grid")}
-                                    className="w-full p-4 rounded-lg border-2 border-gray-700 hover:border-blue-500 bg-gray-800/50 hover:bg-gray-800 transition-all text-left group"
+                                    className="w-full p-4 rounded-lg border-2 border-ui-border-primary hover:border-ui-accent-primary-light bg-ui-bg-secondary/50 hover:bg-ui-bg-secondary transition-all text-left group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-600/20 rounded-lg">
-                                            <MdGridView className="w-6 h-6 text-blue-400" />
+                                        <div className="p-2 bg-ui-accent-primary-bg rounded-lg">
+                                            <MdGridView className="w-6 h-6 text-ui-accent-primary-text" />
                                         </div>
                                         <div>
-                                            <h4 className="font-medium text-white">Grid Layout</h4>
-                                            <p className="text-xs text-gray-400">Multiple widgets</p>
+                                            <h4 className="font-medium text-ui-text-primary">Grid Layout</h4>
+                                            <p className="text-xs text-ui-text-secondary">Multiple widgets</p>
                                         </div>
                                     </div>
                                 </button>
 
                                 <button
                                     onClick={() => handleSave("fullscreen")}
-                                    className="w-full p-4 rounded-lg border-2 border-gray-700 hover:border-purple-500 bg-gray-800/50 hover:bg-gray-800 transition-all text-left group"
+                                    className="w-full p-4 rounded-lg border-2 border-ui-border-primary hover:border-ui-accent-secondary-light bg-ui-bg-secondary/50 hover:bg-ui-bg-secondary transition-all text-left group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-purple-600/20 rounded-lg">
-                                            <MdFullscreen className="w-6 h-6 text-purple-400" />
+                                        <div className="p-2 bg-ui-accent-secondary-bg rounded-lg">
+                                            <MdFullscreen className="w-6 h-6 text-ui-accent-secondary-text" />
                                         </div>
                                         <div>
-                                            <h4 className="font-medium text-white">Fullscreen</h4>
-                                            <p className="text-xs text-gray-400">Single widget fills screen</p>
+                                            <h4 className="font-medium text-ui-text-primary">Fullscreen</h4>
+                                            <p className="text-xs text-ui-text-secondary">Single widget fills screen</p>
                                         </div>
                                     </div>
                                 </button>
                             </div>
 
-                            <div className="p-4 border-t border-gray-700">
+                            <div className="p-4 border-t border-ui-border-primary">
                                 <button
                                     onClick={() => setSaveModalOpen(false)}
-                                    className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                    className="w-full px-4 py-2 bg-ui-bg-secondary hover:bg-ui-bg-tertiary text-white rounded-lg text-sm font-medium transition-colors"
                                 >
                                     Cancel
                                 </button>

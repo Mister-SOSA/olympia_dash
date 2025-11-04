@@ -1,26 +1,75 @@
 :root {
-    --primary: #4CAF50;
-    --primary-light: #66BB6A;
-    --primary-dark: #388E3C;
-    --secondary: #2196F3;
-    --secondary-light: #64B5F6;
-    --secondary-dark: #1976D2;
-    --accent-1: #FFC107;
-    --accent-2: #FF5722;
-    --accent-3: #9C27B0;
+    /* ===== THEME SYSTEM - UI/Menu Colors ===== */
+    /* Based on PresetManagerMenu design - gray backgrounds with purple/blue accents */
+    
+    /* UI Backgrounds - Layered from darkest to lightest */
+    --ui-bg-primary: #111827;      /* gray-900 - Main modals, overlays */
+    --ui-bg-secondary: #1f2937;    /* gray-800 - Secondary panels, footers */
+    --ui-bg-tertiary: #374151;     /* gray-700 - Tertiary elements, hover states */
+    --ui-bg-quaternary: #4b5563;   /* gray-600 - Lighter hover states */
+    
+    /* UI Borders */
+    --ui-border-primary: #374151;  /* gray-700 - Main borders */
+    --ui-border-secondary: #4b5563; /* gray-600 - Secondary borders */
+    
+    /* UI Text Colors */
+    --ui-text-primary: #ffffff;    /* white - Primary text */
+    --ui-text-secondary: #9ca3af;  /* gray-400 - Secondary text */
+    --ui-text-muted: #6b7280;      /* gray-500 - Muted text */
+    
+    /* UI Primary Accent (Blue) - Primary actions, grid mode */
+    --ui-accent-primary: #2563eb;       /* blue-600 - Main accent */
+    --ui-accent-primary-hover: #1d4ed8; /* blue-700 - Hover state */
+    --ui-accent-primary-light: #3b82f6; /* blue-500 - Light variant */
+    --ui-accent-primary-text: #60a5fa;  /* blue-400 - Text on dark */
+    --ui-accent-primary-bg: rgba(37, 99, 235, 0.2);  /* blue-600/20 - Subtle backgrounds */
+    --ui-accent-primary-border: rgba(37, 99, 235, 0.5); /* blue-600/50 - Subtle borders */
+    
+    /* UI Secondary Accent (Purple) - Fullscreen mode, admin features */
+    --ui-accent-secondary: #9333ea;       /* purple-600 - Main accent */
+    --ui-accent-secondary-hover: #7e22ce; /* purple-700 - Hover state */
+    --ui-accent-secondary-light: #a855f7; /* purple-500 - Light variant */
+    --ui-accent-secondary-text: #c084fc;  /* purple-400 - Text on dark */
+    --ui-accent-secondary-bg: rgba(147, 51, 234, 0.2);  /* purple-600/20 - Subtle backgrounds */
+    --ui-accent-secondary-border: rgba(147, 51, 234, 0.5); /* purple-600/50 - Subtle borders */
+    
+    /* UI Action Colors */
+    --ui-success: #16a34a;          /* green-600 */
+    --ui-success-text: #4ade80;     /* green-400 */
+    --ui-success-bg: rgba(22, 163, 74, 0.2); /* green-600/20 */
+    --ui-success-border: rgba(22, 163, 74, 0.5); /* green-600/50 */
+    
+    --ui-warning: #ea580c;          /* orange-600 */
+    --ui-warning-text: #fb923c;     /* orange-400 */
+    --ui-warning-bg: rgba(234, 88, 12, 0.2); /* orange-600/20 */
+    --ui-warning-border: rgba(234, 88, 12, 0.5); /* orange-600/50 */
+    
+    --ui-danger: #dc2626;           /* red-600 */
+    --ui-danger-text: #f87171;      /* red-400 */
+    --ui-danger-bg: rgba(220, 38, 38, 0.2); /* red-600/20 */
+    --ui-danger-border: rgba(220, 38, 38, 0.5); /* red-600/50 */
+    
+    /* ===== WIDGET/DASHBOARD Colors ===== */
+    /* Widget backgrounds and borders */
     --background-dark: #08121a;
     --background-light: #161e28;
     --background-highlight: #23303d;
     --border-light: #202D3C;
     --border-dark: #1A1A1A;
+    
+    /* Widget text */
     --text-primary: #FFFFFF;
     --text-secondary: #B0B0B0;
     --text-muted: #757575;
+    
+    /* Widget data visualization colors */
     --success: #4CAF50;
     --success-light: rgba(76, 175, 80, 0.2);
     --warning: #ff8307;
     --error: #F44336;
     --error-light: rgba(244, 67, 54, 0.4);
+    
+    /* Chart colors */
     --chart-bar: #2196F3;
     --chart-1: #4CAF50;
     --chart-2: #2196F3;
@@ -38,17 +87,23 @@
     --chart-14: #795548;
     --chart-15: #BDBDBD;
     --chart-other: #9E9E9E;
+    
+    /* Shadows */
     --shadow-light: rgba(0, 0, 0, 0.2);
     --shadow-dark: rgba(0, 0, 0, 0.4);
-    --highlight: #4CAF50;
+    
+    /* ===== Shadcn/UI HSL Variables ===== */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
+    --primary: 217 91% 60%;          /* blue-500 for consistency */
     --primary-foreground: 0 0% 98%;
+    --secondary: 271 91% 65%;        /* purple-500 for consistency */
     --secondary-foreground: 0 0% 9%;
+    --muted: 220 13% 46%;
     --muted-foreground: 0 0% 45.1%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -56,21 +111,24 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
+}
 
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted-foreground: 0 0% 63.9%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-    }
+.dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;          /* blue-500 */
+    --primary-foreground: 0 0% 9%;
+    --secondary: 271 91% 65%;        /* purple-500 */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 13% 28%;
+    --muted-foreground: 0 0% 63.9%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
 }

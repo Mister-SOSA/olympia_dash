@@ -105,7 +105,7 @@ export default function WidgetContextMenu({
             action: () => {
                 onInfo(widgetId);
             },
-            color: 'text-blue-400 hover:bg-blue-600/20'
+            color: 'text-ui-accent-primary-text hover:bg-ui-accent-primary-bg'
         },
         {
             id: 'refresh',
@@ -115,7 +115,7 @@ export default function WidgetContextMenu({
                 onRefresh(widgetId);
                 onClose();
             },
-            color: 'text-green-400 hover:bg-green-600/20'
+            color: 'text-ui-success-text hover:bg-ui-success-bg'
         },
         {
             id: 'resize',
@@ -144,7 +144,7 @@ export default function WidgetContextMenu({
                     }
                 }
             ],
-            color: 'text-purple-400 hover:bg-purple-600/20'
+            color: 'text-ui-accent-secondary-text hover:bg-ui-accent-secondary-bg'
         },
         {
             id: 'separator1',
@@ -157,7 +157,7 @@ export default function WidgetContextMenu({
             action: () => {
                 onDelete(widgetId);
             },
-            color: 'text-red-400 hover:bg-red-600/20'
+            color: 'text-ui-danger-text hover:bg-ui-danger-bg'
         }
     ];
 
@@ -172,7 +172,7 @@ export default function WidgetContextMenu({
                     transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.2 }}
                     // NOTE: was `overflow-hidden` which prevented the resize submenu (absolutely positioned with left-full) from being visible.
                     // Using overflow-visible so the submenu can extend outside the main menu bounds.
-                    className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-visible"
+                    className="fixed z-[9999] bg-ui-bg-primary/95 backdrop-blur-md border border-ui-border-primary rounded-xl shadow-2xl overflow-visible"
                     style={{
                         left: position.x,
                         top: position.y,
@@ -180,11 +180,11 @@ export default function WidgetContextMenu({
                     }}
                 >
                     {/* Menu Header */}
-                    <div className="bg-gradient-to-r from-gray-800 to-gray-700 px-4 py-3 border-b border-gray-600">
-                        <h3 className="font-semibold text-white text-sm truncate">
+                    <div className="bg-gradient-to-r from-ui-bg-secondary to-ui-bg-tertiary px-4 py-3 border-b border-ui-border-secondary">
+                        <h3 className="font-semibold text-ui-text-primary text-sm truncate">
                             {widgetTitle}
                         </h3>
-                        <p className="text-gray-400 text-xs">Widget Actions</p>
+                        <p className="text-ui-text-secondary text-xs">Widget Actions</p>
                     </div>
 
                     {/* Menu Items */}
@@ -194,7 +194,7 @@ export default function WidgetContextMenu({
                                 return (
                                     <div
                                         key={item.id}
-                                        className="border-t border-gray-700 my-2"
+                                        className="border-t border-ui-border-primary my-2"
                                     />
                                 );
                             }
@@ -223,7 +223,7 @@ export default function WidgetContextMenu({
                                             </span>
                                         </div>
                                         {item.submenu && (
-                                            <span className="text-gray-500">
+                                            <span className="text-ui-text-muted">
                                                 ▶
                                             </span>
                                         )}
@@ -236,18 +236,18 @@ export default function WidgetContextMenu({
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: -10 }}
                                             transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.15 }}
-                                            className="absolute left-full top-0 ml-2 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl overflow-hidden min-w-[200px] z-[10000]"
+                                            className="absolute left-full top-0 ml-2 bg-ui-bg-primary border border-ui-border-secondary rounded-lg shadow-2xl overflow-hidden min-w-[200px] z-[10000]"
                                             style={{
                                                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
                                             }}
                                         >
-                                            <div className="bg-gray-800 px-3 py-2 border-b border-gray-600">
-                                                <p className="text-xs text-gray-400 font-medium">Resize Options</p>
+                                            <div className="bg-ui-bg-secondary px-3 py-2 border-b border-ui-border-secondary">
+                                                <p className="text-xs text-ui-text-secondary font-medium">Resize Options</p>
                                             </div>
                                             {item.submenu.map((subItem, subIndex) => (
                                                 <button
                                                     key={subIndex}
-                                                    className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-between"
+                                                    className="w-full text-left px-4 py-3 text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary transition-colors flex items-center justify-between"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         subItem.action();
@@ -256,7 +256,7 @@ export default function WidgetContextMenu({
                                                     }}
                                                 >
                                                     <span>{subItem.label}</span>
-                                                    <span className="text-xs text-gray-500">
+                                                    <span className="text-xs text-ui-text-muted">
                                                         {subItem.label.includes('Small') ? '📱' :
                                                             subItem.label.includes('Medium') ? '💻' : '🖥️'}
                                                     </span>
@@ -270,8 +270,8 @@ export default function WidgetContextMenu({
                     </div>
 
                     {/* Menu Footer */}
-                    <div className="bg-gray-800/50 px-4 py-2 border-t border-gray-700">
-                        <p className="text-xs text-gray-500 text-center">
+                    <div className="bg-ui-bg-secondary/50 px-4 py-2 border-t border-ui-border-primary">
+                        <p className="text-xs text-ui-text-muted text-center">
                             Right-click for widget options
                         </p>
                     </div>

@@ -1,8 +1,6 @@
 'use client';
 
 import { motion } from "framer-motion";
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
 import { User } from "@/lib/auth";
 
 interface SettingsMenuProps {
@@ -18,7 +16,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={onClose}
         >
             <motion.div
@@ -28,27 +26,29 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-md"
             >
-                <Card className="bg-slate-800/95 border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-bold text-white">Settings</h2>
+                <div className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 border-b border-ui-border-primary">
+                        <h2 className="text-lg font-semibold text-ui-text-primary">Settings</h2>
                         <button
                             onClick={onClose}
-                            className="text-slate-400 hover:text-white transition-colors"
+                            className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
                         >
                             <span className="text-2xl">×</span>
                         </button>
                     </div>
 
-                    <div className="space-y-6">
+                    {/* Content */}
+                    <div className="p-6 space-y-6">
                         {/* User Info */}
-                        <div className="border-b border-slate-700 pb-4">
-                            <p className="text-slate-400 text-sm mb-1">Signed in as</p>
-                            <p className="text-white font-semibold">{user?.name}</p>
-                            <p className="text-slate-300 text-sm">{user?.email}</p>
+                        <div className="border-b border-ui-border-primary pb-4">
+                            <p className="text-ui-text-secondary text-sm mb-1">Signed in as</p>
+                            <p className="text-ui-text-primary font-semibold">{user?.name}</p>
+                            <p className="text-ui-text-secondary text-sm">{user?.email}</p>
                             {user?.role && (
                                 <span className={`inline-block mt-2 px-2 py-1 rounded text-xs font-semibold ${user.role === 'admin'
-                                        ? 'bg-purple-500/20 text-purple-400'
-                                        : 'bg-blue-500/20 text-blue-400'
+                                        ? 'bg-ui-accent-secondary-bg text-ui-accent-secondary-text'
+                                        : 'bg-ui-accent-primary-bg text-ui-accent-primary-text'
                                     }`}>
                                     {user.role.toUpperCase()}
                                 </span>
@@ -58,55 +58,54 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                         {/* Actions */}
                         <div className="space-y-3">
                             {user?.role === 'admin' && onAdminClick && (
-                                <Button
+                                <button
                                     onClick={onAdminClick}
-                                    className="w-full bg-purple-600 hover:bg-purple-700"
+                                    className="w-full px-4 py-2 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white rounded-lg text-sm font-medium transition-colors"
                                 >
                                     Admin Panel
-                                </Button>
+                                </button>
                             )}
 
-                            <Button
+                            <button
                                 onClick={onLogout}
-                                variant="outline"
-                                className="w-full border-red-500 text-red-400 hover:bg-red-500/10"
+                                className="w-full px-4 py-2 bg-ui-danger-bg hover:bg-ui-danger-bg border border-ui-danger-border text-ui-danger-text rounded-lg text-sm font-medium transition-colors"
                             >
                                 Logout
-                            </Button>
+                            </button>
                         </div>
 
                         {/* Keyboard Shortcuts */}
-                        <div className="border-t border-slate-700 pt-4">
-                            <p className="text-slate-400 text-sm font-semibold mb-2">Keyboard Shortcuts</p>
-                            <div className="space-y-1 text-xs text-slate-400">
+                        <div className="border-t border-ui-border-primary pt-4">
+                            <p className="text-ui-text-secondary text-sm font-semibold mb-2">Keyboard Shortcuts</p>
+                            <div className="space-y-1 text-xs text-ui-text-secondary">
                                 <div className="flex justify-between">
                                     <span>Widget Menu</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">F</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">F</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Preset Menu</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">P</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">P</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Settings</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">S</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">S</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Compact Dashboard</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">X</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">X</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Load Preset 1-9</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">1-9</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">1-9</kbd>
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Save Preset 1-9</span>
-                                    <kbd className="px-2 py-1 bg-slate-700 rounded">Shift+1-9</kbd>
+                                    <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded">Shift+1-9</kbd>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </Card>
+                </div>
             </motion.div>
         </motion.div>
     );

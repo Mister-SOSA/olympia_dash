@@ -263,7 +263,7 @@ export default function Dashboard() {
 
     if (checkingAuth) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary">
                 <Loader />
             </div>
         );
@@ -371,7 +371,7 @@ export default function Dashboard() {
 
             {/* Fullscreen Widget Overlay */}
             {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
-                <div className="fixed inset-0 z-40 bg-gray-950">
+                <div className="fixed inset-0 z-40 bg-ui-bg-primary">
                     {(() => {
                         const enabledWidget = layout.find(w => w.enabled);
                         if (!enabledWidget) return null;
