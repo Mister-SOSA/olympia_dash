@@ -96,8 +96,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -145,7 +146,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                         x={prevX + barWidth / 2}
                                         y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight - 8}
                                         textAnchor="middle"
-                                        fill="rgba(255, 255, 255, 0.9)"
+                                        fill="var(--text-secondary)"
                                         fontSize="14"
                                         fontWeight="600"
                                         style={{ pointerEvents: "none" }}
@@ -173,7 +174,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                         x={currX + barWidth / 2}
                                         y={currY - 8}
                                         textAnchor="middle"
-                                        fill="white"
+                                        fill="var(--text-primary)"
                                         fontSize="15"
                                         fontWeight="700"
                                         style={{ pointerEvents: "none" }}
@@ -239,7 +240,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                             x={prevX + barWidth / 2}
                                                             y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight + 20}
                                                             textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.7)"
+                                                            fill="var(--text-muted)"
                                                             fontSize="13"
                                                             fontWeight="500"
                                                             style={{ pointerEvents: "none" }}
@@ -251,7 +252,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                             x={prevX + barWidth / 2}
                                                             y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight + 20}
                                                             textAnchor="middle"
-                                                            fill="white"
+                                                            fill="var(--text-primary)"
                                                             fontSize="14"
                                                             fontWeight="600"
                                                             style={{ pointerEvents: "none" }}
@@ -267,7 +268,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                             x={prevX + barWidth / 2}
                                                             y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight - 8}
                                                             textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.5)"
+                                                            fill="var(--text-muted)"
                                                             fontSize="13"
                                                             fontWeight="500"
                                                             style={{ pointerEvents: "none" }}
@@ -279,7 +280,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                             x={prevX + barWidth / 2}
                                                             y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight - 8}
                                                             textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.9)"
+                                                            fill="var(--text-secondary)"
                                                             fontSize="14"
                                                             fontWeight="600"
                                                             style={{ pointerEvents: "none" }}
@@ -356,7 +357,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                                 x={currX + barWidth / 2}
                                                                 y={currY - 8}
                                                                 textAnchor="middle"
-                                                                fill="white"
+                                                                fill="var(--text-primary)"
                                                                 fontSize="15"
                                                                 fontWeight="700"
                                                                 style={{ pointerEvents: "none" }}
@@ -369,7 +370,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                                 x={currX + barWidth / 2}
                                                                 y={currY + 20}
                                                                 textAnchor="middle"
-                                                                fill="white"
+                                                                fill="var(--text-primary)"
                                                                 fontSize="15"
                                                                 fontWeight="700"
                                                                 style={{ pointerEvents: "none" }}
@@ -385,7 +386,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                     x={currX + barWidth / 2}
                                                     y={padding.top + chartHeight - projectedHeight - 8}
                                                     textAnchor="middle"
-                                                    fill="rgba(255, 255, 255, 0.8)"
+                                                    fill="var(--text-secondary)"
                                                     fontSize="13"
                                                     fontWeight="500"
                                                     fontStyle="italic"
@@ -404,7 +405,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={groupX + (barWidth * 2 + barGap) / 2}
                                 y={padding.top + chartHeight + 25}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
+                                fill="var(--text-secondary)"
                                 fontSize="14"
                                 fontWeight="500"
                                 style={{ pointerEvents: "none" }}
@@ -424,16 +425,17 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                         top: padding.top - 10,
                         left: padding.left + hoveredIndex * groupWidth + groupWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
+                        backgroundColor: "var(--ui-bg-primary)",
                         padding: "10px 14px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "6px", fontWeight: 500 }}>
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "13px", marginBottom: "6px", fontWeight: 500 }}>
                         {data[hoveredIndex].periodLabel}
                     </div>
                     {hoveredIndex === data.length - 1 ? (
@@ -441,18 +443,18 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             <div style={{ color: "var(--chart-1)", fontSize: "14px", fontWeight: 600, marginBottom: "2px" }}>
                                 Last Year (MTD): ${nFormatter(data[hoveredIndex].previousPeriodSales * monthProgressRatio, 2)}
                             </div>
-                            <div style={{ color: "rgba(76, 175, 80, 0.6)", fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>
+                            <div style={{ color: "var(--ui-text-muted)", fontSize: "12px", fontWeight: 500, marginBottom: "4px", opacity: 0.8 }}>
                                 Remaining: ${nFormatter(data[hoveredIndex].previousPeriodSales * (1 - monthProgressRatio), 2)}
                             </div>
                             <div style={{ color: "var(--chart-bar)", fontSize: "15px", fontWeight: 700, marginBottom: "4px" }}>
                                 This Year (MTD): ${nFormatter(data[hoveredIndex].currentPeriodSales, 2)}
                             </div>
                             <div style={{
-                                color: "rgba(255, 255, 255, 0.7)",
+                                color: "var(--ui-text-secondary)",
                                 fontSize: "13px",
                                 fontWeight: 500,
                                 fontStyle: "italic",
-                                borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+                                borderTop: "1px solid var(--ui-border-primary)",
                                 paddingTop: "4px",
                                 marginTop: "2px"
                             }}>

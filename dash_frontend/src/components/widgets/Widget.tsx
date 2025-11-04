@@ -182,8 +182,9 @@ export default function Widget({
                             cy="10"
                             r="8"
                             fill="none"
-                            stroke="rgba(255, 255, 255, 0.1)"
+                            stroke="var(--border-light)"
                             strokeWidth="2"
+                            opacity="0.3"
                         />
                         <circle
                             cx="10"

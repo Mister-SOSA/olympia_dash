@@ -146,11 +146,12 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                     style={{
                         width: "85%",
                         height: "16px",
-                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        backgroundColor: "var(--ui-bg-tertiary)",
                         borderRadius: "8px",
                         overflow: "hidden",
                         position: "relative",
-                        border: "1px solid rgba(255, 255, 255, 0.2)"
+                        border: "1px solid var(--ui-border-primary)",
+                        opacity: 0.5
                     }}
                 >
                     <div
@@ -162,8 +163,8 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                             borderRadius: "8px"
                         }}
                     />
-                    <div style={{ position: "absolute", left: "30%", top: 0, bottom: 0, width: "1px", backgroundColor: "rgba(255, 255, 255, 0.3)" }} />
-                    <div style={{ position: "absolute", left: "60%", top: 0, bottom: 0, width: "1px", backgroundColor: "rgba(255, 255, 255, 0.3)" }} />
+                    <div style={{ position: "absolute", left: "30%", top: 0, bottom: 0, width: "1px", backgroundColor: "var(--border-light)", opacity: 0.5 }} />
+                    <div style={{ position: "absolute", left: "60%", top: 0, bottom: 0, width: "1px", backgroundColor: "var(--border-light)", opacity: 0.5 }} />
                 </div>
             </div>
         );
@@ -222,11 +223,12 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                     width: "80%",
                     maxWidth: "300px",
                     height: "20px",
-                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                    backgroundColor: "var(--ui-bg-tertiary)",
                     borderRadius: "10px",
                     overflow: "hidden",
                     position: "relative",
-                    border: "1px solid rgba(255, 255, 255, 0.2)"
+                    border: "1px solid var(--ui-border-primary)",
+                    opacity: 0.5
                 }}
             >
                 {/* Fill bar */}
@@ -248,7 +250,8 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                         top: 0,
                         bottom: 0,
                         width: "1px",
-                        backgroundColor: "rgba(255, 255, 255, 0.3)"
+                        backgroundColor: "var(--border-light)",
+                        opacity: 0.5
                     }}
                 />
                 <div
@@ -258,7 +261,8 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                         top: 0,
                         bottom: 0,
                         width: "1px",
-                        backgroundColor: "rgba(255, 255, 255, 0.3)"
+                        backgroundColor: "var(--border-light)",
+                        opacity: 0.5
                     }}
                 />
             </div>
@@ -268,7 +272,7 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                 <div
                     style={{
                         fontSize: `${Math.max(12, parseInt(fontSize) * 0.35)}px`,
-                        color: "rgba(255, 255, 255, 0.7)",
+                        color: "var(--text-secondary)",
                         fontWeight: "500",
                         textTransform: "uppercase",
                         letterSpacing: "0.05em"
@@ -286,7 +290,7 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
                     width: "80%",
                     maxWidth: "300px",
                     fontSize: `${Math.max(10, parseInt(fontSize) * 0.25)}px`,
-                    color: "rgba(255, 255, 255, 0.5)",
+                    color: "var(--text-muted)",
                     marginTop: "-0.25rem"
                 }}
             >

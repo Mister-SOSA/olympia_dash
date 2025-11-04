@@ -93,27 +93,46 @@ interface StatusCardProps {
 }
 
 const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon, compact = false }) => {
-    const bgColorClass = statusColor === 'success' ? 'bg-[#4CAF50]' :
-        statusColor === 'warning' ? 'bg-[#ff8307]' :
-            'bg-[#F44336]';
-    const borderColorClass = statusColor === 'success' ? 'border-[#4CAF50]' :
-        statusColor === 'warning' ? 'border-[#ff8307]' :
-            'border-[#F44336]';
-    const bgLightClass = statusColor === 'success' ? 'bg-[#4CAF50]/10' :
-        statusColor === 'warning' ? 'bg-[#ff8307]/10' :
-            'bg-[#F44336]/10';
+    const getColors = () => {
+        if (statusColor === 'success') return {
+            bg: 'var(--badge-success-text)',
+            border: 'var(--badge-success-text)',
+            bgLight: 'var(--badge-success-bg)',
+        };
+        if (statusColor === 'warning') return {
+            bg: 'var(--badge-warning-text)',
+            border: 'var(--badge-warning-text)',
+            bgLight: 'var(--badge-warning-bg)',
+        };
+        return {
+            bg: 'var(--badge-error-text)',
+            border: 'var(--badge-error-text)',
+            bgLight: 'var(--badge-error-bg)',
+        };
+    };
+
+    const colors = getColors();
 
     return (
         <div className="flex flex-col h-full min-h-[200px]">
-            <div className={`rounded-lg border-2 ${borderColorClass} flex flex-col h-full bg-[#161e28]`}>
+            <div className="rounded-lg border-2 flex flex-col h-full" style={{
+                borderColor: colors.border,
+                backgroundColor: 'var(--background-light)'
+            }}>
                 {/* Header */}
-                <div className={`${bgLightClass} px-3 py-2 border-b-2 ${borderColorClass} flex-shrink-0`}>
+                <div className="px-3 py-2 border-b-2 flex-shrink-0" style={{
+                    backgroundColor: colors.bgLight,
+                    borderColor: colors.border
+                }}>
                     <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-base flex items-center gap-1.5 text-white">
+                        <h3 className="font-bold text-base flex items-center gap-1.5" style={{ color: 'var(--table-text-primary)' }}>
                             <span className="text-xl">{icon}</span>
                             <span className="truncate">{title}</span>
                         </h3>
-                        <span className={`${bgColorClass} text-white font-bold px-2 py-0.5 rounded-full text-xs flex-shrink-0`}>
+                        <span className="font-bold px-2 py-0.5 rounded-full text-xs flex-shrink-0" style={{
+                            backgroundColor: colors.bg,
+                            color: 'var(--background-dark)'
+                        }}>
                             {machines.length}
                         </span>
                     </div>
@@ -122,40 +141,48 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                 {/* Machine List */}
                 <div className="p-2 space-y-1.5 overflow-y-auto flex-1">
                     {machines.length === 0 ? (
-                        <div className="text-center py-4 text-[#757575] text-sm">
+                        <div className="text-center py-4 text-sm" style={{ color: 'var(--text-muted)' }}>
                             No machines in this status
                         </div>
                     ) : (
                         machines.map((machine) => {
-                            // Highlight green if in cost center 1 (success status) and has available units
+                            // Highlight if in cost center 1 (success status) and has available units
                             const isAvailable = statusColor === 'success' && machine.available > 0;
-                            const bgClass = isAvailable
-                                ? 'bg-[#4CAF50]/20 border-[#4CAF50]'
-                                : 'bg-[#23303d] border-[#202D3C]';
-                            const hoverClass = isAvailable
-                                ? 'hover:bg-[#4CAF50]/30'
-                                : 'hover:bg-[#23303d]/80';
 
                             return compact ? (
                                 // Compact view for tabbed mode
                                 <div
                                     key={machine.part_code}
-                                    className={`${bgClass} rounded px-2 py-1.5 border ${hoverClass} transition-colors flex items-center justify-between gap-2`}
+                                    className="rounded px-2 py-1.5 border transition-colors flex items-center justify-between gap-2"
+                                    style={{
+                                        backgroundColor: isAvailable ? colors.bgLight : 'var(--background-highlight)',
+                                        borderColor: isAvailable ? colors.border : 'var(--border-light)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = isAvailable
+                                            ? 'var(--badge-success-bg)'
+                                            : 'var(--ui-bg-tertiary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = isAvailable
+                                            ? colors.bgLight
+                                            : 'var(--background-highlight)';
+                                    }}
                                 >
                                     {/* Machine Code - Bold and prominent */}
-                                    <div className="font-bold text-sm text-white truncate flex-1 min-w-0">
+                                    <div className="font-bold text-sm truncate flex-1 min-w-0" style={{ color: 'var(--table-text-primary)' }}>
                                         {machine.part_code}
                                     </div>
 
                                     {/* Compact Metrics */}
                                     <div className="flex gap-1.5 flex-shrink-0 items-center">
-                                        <div className="flex items-center gap-1 bg-[#08121a] rounded px-1.5 py-0.5">
-                                            <span className="text-[10px] text-[#B0B0B0]">A:</span>
-                                            <span className="text-xs font-bold text-[#4CAF50]">{machine.available}</span>
+                                        <div className="flex items-center gap-1 rounded px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                            <span className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>A:</span>
+                                            <span className="text-xs font-bold" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 bg-[#08121a] rounded px-1.5 py-0.5">
-                                            <span className="text-[10px] text-[#B0B0B0]">H:</span>
-                                            <span className="text-xs font-bold text-[#ff8307]">{machine.on_hold}</span>
+                                        <div className="flex items-center gap-1 rounded px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                            <span className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>H:</span>
+                                            <span className="text-xs font-bold" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -163,24 +190,38 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                                 // Full detail view for full-screen mode
                                 <div
                                     key={machine.part_code}
-                                    className={`${bgClass} rounded-md p-2.5 border ${hoverClass} transition-colors`}
+                                    className="rounded-md p-2.5 border transition-colors"
+                                    style={{
+                                        backgroundColor: isAvailable ? colors.bgLight : 'var(--background-highlight)',
+                                        borderColor: isAvailable ? colors.border : 'var(--border-light)',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = isAvailable
+                                            ? 'var(--badge-success-bg)'
+                                            : 'var(--ui-bg-tertiary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = isAvailable
+                                            ? colors.bgLight
+                                            : 'var(--background-highlight)';
+                                    }}
                                 >
                                     <div className="flex items-center justify-between gap-3">
                                         {/* Machine Info */}
                                         <div className="flex-1 min-w-0">
-                                            <div className="font-bold text-sm text-white truncate">{machine.part_code}</div>
-                                            <div className="text-xs text-[#B0B0B0] truncate mt-0.5">{machine.part_desc}</div>
+                                            <div className="font-bold text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>{machine.part_code}</div>
+                                            <div className="text-xs truncate mt-0.5" style={{ color: 'var(--table-text-secondary)' }}>{machine.part_desc}</div>
                                         </div>
 
                                         {/* Metrics with labels */}
                                         <div className="flex gap-2 flex-shrink-0">
-                                            <div className="text-center bg-[#08121a] rounded px-2.5 py-1">
-                                                <div className="text-[10px] text-[#B0B0B0]">Avail</div>
-                                                <div className="font-bold text-sm text-[#4CAF50]">{machine.available}</div>
+                                            <div className="text-center rounded px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                                <div className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>Avail</div>
+                                                <div className="font-bold text-sm" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</div>
                                             </div>
-                                            <div className="text-center bg-[#08121a] rounded px-2.5 py-1">
-                                                <div className="text-[10px] text-[#B0B0B0]">Hold</div>
-                                                <div className="font-bold text-sm text-[#ff8307]">{machine.on_hold}</div>
+                                            <div className="text-center rounded px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                                <div className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>Hold</div>
+                                                <div className="font-bold text-sm" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -234,15 +275,40 @@ export default function MachineStockStatus() {
                         {/* Cost Center 1 Tab */}
                         <button
                             onClick={() => setActiveTab('cc1')}
-                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc1'
-                                ? 'bg-[#4CAF50] text-white border-2 border-[#4CAF50] shadow-lg'
-                                : 'bg-[#4CAF50]/10 text-[#4CAF50] border-2 border-[#4CAF50]/50 hover:bg-[#4CAF50]/20'
-                                }`}
+                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
+                            style={activeTab === 'cc1' ? {
+                                backgroundColor: 'var(--badge-success-text)',
+                                color: 'var(--background-dark)',
+                                borderColor: 'var(--badge-success-text)',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                            } : {
+                                backgroundColor: 'var(--badge-success-bg)',
+                                color: 'var(--badge-success-text)',
+                                borderColor: 'var(--badge-success-border)',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeTab !== 'cc1') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-success-bg)';
+                                    e.currentTarget.style.opacity = '0.8';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeTab !== 'cc1') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-success-bg)';
+                                    e.currentTarget.style.opacity = '1';
+                                }
+                            }}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>✅</span>
                                 <span className="hidden @md:inline">CC1</span>
-                                <span className={`${activeTab === 'cc1' ? 'bg-white text-[#4CAF50]' : 'bg-[#4CAF50] text-white'} px-2 py-0.5 rounded-full text-xs font-bold`}>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc1' ? {
+                                    backgroundColor: 'var(--background-dark)',
+                                    color: 'var(--badge-success-text)'
+                                } : {
+                                    backgroundColor: 'var(--badge-success-text)',
+                                    color: 'var(--background-dark)'
+                                }}>
                                     {totalAvailable}
                                 </span>
                             </div>
@@ -251,15 +317,40 @@ export default function MachineStockStatus() {
                         {/* Cost Center 2 Tab */}
                         <button
                             onClick={() => setActiveTab('cc2')}
-                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc2'
-                                ? 'bg-[#ff8307] text-white border-2 border-[#ff8307] shadow-lg'
-                                : 'bg-[#ff8307]/10 text-[#ff8307] border-2 border-[#ff8307]/50 hover:bg-[#ff8307]/20'
-                                }`}
+                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
+                            style={activeTab === 'cc2' ? {
+                                backgroundColor: 'var(--badge-warning-text)',
+                                color: 'var(--background-dark)',
+                                borderColor: 'var(--badge-warning-text)',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                            } : {
+                                backgroundColor: 'var(--badge-warning-bg)',
+                                color: 'var(--badge-warning-text)',
+                                borderColor: 'var(--badge-warning-border)',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeTab !== 'cc2') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-warning-bg)';
+                                    e.currentTarget.style.opacity = '0.8';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeTab !== 'cc2') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-warning-bg)';
+                                    e.currentTarget.style.opacity = '1';
+                                }
+                            }}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>⏳</span>
                                 <span className="hidden @md:inline">CC2</span>
-                                <span className={`${activeTab === 'cc2' ? 'bg-white text-[#ff8307]' : 'bg-[#ff8307] text-white'} px-2 py-0.5 rounded-full text-xs font-bold`}>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc2' ? {
+                                    backgroundColor: 'var(--background-dark)',
+                                    color: 'var(--badge-warning-text)'
+                                } : {
+                                    backgroundColor: 'var(--badge-warning-text)',
+                                    color: 'var(--background-dark)'
+                                }}>
                                     {totalInQueue}
                                 </span>
                             </div>
@@ -268,15 +359,40 @@ export default function MachineStockStatus() {
                         {/* Cost Center 5 Tab */}
                         <button
                             onClick={() => setActiveTab('cc5')}
-                            className={`flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all ${activeTab === 'cc5'
-                                ? 'bg-[#F44336] text-white border-2 border-[#F44336] shadow-lg'
-                                : 'bg-[#F44336]/10 text-[#F44336] border-2 border-[#F44336]/50 hover:bg-[#F44336]/20'
-                                }`}
+                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
+                            style={activeTab === 'cc5' ? {
+                                backgroundColor: 'var(--badge-error-text)',
+                                color: 'var(--background-dark)',
+                                borderColor: 'var(--badge-error-text)',
+                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                            } : {
+                                backgroundColor: 'var(--badge-error-bg)',
+                                color: 'var(--badge-error-text)',
+                                borderColor: 'var(--badge-error-border)',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (activeTab !== 'cc5') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-error-bg)';
+                                    e.currentTarget.style.opacity = '0.8';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (activeTab !== 'cc5') {
+                                    e.currentTarget.style.backgroundColor = 'var(--badge-error-bg)';
+                                    e.currentTarget.style.opacity = '1';
+                                }
+                            }}
                         >
                             <div className="flex items-center justify-center gap-2">
                                 <span>🔧</span>
                                 <span className="hidden @md:inline">CC5</span>
-                                <span className={`${activeTab === 'cc5' ? 'bg-white text-[#F44336]' : 'bg-[#F44336] text-white'} px-2 py-0.5 rounded-full text-xs font-bold`}>
+                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc5' ? {
+                                    backgroundColor: 'var(--background-dark)',
+                                    color: 'var(--badge-error-text)'
+                                } : {
+                                    backgroundColor: 'var(--badge-error-text)',
+                                    color: 'var(--background-dark)'
+                                }}>
                                     {totalAtRepair}
                                 </span>
                             </div>

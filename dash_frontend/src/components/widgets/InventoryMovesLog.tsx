@@ -155,100 +155,125 @@ const formatQuantity = (qty: number): string => {
     }).format(qty);
 };
 
-// Get color for transfer type badge
-const getTransferTypeColor = (type: string): string => {
-    if (!type) return 'bg-gray-500/20 text-gray-400 border-gray-500/50';
-
-    const typeUpper = type.toUpperCase();
-    const typeMap: Record<string, string> = {
-        // Shipments - Blue tones
-        'SHIPMNT': 'bg-blue-500/20 text-blue-300 border-blue-500/50',
-        'SHPMNT': 'bg-blue-500/20 text-blue-300 border-blue-500/50',
-        'SHIP': 'bg-blue-500/20 text-blue-300 border-blue-500/50',
-
-        // Putaways - Green tones
-        'PUTAWY': 'bg-green-500/20 text-green-300 border-green-500/50',
-        'PUTAWAY': 'bg-green-500/20 text-green-300 border-green-500/50',
-        'PUT': 'bg-green-500/20 text-green-300 border-green-500/50',
-
-        // Location Changes - Purple tones
-        'LOCCHG': 'bg-purple-500/20 text-purple-300 border-purple-500/50',
-        'LOCCNG': 'bg-purple-500/20 text-purple-300 border-purple-500/50',
-        'LOC': 'bg-purple-500/20 text-purple-300 border-purple-500/50',
-
-        // Adjustments - Yellow/Orange tones
-        'ADJ': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
-        'ADJUST': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
-
-        // Transfers - Cyan tones
-        'XFER': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50',
-        'TRANSFER': 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50',
-
-        // Receipts - Emerald tones
-        'RECEIPT': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50',
-        'RCV': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50',
-        'RECEIVE': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50',
-
-        // Issues/Out - Red tones
-        'ISSUE': 'bg-red-500/20 text-red-300 border-red-500/50',
-        'OUT': 'bg-red-500/20 text-red-300 border-red-500/50',
-
-        // Moves - Indigo tones
-        'MOVE': 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50',
-
-        // Returns - Amber tones
-        'RETURN': 'bg-amber-500/20 text-amber-300 border-amber-500/50',
-        'RET': 'bg-amber-500/20 text-amber-300 border-amber-500/50',
+// Get color for transfer type badge - returns inline styles object
+const getTransferTypeColor = (type: string): React.CSSProperties => {
+    if (!type) return {
+        backgroundColor: 'var(--ui-bg-tertiary)',
+        color: 'var(--text-muted)',
+        borderColor: 'var(--ui-border-primary)',
+        opacity: 0.7
     };
 
-    return typeMap[typeUpper] || 'bg-gray-500/20 text-gray-400 border-gray-500/50';
+    const typeUpper = type.toUpperCase();
+
+    // Shipments - Blue tones (chart-2)
+    if (['SHIPMNT', 'SHPMNT', 'SHIP'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-primary-bg)', color: 'var(--badge-primary-text)', borderColor: 'var(--badge-primary-border)' };
+    }
+    // Putaways - Green tones (chart-1)
+    if (['PUTAWY', 'PUTAWAY', 'PUT'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)' };
+    }
+    // Location Changes - Purple tones (chart-5)
+    if (['LOCCHG', 'LOCCNG', 'LOC'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--ui-accent-secondary-bg)', color: 'var(--ui-accent-secondary-text)', borderColor: 'var(--ui-accent-secondary-border)' };
+    }
+    // Adjustments - Yellow/Orange tones
+    if (['ADJ', 'ADJUST'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)' };
+    }
+    // Transfers - Cyan tones
+    if (['XFER', 'TRANSFER'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--ui-accent-primary-bg)', color: 'var(--ui-accent-primary-text)', borderColor: 'var(--ui-accent-primary-border)' };
+    }
+    // Receipts - Emerald tones
+    if (['RECEIPT', 'RCV', 'RECEIVE'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)' };
+    }
+    // Issues/Out - Red tones
+    if (['ISSUE', 'OUT'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-error-bg)', color: 'var(--badge-error-text)', borderColor: 'var(--badge-error-border)' };
+    }
+    // Moves - Indigo tones
+    if (['MOVE'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--ui-accent-secondary-bg)', color: 'var(--ui-accent-secondary-text)', borderColor: 'var(--ui-accent-secondary-border)' };
+    }
+    // Returns - Amber tones
+    if (['RETURN', 'RET'].includes(typeUpper)) {
+        return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)' };
+    }
+
+    return {
+        backgroundColor: 'var(--ui-bg-tertiary)',
+        color: 'var(--text-muted)',
+        borderColor: 'var(--ui-border-primary)',
+        opacity: 0.7
+    };
 };
 
-// Get color for location badge
-const getLocationColor = (location: string, isFrom: boolean = false): string => {
-    if (!location || location === '—') return '';
+// Get color for location badge - returns inline styles object
+const getLocationColor = (location: string, isFrom: boolean = false): React.CSSProperties => {
+    if (!location || location === '—') return {};
 
     const locUpper = location.toUpperCase();
 
-    // Dock locations - Red/Orange
+    // Dock locations - Error/Red tones
     if (locUpper.includes('DOCK') || locUpper.includes('DOOR')) {
-        return isFrom
-            ? 'bg-red-500/15 text-red-300 border-red-500/40'
-            : 'bg-red-500/15 text-red-300 border-red-500/40';
+        return {
+            backgroundColor: 'var(--badge-error-bg)',
+            color: 'var(--badge-error-text)',
+            borderColor: 'var(--badge-error-border)'
+        };
     }
 
-    // Bay locations - Cyan
+    // Bay locations - Primary/Cyan tones
     if (locUpper.includes('BAY') || locUpper.startsWith('BA')) {
-        return isFrom
-            ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40'
-            : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40';
+        return {
+            backgroundColor: 'var(--ui-accent-primary-bg)',
+            color: 'var(--ui-accent-primary-text)',
+            borderColor: 'var(--ui-accent-primary-border)'
+        };
     }
 
-    // Stock/Warehouse - Blue
+    // Stock/Warehouse - Primary/Blue tones
     if (locUpper.includes('STOCK') || locUpper.includes('WARE') || locUpper.includes('WH')) {
-        return isFrom
-            ? 'bg-blue-500/15 text-blue-300 border-blue-500/40'
-            : 'bg-blue-500/15 text-blue-300 border-blue-500/40';
+        return {
+            backgroundColor: 'var(--badge-primary-bg)',
+            color: 'var(--badge-primary-text)',
+            borderColor: 'var(--badge-primary-border)'
+        };
     }
 
-    // Production/Work areas - Purple
+    // Production/Work areas - Secondary/Purple tones
     if (locUpper.includes('PROD') || locUpper.includes('WORK') || locUpper.includes('MFG')) {
-        return isFrom
-            ? 'bg-purple-500/15 text-purple-300 border-purple-500/40'
-            : 'bg-purple-500/15 text-purple-300 border-purple-500/40';
+        return {
+            backgroundColor: 'var(--ui-accent-secondary-bg)',
+            color: 'var(--ui-accent-secondary-text)',
+            borderColor: 'var(--ui-accent-secondary-border)'
+        };
     }
 
-    // Staging - Yellow
+    // Staging - Warning/Yellow tones
     if (locUpper.includes('STAGE') || locUpper.includes('STG')) {
-        return isFrom
-            ? 'bg-yellow-500/15 text-yellow-300 border-yellow-500/40'
-            : 'bg-yellow-500/15 text-yellow-300 border-yellow-500/40';
+        return {
+            backgroundColor: 'var(--badge-warning-bg)',
+            color: 'var(--badge-warning-text)',
+            borderColor: 'var(--badge-warning-border)'
+        };
     }
 
     // Default colors
-    return isFrom
-        ? 'bg-orange-500/15 text-orange-300 border-orange-500/40'
-        : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40';
+    return isFrom ? {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)',
+        opacity: 0.8
+    } : {
+        backgroundColor: 'var(--badge-success-bg)',
+        color: 'var(--badge-success-text)',
+        borderColor: 'var(--badge-success-border)',
+        opacity: 0.8
+    };
 };
 
 /* -------------------------------------- */
@@ -343,21 +368,18 @@ export default function InventoryMovesLog() {
                                                 </Tooltip>
                                             ) : timeData.display}
                                         </div>
-                                        <span className={`
-                                            inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
-                                            ${getTransferTypeColor(row.transferType)}
-                                        `}>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border" style={getTransferTypeColor(row.transferType)}>
                                             {row.transferType || "—"}
                                         </span>
                                     </div>
 
                                     {/* Main Info Row: Part & Quantity */}
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="font-mono text-sm font-semibold truncate">
+                                        <div className="font-mono text-sm font-semibold truncate" style={{ color: 'var(--table-text-primary)' }}>
                                             {row.partCode || "—"}
                                         </div>
                                         <div className="text-right font-semibold text-sm shrink-0">
-                                            <span className={row.quantity > 0 ? "text-green-400" : "text-red-400"}>
+                                            <span style={{ color: row.quantity > 0 ? 'var(--value-positive)' : 'var(--value-negative)' }}>
                                                 {formatQuantity(row.quantity)}
                                             </span>
                                         </div>
@@ -367,18 +389,18 @@ export default function InventoryMovesLog() {
                                     <div className="flex items-center justify-between gap-2 text-xs">
                                         <div className="flex items-center gap-1">
                                             {row.fromLocation && row.fromLocation !== "—" ? (
-                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.fromLocation, true)}`}>
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.fromLocation, true)}>
                                                     {row.fromLocation}
                                                 </span>
-                                            ) : <span className="text-muted-foreground">—</span>}
-                                            <span className="text-muted-foreground">→</span>
+                                            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                                            <span style={{ color: 'var(--text-muted)' }}>→</span>
                                             {row.toLocation && row.toLocation !== "—" ? (
-                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.toLocation, false)}`}>
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.toLocation, false)}>
                                                     {row.toLocation}
                                                 </span>
-                                            ) : <span className="text-muted-foreground">—</span>}
+                                            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                                         </div>
-                                        <span className="text-blue-400 lowercase shrink-0">{row.moveUser || "—"}</span>
+                                        <span className="lowercase shrink-0" style={{ color: 'var(--badge-primary-text)' }}>{row.moveUser || "—"}</span>
                                     </div>
                                 </div>
                             );
@@ -387,74 +409,74 @@ export default function InventoryMovesLog() {
 
                     {/* Table View for Medium+ Sizes */}
                     <div className="hidden @xl:block p-1">
-                        <Table className="text-left text-white inventory-moves-log-table">
-                            <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
+                        <Table className="text-left inventory-moves-log-table" style={{ color: 'var(--table-text-primary)' }}>
+                            <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                                 <TableRow className="border-border/50 hover:bg-transparent">
                                     {/* Date - Hidden below 7xl container */}
-                                    <TableHead className="font-semibold hidden @7xl:table-cell">
+                                    <TableHead className="font-semibold hidden @7xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Date
                                         </div>
                                     </TableHead>
                                     {/* Time - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Clock className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Time
                                         </div>
                                     </TableHead>
                                     {/* User - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <User className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             User
                                         </div>
                                     </TableHead>
                                     {/* Type - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <ArrowRightLeft className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Type
                                         </div>
                                     </TableHead>
                                     {/* Part - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Part
                                         </div>
                                     </TableHead>
                                     {/* Quantity - Always visible in table */}
-                                    <TableHead className="text-right font-semibold">
+                                    <TableHead className="text-right font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center justify-end gap-1.5">
-                                            <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Qty
                                         </div>
                                     </TableHead>
                                     {/* From - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-orange-400">↗</span>
+                                            <span style={{ color: 'var(--badge-warning-text)' }}>↗</span>
                                             From
                                         </div>
                                     </TableHead>
                                     {/* To - Always visible in table */}
-                                    <TableHead className="font-semibold">
+                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-cyan-400">↘</span>
+                                            <span style={{ color: 'var(--badge-primary-text)' }}>↘</span>
                                             To
                                         </div>
                                     </TableHead>
                                     {/* Doc # - Hidden below 6xl container */}
-                                    <TableHead className="font-semibold hidden @6xl:table-cell">
+                                    <TableHead className="font-semibold hidden @6xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>
                                         <div className="flex items-center gap-1.5">
-                                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                             Doc #
                                         </div>
                                     </TableHead>
                                     {/* Lot - Hidden below 6xl container */}
-                                    <TableHead className="font-semibold hidden @6xl:table-cell">Lot</TableHead>
+                                    <TableHead className="font-semibold hidden @6xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>Lot</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -468,11 +490,11 @@ export default function InventoryMovesLog() {
                                     `}
                                     >
                                         {/* Date - Hidden below 7xl container */}
-                                        <TableCell className="font-medium text-sm hidden @7xl:table-cell">
+                                        <TableCell className="font-medium text-sm hidden @7xl:table-cell" style={{ color: 'var(--table-text-secondary)' }}>
                                             {formatDate(row.moveDate)}
                                         </TableCell>
                                         {/* Time - Always visible in table */}
-                                        <TableCell className="text-sm text-muted-foreground">
+                                        <TableCell className="text-sm" style={{ color: 'var(--table-text-secondary)' }}>
                                             {(() => {
                                                 const timeData = formatTimeAgo(row.moveDate, row.moveTime);
                                                 if (timeData.isRelative && timeData.tooltip) {
@@ -494,53 +516,50 @@ export default function InventoryMovesLog() {
                                         </TableCell>
                                         {/* User - Always visible in table */}
                                         <TableCell className="font-medium">
-                                            <span className="text-blue-400 lowercase">{row.moveUser || "—"}</span>
+                                            <span className="lowercase" style={{ color: 'var(--badge-primary-text)' }}>{row.moveUser || "—"}</span>
                                         </TableCell>
                                         {/* Type - Always visible in table */}
                                         <TableCell>
-                                            <span className={`
-                                            inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
-                                            ${getTransferTypeColor(row.transferType)}
-                                        `}>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border" style={getTransferTypeColor(row.transferType)}>
                                                 {row.transferType || "—"}
                                             </span>
                                         </TableCell>
                                         {/* Part - Always visible in table */}
-                                        <TableCell className="font-mono text-sm font-semibold">
+                                        <TableCell className="font-mono text-sm font-semibold" style={{ color: 'var(--table-text-primary)' }}>
                                             {row.partCode || "—"}
                                         </TableCell>
                                         {/* Quantity - Always visible in table */}
                                         <TableCell className="text-right font-semibold text-sm">
-                                            <span className={row.quantity > 0 ? "text-green-400" : "text-red-400"}>
+                                            <span style={{ color: row.quantity > 0 ? 'var(--value-positive)' : 'var(--value-negative)' }}>
                                                 {formatQuantity(row.quantity)}
                                             </span>
                                         </TableCell>
                                         {/* From - Always visible in table */}
                                         <TableCell>
                                             {row.fromLocation && row.fromLocation !== "—" ? (
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.fromLocation, true)}`}>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.fromLocation, true)}>
                                                     {row.fromLocation}
                                                 </span>
                                             ) : (
-                                                <span className="text-muted-foreground text-xs">—</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
                                             )}
                                         </TableCell>
                                         {/* To - Always visible in table */}
                                         <TableCell>
                                             {row.toLocation && row.toLocation !== "—" ? (
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getLocationColor(row.toLocation, false)}`}>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.toLocation, false)}>
                                                     {row.toLocation}
                                                 </span>
                                             ) : (
-                                                <span className="text-muted-foreground text-xs">—</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
                                             )}
                                         </TableCell>
                                         {/* Doc # - Hidden below 6xl container */}
-                                        <TableCell className="font-mono text-xs text-muted-foreground/80 hidden @6xl:table-cell">
+                                        <TableCell className="font-mono text-xs hidden @6xl:table-cell" style={{ color: 'var(--table-text-secondary)', opacity: 0.8 }}>
                                             {row.docNumber || "—"}
                                         </TableCell>
                                         {/* Lot - Hidden below 6xl container */}
-                                        <TableCell className="font-mono text-xs text-muted-foreground/80 hidden @6xl:table-cell">
+                                        <TableCell className="font-mono text-xs hidden @6xl:table-cell" style={{ color: 'var(--table-text-secondary)', opacity: 0.8 }}>
                                             {row.lotNumber || "—"}
                                         </TableCell>
                                     </TableRow>

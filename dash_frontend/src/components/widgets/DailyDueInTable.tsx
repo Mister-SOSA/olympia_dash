@@ -314,19 +314,19 @@ export default function DailyDueInTable() {
 
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader>
+                <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow>
-                            <TableHead>PO Number</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Part Code</TableHead>
-                            <TableHead className="text-right">Qty Ordered</TableHead>
-                            <TableHead className="text-right">Qty Received</TableHead>
-                            <TableHead className="text-right">Date Ordered</TableHead>
-                            <TableHead className="text-right">Prev. Order</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Prev. Price</TableHead>
+                            <TableHead style={{ color: 'var(--table-text-primary)' }}>PO Number</TableHead>
+                            <TableHead style={{ color: 'var(--table-text-primary)' }}>Status</TableHead>
+                            <TableHead style={{ color: 'var(--table-text-primary)' }}>Vendor</TableHead>
+                            <TableHead style={{ color: 'var(--table-text-primary)' }}>Part Code</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Ordered</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Received</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Date Ordered</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Order</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Unit Price</TableHead>
+                            <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Price</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -340,24 +340,24 @@ export default function DailyDueInTable() {
                   ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
                 `}
                             >
-                                <TableCell className="font-black">{row.poNumber}</TableCell>
+                                <TableCell className="font-black" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
                                 <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
-                                <TableCell>{row.vendName}</TableCell>
-                                <TableCell>{row.partCode}</TableCell>
-                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
+                                <TableCell style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+                                <TableCell style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+                                <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyRecvd}</TableCell>
+                                <TableCell className="text-right" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
                                 <TableCell className="text-right row-secondary">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.recentUnitPrice}</span>
+                                        <span className="dollar-sign" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                        <span className="dollar-value" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right row-secondary">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
+                                        <span className="dollar-sign" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                        <span className="dollar-value" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
                                     </div>
                                 </TableCell>
                             </TableRow>

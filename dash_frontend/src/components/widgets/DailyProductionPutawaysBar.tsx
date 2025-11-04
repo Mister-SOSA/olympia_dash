@@ -52,8 +52,9 @@ const CustomBarChart = ({ data }: { data: { product: string; putaways: number }[
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -90,7 +91,7 @@ const CustomBarChart = ({ data }: { data: { product: string; putaways: number }[
                                 x={x + actualBarWidth / 2}
                                 y={y - 10}
                                 textAnchor="middle"
-                                fill="white"
+                                fill="var(--text-primary)"
                                 fontSize="15"
                                 fontWeight="700"
                                 style={{ pointerEvents: "none" }}
@@ -103,7 +104,7 @@ const CustomBarChart = ({ data }: { data: { product: string; putaways: number }[
                                 x={x + actualBarWidth / 2}
                                 y={padding.top + chartHeight + 25}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
+                                fill="var(--text-secondary)"
                                 fontSize="14"
                                 fontWeight="500"
                                 style={{ pointerEvents: "none" }}
@@ -123,16 +124,17 @@ const CustomBarChart = ({ data }: { data: { product: string; putaways: number }[
                         top: padding.top + chartHeight - (data[hoveredIndex].putaways / maxValue) * chartHeight - 60,
                         left: padding.left + hoveredIndex * barWidth + barWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
+                        backgroundColor: "var(--ui-bg-primary)",
                         padding: "10px 14px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "4px" }}>
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "13px", marginBottom: "4px" }}>
                         {data[hoveredIndex].product}
                     </div>
                     <div style={{ color: "var(--chart-6)", fontSize: "16px", fontWeight: 700 }}>

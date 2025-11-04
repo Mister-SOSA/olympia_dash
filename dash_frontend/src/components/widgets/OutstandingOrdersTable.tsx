@@ -247,66 +247,66 @@ export default function OutstandingOrdersTable() {
         // Render the table within a scrollable container.
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
+                <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow className="border-border/50 hover:bg-transparent">
-                            <TableHead className="font-bold text-white py-2">
+                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     PO Number
                                 </div>
                             </TableHead>
-                            <TableHead className="font-bold text-white py-2">
+                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Status
                                 </div>
                             </TableHead>
-                            <TableHead className="font-bold text-white py-2">
+                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Vendor
                                 </div>
                             </TableHead>
-                            <TableHead className="font-bold text-white py-2">
+                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Part Code
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Qty Ordered
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Date Ordered
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <AlertCircle className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Vendor Promise Date
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <TrendingUp className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Prev. Order
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Unit Price
                                 </div>
                             </TableHead>
-                            <TableHead className="text-right font-bold text-white py-2">
+                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-end gap-1">
-                                    <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Prev. Price
                                 </div>
                             </TableHead>
@@ -324,31 +324,35 @@ export default function OutstandingOrdersTable() {
                   ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
                 `}
                             >
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">{row.poNumber}</TableCell>
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
                                 <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
-                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5">{row.vendName}</TableCell>
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">{row.partCode}</TableCell>
-                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5">{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5">{row.dateOrdered}</TableCell>
+                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
                                 <TableCell className="text-right py-1.5">
                                     <div className="flex items-center justify-end gap-1.5">
-                                        <span className="font-medium text-[15px] leading-tight">{row.vendorPromiseDate}</span>
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border bg-amber-500/20 text-amber-300 border-amber-500/50">
+                                        <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{ 
+                                            backgroundColor: 'var(--badge-warning-bg)', 
+                                            color: 'var(--badge-warning-text)', 
+                                            borderColor: 'var(--badge-warning-border)'
+                                        }}>
                                             {row.overdueDays}d
                                         </span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5">{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
                                 <TableCell className="text-right row-secondary py-1.5">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign text-xs">$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight">{row.recentUnitPrice}</span>
+                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell className="text-right row-secondary py-1.5">
                                     <div className="table-dollars">
-                                        <span className="dollar-sign text-xs">$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight">{row.lastOrderUnitPrice}</span>
+                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
                                     </div>
                                 </TableCell>
                             </TableRow>

@@ -55,14 +55,14 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
                         borderRadius: "0.375rem",
                         backgroundColor:
                             activeIndex === index
-                                ? "rgba(255, 255, 255, 0.12)"
+                                ? "var(--ui-bg-tertiary)"
                                 : "transparent",
                         minWidth: 0,
                         flex: isVertical ? "0 0 auto" : "0 0 auto",
                     }}
                     onMouseEnter={(e) => {
                         if (activeIndex !== index) {
-                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.06)";
+                            e.currentTarget.style.backgroundColor = "var(--ui-bg-secondary)";
                         }
                     }}
                     onMouseLeave={(e) => {
@@ -102,7 +102,7 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
                                 whiteSpace: "nowrap",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
-                                color: "rgba(255, 255, 255, 0.95)",
+                                color: "var(--text-primary)",
                             }}
                         >
                             {entry.name}
@@ -111,7 +111,7 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
                             style={{
                                 fontSize: "0.75rem",
                                 lineHeight: "1.2",
-                                color: "rgba(255, 255, 255, 0.65)",
+                                color: "var(--text-secondary)",
                                 whiteSpace: "nowrap",
                                 fontWeight: 500,
                             }}

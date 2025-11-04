@@ -92,6 +92,37 @@
     --shadow-light: rgba(0, 0, 0, 0.2);
     --shadow-dark: rgba(0, 0, 0, 0.4);
     
+    /* Table-specific colors */
+    --table-header-bg: #1f2937;
+    --table-row-bg: #161e28;
+    --table-row-alt-bg: #1a2332;
+    --table-row-hover-bg: rgba(255, 255, 255, 0.05);
+    --table-border: #202D3C;
+    --table-text-primary: #FFFFFF;
+    --table-text-secondary: #B0B0B0;
+    
+    /* Status badge colors - dark mode optimized */
+    --badge-success-bg: rgba(76, 175, 80, 0.2);
+    --badge-success-text: #4ade80;
+    --badge-success-border: rgba(76, 175, 80, 0.5);
+    
+    --badge-warning-bg: rgba(255, 131, 7, 0.2);
+    --badge-warning-text: #fbbf24;
+    --badge-warning-border: rgba(255, 131, 7, 0.5);
+    
+    --badge-error-bg: rgba(244, 67, 54, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(244, 67, 54, 0.5);
+    
+    --badge-primary-bg: rgba(33, 150, 243, 0.2);
+    --badge-primary-text: #60a5fa;
+    --badge-primary-border: rgba(33, 150, 243, 0.5);
+    
+    /* Conditional value colors */
+    --value-positive: #4ade80;
+    --value-negative: #f87171;
+    --value-neutral: #94a3b8;
+    
     /* ===== Shadcn/UI HSL Variables ===== */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -207,6 +238,35 @@
     --chart-3: #ffa500;
     --chart-4: #ff4757;
     --chart-5: #52c9ff;
+    
+    /* Table-specific colors */
+    --table-header-bg: #132f42;
+    --table-row-bg: #0c1e2e;
+    --table-row-alt-bg: #11283a;
+    --table-row-hover-bg: rgba(0, 212, 170, 0.1);
+    --table-border: #1a4259;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #94c3d4;
+    
+    --badge-success-bg: rgba(0, 212, 170, 0.2);
+    --badge-success-text: #5dffdb;
+    --badge-success-border: rgba(0, 212, 170, 0.5);
+    
+    --badge-warning-bg: rgba(255, 165, 0, 0.2);
+    --badge-warning-text: #ffb732;
+    --badge-warning-border: rgba(255, 165, 0, 0.5);
+    
+    --badge-error-bg: rgba(255, 71, 87, 0.2);
+    --badge-error-text: #ff6b7a;
+    --badge-error-border: rgba(255, 71, 87, 0.5);
+    
+    --badge-primary-bg: rgba(0, 168, 232, 0.2);
+    --badge-primary-text: #52c9ff;
+    --badge-primary-border: rgba(0, 168, 232, 0.5);
+    
+    --value-positive: #5dffdb;
+    --value-negative: #ff6b7a;
+    --value-neutral: #94c3d4;
 }
 
 /* Theme: Forest - Greens and earth tones */
@@ -276,6 +336,35 @@
     --chart-3: #fbbf24;
     --chart-4: #ef4444;
     --chart-5: #fb923c;
+    
+    /* Table-specific colors */
+    --table-header-bg: #243b24;
+    --table-row-bg: #1a2f1a;
+    --table-row-alt-bg: #1f341f;
+    --table-row-hover-bg: rgba(74, 222, 128, 0.1);
+    --table-border: #2e4a2e;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #a8d5a8;
+    
+    --badge-success-bg: rgba(74, 222, 128, 0.2);
+    --badge-success-text: #86efac;
+    --badge-success-border: rgba(74, 222, 128, 0.5);
+    
+    --badge-warning-bg: rgba(251, 146, 60, 0.2);
+    --badge-warning-text: #fdba74;
+    --badge-warning-border: rgba(251, 146, 60, 0.5);
+    
+    --badge-error-bg: rgba(239, 68, 68, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(239, 68, 68, 0.5);
+    
+    --badge-primary-bg: rgba(74, 222, 128, 0.2);
+    --badge-primary-text: #86efac;
+    --badge-primary-border: rgba(74, 222, 128, 0.5);
+    
+    --value-positive: #86efac;
+    --value-negative: #f87171;
+    --value-neutral: #a8d5a8;
 }
 
 /* Theme: Sunset - Warm oranges and purples */
@@ -345,6 +434,35 @@
     --chart-3: #fbbf24;
     --chart-4: #ef4444;
     --chart-5: #f472b6;
+    
+    /* Table-specific colors */
+    --table-header-bg: #3d2540;
+    --table-row-bg: #2d1b2e;
+    --table-row-alt-bg: #352137;
+    --table-row-hover-bg: rgba(249, 115, 22, 0.1);
+    --table-border: #4d2f52;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #e9b8f0;
+    
+    --badge-success-bg: rgba(16, 185, 129, 0.2);
+    --badge-success-text: #6ee7b7;
+    --badge-success-border: rgba(16, 185, 129, 0.5);
+    
+    --badge-warning-bg: rgba(251, 191, 36, 0.2);
+    --badge-warning-text: #fcd34d;
+    --badge-warning-border: rgba(251, 191, 36, 0.5);
+    
+    --badge-error-bg: rgba(239, 68, 68, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(239, 68, 68, 0.5);
+    
+    --badge-primary-bg: rgba(249, 115, 22, 0.2);
+    --badge-primary-text: #fb923c;
+    --badge-primary-border: rgba(249, 115, 22, 0.5);
+    
+    --value-positive: #6ee7b7;
+    --value-negative: #f87171;
+    --value-neutral: #e9b8f0;
 }
 
 /* Theme: Midnight - Very dark with cyan accents */
@@ -414,6 +532,35 @@
     --chart-3: #f59e0b;
     --chart-4: #ef4444;
     --chart-5: #22d3ee;
+    
+    /* Table-specific colors */
+    --table-header-bg: #131829;
+    --table-row-bg: #0a0e1a;
+    --table-row-alt-bg: #0f1320;
+    --table-row-hover-bg: rgba(6, 182, 212, 0.1);
+    --table-border: #1c2438;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #a5b4d4;
+    
+    --badge-success-bg: rgba(16, 185, 129, 0.2);
+    --badge-success-text: #6ee7b7;
+    --badge-success-border: rgba(16, 185, 129, 0.5);
+    
+    --badge-warning-bg: rgba(245, 158, 11, 0.2);
+    --badge-warning-text: #fbbf24;
+    --badge-warning-border: rgba(245, 158, 11, 0.5);
+    
+    --badge-error-bg: rgba(239, 68, 68, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(239, 68, 68, 0.5);
+    
+    --badge-primary-bg: rgba(6, 182, 212, 0.2);
+    --badge-primary-text: #67e8f9;
+    --badge-primary-border: rgba(6, 182, 212, 0.5);
+    
+    --value-positive: #6ee7b7;
+    --value-negative: #f87171;
+    --value-neutral: #a5b4d4;
 }
 
 /* Theme: Dawn - LIGHT MODE - Soft pinks, purples, and warm tones */
@@ -483,6 +630,35 @@
     --chart-3: #f59e0b;
     --chart-4: #dc2626;
     --chart-5: #ec4899;
+    
+    /* Table-specific colors - LIGHT MODE */
+    --table-header-bg: #fce7f3;
+    --table-row-bg: #ffffff;
+    --table-row-alt-bg: #fef3f8;
+    --table-row-hover-bg: rgba(219, 39, 119, 0.05);
+    --table-border: #f9a8d4;
+    --table-text-primary: #1f1f1f;
+    --table-text-secondary: #831843;
+    
+    --badge-success-bg: rgba(22, 163, 74, 0.15);
+    --badge-success-text: #15803d;
+    --badge-success-border: rgba(22, 163, 74, 0.4);
+    
+    --badge-warning-bg: rgba(234, 88, 12, 0.15);
+    --badge-warning-text: #c2410c;
+    --badge-warning-border: rgba(234, 88, 12, 0.4);
+    
+    --badge-error-bg: rgba(220, 38, 38, 0.15);
+    --badge-error-text: #b91c1c;
+    --badge-error-border: rgba(220, 38, 38, 0.4);
+    
+    --badge-primary-bg: rgba(219, 39, 119, 0.15);
+    --badge-primary-text: #be185d;
+    --badge-primary-border: rgba(219, 39, 119, 0.4);
+    
+    --value-positive: #15803d;
+    --value-negative: #b91c1c;
+    --value-neutral: #831843;
 }
 
 /* Theme: Nordic - LIGHT MODE - Clean whites, blues, and grays */
@@ -552,6 +728,35 @@
     --chart-3: #f59e0b;
     --chart-4: #ef4444;
     --chart-5: #06b6d4;
+    
+    /* Table-specific colors - LIGHT MODE */
+    --table-header-bg: #f1f5f9;
+    --table-row-bg: #ffffff;
+    --table-row-alt-bg: #f8fafc;
+    --table-row-hover-bg: rgba(14, 165, 233, 0.05);
+    --table-border: #cbd5e1;
+    --table-text-primary: #0f172a;
+    --table-text-secondary: #334155;
+    
+    --badge-success-bg: rgba(16, 185, 129, 0.15);
+    --badge-success-text: #059669;
+    --badge-success-border: rgba(16, 185, 129, 0.4);
+    
+    --badge-warning-bg: rgba(245, 158, 11, 0.15);
+    --badge-warning-text: #d97706;
+    --badge-warning-border: rgba(245, 158, 11, 0.4);
+    
+    --badge-error-bg: rgba(239, 68, 68, 0.15);
+    --badge-error-text: #dc2626;
+    --badge-error-border: rgba(239, 68, 68, 0.4);
+    
+    --badge-primary-bg: rgba(14, 165, 233, 0.15);
+    --badge-primary-text: #0369a1;
+    --badge-primary-border: rgba(14, 165, 233, 0.4);
+    
+    --value-positive: #059669;
+    --value-negative: #dc2626;
+    --value-neutral: #334155;
 }
 
 /* Theme: Coral - LIGHT MODE - Warm coral, peach, and cream tones */
@@ -621,6 +826,35 @@
     --chart-3: #eab308;
     --chart-4: #dc2626;
     --chart-5: #fb923c;
+    
+    /* Table-specific colors - LIGHT MODE */
+    --table-header-bg: #ffedd5;
+    --table-row-bg: #fffbeb;
+    --table-row-alt-bg: #fff7ed;
+    --table-row-hover-bg: rgba(249, 115, 22, 0.05);
+    --table-border: #fdba74;
+    --table-text-primary: #1c1917;
+    --table-text-secondary: #78350f;
+    
+    --badge-success-bg: rgba(22, 163, 74, 0.15);
+    --badge-success-text: #15803d;
+    --badge-success-border: rgba(22, 163, 74, 0.4);
+    
+    --badge-warning-bg: rgba(234, 179, 8, 0.15);
+    --badge-warning-text: #ca8a04;
+    --badge-warning-border: rgba(234, 179, 8, 0.4);
+    
+    --badge-error-bg: rgba(220, 38, 38, 0.15);
+    --badge-error-text: #b91c1c;
+    --badge-error-border: rgba(220, 38, 38, 0.4);
+    
+    --badge-primary-bg: rgba(249, 115, 22, 0.15);
+    --badge-primary-text: #c2410c;
+    --badge-primary-border: rgba(249, 115, 22, 0.4);
+    
+    --value-positive: #15803d;
+    --value-negative: #b91c1c;
+    --value-neutral: #78350f;
 }
 
 /* Theme: Crimson - Dark mode with red and black */
@@ -690,6 +924,35 @@
     --chart-3: #eab308;
     --chart-4: #ef4444;
     --chart-5: #fb923c;
+    
+    /* Table-specific colors */
+    --table-header-bg: #2d1319;
+    --table-row-bg: #1a0a0e;
+    --table-row-alt-bg: #231015;
+    --table-row-hover-bg: rgba(220, 38, 38, 0.1);
+    --table-border: #451a24;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #fca5a5;
+    
+    --badge-success-bg: rgba(22, 163, 74, 0.2);
+    --badge-success-text: #4ade80;
+    --badge-success-border: rgba(22, 163, 74, 0.5);
+    
+    --badge-warning-bg: rgba(234, 179, 8, 0.2);
+    --badge-warning-text: #fbbf24;
+    --badge-warning-border: rgba(234, 179, 8, 0.5);
+    
+    --badge-error-bg: rgba(220, 38, 38, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(220, 38, 38, 0.5);
+    
+    --badge-primary-bg: rgba(220, 38, 38, 0.2);
+    --badge-primary-text: #f87171;
+    --badge-primary-border: rgba(220, 38, 38, 0.5);
+    
+    --value-positive: #4ade80;
+    --value-negative: #f87171;
+    --value-neutral: #fca5a5;
 }
 
 /* Theme: Neon - Dark mode with vibrant neon colors */
@@ -759,4 +1022,33 @@
     --chart-3: #ffcc00;
     --chart-4: #ff0066;
     --chart-5: #00ff88;
+    
+    /* Table-specific colors */
+    --table-header-bg: #14141f;
+    --table-row-bg: #0a0a0f;
+    --table-row-alt-bg: #0f0f18;
+    --table-row-hover-bg: rgba(0, 255, 255, 0.1);
+    --table-border: #1e1e2e;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #d4d4ff;
+    
+    --badge-success-bg: rgba(0, 255, 136, 0.2);
+    --badge-success-text: #66ffaa;
+    --badge-success-border: rgba(0, 255, 136, 0.5);
+    
+    --badge-warning-bg: rgba(255, 204, 0, 0.2);
+    --badge-warning-text: #ffe066;
+    --badge-warning-border: rgba(255, 204, 0, 0.5);
+    
+    --badge-error-bg: rgba(255, 0, 102, 0.2);
+    --badge-error-text: #ff6699;
+    --badge-error-border: rgba(255, 0, 102, 0.5);
+    
+    --badge-primary-bg: rgba(0, 255, 255, 0.2);
+    --badge-primary-text: #66ffff;
+    --badge-primary-border: rgba(0, 255, 255, 0.5);
+    
+    --value-positive: #66ffaa;
+    --value-negative: #ff6699;
+    --value-neutral: #d4d4ff;
 }

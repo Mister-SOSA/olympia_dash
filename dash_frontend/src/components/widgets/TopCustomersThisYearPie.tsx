@@ -250,24 +250,24 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                     return (
                                         <div
                                             style={{
-                                                backgroundColor: "rgba(22, 30, 40, 0.96)",
-                                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                                backgroundColor: "var(--ui-bg-primary)",
+                                                border: "1px solid var(--ui-border-primary)",
                                                 borderRadius: "0.5rem",
                                                 padding: "0.875rem",
                                                 backdropFilter: "blur(12px)",
-                                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                                                boxShadow: "0 4px 12px var(--shadow-dark)",
                                             }}
                                         >
                                             <div style={{
                                                 fontWeight: 700,
                                                 marginBottom: "0.375rem",
                                                 fontSize: "0.9375rem",
-                                                color: "rgba(255, 255, 255, 0.95)",
+                                                color: "var(--ui-text-primary)",
                                             }}>
                                                 {data.name}
                                             </div>
                                             <div style={{
-                                                color: "rgba(255, 255, 255, 0.85)",
+                                                color: "var(--ui-text-primary)",
                                                 fontSize: "1rem",
                                                 fontWeight: 600,
                                                 marginBottom: "0.25rem",
@@ -276,7 +276,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                             </div>
                                             <div
                                                 style={{
-                                                    color: "rgba(255, 255, 255, 0.6)",
+                                                    color: "var(--ui-text-secondary)",
                                                     fontSize: "0.8125rem",
                                                     fontWeight: 500,
                                                 }}

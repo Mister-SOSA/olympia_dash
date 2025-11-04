@@ -154,61 +154,61 @@ export default function TopProductUnitSalesTable() {
             return parseInt(b.avg12.value.replace(/,/g, "")) - parseInt(a.avg12.value.replace(/,/g, ""));
         });
 
-        // Helper function to get color classes based on percentage
-        const getPercentageColor = (pct: number) => {
-            if (pct >= 10) return "bg-emerald-500/40 text-emerald-100 border-emerald-400";
-            if (pct >= 5) return "bg-green-500/40 text-green-100 border-green-400";
-            if (pct > 0) return "bg-lime-500/40 text-lime-100 border-lime-400";
-            if (pct === 0) return "bg-slate-500/40 text-slate-100 border-slate-400";
-            if (pct > -5) return "bg-yellow-500/40 text-yellow-100 border-yellow-400";
-            if (pct > -10) return "bg-orange-500/40 text-orange-100 border-orange-400";
-            return "bg-red-500/40 text-red-100 border-red-400";
+        // Helper function to get color styles based on percentage - theme-aware
+        const getPercentageColor = (pct: number): React.CSSProperties => {
+            if (pct >= 10) return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)', opacity: 1.2 };
+            if (pct >= 5) return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)' };
+            if (pct > 0) return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)', opacity: 0.8 };
+            if (pct === 0) return { backgroundColor: 'var(--ui-bg-tertiary)', color: 'var(--text-muted)', borderColor: 'var(--ui-border-primary)' };
+            if (pct > -5) return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)', opacity: 0.8 };
+            if (pct > -10) return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)' };
+            return { backgroundColor: 'var(--badge-error-bg)', color: 'var(--badge-error-text)', borderColor: 'var(--badge-error-border)' };
         };
 
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
+                <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow className="border-border/50 hover:bg-transparent">
-                            <TableHead className="font-bold text-white py-2 w-12">
+                            <TableHead className="font-bold py-2 w-12" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <Award className="h-3.5 w-3.5 text-amber-400" />
+                                    <Award className="h-3.5 w-3.5" style={{ color: 'var(--badge-warning-text)' }} />
                                     #
                                 </div>
                             </TableHead>
-                            <TableHead className="font-bold text-white py-2 w-24">
+                            <TableHead className="font-bold py-2 w-24" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Part
                                 </div>
                             </TableHead>
-                            <TableHead className="font-bold text-white py-2">
+                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
-                                    <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     Description
                                 </div>
                             </TableHead>
-                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                            <TableHead className="text-center font-bold py-2 w-48 border-l border-border" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-center gap-1">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     3 Mo Avg
                                 </div>
                             </TableHead>
-                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                            <TableHead className="text-center font-bold py-2 w-48 border-l border-border" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-center gap-1">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     6 Mo Avg
                                 </div>
                             </TableHead>
-                            <TableHead className="text-center font-bold text-white py-2 w-48 border-l border-border">
+                            <TableHead className="text-center font-bold py-2 w-48 border-l border-border" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-center gap-1">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                     9 Mo Avg
                                 </div>
                             </TableHead>
-                            <TableHead className="text-center font-bold text-white py-2 w-36 border-l border-border">
+                            <TableHead className="text-center font-bold py-2 w-36 border-l border-border" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center justify-center gap-1">
-                                    <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                                    <TrendingUp className="h-3.5 w-3.5" style={{ color: 'var(--badge-warning-text)' }} />
                                     12 Mo Avg
                                 </div>
                             </TableHead>
@@ -218,64 +218,72 @@ export default function TopProductUnitSalesTable() {
                         {tableData.map((row, i) => {
                             const rank = i + 1;
                             const isTopThree = rank <= 3;
-                            const rankColors = {
-                                1: "text-amber-400 font-black",
-                                2: "text-slate-300 font-black",
-                                3: "text-amber-600 font-bold"
+                            const getRankColor = () => {
+                                if (rank === 1) return 'var(--badge-warning-text)';
+                                if (rank === 2) return 'var(--table-text-primary)';
+                                if (rank === 3) return 'var(--badge-warning-border)';
+                                return 'var(--text-muted)';
                             };
                             
                             return (
                                 <TableRow 
                                     key={i} 
-                                    className={`
-                                        border-border/30 transition-all duration-300 hover:bg-muted/50
-                                        ${isTopThree ? "bg-muted/20" : ""}
-                                        ${rank === 1 ? "bg-amber-500/5 border-l-2 border-l-amber-500/50" : ""}
-                                    `}
+                                    className={`border-border/30 transition-all duration-300 hover:bg-muted/50`}
+                                    style={rank === 1 ? {
+                                        backgroundColor: 'var(--badge-warning-bg)',
+                                        borderLeft: '2px solid var(--badge-warning-border)',
+                                        opacity: 0.5
+                                    } : isTopThree ? {
+                                        backgroundColor: 'var(--ui-bg-secondary)',
+                                        opacity: 0.3
+                                    } : {}}
                                 >
                                     <TableCell className="py-1.5 text-center">
-                                        <span className={`font-bold text-[15px] ${rankColors[rank as 1 | 2 | 3] || "text-muted-foreground"}`}>
+                                        <span className="font-bold text-[15px]" style={{ 
+                                            color: getRankColor(),
+                                            fontWeight: rank <= 2 ? 900 : 700
+                                        }}>
                                             {rank}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5">
+                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>
                                         {row.partCode}
                                     </TableCell>
-                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5">
+                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>
                                         {row.partDesc}
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
                                             {row.avg3.pct !== null && (
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg3.pct)}`}>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg3.pct)}>
                                                     {row.avg3.pct > 0 ? "+" : ""}{row.avg3.pct.toFixed(1)}%
                                                 </span>
                                             )}
-                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg3.value}</span>
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right" style={{ color: 'var(--table-text-primary)' }}>{row.avg3.value}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
                                             {row.avg6.pct !== null && (
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg6.pct)}`}>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg6.pct)}>
                                                     {row.avg6.pct > 0 ? "+" : ""}{row.avg6.pct.toFixed(1)}%
                                                 </span>
                                             )}
-                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg6.value}</span>
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right" style={{ color: 'var(--table-text-primary)' }}>{row.avg6.value}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
                                             {row.avg9.pct !== null && (
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border ${getPercentageColor(row.avg9.pct)}`}>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg9.pct)}>
                                                     {row.avg9.pct > 0 ? "+" : ""}{row.avg9.pct.toFixed(1)}%
                                                 </span>
                                             )}
-                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right">{row.avg9.value}</span>
+                                            <span className="font-bold text-[15px] leading-tight min-w-[60px] text-right" style={{ color: 'var(--table-text-primary)' }}>{row.avg9.value}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className={`text-center py-1.5 border-l border-border ${rank === 1 ? "text-amber-300" : ""}`}>
-                                        <span className="font-black text-[16px] leading-tight">{row.avg12.value}</span>
+                                    <TableCell className="text-center py-1.5 border-l border-border">
+                                        <span className="font-black text-[16px] leading-tight" style={{ color: rank === 1 ? 'var(--badge-warning-text)' : 'var(--table-text-primary)' }}>{row.avg12.value}</span>
                                     </TableCell>
                                 </TableRow>
                             );
