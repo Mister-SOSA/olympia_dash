@@ -308,23 +308,32 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Listen to layout changes – on any change, grab the new state
             // and propagate it to the parent and local storage.
+            // ✅ DEBOUNCED: Prevent feedback loops during resize/responsive changes
+            let changeTimer: NodeJS.Timeout;
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
-                const nodes = gridInstance.current.save() as GridStackNode[];
-                const updatedLayout = nodes.map((node) => ({
-                    id: node.id as string,
-                    x: node.x || 0,
-                    y: node.y || 0,
-                    w: node.w || 1,
-                    h: node.h || 1,
-                    enabled: true,
-                }));
-                if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
-                saveLayoutToStorage(updatedLayout);
+                
+                // Debounce change events to prevent rapid-fire updates during resize
+                clearTimeout(changeTimer);
+                changeTimer = setTimeout(() => {
+                    if (!gridInstance.current) return;
+                    const nodes = gridInstance.current.save() as GridStackNode[];
+                    const updatedLayout = nodes.map((node) => ({
+                        id: node.id as string,
+                        x: node.x || 0,
+                        y: node.y || 0,
+                        w: node.w || 1,
+                        h: node.h || 1,
+                        enabled: true,
+                    }));
+                    if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
+                    saveLayoutToStorage(updatedLayout);
+                }, 200); // Wait 200ms after last change before saving
             });
 
             return () => {
-                // Clean up React roots and destroy the grid instance.
+                // Clean up timers, React roots and destroy the grid instance.
+                clearTimeout(changeTimer);
                 widgetRoots.current.forEach((root) => root.unmount());
                 widgetRoots.current.clear();
                 gridInstance.current!.destroy(false);
@@ -332,44 +341,26 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             };
         }, []);
 
-        // Update cell height on window resize to maintain square cells while fitting viewport
-        useEffect(() => {
-            const handleResize = () => {
-                if (!gridRef.current || !gridInstance.current) return;
-
-                const containerWidth = gridRef.current.clientWidth;
-                const viewportHeight = window.innerHeight;
-
-                // Calculate cell height based on width (for square cells)
-                const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
-
-                // Calculate max cell height that would fit approximately 8-9 rows in viewport
-                const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
-
-                // Use the smaller value to ensure grid fits reasonably in viewport
-                const newCellHeight = Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
-
-                // @ts-ignore - GridStack has this method but it's not in the types
-                gridInstance.current.cellHeight(newCellHeight);
-            };
-
-            // Debounce resize events
-            let resizeTimer: NodeJS.Timeout;
-            const debouncedResize = () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(handleResize, 150);
-            };
-
-            window.addEventListener('resize', debouncedResize);
-            return () => {
-                clearTimeout(resizeTimer);
-                window.removeEventListener('resize', debouncedResize);
-            };
-        }, []);
+        // ✅ REMOVED: Manual cell height adjustment on resize
+        // GridStack's built-in responsive columnOpts already handle layout adjustments
+        // on window resize. Manual cellHeight updates were causing feedback loops and
+        // conflicts with GridStack's internal resize handling.
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
+        // ✅ OPTIMIZED: Only reload if widgets actually changed, not just positions
+        const prevLayoutRef = useRef<Widget[]>(layout);
         useEffect(() => {
-            if (gridInstance.current) {
+            if (!gridInstance.current) return;
+
+            // Check if widgets were added/removed (not just moved)
+            const prevIds = new Set(prevLayoutRef.current.map(w => w.id));
+            const currentIds = new Set(layout.map(w => w.id));
+            
+            const widgetsAdded = layout.some(w => !prevIds.has(w.id));
+            const widgetsRemoved = prevLayoutRef.current.some(w => !currentIds.has(w.id));
+            
+            // Only reload if widgets were actually added or removed
+            if (widgetsAdded || widgetsRemoved) {
                 // Create a set of widget IDs from the new layout
                 const newWidgetIds = new Set(layout.map(widget => widget.id));
 
@@ -393,6 +384,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 // Load the new layout into GridStack
                 gridInstance.current.load(layoutWithMinimums);
             }
+            
+            // Update the previous layout reference
+            prevLayoutRef.current = layout;
         }, [layout]);
 
         return (
