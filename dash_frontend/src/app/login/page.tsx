@@ -143,32 +143,32 @@ function LoginContent() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
                 <Loader />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+        <div className="min-h-screen bg-ui-bg-primary flex items-center justify-center p-6">
             <div className="w-full max-w-6xl">
                 {/* Header */}
                 <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-white mb-2">Olympia Dashboard</h1>
-                    <p className="text-slate-400">Sign in to access your dashboard</p>
+                    <h1 className="text-4xl font-bold text-ui-text-primary mb-2">Olympia Dashboard</h1>
+                    <p className="text-ui-text-secondary">Sign in to access your dashboard</p>
                 </div>
 
                 <div className="grid lg:grid-cols-2 gap-8">
                     {/* Microsoft OAuth Login */}
-                    <Card className="bg-slate-900 border-slate-800">
+                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
                         <CardHeader className="space-y-1 pb-6">
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-blue-500/10 rounded-lg">
-                                    <FaMicrosoft className="w-6 h-6 text-blue-500" />
+                                <div className="p-2 bg-ui-accent-primary-bg rounded-lg">
+                                    <FaMicrosoft className="w-6 h-6 text-ui-accent-primary-text" />
                                 </div>
-                                <CardTitle className="text-2xl text-white">Microsoft Account</CardTitle>
+                                <CardTitle className="text-2xl text-ui-text-primary">Microsoft Account</CardTitle>
                             </div>
-                            <CardDescription className="text-slate-400">
+                            <CardDescription className="text-ui-text-secondary">
                                 Sign in with your Microsoft work account
                             </CardDescription>
                         </CardHeader>
@@ -176,27 +176,27 @@ function LoginContent() {
                             <Button
                                 onClick={handleLogin}
                                 disabled={loading}
-                                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                                className="w-full h-12 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium"
                             >
                                 <FaMicrosoft className="mr-2 h-4 w-4" />
                                 {loading ? 'Redirecting...' : 'Sign in with Microsoft'}
                             </Button>
                             {error && !deviceCode && (
-                                <p className="mt-4 text-sm text-red-400">{error}</p>
+                                <p className="mt-4 text-sm text-ui-danger-text">{error}</p>
                             )}
                         </CardContent>
                     </Card>
 
                     {/* Device Pairing */}
-                    <Card className="bg-slate-900 border-slate-800">
+                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
                         <CardHeader className="space-y-1 pb-6">
                             <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 bg-purple-500/10 rounded-lg">
-                                    <MdDevices className="w-6 h-6 text-purple-500" />
+                                <div className="p-2 bg-ui-accent-secondary-bg rounded-lg">
+                                    <MdDevices className="w-6 h-6 text-ui-accent-secondary-text" />
                                 </div>
-                                <CardTitle className="text-2xl text-white">TV Dashboard</CardTitle>
+                                <CardTitle className="text-2xl text-ui-text-primary">TV Dashboard</CardTitle>
                             </div>
-                            <CardDescription className="text-slate-400">
+                            <CardDescription className="text-ui-text-secondary">
                                 Display dashboard on a TV or kiosk screen
                             </CardDescription>
                         </CardHeader>
@@ -204,26 +204,26 @@ function LoginContent() {
                             {deviceLoading ? (
                                 <div className="flex flex-col items-center justify-center py-8">
                                     <Loader />
-                                    <p className="text-slate-400 mt-4 text-sm">Generating pairing code...</p>
+                                    <p className="text-ui-text-secondary mt-4 text-sm">Generating pairing code...</p>
                                 </div>
                             ) : userCode ? (
                                 <div className="space-y-4">
-                                    <div className="bg-slate-950 border border-slate-800 rounded-lg p-6">
+                                    <div className="bg-ui-bg-primary border border-ui-border-primary rounded-lg p-6">
                                         <div className="text-center mb-4">
-                                            <p className="text-sm text-slate-400 mb-1">Visit on your computer:</p>
-                                            <p className="text-lg font-semibold text-blue-400 font-mono">
+                                            <p className="text-sm text-ui-text-secondary mb-1">Visit on your computer:</p>
+                                            <p className="text-lg font-semibold text-ui-accent-primary-text font-mono">
                                                 {window.location.origin}/pair
                                             </p>
                                         </div>
 
                                         <div className="text-center">
-                                            <p className="text-sm text-slate-400 mb-3">Enter this code:</p>
-                                            <div className="text-5xl font-bold text-white tracking-[0.5em] font-mono py-4">
+                                            <p className="text-sm text-ui-text-secondary mb-3">Enter this code:</p>
+                                            <div className="text-5xl font-bold text-ui-text-primary tracking-[0.5em] font-mono py-4">
                                                 {userCode}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-slate-500">
+                                        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-ui-text-muted">
                                             <IoTimeOutline className="w-4 h-4" />
                                             <span>Expires in 15 minutes</span>
                                         </div>
@@ -236,7 +236,7 @@ function LoginContent() {
                                             handleRequestDeviceCode();
                                         }}
                                         variant="outline"
-                                        className="w-full border-slate-700 hover:bg-slate-800 text-slate-300"
+                                        className="w-full border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
                                     >
                                         <MdRefresh className="mr-2 h-4 w-4" />
                                         Generate New Code
@@ -244,10 +244,10 @@ function LoginContent() {
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
-                                    <p className="text-red-400 mb-4">{error || 'Failed to generate code'}</p>
+                                    <p className="text-ui-danger-text mb-4">{error || 'Failed to generate code'}</p>
                                     <Button
                                         onClick={handleRequestDeviceCode}
-                                        className="bg-purple-600 hover:bg-purple-700"
+                                        className="bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover"
                                     >
                                         <MdRefresh className="mr-2 h-4 w-4" />
                                         Try Again
@@ -265,7 +265,7 @@ function LoginContent() {
 export default function LoginPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-slate-950">
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
                 <Loader />
             </div>
         }>

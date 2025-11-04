@@ -324,25 +324,25 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
         <Loader />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-ui-bg-primary p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Admin Dashboard</h1>
-            <p className="text-slate-400">Comprehensive system management and monitoring</p>
+            <h1 className="text-3xl font-bold text-ui-text-primary mb-1">Admin Dashboard</h1>
+            <p className="text-ui-text-secondary">Comprehensive system management and monitoring</p>
           </div>
           <Button
             onClick={() => router.push('/')}
             variant="outline"
-            className="border-slate-700 hover:bg-slate-800 text-slate-300"
+            className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
           >
             <MdArrowBack className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -350,7 +350,7 @@ export default function AdminPage() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500 text-red-400 p-4 rounded-lg">
+          <div className="bg-ui-danger-bg border border-red-500 text-ui-danger-text p-4 rounded-lg">
             {error}
           </div>
         )}
@@ -358,72 +358,72 @@ export default function AdminPage() {
         {/* Stats Grid */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Total Users</p>
-                    <p className="text-3xl font-bold text-white">{stats.total_users}</p>
+                    <p className="text-ui-text-secondary text-sm mb-1">Total Users</p>
+                    <p className="text-3xl font-bold text-ui-text-primary">{stats.total_users}</p>
                   </div>
-                  <div className="p-3 bg-blue-500/10 rounded-lg">
-                    <MdPeople className="w-6 h-6 text-blue-500" />
+                  <div className="p-3 bg-ui-accent-primary-bg rounded-lg">
+                    <MdPeople className="w-6 h-6 text-ui-accent-primary-text" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Active Users</p>
+                    <p className="text-ui-text-secondary text-sm mb-1">Active Users</p>
                     <p className="text-3xl font-bold text-green-400">{stats.active_users}</p>
                   </div>
-                  <div className="p-3 bg-green-500/10 rounded-lg">
-                    <MdCheckCircle className="w-6 h-6 text-green-500" />
+                  <div className="p-3 bg-ui-success-bg rounded-lg">
+                    <MdCheckCircle className="w-6 h-6 text-ui-success-text" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Admins</p>
+                    <p className="text-ui-text-secondary text-sm mb-1">Admins</p>
                     <p className="text-3xl font-bold text-purple-400">{stats.admin_count}</p>
                   </div>
-                  <div className="p-3 bg-purple-500/10 rounded-lg">
-                    <MdAdminPanelSettings className="w-6 h-6 text-purple-500" />
+                  <div className="p-3 bg-ui-accent-secondary-bg rounded-lg">
+                    <MdAdminPanelSettings className="w-6 h-6 text-ui-accent-secondary-text" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">Sessions</p>
+                    <p className="text-ui-text-secondary text-sm mb-1">Sessions</p>
                     <p className="text-3xl font-bold text-orange-400">{stats.active_sessions}</p>
                   </div>
-                  <div className="p-3 bg-orange-500/10 rounded-lg">
-                    <IoTime className="w-6 h-6 text-orange-500" />
+                  <div className="p-3 bg-ui-warning-bg rounded-lg">
+                    <IoTime className="w-6 h-6 text-ui-warning-text" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800 hover:border-slate-700 transition-colors">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-sm mb-1">DB Size</p>
+                    <p className="text-ui-text-secondary text-sm mb-1">DB Size</p>
                     <p className="text-3xl font-bold text-cyan-400">{stats.db_size_mb}</p>
-                    <p className="text-slate-500 text-xs">MB</p>
+                    <p className="text-ui-text-muted text-xs">MB</p>
                   </div>
-                  <div className="p-3 bg-cyan-500/10 rounded-lg">
-                    <MdStorage className="w-6 h-6 text-cyan-500" />
+                  <div className="p-3 bg-ui-accent-primary-bg rounded-lg">
+                    <MdStorage className="w-6 h-6 text-ui-accent-primary-text" />
                   </div>
                 </div>
               </CardContent>
@@ -433,9 +433,9 @@ export default function AdminPage() {
 
         {/* System Health Alert */}
         {systemHealth && systemHealth.status !== 'healthy' && (
-          <Card className="bg-red-500/10 border-red-500">
+          <Card className="bg-ui-danger-bg border-red-500">
             <CardHeader>
-              <CardTitle className="text-red-400 flex items-center">
+              <CardTitle className="text-ui-danger-text flex items-center">
                 <MdHealthAndSafety className="mr-2" />
                 System Health: {systemHealth.status}
               </CardTitle>
@@ -457,7 +457,7 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex space-x-2 border-b border-slate-800">
+        <div className="flex space-x-2 border-b border-ui-border-primary">
           {[
             { id: 'users', label: 'User Management', icon: MdPeople },
             { id: 'logs', label: 'Audit Logs', icon: MdHistory },
@@ -469,8 +469,8 @@ export default function AdminPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-300'
+                  ? 'border-ui-accent-primary text-ui-accent-primary-text'
+                  : 'border-transparent text-ui-text-secondary hover:text-ui-text-secondary'
               }`}
             >
               <tab.icon className="mr-2 h-4 w-4" />
@@ -481,12 +481,12 @@ export default function AdminPage() {
 
         {/* Tab Content */}
         {activeTab === 'users' && (
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-ui-bg-secondary border-ui-border-primary">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-white text-xl">User Management</CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardTitle className="text-ui-text-primary text-xl">User Management</CardTitle>
+                  <CardDescription className="text-ui-text-secondary">
                     Manage user accounts, roles, and permissions ({filteredUsers.length} users)
                   </CardDescription>
                 </div>
@@ -494,7 +494,7 @@ export default function AdminPage() {
                   onClick={handleExportUsers}
                   variant="outline"
                   size="sm"
-                  className="border-slate-700 hover:bg-slate-800 text-slate-300"
+                  className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
                 >
                   <MdFileDownload className="mr-2 h-4 w-4" />
                   Export
@@ -508,12 +508,12 @@ export default function AdminPage() {
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded px-4 py-2 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
                 />
                 <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value as any)}
-                  className="bg-slate-800 border border-slate-700 rounded px-4 py-2 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
                 >
                   <option value="all">All Roles</option>
                   <option value="user">User</option>
@@ -522,7 +522,7 @@ export default function AdminPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="bg-slate-800 border border-slate-700 rounded px-4 py-2 text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>
@@ -534,25 +534,25 @@ export default function AdminPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Email</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Name</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Role</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Status</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Last Login</th>
-                      <th className="text-right p-4 text-slate-300 font-semibold text-sm">Actions</th>
+                    <tr className="border-b border-ui-border-primary">
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Email</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Name</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Role</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Status</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Last Login</th>
+                      <th className="text-right p-4 text-ui-text-secondary font-semibold text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
-                        <td className="p-4 text-slate-300 text-sm">{user.email}</td>
-                        <td className="p-4 text-slate-300 text-sm">{user.name}</td>
+                      <tr key={user.id} className="border-b border-ui-border-primary hover:bg-ui-bg-tertiary/50 transition-colors">
+                        <td className="p-4 text-ui-text-secondary text-sm">{user.email}</td>
+                        <td className="p-4 text-ui-text-secondary text-sm">{user.name}</td>
                         <td className="p-4">
                           <select
                             value={user.role}
                             onChange={(e) => handleChangeRole(user.id, e.target.value)}
-                            className="bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-slate-300 text-sm hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-3 py-1.5 text-ui-text-secondary text-sm hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
                           >
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
@@ -562,13 +562,13 @@ export default function AdminPage() {
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active
                               ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              : 'bg-red-500/20 text-ui-danger-text'
                             }`}
                           >
                             {user.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-400 text-sm">
+                        <td className="p-4 text-ui-text-secondary text-sm">
                           {user.last_login
                             ? new Date(user.last_login).toLocaleString()
                             : 'Never'}
@@ -578,7 +578,7 @@ export default function AdminPage() {
                             onClick={() => handleToggleActive(user.id)}
                             variant="outline"
                             size="sm"
-                            className="text-xs border-slate-700 hover:bg-slate-800"
+                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary"
                           >
                             {user.is_active ? 'Deactivate' : 'Activate'}
                           </Button>
@@ -586,7 +586,7 @@ export default function AdminPage() {
                             onClick={() => handleRevokeAllSessions(user.id)}
                             variant="outline"
                             size="sm"
-                            className="text-xs border-slate-700 hover:bg-slate-800 text-red-400 hover:text-red-300"
+                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-danger-text hover:text-red-300"
                           >
                             Revoke Sessions
                           </Button>
@@ -601,12 +601,12 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'logs' && (
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-ui-bg-secondary border-ui-border-primary">
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-white text-xl">Audit Logs</CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardTitle className="text-ui-text-primary text-xl">Audit Logs</CardTitle>
+                  <CardDescription className="text-ui-text-secondary">
                     System activity and user actions ({auditLogs.length} recent logs)
                   </CardDescription>
                 </div>
@@ -614,7 +614,7 @@ export default function AdminPage() {
                   onClick={handleExportLogs}
                   variant="outline"
                   size="sm"
-                  className="border-slate-700 hover:bg-slate-800 text-slate-300"
+                  className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
                 >
                   <MdFileDownload className="mr-2 h-4 w-4" />
                   Export
@@ -624,30 +624,30 @@ export default function AdminPage() {
             <CardContent>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {auditLogs.map((log) => (
-                  <div key={log.id} className="p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors">
+                  <div key={log.id} className="p-4 bg-ui-bg-tertiary rounded-lg hover:bg-slate-700 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-red-400' :
+                          log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-ui-danger-text' :
                           log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
                           log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
                           'bg-blue-500/20 text-blue-400'
                         }`}>
                           {log.action}
                         </span>
-                        <span className="text-slate-400 text-sm">
+                        <span className="text-ui-text-secondary text-sm">
                           User ID: {log.user_id || 'System'}
                         </span>
                       </div>
-                      <span className="text-slate-500 text-xs">
+                      <span className="text-ui-text-muted text-xs">
                         {new Date(log.created_at).toLocaleString()}
                       </span>
                     </div>
                     {log.details && (
-                      <p className="text-slate-300 text-sm">{log.details}</p>
+                      <p className="text-ui-text-secondary text-sm">{log.details}</p>
                     )}
                     {log.ip_address && (
-                      <p className="text-slate-500 text-xs mt-1">IP: {log.ip_address}</p>
+                      <p className="text-ui-text-muted text-xs mt-1">IP: {log.ip_address}</p>
                     )}
                   </div>
                 ))}
@@ -657,10 +657,10 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'devices' && (
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-ui-bg-secondary border-ui-border-primary">
             <CardHeader>
-              <CardTitle className="text-white text-xl">Device Sessions</CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardTitle className="text-ui-text-primary text-xl">Device Sessions</CardTitle>
+              <CardDescription className="text-ui-text-secondary">
                 Manage paired TV and device dashboards ({deviceSessions.length} active)
               </CardDescription>
             </CardHeader>
@@ -668,28 +668,28 @@ export default function AdminPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Device Name</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">User</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Created</th>
-                      <th className="text-left p-4 text-slate-300 font-semibold text-sm">Last Used</th>
-                      <th className="text-right p-4 text-slate-300 font-semibold text-sm">Actions</th>
+                    <tr className="border-b border-ui-border-primary">
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Device Name</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">User</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Created</th>
+                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Last Used</th>
+                      <th className="text-right p-4 text-ui-text-secondary font-semibold text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {deviceSessions.map((session) => (
-                      <tr key={session.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
-                        <td className="p-4 text-slate-300 text-sm">{session.device_name || 'Unknown Device'}</td>
-                        <td className="p-4 text-slate-300 text-sm">
+                      <tr key={session.id} className="border-b border-ui-border-primary hover:bg-ui-bg-tertiary/50 transition-colors">
+                        <td className="p-4 text-ui-text-secondary text-sm">{session.device_name || 'Unknown Device'}</td>
+                        <td className="p-4 text-ui-text-secondary text-sm">
                           <div>
                             <div className="font-medium">{session.user_name}</div>
-                            <div className="text-slate-500 text-xs">{session.user_email}</div>
+                            <div className="text-ui-text-muted text-xs">{session.user_email}</div>
                           </div>
                         </td>
-                        <td className="p-4 text-slate-400 text-sm">
+                        <td className="p-4 text-ui-text-secondary text-sm">
                           {new Date(session.created_at).toLocaleString()}
                         </td>
-                        <td className="p-4 text-slate-400 text-sm">
+                        <td className="p-4 text-ui-text-secondary text-sm">
                           {new Date(session.last_used).toLocaleString()}
                         </td>
                         <td className="p-4 text-right">
@@ -697,7 +697,7 @@ export default function AdminPage() {
                             onClick={() => handleDeleteDeviceSession(session.id)}
                             variant="outline"
                             size="sm"
-                            className="text-xs border-slate-700 hover:bg-slate-800 text-red-400 hover:text-red-300"
+                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-danger-text hover:text-red-300"
                           >
                             Revoke
                           </Button>
@@ -713,10 +713,10 @@ export default function AdminPage() {
 
         {activeTab === 'system' && (
           <div className="space-y-6">
-            <Card className="bg-slate-900 border-slate-800">
+            <Card className="bg-ui-bg-secondary border-ui-border-primary">
               <CardHeader>
-                <CardTitle className="text-white text-xl">System Tools</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardTitle className="text-ui-text-primary text-xl">System Tools</CardTitle>
+                <CardDescription className="text-ui-text-secondary">
                   Database maintenance and system utilities
                 </CardDescription>
               </CardHeader>
@@ -724,38 +724,38 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Button
                     onClick={handleSystemCleanup}
-                    className="h-20 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 flex flex-col items-center justify-center"
+                    className="h-20 bg-ui-warning-bg hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 flex flex-col items-center justify-center"
                   >
                     <MdCleaningServices className="h-6 w-6 mb-2" />
                     <span>Run System Cleanup</span>
-                    <span className="text-xs text-slate-500">Remove expired data</span>
+                    <span className="text-xs text-ui-text-muted">Remove expired data</span>
                   </Button>
 
                   <Button
                     onClick={handleExportUsers}
-                    className="h-20 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 flex flex-col items-center justify-center"
+                    className="h-20 bg-ui-accent-primary-bg hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 flex flex-col items-center justify-center"
                   >
                     <MdFileDownload className="h-6 w-6 mb-2" />
                     <span>Export All Users</span>
-                    <span className="text-xs text-slate-500">JSON format</span>
+                    <span className="text-xs text-ui-text-muted">JSON format</span>
                   </Button>
 
                   <Button
                     onClick={handleExportLogs}
-                    className="h-20 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center"
+                    className="h-20 bg-ui-accent-secondary-bg hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center"
                   >
                     <MdFileDownload className="h-6 w-6 mb-2" />
                     <span>Export Audit Logs</span>
-                    <span className="text-xs text-slate-500">Last 1000 entries</span>
+                    <span className="text-xs text-ui-text-muted">Last 1000 entries</span>
                   </Button>
 
                   <Button
                     onClick={loadData}
-                    className="h-20 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-300 flex flex-col items-center justify-center"
+                    className="h-20 bg-ui-success-bg hover:bg-green-500/20 border border-green-500/30 text-green-300 flex flex-col items-center justify-center"
                   >
                     <MdHealthAndSafety className="h-6 w-6 mb-2" />
                     <span>Refresh System Data</span>
-                    <span className="text-xs text-slate-500">Reload all metrics</span>
+                    <span className="text-xs text-ui-text-muted">Reload all metrics</span>
                   </Button>
                 </div>
               </CardContent>
@@ -763,35 +763,35 @@ export default function AdminPage() {
 
             {/* System Info */}
             {stats && (
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="bg-ui-bg-secondary border-ui-border-primary">
                 <CardHeader>
-                  <CardTitle className="text-white text-xl">System Information</CardTitle>
+                  <CardTitle className="text-ui-text-primary text-xl">System Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">Total Preferences</p>
-                      <p className="text-2xl font-bold text-white">{stats.total_preferences}</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">Total Preferences</p>
+                      <p className="text-2xl font-bold text-ui-text-primary">{stats.total_preferences}</p>
                     </div>
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">Total Audit Logs</p>
-                      <p className="text-2xl font-bold text-white">{stats.total_audit_logs}</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">Total Audit Logs</p>
+                      <p className="text-2xl font-bold text-ui-text-primary">{stats.total_audit_logs}</p>
                     </div>
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">Database Size</p>
-                      <p className="text-2xl font-bold text-white">{stats.db_size_mb} MB</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">Database Size</p>
+                      <p className="text-2xl font-bold text-ui-text-primary">{stats.db_size_mb} MB</p>
                     </div>
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">Device Sessions</p>
-                      <p className="text-2xl font-bold text-white">{stats.active_device_sessions}</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">Device Sessions</p>
+                      <p className="text-2xl font-bold text-ui-text-primary">{stats.active_device_sessions}</p>
                     </div>
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">Recent Logins</p>
-                      <p className="text-2xl font-bold text-white">{stats.recent_logins}</p>
-                      <p className="text-slate-500 text-xs">Last 24 hours</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">Recent Logins</p>
+                      <p className="text-2xl font-bold text-ui-text-primary">{stats.recent_logins}</p>
+                      <p className="text-ui-text-muted text-xs">Last 24 hours</p>
                     </div>
-                    <div className="p-4 bg-slate-800 rounded-lg">
-                      <p className="text-slate-400 text-sm mb-1">System Status</p>
+                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
+                      <p className="text-ui-text-secondary text-sm mb-1">System Status</p>
                       <p className={`text-2xl font-bold ${
                         systemHealth?.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
                       }`}>
