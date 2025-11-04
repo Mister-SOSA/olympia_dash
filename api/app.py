@@ -54,7 +54,16 @@ OPEN_METEO_PARAMS = {
 }
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": False,
+        "max_age": 3600
+    }
+})
 
 # Register authentication blueprints with /api/auth prefix
 app.register_blueprint(auth_bp, url_prefix='/api/auth')

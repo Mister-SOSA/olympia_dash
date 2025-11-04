@@ -3,6 +3,7 @@ Admin routes for user and permission management.
 """
 
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 from auth.database import (
     get_all_users,
     get_user_by_id,
@@ -299,6 +300,7 @@ def get_stats():
     """Get system statistics."""
     try:
         from auth.database import get_db
+        import os
         conn = get_db()
         cursor = conn.cursor()
         
@@ -329,6 +331,19 @@ def get_stats():
         """)
         recent_logins = cursor.fetchone()[0]
         
+        # Count total preferences
+        cursor.execute('SELECT COUNT(*) FROM user_preferences')
+        total_preferences = cursor.fetchone()[0]
+        
+        # Count audit logs
+        cursor.execute('SELECT COUNT(*) FROM audit_log')
+        total_audit_logs = cursor.fetchone()[0]
+        
+        # Get database size
+        from auth.database import DB_PATH
+        db_size_bytes = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+        db_size_mb = round(db_size_bytes / (1024 * 1024), 2)
+        
         conn.close()
         
         return jsonify({
@@ -339,8 +354,350 @@ def get_stats():
                 'admin_count': admin_count,
                 'active_sessions': active_sessions,
                 'active_device_sessions': active_device_sessions,
-                'recent_logins': recent_logins
+                'recent_logins': recent_logins,
+                'total_preferences': total_preferences,
+                'total_audit_logs': total_audit_logs,
+                'db_size_mb': db_size_mb
             }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/device-sessions', methods=['GET'])
+@require_role('admin')
+def list_device_sessions():
+    """List all active device sessions."""
+    try:
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                ds.id,
+                ds.user_id,
+                ds.device_name,
+                ds.created_at,
+                ds.last_used,
+                ds.expires_at,
+                u.email,
+                u.name
+            FROM device_sessions ds
+            JOIN users u ON ds.user_id = u.id
+            WHERE ds.expires_at > CURRENT_TIMESTAMP
+            ORDER BY ds.last_used DESC
+        ''')
+        
+        sessions = []
+        for row in cursor.fetchall():
+            sessions.append({
+                'id': row[0],
+                'user_id': row[1],
+                'device_name': row[2],
+                'created_at': row[3],
+                'last_used': row[4],
+                'expires_at': row[5],
+                'user_email': row[6],
+                'user_name': row[7]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'sessions': sessions
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/device-sessions/<int:session_id>', methods=['DELETE'])
+@require_role('admin')
+def delete_device_session(session_id):
+    """Delete a specific device session."""
+    try:
+        admin_user = request.current_user  # type: ignore
+        from auth.database import get_db
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get session info before deleting
+        cursor.execute('SELECT user_id, device_name FROM device_sessions WHERE id = ?', (session_id,))
+        session = cursor.fetchone()
+        
+        if not session:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': 'Device session not found'
+            }), 404
+        
+        user_id, device_name = session
+        
+        cursor.execute('DELETE FROM device_sessions WHERE id = ?', (session_id,))
+        conn.commit()
+        conn.close()
+        
+        log_action(admin_user['id'], 'device_session_deleted', 
+                   f'Deleted device session {session_id} for user {user_id} ({device_name})', 
+                   get_client_ip())
+        
+        return jsonify({
+            'success': True,
+            'message': 'Device session deleted'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/preferences', methods=['GET'])
+@require_role('admin')
+def list_all_preferences():
+    """List all user preferences (summary)."""
+    try:
+        from auth.database import get_db
+        import json
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                up.user_id,
+                u.email,
+                u.name,
+                up.version,
+                up.updated_at,
+                length(up.preferences) as size_bytes
+            FROM user_preferences up
+            JOIN users u ON up.user_id = u.id
+            ORDER BY up.updated_at DESC
+        ''')
+        
+        preferences = []
+        for row in cursor.fetchall():
+            preferences.append({
+                'user_id': row[0],
+                'user_email': row[1],
+                'user_name': row[2],
+                'version': row[3],
+                'updated_at': row[4],
+                'size_bytes': row[5]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'preferences': preferences
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/preferences/<int:user_id>', methods=['GET'])
+@require_role('admin')
+def get_user_preferences_admin(user_id):
+    """Get detailed preferences for a specific user."""
+    try:
+        from auth.database import get_user_preferences
+        
+        result = get_user_preferences(user_id)
+        
+        return jsonify({
+            'success': True,
+            'preferences': result['preferences'],
+            'version': result['version'],
+            'updated_at': result['updated_at']
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/system/cleanup', methods=['POST'])
+@require_role('admin')
+def cleanup_system():
+    """Clean up expired sessions, device codes, and old audit logs."""
+    try:
+        admin_user = request.current_user  # type: ignore
+        from auth.database import get_db, cleanup_expired_sessions, cleanup_expired_device_codes
+        
+        # Clean up expired sessions and device codes
+        cleanup_expired_sessions()
+        cleanup_expired_device_codes()
+        
+        # Optionally clean up old audit logs (keep last 10000)
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            DELETE FROM audit_log 
+            WHERE id NOT IN (
+                SELECT id FROM audit_log 
+                ORDER BY created_at DESC 
+                LIMIT 10000
+            )
+        ''')
+        
+        deleted_logs = cursor.rowcount
+        
+        # Clean up expired rate limits
+        cursor.execute('''
+            DELETE FROM rate_limits 
+            WHERE window_start < datetime('now', '-1 hour')
+        ''')
+        
+        deleted_rate_limits = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        
+        log_action(admin_user['id'], 'system_cleanup', 
+                   f'Cleaned up system: {deleted_logs} old logs, {deleted_rate_limits} rate limits', 
+                   get_client_ip())
+        
+        return jsonify({
+            'success': True,
+            'message': 'System cleanup completed',
+            'deleted_logs': deleted_logs,
+            'deleted_rate_limits': deleted_rate_limits
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/system/health', methods=['GET'])
+@require_role('admin')
+def system_health():
+    """Get detailed system health information."""
+    try:
+        from auth.database import get_db, DB_PATH
+        import os
+        from datetime import datetime, timedelta
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check for issues
+        issues = []
+        
+        # Check for expired sessions not cleaned up
+        cursor.execute('SELECT COUNT(*) FROM sessions WHERE expires_at < CURRENT_TIMESTAMP')
+        expired_sessions = cursor.fetchone()[0]
+        if expired_sessions > 100:
+            issues.append({
+                'type': 'warning',
+                'message': f'{expired_sessions} expired sessions need cleanup'
+            })
+        
+        # Check for expired device codes
+        cursor.execute('SELECT COUNT(*) FROM device_codes WHERE expires_at < CURRENT_TIMESTAMP')
+        expired_codes = cursor.fetchone()[0]
+        if expired_codes > 50:
+            issues.append({
+                'type': 'warning',
+                'message': f'{expired_codes} expired device codes need cleanup'
+            })
+        
+        # Check database size
+        db_size_bytes = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+        db_size_mb = round(db_size_bytes / (1024 * 1024), 2)
+        if db_size_mb > 100:
+            issues.append({
+                'type': 'info',
+                'message': f'Database size is {db_size_mb}MB'
+            })
+        
+        # Check for inactive admins
+        cursor.execute('''
+            SELECT COUNT(*) FROM users 
+            WHERE role = 'admin' AND is_active = 0
+        ''')
+        inactive_admins = cursor.fetchone()[0]
+        if inactive_admins > 0:
+            issues.append({
+                'type': 'info',
+                'message': f'{inactive_admins} inactive admin account(s)'
+            })
+        
+        # Get recent error logs (if any)
+        cursor.execute('''
+            SELECT COUNT(*) FROM audit_log 
+            WHERE action LIKE '%error%' 
+            AND created_at > datetime('now', '-1 hour')
+        ''')
+        recent_errors = cursor.fetchone()[0]
+        if recent_errors > 10:
+            issues.append({
+                'type': 'error',
+                'message': f'{recent_errors} errors in the last hour'
+            })
+        
+        conn.close()
+        
+        health_status = 'healthy' if not any(i['type'] == 'error' for i in issues) else 'degraded'
+        
+        return jsonify({
+            'success': True,
+            'status': health_status,
+            'issues': issues,
+            'db_size_mb': db_size_mb,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/export/users', methods=['GET'])
+@require_role('admin')
+def export_users():
+    """Export user list as JSON."""
+    try:
+        users = get_all_users()
+        
+        # Add permissions to each user
+        for user in users:
+            user['permissions'] = get_user_permissions(user['id'])
+        
+        return jsonify({
+            'success': True,
+            'users': users,
+            'exported_at': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/export/audit-logs', methods=['GET'])
+@require_role('admin')
+def export_audit_logs():
+    """Export audit logs as JSON."""
+    try:
+        limit = request.args.get('limit', 1000, type=int)
+        logs = get_audit_logs(limit)
+        
+        return jsonify({
+            'success': True,
+            'logs': logs,
+            'exported_at': datetime.now().isoformat()
         }), 200
     except Exception as e:
         return jsonify({
