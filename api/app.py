@@ -77,9 +77,8 @@ def get_widgets_post():
     """
     Handle POST requests to retrieve widget data.
 
-    Accepts a JSON payload that either contains a 'raw_query' to be executed directly,
-    or parameters to build a dynamic query:
-      - table: the table to query (required if not using 'raw_query')
+    Accepts a JSON payload with parameters to build a dynamic query:
+    - table: the table to query (required)
       - columns: list of columns to select (default: ["*"])
       - filters: conditions for the WHERE clause
       - group_by: columns to group by
@@ -94,13 +93,6 @@ def get_widgets_post():
         data = request.get_json(force=True)
         if not data:
             return jsonify({"success": False, "error": "No JSON payload provided"}), 200
-
-        # If a raw SQL query is provided, execute it directly.
-        raw_query = data.get("raw_query")
-        if raw_query:
-            results = QueryBuilder.execute_query(raw_query)
-            logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed raw query', module)
-            return jsonify({"success": True, "data": results}), 200
 
         # Ensure required parameters are provided.
         table = data.get("table")
