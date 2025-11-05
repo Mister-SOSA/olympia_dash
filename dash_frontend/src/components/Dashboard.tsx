@@ -73,6 +73,61 @@ const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
     });
 };
 
+const NON_TEXT_INPUT_TYPES = new Set([
+    "button",
+    "checkbox",
+    "color",
+    "file",
+    "image",
+    "radio",
+    "range",
+    "reset",
+    "submit",
+    "time",
+    "date",
+    "datetime-local",
+    "month",
+    "week"
+]);
+
+const shouldIgnoreGlobalHotkeys = (element: HTMLElement | null): boolean => {
+    if (!element) return false;
+
+    if (element.getAttribute("data-hotkeys-allow") === "true") {
+        return false;
+    }
+
+    if (element.closest('[data-hotkeys-allow="true"]')) {
+        return false;
+    }
+
+    if (element.closest('[data-hotkeys-disabled="true"]')) {
+        return true;
+    }
+
+    if (element.isContentEditable) {
+        return true;
+    }
+
+    const tagName = element.tagName?.toLowerCase();
+
+    if (tagName === "textarea" || tagName === "select") {
+        return true;
+    }
+
+    if (tagName === "input") {
+        const type = (element as HTMLInputElement).type?.toLowerCase() || "text";
+        return !NON_TEXT_INPUT_TYPES.has(type);
+    }
+
+    const role = element.getAttribute("role")?.toLowerCase();
+    if (role === "textbox" || role === "combobox" || role === "searchbox") {
+        return true;
+    }
+
+    return false;
+};
+
 export default function Dashboard() {
     const router = useRouter();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -194,23 +249,72 @@ export default function Dashboard() {
     );    // Global keybindings: F = menu, P = presets, S = settings, X = compact, 1–9 = load/save presets
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
+            if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) {
+                return;
+            }
+
+            const targetElement = (e.target as HTMLElement) ?? null;
+            const activeElement = (document.activeElement as HTMLElement) ?? null;
+            const elementToCheck = targetElement ?? activeElement;
+
+            if (shouldIgnoreGlobalHotkeys(elementToCheck)) {
+                return;
+            }
+
             const key = e.key.toLowerCase();
+            const otherModalOpen = settingsOpen || presetManagerOpen || presetDialogOpen;
+            const anyModalOpen = otherModalOpen || menuOpen;
+
             if (key === "f") {
-                setMenuOpen((prev) => !prev);
-                updateTempLayout();
-            } else if (key === "p") {
+                if (otherModalOpen) {
+                    return;
+                }
+                e.preventDefault();
+                setMenuOpen((prev) => {
+                    if (!prev) {
+                        updateTempLayout();
+                    }
+                    return !prev;
+                });
+                return;
+            }
+
+            if (key === "p") {
+                if (menuOpen || settingsOpen || presetDialogOpen) {
+                    return;
+                }
+                e.preventDefault();
                 setPresetManagerOpen((prev) => !prev);
-            } else if (key === "s") {
+                return;
+            }
+
+            if (key === "s") {
+                if (menuOpen || presetManagerOpen || presetDialogOpen) {
+                    return;
+                }
+                e.preventDefault();
                 setSettingsOpen((prev) => !prev);
-            } else if (key === "x") {
+                return;
+            }
+
+            if (key === "x") {
+                if (anyModalOpen) {
+                    return;
+                }
                 if (gridDashboardRef.current) {
                     gridDashboardRef.current.compact();
                     toast.success("Dashboard Compacted");
                 }
-            } else if (
+                return;
+            }
+
+            if (
                 (!e.shiftKey && key >= "0" && key <= "9") ||
                 (e.shiftKey && e.code.startsWith("Digit"))
             ) {
+                if (anyModalOpen) {
+                    return;
+                }
                 let digit: number;
                 if (e.shiftKey) {
                     digit = parseInt(e.code.replace("Digit", ""), 10);
@@ -247,15 +351,27 @@ export default function Dashboard() {
                         loadPreset(index);
                     }
                 }
-            } else if (key === "arrowleft") {
+                return;
+            }
+
+            if (key === "arrowleft") {
+                if (anyModalOpen) {
+                    return;
+                }
                 const newIndex = findNextPresetIndex(presets, presetIndex, -1);
                 if (newIndex !== presetIndex) loadPreset(newIndex);
-            } else if (key === "arrowright") {
+                return;
+            }
+
+            if (key === "arrowright") {
+                if (anyModalOpen) {
+                    return;
+                }
                 const newIndex = findNextPresetIndex(presets, presetIndex, 1);
                 if (newIndex !== presetIndex) loadPreset(newIndex);
             }
         },
-        [layout, presets, presetIndex, loadPreset, updateTempLayout]
+        [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, presets, presetIndex, loadPreset, updateTempLayout]
     );
 
     useEffect(() => {
