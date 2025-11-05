@@ -234,53 +234,13 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
 /* -------------------------------------- */
 
 export default function Overview() {
-    const previousYearStart = useMemo(
-        () => new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split("T")[0],
-        []
-    );
-    const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);
-    const sevenDaysAgoDate = useMemo(() => {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        return sevenDaysAgo.toISOString().split("T")[0];
-    }, []);
-
     const widgetPayload = useMemo(
         () => ({
             module: "Overview",
-            raw_query: `
-        -- Fetch sales data for the last 7 days from orditem
-        SELECT 
-            FORMAT(duedate, 'yyyy-MM-dd') AS period,
-            SUM(ext_price) AS total
-        FROM 
-            orditem
-        WHERE 
-            duedate >= '${sevenDaysAgoDate}'
-            AND duedate <= '${currentDate}'
-        GROUP BY 
-            FORMAT(duedate, 'yyyy-MM-dd')
-
-        UNION ALL
-
-        -- Fetch sales data beyond the last 7 days (within the full year) from sumsales
-        SELECT 
-            FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-            SUM(sales_dol) AS total
-        FROM 
-            sumsales
-        WHERE 
-            sale_date >= '${previousYearStart}'
-            AND sale_date < '${sevenDaysAgoDate}'
-            AND sale_date <= '${currentDate}'
-        GROUP BY 
-            FORMAT(sale_date, 'yyyy-MM-dd')
-
-        ORDER BY 
-            period ASC;
-      `,
+            table: "olympia_OverviewSales",
+            sort: ["period ASC"]
         }),
-        [sevenDaysAgoDate, currentDate, previousYearStart]
+        []
     );
 
     return (
