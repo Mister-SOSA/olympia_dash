@@ -2,6 +2,9 @@
 
 A full-stack dashboard application with a Flask backend and Next.js frontend, featuring customizable widgets, real-time data visualization, and **secure authentication with Microsoft OAuth**.
 
+<img width="1686" height="908" alt="image" src="https://github.com/user-attachments/assets/5362cdfb-b89b-4802-a505-95fbee9e325d" />
+
+
 ## Architecture
 
 - **Backend**: Flask API (`/api`) - Handles data processing and API endpoints
