@@ -202,43 +202,12 @@ export default function SalesByDayBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleDays = useResponsiveVisibleDays(containerRef);
 
-    // Memoize the widget payload.
+    // Memoize the widget payload pointed at the secure SQL view.
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByDayBar",
-            raw_query: `
-        -- Fetch sales data for the last 3 days from orditem
-        SELECT 
-          FORMAT(duedate, 'yyyy-MM-dd') AS period,
-          SUM(ext_price) AS total
-        FROM 
-          orditem
-        WHERE 
-          duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-          AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
-          AND duedate <= GETDATE()
-        GROUP BY 
-          FORMAT(duedate, 'yyyy-MM-dd')
-
-        UNION ALL
-
-        -- Fetch sales data older than 3 days but within 30 days from sumsales
-        SELECT 
-          FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-          SUM(sales_dol) AS total
-        FROM 
-          sumsales
-        WHERE 
-          sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-          AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
-          AND sale_date <= GETDATE()
-        GROUP BY 
-          FORMAT(sale_date, 'yyyy-MM-dd')
-
-        -- Combine and aggregate the data for consistent results
-        ORDER BY 
-          period ASC;
-      `,
+            table: "olympia_SalesByDay",
+            sort: ["period ASC"]
         }),
         []
     );
