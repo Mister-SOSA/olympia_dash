@@ -202,12 +202,11 @@ export default function SalesByDayBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleDays = useResponsiveVisibleDays(containerRef);
 
-    // Memoize the widget payload pointed at the secure SQL view.
+    // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByDayBar",
-            table: "olympia_SalesByDay",
-            sort: ["period ASC"]
+            queryId: "SalesByDayBar"
         }),
         []
     );

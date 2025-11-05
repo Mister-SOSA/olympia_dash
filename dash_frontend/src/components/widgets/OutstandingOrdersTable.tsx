@@ -48,11 +48,7 @@ export default function OutstandingOrdersTable() {
     const widgetPayload = useMemo(
         () => ({
             module: "OutstandingOrdersTable",
-            table: "olympia_OutstandingDueIn",
-            sort: [
-                "po_number ASC",
-                "vend_prom_date ASC"
-            ]
+            queryId: "OutstandingOrdersTable"
         }),
         []
     );

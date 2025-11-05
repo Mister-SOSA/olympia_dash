@@ -15,6 +15,7 @@ import requests_cache
 import openmeteo_requests
 from retry_requests import retry
 from database.queries import QueryBuilder
+from database.query_registry import QueryRegistry, QueryRegistryError
 from auth.routes import auth_bp
 from auth.device_routes import device_bp
 from auth.admin_routes import admin_bp
@@ -77,22 +78,80 @@ def get_widgets_post():
     """
     Handle POST requests to retrieve widget data.
 
-    Accepts a JSON payload with parameters to build a dynamic query:
-    - table: the table to query (required)
-      - columns: list of columns to select (default: ["*"])
-      - filters: conditions for the WHERE clause
-      - group_by: columns to group by
-      - sort: sort order
-      - join: join clause(s)
-      - limit: limit for pagination
-      - offset: offset for pagination (default: 0)
-      - module: the name of the module requesting the query
+        Accepts a JSON payload with either:
+            - query_id: identifier for a registry-backed query plus optional "params" dict
+            - table (legacy support): table name and accompanying builder parameters
+                - columns: list of columns to select (default: ["*"])
+                - filters: conditions for the WHERE clause
+                - group_by: columns to group by
+                - sort: sort order
+                - join: join clause(s)
+                - limit: limit for pagination
+                - offset: offset for pagination (default: 0)
+        The payload may also include "module" for logging purposes.
     """
     try:
         module = request.headers.get("module")
         data = request.get_json(force=True)
         if not data:
             return jsonify({"success": False, "error": "No JSON payload provided"}), 200
+        if not module:
+            module = data.get("module")
+
+        query_id = data.get("query_id") or data.get("queryId")
+        params = data.get("params") or {}
+        current_user = getattr(request, "current_user", None)
+        user_role = current_user.get("role") if isinstance(current_user, dict) else None
+
+        if query_id:
+            if params and not isinstance(params, dict):
+                return jsonify({"success": False, "error": "Params must be an object"}), 200
+
+            try:
+                query_definition = QueryRegistry.build_query(query_id, params, user_role)
+            except QueryRegistryError as exc:
+                logger.warning(
+                    'Module: %s | Endpoint: /api/widgets | QueryId: %s | Error: %s',
+                    module,
+                    query_id,
+                    exc,
+                )
+                return jsonify({"success": False, "error": str(exc)}), 200
+
+            table = query_definition.get("table")
+            columns = query_definition.get("columns", ["*"])
+            filters = query_definition.get("filters")
+            group_by = query_definition.get("group_by")
+            sort = query_definition.get("sort")
+            join_clause = query_definition.get("join")
+            limit = query_definition.get("limit")
+            offset = query_definition.get("offset", 0)
+            custom_sql = query_definition.get("custom_sql")
+
+            if custom_sql:
+                query = custom_sql
+            else:
+                qb = QueryBuilder(table).select(columns)
+                if join_clause:
+                    qb = qb.join_clause(join_clause)
+                if filters:
+                    qb = qb.where(filters)
+                if group_by:
+                    qb = qb.group_by_clause(group_by)
+                if sort:
+                    qb = qb.order_by(sort)
+                if limit:
+                    qb = qb.paginate(limit, offset)
+
+                query = qb.build_query()
+
+            results = QueryBuilder.execute_query(query)
+            logger.info(
+                'Module: %s | Endpoint: /api/widgets | Action: Executed registry query | QueryId: %s',
+                module,
+                query_id,
+            )
+            return jsonify({"success": True, "data": results}), 200
 
         # Ensure required parameters are provided.
         table = data.get("table")
@@ -125,7 +184,11 @@ def get_widgets_post():
 
         # Execute the built query.
         results = QueryBuilder.execute_query(query)
-        logger.info('Module: %s | Endpoint: /api/widgets | Action: Executed dynamic query | Query: %s', module, query)
+        logger.info(
+            'Module: %s | Endpoint: /api/widgets | Action: Executed dynamic query | Query: %s',
+            module,
+            query,
+        )
         return jsonify({"success": True, "data": results}), 200
 
     except Exception as e:

@@ -355,11 +355,10 @@ export default function DailyMovesByUser() {
     const widgetPayload = useMemo(
         () => ({
             module: "DailyMovesByUser",
-            table: "inadjinf",
-            columns: ["user_id", "COUNT(*) as moves"],
-            group_by: ["inadjinf.user_id"],
-            filters: `trans_date = '${currentDate}' AND user_id != 'AUTO'`,
-            sort: "moves DESC",
+            queryId: "DailyMovesByUser",
+            params: {
+                currentDate,
+            },
         }),
         [currentDate]
     );

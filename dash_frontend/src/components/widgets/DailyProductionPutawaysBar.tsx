@@ -20,7 +20,7 @@ function useResponsiveConfig(ref: React.RefObject<HTMLDivElement | null>) {
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
                 const { width, height } = entry.contentRect;
-                
+
                 // Base visible products on height
                 let visibleProducts = 8;
                 if (height >= 500) visibleProducts = 12;
@@ -29,7 +29,7 @@ function useResponsiveConfig(ref: React.RefObject<HTMLDivElement | null>) {
                 else if (height >= 220) visibleProducts = 6;
                 else if (height >= 150) visibleProducts = 4;
                 else visibleProducts = 3;
-                
+
                 if (width >= 1200 && height >= 300) {
                     setConfig({
                         visibleProducts,
@@ -134,21 +134,21 @@ const ResponsiveBarChart: React.FC<ResponsiveBarChartProps> = ({ data, config })
     // Calculate padding for horizontal layout
     const topPadding = 15;
     const bottomPadding = 10;
-    
+
     // Dynamic left padding based on longest product name
     const maxProductNameLength = Math.max(...data.map(d => d.product.length));
-    const estimatedLabelWidth = config.compactMode 
-        ? Math.min(maxProductNameLength * 6, 80) 
+    const estimatedLabelWidth = config.compactMode
+        ? Math.min(maxProductNameLength * 6, 80)
         : Math.min(maxProductNameLength * 7, 120);
-    
+
     const leftPadding = config.showLabels ? estimatedLabelWidth + 10 : 15;
     const rightPadding = config.showPercentages ? 50 : 30;
-    
-    const padding = { 
-        top: topPadding, 
-        right: rightPadding, 
-        bottom: bottomPadding, 
-        left: leftPadding 
+
+    const padding = {
+        top: topPadding,
+        right: rightPadding,
+        bottom: bottomPadding,
+        left: leftPadding
     };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
@@ -297,7 +297,7 @@ const ResponsiveBarChart: React.FC<ResponsiveBarChartProps> = ({ data, config })
                     padding.left + barWidth + 15,
                     dimensions.width - 150
                 );
-                
+
                 return (
                     <div
                         style={{
@@ -359,15 +359,10 @@ export default function DailyProductionPutawaysBar() {
     const widgetPayload = useMemo(
         () => ({
             module: "DailyProductionPutawaysBar",
-            table: "putaway",
-            columns: [
-                "part_code",
-                "SUM(lotqty) AS lotqty",
-                "MAX(uom) AS uom"
-            ],
-            filters: `recdat = '${currentDate}' AND source_type = 'MF'`,
-            group_by: ["part_code"],
-            sort: "lotqty DESC",
+            queryId: "DailyProductionPutawaysBar",
+            params: {
+                currentDate,
+            },
         }),
         [currentDate]
     );

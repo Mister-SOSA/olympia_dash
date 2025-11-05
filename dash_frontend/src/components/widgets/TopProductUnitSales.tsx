@@ -5,38 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
 import { Package, FileText, TrendingUp, Calendar, Award } from "lucide-react";
 
-
-/* -------------------------------------- */
-/* Constants & Helper Functions           */
-/* -------------------------------------- */
-const PRODUCTS = [
-    "1130",
-    "1220",
-    "1140",
-    "1210",
-    "270",
-    "270C",
-    "1040",
-    "H1410",
-    "H1220",
-    "H1140",
-    "H405",
-    "H00132",
-    "1001",
-    "402",
-    "502",
-    "504",
-    "407",
-    "1410-C",
-    "1220-C",
-    "10906",
-    "10907",
-    "286",
-    "287",
-    "100",
-    "104"
-];
-
 // Raw data type for each record from the API
 type ProductUnitData = {
     part_code: string;
@@ -63,16 +31,7 @@ export default function TopProductUnitSalesTable() {
     const widgetPayload = useMemo(
         () => ({
             module: "TopProductUnitSales",
-            table: "shpordview",
-            columns: [
-                "part_code",
-                "part_desc",
-                "qty_ship_unt",
-                "trans_year", // Added trans_year
-                "trans_mo",   // Added trans_mo
-            ],
-            filters: `part_code IN (${PRODUCTS.map((code) => `'${code}'`).join(",")}) AND qty_ship_unt > 0 AND trans_datetime >= DATEADD(MONTH, -12, DATEADD(DAY, 1, EOMONTH(GETDATE())))`,
-            sort: ["trans_datetime DESC", "part_code ASC"],
+            queryId: "TopProductUnitSales"
         }),
         []
     );

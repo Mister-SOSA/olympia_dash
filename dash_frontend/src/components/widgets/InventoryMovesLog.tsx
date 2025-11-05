@@ -308,22 +308,7 @@ export default function InventoryMovesLog() {
     const widgetPayload = useMemo(
         () => ({
             module: "InventoryMovesLog",
-            table: "matlxfer",
-            columns: [
-                "xfer_date",
-                "xfer_time",
-                "xfer_user",
-                "xtype",
-                "xfer_part_code",
-                "xfer_qty",
-                "fmid",
-                "toid",
-                "xfer_doc",
-                "xfer_lot",
-
-            ],
-            sort: ["xfer_date DESC", "xfer_time DESC"],
-            limit: 50,
+            queryId: "InventoryMovesLog"
         }),
         []
     );

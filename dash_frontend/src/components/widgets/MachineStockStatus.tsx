@@ -6,35 +6,6 @@ import Widget from "./Widget";
 /* 📊 Types & Interfaces                  */
 /* -------------------------------------- */
 
-const MACHINE_CODES = [
-    "HERA",
-    "HERA-2",
-    "ELECTRA",
-    "ELECTRA-2",
-    "ATHENA",
-    "ATHENA-2",
-    "ZEUS",
-    "ZEUS-2",
-    "APOLLO",
-    "APOLLO-2",
-    "TITAN",
-    "TITAN-2",
-    "SPARTAN",
-    "SPARTAN-2",
-    "XL-ELECTRICMACHINE",
-    "XL-ELECTRICMACHINE 240V USED",
-    "XL-ELECTRICMACHINE208V-USED",
-    "XL-ELECTRICMACHINE240V",
-    "XL-LPMACHINE",
-    "XL-LPMACHINE USED",
-    "XL-MINIMACHINE",
-    "XL-MINIMACHINE USED",
-    "XL-NEW 4LG NEW 2K",
-    "XL-NEWMACHINE",
-    "XL-USED 4LG NAT",
-    "XL-USED 4LG NAT 2K"
-];
-
 interface MachineStockData {
     part_code: string;
     part_desc: string;
@@ -246,10 +217,7 @@ export default function MachineStockStatus() {
     const widgetPayload = useMemo(
         () => ({
             module: "MachineStockStatus",
-            table: "inventory",
-            columns: ["part_code", "part_desc", "cost_ctr", "available", "on_hand", "on_hold"],
-            filters: `part_code IN (${MACHINE_CODES.map(code => `'${code}'`).join(", ")})`,
-            sort: ["part_code ASC"]
+            queryId: "MachineStockStatus"
         }),
         []
     );

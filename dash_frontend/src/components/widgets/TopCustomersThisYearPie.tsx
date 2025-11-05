@@ -354,21 +354,11 @@ export default function TopCustomersThisYearPie() {
     const widgetPayload = useMemo(
         () => ({
             module: "TopCustomersThisYearPie",
-            table: "sumsales",
-            columns: [
-                "sumsales.cust_code",
-                "orderfrom.bus_name AS businessName",
-                "SUM(sumsales.sales_dol) AS totalSales",
-                "SUM(sumsales.qty_sold) AS total_quantity_sold",
-            ],
-            filters: `(sumsales.sale_date >= '${startOfYear}' AND sumsales.sale_date <= '${today}')`,
-            join: {
-                table: "orderfrom",
-                on: "sumsales.cust_code = orderfrom.cust_code",
-                type: "LEFT",
+            queryId: "TopCustomersThisYearPie",
+            params: {
+                startOfYear,
+                endDate: today,
             },
-            group_by: ["sumsales.cust_code", "orderfrom.bus_name"],
-            sort: ["totalSales DESC"],
         }),
         [startOfYear, today]
     );

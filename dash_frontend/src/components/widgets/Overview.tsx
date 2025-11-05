@@ -237,8 +237,7 @@ export default function Overview() {
     const widgetPayload = useMemo(
         () => ({
             module: "Overview",
-            table: "olympia_OverviewSales",
-            sort: ["period ASC"]
+            queryId: "Overview"
         }),
         []
     );

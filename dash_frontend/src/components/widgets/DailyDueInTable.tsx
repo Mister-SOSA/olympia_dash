@@ -240,34 +240,11 @@ export default function DailyDueInTable() {
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
 
-    // Memoize the widget payload without relying on raw SQL.
+    // Memoize the widget payload via the secure query registry.
     const widgetPayload = useMemo(
         () => ({
             module: "DailyDueInTable",
-            table: "poitem p",
-            columns: [
-                "p.po_number",
-                "ph.po_status AS po_status",
-                "p.vend_code",
-                "p.vend_name",
-                "p.part_code",
-                "p.part_desc",
-                "p.unit_price",
-                "p.date_orderd",
-                "p.vend_prom_date",
-                "p.item_no",
-                "p.part_type",
-                "p.date_rcv",
-                "p.qty_ord",
-                "p.qty_recvd",
-                "p.uom"
-            ],
-            join: {
-                type: "LEFT",
-                table: "pohead ph",
-                on: "p.po_number = ph.po_number"
-            },
-            filters: "p.date_orderd >= DATEADD(DAY, -90, GETDATE())"
+            queryId: "DailyDueInTable"
         }),
         []
     );

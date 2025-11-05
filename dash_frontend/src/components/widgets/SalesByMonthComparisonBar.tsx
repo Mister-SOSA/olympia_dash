@@ -500,23 +500,32 @@ export default function SalesByMonthComparisonBar() {
         []
     );
 
+    const currentRange = useMemo(
+        () => ({
+            start: current.start.toISOString().split("T")[0],
+            end: current.end.toISOString().split("T")[0],
+        }),
+        [current]
+    );
+
+    const lastYearRange = useMemo(
+        () => ({
+            start: lastYear.start.toISOString().split("T")[0],
+            end: lastYear.end.toISOString().split("T")[0],
+        }),
+        [lastYear]
+    );
+
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByMonthComparisonBar",
-            table: "sumsales",
-            columns: [
-                "FORMAT(sale_date, 'yyyy-MM') AS period",
-                "SUM(sales_dol) AS total",
-                "YEAR(sale_date) AS year",
-            ],
-            filters: `(
-        (sale_date >= '${current.start.toISOString().split("T")[0]}' AND sale_date <= '${current.end.toISOString().split("T")[0]}') 
-        OR (sale_date >= '${lastYear.start.toISOString().split("T")[0]}' AND sale_date <= '${lastYear.end.toISOString().split("T")[0]}')
-      )`,
-            group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
-            sort: ["period ASC", "year ASC"],
+            queryId: "SalesByMonthComparisonBar",
+            params: {
+                current: currentRange,
+                lastYear: lastYearRange,
+            },
         }),
-        [current, lastYear]
+        [currentRange, lastYearRange]
     );
 
     const renderSalesComparison = useCallback(
