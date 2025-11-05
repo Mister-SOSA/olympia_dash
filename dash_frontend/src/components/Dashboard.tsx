@@ -227,7 +227,7 @@ export default function Dashboard() {
                             const newPresets = [...presets];
                             const existingPreset = newPresets[index];
                             const now = new Date().toISOString();
-                            
+
                             newPresets[index] = {
                                 type: "grid",
                                 layout: deepClone(liveLayout),
@@ -338,7 +338,7 @@ export default function Dashboard() {
     const handleCreateBlank = useCallback((index: number) => {
         const now = new Date().toISOString();
         const newPresets = [...presets];
-        
+
         newPresets[index] = {
             type: "grid",
             layout: masterWidgetList.map((w) => ({ ...w, enabled: false })),
@@ -347,7 +347,7 @@ export default function Dashboard() {
             createdAt: now,
             updatedAt: now
         };
-        
+
         setPresets(newPresets);
         savePresetsToStorage(newPresets);
         setActivePresetIndex(index);
@@ -365,7 +365,7 @@ export default function Dashboard() {
         const newPresets = [...presets];
         const existingPreset = newPresets[index];
         const now = new Date().toISOString();
-        
+
         newPresets[index] = {
             type: presetType,
             layout: deepClone(layoutToSave),
@@ -374,7 +374,7 @@ export default function Dashboard() {
             createdAt: existingPreset?.createdAt || now,
             updatedAt: now
         };
-        
+
         setPresets(newPresets);
         savePresetsToStorage(newPresets);
         setActivePresetIndex(index);
@@ -429,7 +429,7 @@ export default function Dashboard() {
                     const newPresets = [...presets];
                     const existingPreset = newPresets[index];
                     const now = new Date().toISOString();
-                    
+
                     newPresets[index] = {
                         type: presetType,
                         layout: deepClone(layoutToSave),

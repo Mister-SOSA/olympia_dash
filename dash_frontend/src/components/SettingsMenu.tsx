@@ -5,11 +5,11 @@ import { useState } from "react";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES, Theme } from "@/contexts/ThemeContext";
 import { preferencesService } from "@/lib/preferences";
-import { 
-    MdCheck, 
-    MdPerson, 
-    MdPalette, 
-    MdKeyboard, 
+import {
+    MdCheck,
+    MdPerson,
+    MdPalette,
+    MdKeyboard,
     MdDashboard,
     MdNotifications,
     MdWidgets,
@@ -67,7 +67,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
             onClick={onClose}
         >
             <motion.div
@@ -103,11 +103,10 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
-                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
-                                                activeTab === tab.id
+                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${activeTab === tab.id
                                                     ? 'bg-ui-accent-primary text-white'
                                                     : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
-                                            }`}
+                                                }`}
                                         >
                                             <Icon className="w-5 h-5 flex-shrink-0" />
                                             <span>{tab.label}</span>
@@ -162,11 +161,10 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                         <button
                                                             key={t.id}
                                                             onClick={() => setTheme(t.id)}
-                                                            className={`w-full p-3 rounded-lg border transition-all text-left ${
-                                                                theme === t.id
+                                                            className={`w-full p-3 rounded-lg border transition-all text-left ${theme === t.id
                                                                     ? 'border-ui-accent-primary bg-ui-accent-primary-bg'
                                                                     : 'border-ui-border-primary bg-ui-bg-primary/50 hover:bg-ui-bg-secondary'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <div className="flex gap-1 flex-shrink-0">
@@ -332,11 +330,10 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 {user?.role && (
                                                     <div>
                                                         <div className="text-xs text-ui-text-secondary mb-1">Role</div>
-                                                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                                            user.role === 'admin'
+                                                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${user.role === 'admin'
                                                                 ? 'bg-ui-accent-secondary-bg text-ui-accent-secondary-text'
                                                                 : 'bg-ui-accent-primary-bg text-ui-accent-primary-text'
-                                                        }`}>
+                                                            }`}>
                                                             {user.role.toUpperCase()}
                                                         </span>
                                                     </div>
@@ -372,15 +369,15 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
 }
 
 // Helper Components
-function ToggleSetting({ 
-    label, 
-    description, 
-    enabled, 
-    onChange 
-}: { 
-    label: string; 
-    description: string; 
-    enabled: boolean; 
+function ToggleSetting({
+    label,
+    description,
+    enabled,
+    onChange
+}: {
+    label: string;
+    description: string;
+    enabled: boolean;
     onChange: (val: boolean) => void;
 }) {
     return (
@@ -391,9 +388,8 @@ function ToggleSetting({
             </div>
             <button
                 onClick={() => onChange(!enabled)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                    enabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
-                }`}
+                className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
+                    }`}
             >
                 <motion.div
                     className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md"

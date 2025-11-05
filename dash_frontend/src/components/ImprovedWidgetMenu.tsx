@@ -166,7 +166,7 @@ export default function ImprovedWidgetMenu({
     const visibleEnabledCount = filteredWidgets.filter((w) => isWidgetEnabled(w.id)).length;
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -195,8 +195,8 @@ export default function ImprovedWidgetMenu({
                 {/* Active Preset Context Banner */}
                 {activePresetName && (
                     <div className={`px-4 py-3 border-b border-ui-border-primary ${hasUnsavedChanges
-                            ? "bg-yellow-500/10 border-yellow-500/30"
-                            : "bg-ui-accent-primary-bg/30 border-ui-accent-primary-border"
+                        ? "bg-yellow-500/10 border-yellow-500/30"
+                        : "bg-ui-accent-primary-bg/30 border-ui-accent-primary-border"
                         }`}>
                         <div className="flex items-center gap-2 text-sm">
                             {hasUnsavedChanges && <MdWarning className="w-4 h-4 text-yellow-500 flex-shrink-0" />}

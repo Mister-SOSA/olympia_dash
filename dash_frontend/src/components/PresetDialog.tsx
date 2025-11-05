@@ -202,8 +202,8 @@ const PresetDialog = memo(function PresetDialog({
     return (
         <AnimatePresence mode="wait">
             {isOpen && (
-                <motion.div 
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                <motion.div
+                    className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -214,7 +214,7 @@ const PresetDialog = memo(function PresetDialog({
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ 
+                        transition={{
                             type: "spring",
                             damping: 25,
                             stiffness: 400
@@ -223,7 +223,7 @@ const PresetDialog = memo(function PresetDialog({
                         onClick={(e) => e.stopPropagation()}
                     >
                         {renderDialogContent()}
-                        
+
                         <button
                             onClick={onClose}
                             className="w-full mt-3 px-4 py-2 text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary transition-colors"

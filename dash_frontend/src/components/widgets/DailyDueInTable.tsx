@@ -315,7 +315,7 @@ export default function DailyDueInTable() {
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
-                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                    <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow>
                             <TableHead style={{ color: 'var(--table-text-primary)' }}>PO Number</TableHead>
                             <TableHead style={{ color: 'var(--table-text-primary)' }}>Status</TableHead>

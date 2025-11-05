@@ -99,7 +99,7 @@ export default function PresetManagerMenu({
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -160,31 +160,29 @@ export default function PresetManagerMenu({
                                         }}
                                         className={`
                                             relative aspect-square rounded-xl border-2 cursor-pointer transition-all
-                                            ${isActive 
-                                                ? "border-ui-accent-primary bg-gradient-to-br from-ui-accent-primary/20 to-ui-accent-primary/5 shadow-lg shadow-ui-accent-primary/20" 
+                                            ${isActive
+                                                ? "border-ui-accent-primary bg-gradient-to-br from-ui-accent-primary/20 to-ui-accent-primary/5 shadow-lg shadow-ui-accent-primary/20"
                                                 : info.isEmpty
-                                                ? "border-dashed border-ui-border-primary bg-ui-bg-secondary/30 hover:border-ui-accent-primary/50 hover:bg-ui-bg-secondary/50"
-                                                : "border-ui-accent-secondary-border bg-gradient-to-br from-ui-accent-secondary-bg/40 to-ui-bg-secondary hover:border-ui-accent-secondary hover:shadow-lg"
+                                                    ? "border-dashed border-ui-border-primary bg-ui-bg-secondary/30 hover:border-ui-accent-primary/50 hover:bg-ui-bg-secondary/50"
+                                                    : "border-ui-accent-secondary-border bg-gradient-to-br from-ui-accent-secondary-bg/40 to-ui-bg-secondary hover:border-ui-accent-secondary hover:shadow-lg"
                                             }
                                         `}
                                     >
                                         {/* Preset Number Badge */}
-                                        <div className={`absolute -top-2 -left-2 w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm shadow-lg ${
-                                            isActive 
+                                        <div className={`absolute -top-2 -left-2 w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm shadow-lg ${isActive
                                                 ? "bg-ui-accent-primary border-ui-accent-primary text-white"
                                                 : "bg-ui-bg-primary border-ui-border-primary text-ui-text-primary"
-                                        }`}>
+                                            }`}>
                                             {index + 1}
                                         </div>
 
                                         {/* Type Badge */}
                                         {!info.isEmpty && preset && (
                                             <div className="absolute -top-2 -right-2">
-                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                                    preset.type === "fullscreen" 
-                                                        ? "bg-ui-accent-secondary text-white" 
+                                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${preset.type === "fullscreen"
+                                                        ? "bg-ui-accent-secondary text-white"
                                                         : "bg-ui-accent-primary text-white"
-                                                }`}>
+                                                    }`}>
                                                     {preset.type === "fullscreen" ? (
                                                         <MdFullscreen className="w-3 h-3" />
                                                     ) : (
@@ -224,7 +222,7 @@ export default function PresetManagerMenu({
                                             <motion.div
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
-                                                className="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-xl flex items-center justify-center gap-2"
+                                                className="absolute inset-0 bg-black/80 rounded-xl flex items-center justify-center gap-2"
                                             >
                                                 <button
                                                     onClick={(e) => {
@@ -291,7 +289,7 @@ export default function PresetManagerMenu({
             {/* Type Selection Modal */}
             <AnimatePresence>
                 {saveTypeModal && (
-                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}

@@ -19,8 +19,8 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                 onMouseMove={(e) => mouseX.set(e.pageX)}
                 onMouseLeave={() => mouseX.set(Infinity)}
                 className={cn(
-                    "flex h-16 gap-2 items-end rounded-2xl backdrop-blur-xl px-3 pb-2",
-                    "bg-ui-bg-primary/95 border-2 border-ui-border-primary/80",
+                    "flex h-16 gap-2 items-end rounded-2xl px-3 pb-2",
+                    "bg-ui-bg-primary border-2 border-ui-border-primary/80",
                     "shadow-[0_8px_32px_rgba(0,0,0,0.6)]",
                     className
                 )}

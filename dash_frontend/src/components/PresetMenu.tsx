@@ -43,7 +43,7 @@ const PresetMenu = memo(function PresetMenu({
     return (
         <AnimatePresence mode="wait">
             {isOpen && (
-                <motion.div 
+                <motion.div
                     className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -54,18 +54,18 @@ const PresetMenu = memo(function PresetMenu({
                         initial={{ opacity: 0, y: 20, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                        transition={{ 
+                        transition={{
                             type: "spring",
                             damping: 25,
                             stiffness: 400
                         }}
                         className="pointer-events-auto"
                     >
-                        <div className="flex items-center gap-3 bg-ui-bg-primary/95 backdrop-blur-md border border-ui-border-primary rounded-2xl px-4 py-3 shadow-2xl">
+                        <div className="flex items-center gap-3 bg-ui-bg-primary border border-ui-border-primary rounded-2xl px-4 py-3 shadow-2xl">
                             <span className="text-sm font-medium text-ui-text-secondary mr-2">
                                 Save to slot {presetIndex + 1}:
                             </span>
-                            
+
                             <button
                                 onClick={() => handleSave("grid")}
                                 className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ui-accent-primary-bg hover:bg-ui-accent-primary transition-all hover:scale-105 active:scale-95"
@@ -97,7 +97,7 @@ const PresetMenu = memo(function PresetMenu({
                         </div>
                     </motion.div>
                 </motion.div>
-        )}
+            )}
         </AnimatePresence>
     );
 });

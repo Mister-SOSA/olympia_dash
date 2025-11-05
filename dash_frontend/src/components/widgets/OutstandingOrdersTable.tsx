@@ -248,7 +248,7 @@ export default function OutstandingOrdersTable() {
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
-                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                    <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow className="border-border/50 hover:bg-transparent">
                             <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
@@ -333,9 +333,9 @@ export default function OutstandingOrdersTable() {
                                 <TableCell className="text-right py-1.5">
                                     <div className="flex items-center justify-end gap-1.5">
                                         <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{ 
-                                            backgroundColor: 'var(--badge-warning-bg)', 
-                                            color: 'var(--badge-warning-text)', 
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{
+                                            backgroundColor: 'var(--badge-warning-bg)',
+                                            color: 'var(--badge-warning-text)',
                                             borderColor: 'var(--badge-warning-border)'
                                         }}>
                                             {row.overdueDays}d

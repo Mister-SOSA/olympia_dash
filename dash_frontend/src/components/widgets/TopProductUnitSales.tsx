@@ -168,7 +168,7 @@ export default function TopProductUnitSalesTable() {
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
-                    <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                    <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                         <TableRow className="border-border/50 hover:bg-transparent">
                             <TableHead className="font-bold py-2 w-12" style={{ color: 'var(--table-text-primary)' }}>
                                 <div className="flex items-center gap-1">
@@ -224,10 +224,10 @@ export default function TopProductUnitSalesTable() {
                                 if (rank === 3) return 'var(--badge-warning-border)';
                                 return 'var(--text-muted)';
                             };
-                            
+
                             return (
-                                <TableRow 
-                                    key={i} 
+                                <TableRow
+                                    key={i}
                                     className={`border-border/30 transition-all duration-300 hover:bg-muted/50`}
                                     style={rank === 1 ? {
                                         backgroundColor: 'var(--badge-warning-bg)',
@@ -239,7 +239,7 @@ export default function TopProductUnitSalesTable() {
                                     } : {}}
                                 >
                                     <TableCell className="py-1.5 text-center">
-                                        <span className="font-bold text-[15px]" style={{ 
+                                        <span className="font-bold text-[15px]" style={{
                                             color: getRankColor(),
                                             fontWeight: rank <= 2 ? 900 : 700
                                         }}>

@@ -410,7 +410,7 @@ export default function InventoryMovesLog() {
                     {/* Table View for Medium+ Sizes */}
                     <div className="hidden @xl:block p-1">
                         <Table className="text-left inventory-moves-log-table" style={{ color: 'var(--table-text-primary)' }}>
-                            <TableHeader className="sticky top-0 backdrop-blur z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                            <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                                 <TableRow className="border-border/50 hover:bg-transparent">
                                     {/* Date - Hidden below 7xl container */}
                                     <TableHead className="font-semibold hidden @7xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>

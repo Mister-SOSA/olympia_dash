@@ -307,11 +307,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                             activeIndex === null || activeIndex === index ? 1 : 0.3
                                         }
                                         style={{
-                                            filter:
-                                                activeIndex === index
-                                                    ? "brightness(1.15) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))"
-                                                    : "none",
-                                            transition: "opacity 0.2s ease, filter 0.2s ease",
+                                            transition: "opacity 0.2s ease",
                                             cursor: "pointer",
                                             stroke: "var(--background-light)",
                                             strokeWidth: 2,
