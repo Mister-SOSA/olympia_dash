@@ -13,8 +13,7 @@ import {
     MdDashboard,
     MdNotifications,
     MdWidgets,
-    MdSettings as MdSettingsIcon,
-    MdChevronRight
+    MdSettings as MdSettingsIcon
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -29,7 +28,7 @@ type Tab = 'general' | 'dashboard' | 'widgets' | 'notifications' | 'keyboard' | 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
     const [activeTab, setActiveTab] = useState<Tab>('general');
-    const [themeExpanded, setThemeExpanded] = useState(false);
+    const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>('dark');
 
     // Load preferences
     const [autoSaveLayout, setAutoSaveLayout] = useState(
@@ -104,8 +103,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
                                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${activeTab === tab.id
-                                                    ? 'bg-ui-accent-primary text-white'
-                                                    : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
+                                                ? 'bg-ui-accent-primary text-white'
+                                                : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                                                 }`}
                                         >
                                             <Icon className="w-5 h-5 flex-shrink-0" />
@@ -129,65 +128,109 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
 
                                         {/* Theme Selector */}
                                         <div className="space-y-3">
-                                            <button
-                                                onClick={() => setThemeExpanded(!themeExpanded)}
-                                                className="w-full flex items-center justify-between p-4 rounded-lg bg-ui-bg-secondary hover:bg-ui-bg-tertiary border border-ui-border-primary transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <MdPalette className="w-5 h-5 text-ui-accent-primary-text" />
-                                                    <div className="text-left">
-                                                        <div className="font-medium text-ui-text-primary text-sm">Theme</div>
-                                                        <div className="text-xs text-ui-text-secondary">
-                                                            {THEMES.find(t => t.id === theme)?.name}
-                                                        </div>
-                                                    </div>
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-sm font-medium text-ui-text-primary">Theme</label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setThemeCategory('dark')}
+                                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors ${themeCategory === 'dark'
+                                                            ? 'bg-ui-accent-primary text-white'
+                                                            : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                            }`}
+                                                    >
+                                                        Dark
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setThemeCategory('light')}
+                                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors ${themeCategory === 'light'
+                                                            ? 'bg-ui-accent-primary text-white'
+                                                            : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                            }`}
+                                                    >
+                                                        Light
+                                                    </button>
                                                 </div>
-                                                <motion.div
-                                                    animate={{ rotate: themeExpanded ? 90 : 0 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
-                                                    <MdChevronRight className="w-5 h-5 text-ui-text-secondary" />
-                                                </motion.div>
-                                            </button>
+                                            </div>
 
-                                            {themeExpanded && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    exit={{ opacity: 0, height: 0 }}
-                                                    className="space-y-2 pl-4"
-                                                >
-                                                    {THEMES.map((t) => (
-                                                        <button
-                                                            key={t.id}
-                                                            onClick={() => setTheme(t.id)}
-                                                            className={`w-full p-3 rounded-lg border transition-all text-left ${theme === t.id
-                                                                    ? 'border-ui-accent-primary bg-ui-accent-primary-bg'
-                                                                    : 'border-ui-border-primary bg-ui-bg-primary/50 hover:bg-ui-bg-secondary'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="flex gap-1 flex-shrink-0">
-                                                                    {t.colors.map((color, idx) => (
-                                                                        <div
-                                                                            key={idx}
-                                                                            className="w-4 h-4 rounded-full border border-black/20"
-                                                                            style={{ backgroundColor: color }}
-                                                                        />
-                                                                    ))}
+                                            <div className="grid grid-cols-4 gap-2.5">
+                                                {THEMES.filter(t => t.category === themeCategory).map((t) => (
+                                                    <button
+                                                        key={t.id}
+                                                        onClick={() => setTheme(t.id)}
+                                                        className={`group relative aspect-square rounded-lg border-2 transition-all hover:scale-105 overflow-hidden ${theme === t.id
+                                                            ? 'border-ui-accent-primary shadow-lg ring-2 ring-ui-accent-primary/30'
+                                                            : 'border-ui-border-primary hover:border-ui-accent-primary/50'
+                                                            }`}
+                                                    >
+                                                        {/* Mini Dashboard Preview */}
+                                                        <div className="absolute inset-0 flex flex-col" style={{ backgroundColor: t.colors[2] }}>
+                                                            <div className="flex-1 p-2 space-y-2">
+                                                                {/* Header Bar */}
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className="h-1.5 w-10 rounded" style={{ backgroundColor: t.colors[0] }} />
+                                                                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.colors[1] }} />
                                                                 </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="font-medium text-ui-text-primary text-sm">{t.name}</div>
-                                                                    <div className="text-xs text-ui-text-secondary truncate">{t.description}</div>
+
+                                                                {/* Single Widget Card */}
+                                                                <div className="rounded p-2 space-y-1" style={{
+                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'
+                                                                }}>
+                                                                    <div className="h-1 w-full rounded" style={{
+                                                                        backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+                                                                    }} />
+                                                                    <div className="h-1 w-3/4 rounded" style={{
+                                                                        backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+                                                                    }} />
                                                                 </div>
-                                                                {theme === t.id && (
-                                                                    <MdCheck className="w-5 h-5 text-ui-accent-primary-text flex-shrink-0" />
-                                                                )}
+
+                                                                {/* Compact Chart Area */}
+                                                                <div className="rounded p-2" style={{
+                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'
+                                                                }}>
+                                                                    <div className="flex items-end justify-between h-8 gap-0.5">
+                                                                        <div className="w-full rounded-t" style={{
+                                                                            backgroundColor: t.colors[0],
+                                                                            height: '50%'
+                                                                        }} />
+                                                                        <div className="w-full rounded-t" style={{
+                                                                            backgroundColor: t.colors[1],
+                                                                            height: '80%'
+                                                                        }} />
+                                                                        <div className="w-full rounded-t" style={{
+                                                                            backgroundColor: t.colors[0],
+                                                                            height: '35%'
+                                                                        }} />
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                        </button>
-                                                    ))}
-                                                </motion.div>
-                                            )}
+
+                                                            {/* Theme Name */}
+                                                            <div
+                                                                className="px-1.5 py-1 text-center flex-shrink-0"
+                                                                style={{
+                                                                    borderTop: `1px solid ${t.category === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                                                                }}
+                                                            >
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <span
+                                                                        className="text-[10px] font-medium truncate"
+                                                                        style={{ color: t.category === 'dark' ? '#ffffff' : '#1f2937' }}
+                                                                    >
+                                                                        {t.name}
+                                                                    </span>
+                                                                    {theme === t.id && (
+                                                                        <MdCheck
+                                                                            className="w-2.5 h-2.5 flex-shrink-0"
+                                                                            style={{ color: t.colors[0] }}
+                                                                        />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
 
                                         {/* Animations Toggle */}
@@ -331,8 +374,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                     <div>
                                                         <div className="text-xs text-ui-text-secondary mb-1">Role</div>
                                                         <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${user.role === 'admin'
-                                                                ? 'bg-ui-accent-secondary-bg text-ui-accent-secondary-text'
-                                                                : 'bg-ui-accent-primary-bg text-ui-accent-primary-text'
+                                                            ? 'bg-ui-accent-secondary-bg text-ui-accent-secondary-text'
+                                                            : 'bg-ui-accent-primary-bg text-ui-accent-primary-text'
                                                             }`}>
                                                             {user.role.toUpperCase()}
                                                         </span>
@@ -377,9 +420,10 @@ function ToggleSetting({
 }: {
     label: string;
     description: string;
-    enabled: boolean;
+    enabled?: boolean;
     onChange: (val: boolean) => void;
 }) {
+    const isEnabled = enabled ?? false;
     return (
         <div className="flex items-center justify-between p-4 rounded-lg bg-ui-bg-secondary border border-ui-border-primary">
             <div className="flex-1">
@@ -387,13 +431,13 @@ function ToggleSetting({
                 <div className="text-xs text-ui-text-secondary mt-1">{description}</div>
             </div>
             <button
-                onClick={() => onChange(!enabled)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
+                onClick={() => onChange(!isEnabled)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
                     }`}
             >
                 <motion.div
                     className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md"
-                    animate={{ x: enabled ? 24 : 0 }}
+                    animate={{ x: isEnabled ? 24 : 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
             </button>
