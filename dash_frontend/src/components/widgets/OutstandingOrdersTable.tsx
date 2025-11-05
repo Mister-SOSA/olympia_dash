@@ -44,134 +44,26 @@ export default function OutstandingOrdersTable() {
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
 
-    // Memoize hidden vendor codes string for query filtering.
-    const hiddenVendorCodes = useMemo(
-        () => config.HIDDEN_OUTSTANDING_VENDOR_CODES.map(code => `'${code}'`).join(", "),
-        []
-    );
-
-    // Prepare the widget payload with the raw SQL query.
+    // Prepare the widget payload to query the backed view securely.
     const widgetPayload = useMemo(
         () => ({
             module: "OutstandingOrdersTable",
-            raw_query: `
-        WITH AdjustedOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price,
-                date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                date_rcv,
-                item_no,
-                part_type,
-                qty_ord,
-                uom,
-                ROW_NUMBER() OVER (
-                    PARTITION BY po_number, item_no
-                    ORDER BY
-                        CASE WHEN date_rcv IS NOT NULL THEN 1 ELSE 2 END,
-                        date_rcv DESC
-                ) AS row_num
-            FROM
-                poitem
-            WHERE
-                part_type = 'S'
-        ),
-        FilteredOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price,
-                date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                date_rcv,
-                item_no,
-                part_type,
-                qty_ord,
-                uom
-            FROM
-                AdjustedOrders
-            WHERE
-                row_num = 1
-                AND vend_code NOT IN (${hiddenVendorCodes})
-        ),
-        RecentOrders AS (
-            SELECT
-                po_number,
-                vend_code,
-                vend_name,
-                part_code,
-                part_desc,
-                unit_price AS recent_unit_price,
-                date_orderd AS recent_date_orderd,
-                vend_prom_date,
-                date_prom_user,
-                part_type,
-                qty_ord,
-                uom,
-                item_no
-            FROM
-                FilteredOrders
-            WHERE
-                date_orderd >= DATEADD(DAY, -10, GETDATE())
-                AND date_rcv IS NULL
-                AND vend_prom_date < DATEADD(DAY, -1, GETDATE())
-        )
-        SELECT
-            ro.po_number,
-            ph.po_status,
-            ro.vend_code,
-            ro.vend_name,
-            ro.part_code,
-            ro.part_desc,
-            ro.recent_unit_price,
-            ro.recent_date_orderd,
-            ro.vend_prom_date,
-            ro.date_prom_user,
-            ro.part_type,
-            ro.qty_ord,
-            ro.uom,
-            ro.item_no,
-            lo.last_order_date,
-            lo.last_order_unit_price
-        FROM
-            RecentOrders ro
-        LEFT JOIN
-            pohead ph ON ro.po_number = ph.po_number
-        OUTER APPLY (
-            SELECT TOP 1
-                p2.date_orderd AS last_order_date,
-                p2.unit_price AS last_order_unit_price
-            FROM
-                FilteredOrders p2
-            WHERE
-                p2.part_code = ro.part_code
-                AND p2.date_orderd < ro.recent_date_orderd
-            ORDER BY
-                p2.date_orderd DESC
-        ) lo
-        WHERE
-            ph.po_status = '12'
-        ORDER BY
-            ro.po_number ASC,
-            ro.vend_prom_date ASC;
-      `,
+            table: "olympia_OutstandingDueIn",
+            sort: [
+                "po_number ASC",
+                "vend_prom_date ASC"
+            ]
         }),
-        [hiddenVendorCodes]
+        []
     );
 
     // Transform raw data into table row data.
     const renderFunction = useCallback((data: POItemData[]) => {
-        const tableData = data.map((item) => {
+        const visibleData = data.filter(
+            (item) => !config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code ?? "")
+        );
+
+        const tableData = visibleData.map((item) => {
             const adjustedOrderDate = adjustDateByOneDay(item.recent_date_orderd ?? undefined);
             const adjustedVendPromDate = adjustDateByOneDay(item.vend_prom_date ?? undefined);
 
