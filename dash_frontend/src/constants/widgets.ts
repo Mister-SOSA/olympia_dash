@@ -23,7 +23,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Sales Overview",
         category: "💸 Sales",
         description: "Displays an overview of sales metrics",
-        defaultSize: { w: 4, h: 4 }
+        defaultSize: { w: 12, h: 2 }
     },
     {
         id: "SalesByDayBar",
@@ -55,7 +55,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Top Customers",
         category: "💸 Sales",
         description: "Shows top customers by sales volume",
-        defaultSize: { w: 4, h: 4 }
+        defaultSize: { w: 6, h: 5 }
     },
 
     // Purchasing widgets
@@ -65,7 +65,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Outstanding Orders",
         category: "🧾 Purchasing",
         description: "Shows outstanding purchase orders",
-        defaultSize: { w: 6, h: 4 }
+        defaultSize: { w: 12, h: 5 }
     },
     {
         id: "DailyDueInTable",
@@ -73,7 +73,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Daily Due In",
         category: "🧾 Purchasing",
         description: "Shows items due in today",
-        defaultSize: { w: 6, h: 4 }
+        defaultSize: { w: 12, h: 5 }
     },
     {
         id: "DailyDueInHiddenVendTable",
@@ -81,7 +81,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Daily Due In (Maintenance Only)",
         category: "🧾 Purchasing",
         description: "Shows maintenance items due in today",
-        defaultSize: { w: 6, h: 4 }
+        defaultSize: { w: 12, h: 5 }
     },
 
     // Inventory widgets
@@ -91,7 +91,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Daily Moves by User",
         category: "📦 Inventory",
         description: "Shows inventory moves by user",
-        defaultSize: { w: 4, h: 4 }
+        defaultSize: { w: 6, h: 4 }
     },
     {
         id: "InventoryMovesLog",
@@ -99,7 +99,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Inventory Moves Log",
         category: "📦 Inventory",
         description: "Log of recent inventory movements",
-        defaultSize: { w: 6, h: 4 }
+        defaultSize: { w: 12, h: 6 }
     },
     {
         id: "DailyProductionPutawaysBar",
@@ -115,7 +115,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Top Product Sales",
         category: "📦 Inventory",
         description: "Shows top selling products by units",
-        defaultSize: { w: 4, h: 4 }
+        defaultSize: { w: 12, h: 6 }
     },
     {
         id: "MachineStockStatus",
@@ -123,7 +123,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Machine Stock Status",
         category: "📦 Inventory",
         description: "Shows stock status for machines",
-        defaultSize: { w: 6, h: 4 }
+        defaultSize: { w: 4, h: 6 }
     },
 
     // Utility widgets
@@ -133,7 +133,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Clock",
         category: "🔧 Utilities",
         description: "Displays current time",
-        defaultSize: { w: 2, h: 2 }
+        defaultSize: { w: 3, h: 2 }
     },
     {
         id: "DateWidget",
@@ -141,7 +141,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Date",
         category: "🔧 Utilities",
         description: "Displays current date",
-        defaultSize: { w: 2, h: 2 }
+        defaultSize: { w: 3, h: 2 }
     },
     {
         id: "Humidity",
@@ -149,7 +149,7 @@ export const WIDGETS: WidgetDefinition[] = [
         title: "Humidity",
         category: "🔧 Utilities",
         description: "Shows current humidity level",
-        defaultSize: { w: 2, h: 2 }
+        defaultSize: { w: 3, h: 2 }
     }
 ];
 
