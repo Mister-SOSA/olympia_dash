@@ -54,6 +54,10 @@ export type PresetType = "grid" | "fullscreen";
 export interface DashboardPreset {
     type: PresetType;
     layout: Widget[];
+    name?: string;
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 // Type for the raw data returned from the API
 export interface POItemData {

@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
-import { DashboardPreset, Widget, PresetType } from "@/types";
-import { MdClose, MdGridView, MdFullscreen } from "react-icons/md";
+import React, { memo, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Widget, PresetType } from "@/types";
+import { MdGridView, MdFullscreen } from "react-icons/md";
 
 interface PresetMenuProps {
     isOpen: boolean;
@@ -13,84 +13,93 @@ interface PresetMenuProps {
     onSavePreset: (index: number, layout: Widget[], type: PresetType) => void;
 }
 
-export default function PresetMenu({
+const PresetMenu = memo(function PresetMenu({
     isOpen,
     onClose,
     presetIndex,
     currentLayout,
     onSavePreset,
 }: PresetMenuProps) {
-    if (!isOpen) return null;
-
-    const handleSave = (type: PresetType) => {
+    const handleSave = useCallback((type: PresetType) => {
         onSavePreset(presetIndex, currentLayout, type);
         onClose();
-    };
+    }, [presetIndex, currentLayout, onSavePreset, onClose]);
+
+    // Handle ESC key
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen, onClose]);
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary w-full max-w-md"
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-ui-border-primary">
-                    <h2 className="text-lg font-semibold text-ui-text-primary">Save Preset {presetIndex + 1}</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
+        <AnimatePresence mode="wait">
+            {isOpen && (
+                <motion.div 
+                    className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                        transition={{ 
+                            type: "spring",
+                            damping: 25,
+                            stiffness: 400
+                        }}
+                        className="pointer-events-auto"
                     >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
+                        <div className="flex items-center gap-3 bg-ui-bg-primary/95 backdrop-blur-md border border-ui-border-primary rounded-2xl px-4 py-3 shadow-2xl">
+                            <span className="text-sm font-medium text-ui-text-secondary mr-2">
+                                Save to slot {presetIndex + 1}:
+                            </span>
+                            
+                            <button
+                                onClick={() => handleSave("grid")}
+                                className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ui-accent-primary-bg hover:bg-ui-accent-primary transition-all hover:scale-105 active:scale-95"
+                            >
+                                <MdGridView className="w-5 h-5 text-ui-accent-primary-text group-hover:text-white transition-colors" />
+                                <span className="text-sm font-medium text-ui-accent-primary-text group-hover:text-white transition-colors">
+                                    Grid
+                                </span>
+                            </button>
 
-                {/* Content */}
-                <div className="p-4 space-y-3">
-                    <p className="text-sm text-ui-text-secondary mb-4">Choose how to display this preset:</p>
+                            <button
+                                onClick={() => handleSave("fullscreen")}
+                                className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary transition-all hover:scale-105 active:scale-95"
+                            >
+                                <MdFullscreen className="w-5 h-5 text-ui-accent-secondary-text group-hover:text-white transition-colors" />
+                                <span className="text-sm font-medium text-ui-accent-secondary-text group-hover:text-white transition-colors">
+                                    Fullscreen
+                                </span>
+                            </button>
 
-                    <button
-                        onClick={() => handleSave("grid")}
-                        className="w-full p-4 rounded-lg border-2 border-ui-border-primary hover:border-ui-accent-primary-light bg-ui-bg-secondary/50 hover:bg-ui-bg-secondary transition-all text-left group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-ui-accent-primary-bg rounded-lg group-hover:bg-ui-accent-primary-bg transition-colors">
-                                <MdGridView className="w-6 h-6 text-ui-accent-primary-text" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-ui-text-primary">Grid Layout</h3>
-                                <p className="text-xs text-ui-text-secondary">Multiple widgets in a grid</p>
-                            </div>
+                            <div className="w-px h-6 bg-ui-border-primary mx-1" />
+
+                            <button
+                                onClick={onClose}
+                                className="px-3 py-2 text-xs font-medium text-ui-text-secondary hover:text-ui-text-primary transition-colors"
+                            >
+                                ESC
+                            </button>
                         </div>
-                    </button>
-
-                    <button
-                        onClick={() => handleSave("fullscreen")}
-                        className="w-full p-4 rounded-lg border-2 border-ui-border-primary hover:border-ui-accent-secondary-light bg-ui-bg-secondary/50 hover:bg-ui-bg-secondary transition-all text-left group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-ui-accent-secondary-bg rounded-lg group-hover:bg-ui-accent-secondary-bg transition-colors">
-                                <MdFullscreen className="w-6 h-6 text-ui-accent-secondary-text" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium text-ui-text-primary">Fullscreen Widget</h3>
-                                <p className="text-xs text-ui-text-secondary">Single widget fills entire screen</p>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-ui-border-primary">
-                    <button
-                        onClick={onClose}
-                        className="w-full px-4 py-2 bg-ui-bg-secondary hover:bg-ui-bg-tertiary text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </motion.div>
-        </div>
+                    </motion.div>
+                </motion.div>
+        )}
+        </AnimatePresence>
     );
-}
+});
+
+export default PresetMenu;

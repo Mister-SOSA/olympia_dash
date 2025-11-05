@@ -8,6 +8,8 @@ import { DashboardPreset } from "@/types";
 
 interface DashboardDockProps {
     presets: Array<DashboardPreset | null>;
+    activePresetIndex: number | null;
+    hasUnsavedChanges: boolean;
     onWidgetsClick: () => void;
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
@@ -17,6 +19,8 @@ interface DashboardDockProps {
 
 export default function DashboardDock({
     presets,
+    activePresetIndex,
+    hasUnsavedChanges,
     onWidgetsClick,
     onPresetManagerClick,
     onPresetClick,
@@ -86,25 +90,42 @@ export default function DashboardDock({
                         {/* Preset Slots 1-9 */}
                         {presets.map((preset, index) => {
                             const isFilled = preset !== null && preset.layout.filter(w => w.enabled).length > 0;
+                            const isActive = activePresetIndex === index;
+                            const presetName = preset?.name || `Preset ${index + 1}`;
+
+                            let tooltipText = `${presetName}`;
+                            if (isActive && hasUnsavedChanges) {
+                                tooltipText += " (Active • Unsaved changes)";
+                            } else if (isActive) {
+                                tooltipText += " (Active)";
+                            } else if (isFilled) {
+                                tooltipText += " - Click to load, Right-click to overwrite";
+                            } else {
+                                tooltipText += " - Right-click to save";
+                            }
 
                             return (
                                 <DockIcon
                                     key={index}
                                     onClick={() => onPresetClick(index)}
                                     onContextMenu={(e) => handlePresetRightClick(e, index)}
-                                    title={
-                                        isFilled
-                                            ? `Preset ${index + 1} - Click to load, Right-click to overwrite`
-                                            : `Preset ${index + 1} - Right-click to save`
-                                    }
+                                    title={tooltipText}
                                     className={
-                                        isFilled
-                                            ? "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary relative"
-                                            : "bg-ui-bg-secondary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
+                                        isActive
+                                            ? "bg-ui-accent-primary hover:bg-ui-accent-primary-hover border-ui-accent-primary relative ring-2 ring-ui-accent-primary/50"
+                                            : isFilled
+                                                ? "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary relative"
+                                                : "bg-ui-bg-secondary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
                                     }
                                 >
                                     <span className="font-semibold text-sm">{index + 1}</span>
-                                    {isFilled && (
+                                    {isActive && hasUnsavedChanges && (
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)] animate-pulse" />
+                                    )}
+                                    {isActive && !hasUnsavedChanges && (
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+                                    )}
+                                    {!isActive && isFilled && (
                                         <span className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-secondary-text rounded-full shadow-[0_0_8px_rgba(147,51,234,0.6)]" />
                                     )}
                                 </DockIcon>

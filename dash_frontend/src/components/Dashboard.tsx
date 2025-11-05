@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import DashboardDock from "./DashboardDock";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
-import PresetMenu from "./PresetMenu";
+import PresetDialog from "./PresetDialog";
 import PresetManagerMenu from "./PresetManagerMenu";
 import SettingsMenu from "./SettingsMenu";
 import { Widget, DashboardPreset, PresetType } from "@/types";
@@ -16,6 +16,9 @@ import {
     savePresetsToStorage,
     saveCurrentPresetType,
     readCurrentPresetType,
+    saveActivePresetIndex,
+    readActivePresetIndex,
+    generatePresetName,
 } from "@/utils/layoutUtils";
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { toast } from "sonner";
@@ -80,12 +83,15 @@ export default function Dashboard() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [presetManagerOpen, setPresetManagerOpen] = useState(false);
-    const [presetSaveOpen, setPresetSaveOpen] = useState(false);
-    const [presetSaveIndex, setPresetSaveIndex] = useState<number>(0);
+    const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+    const [presetDialogType, setPresetDialogType] = useState<"empty" | "save" | "overwrite" | "unsaved">("save");
+    const [presetDialogIndex, setPresetDialogIndex] = useState<number>(0);
     const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
     const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
+    const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
     // Check authentication on mount
@@ -134,6 +140,10 @@ export default function Dashboard() {
             // Restore the last used preset type
             const storedPresetType = readCurrentPresetType();
             setCurrentPresetType(storedPresetType as PresetType);
+
+            // Restore the active preset index
+            const storedActiveIndex = readActivePresetIndex();
+            setActivePresetIndex(storedActiveIndex);
         };
 
         initPreferences();
@@ -169,9 +179,12 @@ export default function Dashboard() {
                 setTempLayout(merged);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
+                setActivePresetIndex(index);
+                setHasUnsavedChanges(false);
 
                 // Save the preset type so it persists across page reloads
                 saveCurrentPresetType(preset.type);
+                saveActivePresetIndex(index);
 
                 setTransitionPhase("fadeOut");
                 setTimeout(() => setTransitionPhase("none"), 300);
@@ -212,12 +225,22 @@ export default function Dashboard() {
                         const liveLayout = readLayoutFromStorage();
                         if (liveLayout) {
                             const newPresets = [...presets];
+                            const existingPreset = newPresets[index];
+                            const now = new Date().toISOString();
+                            
                             newPresets[index] = {
                                 type: "grid",
-                                layout: deepClone(liveLayout)
+                                layout: deepClone(liveLayout),
+                                name: existingPreset?.name || generatePresetName(liveLayout),
+                                description: existingPreset?.description || "",
+                                createdAt: existingPreset?.createdAt || now,
+                                updatedAt: now
                             };
                             setPresets(newPresets);
                             savePresetsToStorage(newPresets);
+                            setActivePresetIndex(index);
+                            saveActivePresetIndex(index);
+                            setHasUnsavedChanges(false);
                             toast.success(`Saved Preset ${index + 1}`);
                         }
                     } else {
@@ -240,15 +263,30 @@ export default function Dashboard() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleKeyDown]);
 
+    // Detect unsaved changes when layout changes and we have an active preset
+    useEffect(() => {
+        if (activePresetIndex !== null && presets[activePresetIndex]) {
+            const activePreset = presets[activePresetIndex];
+            if (activePreset && !layoutsEqual(layout, activePreset.layout)) {
+                setHasUnsavedChanges(true);
+            } else {
+                setHasUnsavedChanges(false);
+            }
+        }
+    }, [layout, activePresetIndex, presets]);
+
     // Save/cancel from widget menu
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
         if (!layoutsEqual(layout, tempLayout)) {
             setLayout([...tempLayout]);
-            // When manually editing widgets, switch to grid mode
+            // When manually editing widgets, switch to grid mode and clear active preset
             setCurrentPresetType("grid");
             saveCurrentPresetType("grid");
+            setActivePresetIndex(null);
+            saveActivePresetIndex(null);
+            setHasUnsavedChanges(false);
         }
     }, [tempLayout, layout]);
 
@@ -260,6 +298,96 @@ export default function Dashboard() {
         await authService.logout();
         router.push('/login');
     };
+
+    // Handle preset click with intelligent dialog
+    const handlePresetClick = useCallback((index: number) => {
+        const preset = presets[index];
+        const isPresetEmpty = !preset || preset.layout.filter(w => w.enabled).length === 0;
+
+        if (isPresetEmpty) {
+            // Empty slot - offer to create blank preset
+            setPresetDialogType("empty");
+            setPresetDialogIndex(index);
+            setPresetDialogOpen(true);
+        } else if (hasUnsavedChanges && activePresetIndex !== index) {
+            // Has unsaved changes - warn before loading
+            setPresetDialogType("unsaved");
+            setPresetDialogIndex(index);
+            setPresetDialogOpen(true);
+        } else {
+            // Normal load
+            loadPreset(index);
+        }
+    }, [presets, hasUnsavedChanges, activePresetIndex, loadPreset]);
+
+    // Handle preset save (right-click)
+    const handlePresetSave = useCallback((index: number) => {
+        const preset = presets[index];
+        const isPresetEmpty = !preset || preset.layout.filter(w => w.enabled).length === 0;
+
+        if (isPresetEmpty) {
+            setPresetDialogType("save");
+        } else {
+            setPresetDialogType("overwrite");
+        }
+        setPresetDialogIndex(index);
+        setPresetDialogOpen(true);
+    }, [presets]);
+
+    // Create a blank preset
+    const handleCreateBlank = useCallback((index: number) => {
+        const now = new Date().toISOString();
+        const newPresets = [...presets];
+        
+        newPresets[index] = {
+            type: "grid",
+            layout: masterWidgetList.map((w) => ({ ...w, enabled: false })),
+            name: `Preset ${index + 1}`,
+            description: "",
+            createdAt: now,
+            updatedAt: now
+        };
+        
+        setPresets(newPresets);
+        savePresetsToStorage(newPresets);
+        setActivePresetIndex(index);
+        saveActivePresetIndex(index);
+        setLayout(newPresets[index]!.layout);
+        saveLayoutToStorage(newPresets[index]!.layout);
+        setCurrentPresetType("grid");
+        saveCurrentPresetType("grid");
+        setHasUnsavedChanges(false);
+        toast.success(`Created blank Preset ${index + 1}`);
+    }, [presets]);
+
+    // Save current layout to preset
+    const handleSaveToPreset = useCallback((index: number, layoutToSave: Widget[], presetType: PresetType) => {
+        const newPresets = [...presets];
+        const existingPreset = newPresets[index];
+        const now = new Date().toISOString();
+        
+        newPresets[index] = {
+            type: presetType,
+            layout: deepClone(layoutToSave),
+            name: existingPreset?.name || generatePresetName(layoutToSave),
+            description: existingPreset?.description || "",
+            createdAt: existingPreset?.createdAt || now,
+            updatedAt: now
+        };
+        
+        setPresets(newPresets);
+        savePresetsToStorage(newPresets);
+        setActivePresetIndex(index);
+        saveActivePresetIndex(index);
+        setHasUnsavedChanges(false);
+        toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
+    }, [presets]);
+
+    // Discard changes and load preset
+    const handleDiscardAndLoad = useCallback((index: number) => {
+        setHasUnsavedChanges(false);
+        loadPreset(index);
+    }, [loadPreset]);
 
     if (checkingAuth) {
         return (
@@ -278,20 +406,15 @@ export default function Dashboard() {
             {/* Dock - Auto-hides at bottom */}
             <DashboardDock
                 presets={presets}
+                activePresetIndex={activePresetIndex}
+                hasUnsavedChanges={hasUnsavedChanges}
                 onWidgetsClick={() => {
                     setMenuOpen(true);
                     updateTempLayout();
                 }}
                 onPresetManagerClick={() => setPresetManagerOpen(true)}
-                onPresetClick={(index) => {
-                    if (presets[index] && presets[index]!.layout.filter(w => w.enabled).length > 0) {
-                        loadPreset(index);
-                    }
-                }}
-                onPresetSave={(index) => {
-                    setPresetSaveIndex(index);
-                    setPresetSaveOpen(true);
-                }}
+                onPresetClick={handlePresetClick}
+                onPresetSave={handlePresetSave}
                 onSettingsClick={() => setSettingsOpen(true)}
             />
 
@@ -300,43 +423,66 @@ export default function Dashboard() {
                 isOpen={presetManagerOpen}
                 onClose={() => setPresetManagerOpen(false)}
                 presets={presets}
+                activePresetIndex={activePresetIndex}
                 onLoadPreset={loadPreset}
-                onSavePreset={(index, layoutToSave, presetType) => {
+                onSavePreset={(index, layoutToSave, presetType, name, description) => {
                     const newPresets = [...presets];
+                    const existingPreset = newPresets[index];
+                    const now = new Date().toISOString();
+                    
                     newPresets[index] = {
                         type: presetType,
-                        layout: deepClone(layoutToSave)
+                        layout: deepClone(layoutToSave),
+                        name: name || generatePresetName(layoutToSave),
+                        description: description || "",
+                        createdAt: existingPreset?.createdAt || now,
+                        updatedAt: now
                     };
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
+                    setActivePresetIndex(index);
+                    saveActivePresetIndex(index);
+                    setHasUnsavedChanges(false);
                     toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
+                }}
+                onUpdatePreset={(index, updates) => {
+                    const newPresets = [...presets];
+                    if (newPresets[index]) {
+                        newPresets[index] = {
+                            ...newPresets[index]!,
+                            ...updates,
+                            updatedAt: new Date().toISOString()
+                        };
+                        setPresets(newPresets);
+                        savePresetsToStorage(newPresets);
+                        toast.success(`Updated Preset ${index + 1}`);
+                    }
                 }}
                 onClearPreset={(index) => {
                     const newPresets = [...presets];
                     newPresets[index] = null;
                     setPresets(newPresets);
                     savePresetsToStorage(newPresets);
+                    if (activePresetIndex === index) {
+                        setActivePresetIndex(null);
+                        saveActivePresetIndex(null);
+                    }
                     toast.warning(`Cleared Preset ${index + 1}`);
                 }}
                 currentLayout={layout}
             />
 
-            {/* Quick Save Preset Type Modal */}
-            <PresetMenu
-                isOpen={presetSaveOpen}
-                onClose={() => setPresetSaveOpen(false)}
-                presetIndex={presetSaveIndex}
+            {/* Intelligent Preset Dialog */}
+            <PresetDialog
+                isOpen={presetDialogOpen}
+                onClose={() => setPresetDialogOpen(false)}
+                dialogType={presetDialogType}
+                presetIndex={presetDialogIndex}
                 currentLayout={layout}
-                onSavePreset={(index, layoutToSave, presetType) => {
-                    const newPresets = [...presets];
-                    newPresets[index] = {
-                        type: presetType,
-                        layout: deepClone(layoutToSave)
-                    };
-                    setPresets(newPresets);
-                    savePresetsToStorage(newPresets);
-                    toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
-                }}
+                onCreateBlank={handleCreateBlank}
+                onSavePreset={handleSaveToPreset}
+                onLoadPreset={loadPreset}
+                onDiscardAndLoad={handleDiscardAndLoad}
             />
 
             {/* Widget Menu Modal */}
@@ -347,6 +493,12 @@ export default function Dashboard() {
                         setTempLayout={setTempLayout}
                         handleSave={handleSave}
                         handleCancel={handleCancel}
+                        activePresetName={
+                            activePresetIndex !== null && presets[activePresetIndex]
+                                ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
+                                : undefined
+                        }
+                        hasUnsavedChanges={hasUnsavedChanges}
                     />
                 )}
             </AnimatePresence>
