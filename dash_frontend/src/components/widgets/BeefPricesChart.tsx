@@ -664,11 +664,11 @@ export default function BeefPricesChart() {
                         // Find the previous and next actual beef heart values
                         let prevIndex = index - 1;
                         let nextIndex = index + 1;
-                        
+
                         while (prevIndex >= 0 && leanFilled[prevIndex].beef_heart === null) {
                             prevIndex--;
                         }
-                        
+
                         while (nextIndex < leanFilled.length && leanFilled[nextIndex].beef_heart === null) {
                             nextIndex++;
                         }
@@ -680,13 +680,13 @@ export default function BeefPricesChart() {
                             const totalGap = nextIndex - prevIndex;
                             const currentGap = index - prevIndex;
                             const interpolatedValue = prevValue + ((nextValue - prevValue) * currentGap / totalGap);
-                            
+
                             return {
                                 ...item,
                                 beef_heart: interpolatedValue
                             };
                         }
-                        
+
                         // If we only have previous value (at the end), forward fill
                         if (prevIndex >= 0) {
                             return {
@@ -694,7 +694,7 @@ export default function BeefPricesChart() {
                                 beef_heart: leanFilled[prevIndex].beef_heart
                             };
                         }
-                        
+
                         // If we only have next value (at the beginning), backward fill
                         if (nextIndex < leanFilled.length) {
                             return {
