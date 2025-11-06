@@ -103,7 +103,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ price, change, color, label
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                 <span style={{ color, fontWeight: 700, fontSize: '24px', lineHeight: '1' }}>
-                    ${price?.toFixed(2) || 'N/A'}
+                    ${price?.toFixed(2) || 'N/A'}<span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>/lb</span>
                 </span>
                 <span style={{ color: changeColor, fontSize: '16px', fontWeight: 600 }}>
                     {formatChange(change)}
@@ -204,8 +204,11 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
 
+    // Convert prices from cents to dollars per pound (divide by 100)
+    const convertPrice = (price: number) => price / 100;
+
     // Get min/max values for scaling
-    const allPrices = data.flatMap(d => [d.lean_50, d.lean_85].filter(p => p !== null)) as number[];
+    const allPrices = data.flatMap(d => [d.lean_50, d.lean_85].filter(p => p !== null).map(p => convertPrice(p!))) as number[];
     const minPrice = Math.min(...allPrices);
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
@@ -216,12 +219,12 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
     const xScale = (index: number) => padding.left + (index / (data.length - 1)) * chartWidth;
     const yScale = (price: number) => padding.top + chartHeight - ((price - yMin) / (yMax - yMin)) * chartHeight;
 
-    // Generate points for each line
+    // Generate points for each line (convert prices to per-pound)
     const lean50Points = data
-        .map((d, i) => (d.lean_50 !== null ? `${xScale(i)},${yScale(d.lean_50)}` : null))
+        .map((d, i) => (d.lean_50 !== null ? `${xScale(i)},${yScale(convertPrice(d.lean_50))}` : null))
         .filter(p => p !== null);
     const lean85Points = data
-        .map((d, i) => (d.lean_85 !== null ? `${xScale(i)},${yScale(d.lean_85)}` : null))
+        .map((d, i) => (d.lean_85 !== null ? `${xScale(i)},${yScale(convertPrice(d.lean_85))}` : null))
         .filter(p => p !== null);
 
     // Format date for display
@@ -267,7 +270,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                 fontSize="10"
                                 fontWeight="500"
                             >
-                                ${price.toFixed(2)}
+                                ${price.toFixed(2)}/lb
                             </text>
                         </g>
                     );
@@ -349,14 +352,14 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <g className="endpoint-blink">
                         <circle
                             cx={xScale(data.length - 1)}
-                            cy={yScale(data[data.length - 1].lean_50!)}
+                            cy={yScale(convertPrice(data[data.length - 1].lean_50!))}
                             r="10"
                             fill="var(--line-chart-1)"
                             opacity="0.2"
                         />
                         <circle
                             cx={xScale(data.length - 1)}
-                            cy={yScale(data[data.length - 1].lean_50!)}
+                            cy={yScale(convertPrice(data[data.length - 1].lean_50!))}
                             r="5"
                             fill="var(--line-chart-1)"
                         />
@@ -366,14 +369,14 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <g className="endpoint-blink">
                         <circle
                             cx={xScale(data.length - 1)}
-                            cy={yScale(data[data.length - 1].lean_85!)}
+                            cy={yScale(convertPrice(data[data.length - 1].lean_85!))}
                             r="10"
                             fill="var(--line-chart-2)"
                             opacity="0.2"
                         />
                         <circle
                             cx={xScale(data.length - 1)}
-                            cy={yScale(data[data.length - 1].lean_85!)}
+                            cy={yScale(convertPrice(data[data.length - 1].lean_85!))}
                             r="5"
                             fill="var(--line-chart-2)"
                         />
@@ -399,7 +402,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             {d.lean_50 !== null && (
                                 <circle
                                     cx={x}
-                                    cy={yScale(d.lean_50)}
+                                    cy={yScale(convertPrice(d.lean_50))}
                                     r="4"
                                     fill="var(--line-chart-1)"
                                     stroke="var(--ui-bg-primary)"
@@ -409,7 +412,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             {d.lean_85 !== null && (
                                 <circle
                                     cx={x}
-                                    cy={yScale(d.lean_85)}
+                                    cy={yScale(convertPrice(d.lean_85))}
                                     r="4"
                                     fill="var(--line-chart-2)"
                                     stroke="var(--ui-bg-primary)"
@@ -466,19 +469,21 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "4px" }}>
                             {formatDate(data[hoveredIndex].date)}
                         </div>
-                        {data[hoveredIndex].lean_50 !== null && (
+                        {data[hoveredIndex].lean_85 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-1)' }} />
-                                <span style={{ color: "var(--line-chart-1)", fontSize: "13px", fontWeight: 700 }}>
-                                    ${data[hoveredIndex].lean_50?.toFixed(2)}
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-2)' }} />
+                                <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>85% Lean:</span>
+                                <span style={{ color: "var(--line-chart-2)", fontSize: "13px", fontWeight: 700 }}>
+                                    ${(convertPrice(data[hoveredIndex].lean_85!)).toFixed(2)}/lb
                                 </span>
                             </div>
                         )}
-                        {data[hoveredIndex].lean_85 !== null && (
+                        {data[hoveredIndex].lean_50 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-2)' }} />
-                                <span style={{ color: "var(--line-chart-2)", fontSize: "13px", fontWeight: 700 }}>
-                                    ${data[hoveredIndex].lean_85?.toFixed(2)}
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-1)' }} />
+                                <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>50% Lean:</span>
+                                <span style={{ color: "var(--line-chart-1)", fontSize: "13px", fontWeight: 700 }}>
+                                    ${(convertPrice(data[hoveredIndex].lean_50!)).toFixed(2)}/lb
                                 </span>
                             </div>
                         )}
@@ -508,13 +513,13 @@ export default function BeefPricesChart() {
     const config = useResponsiveConfig(containerRef);
 
     const calculateStats = useCallback((data: BeefPriceData[]): BeefPriceStats => {
-        const lean50Values = data.map(d => d.lean_50).filter(p => p !== null) as number[];
-        const lean85Values = data.map(d => d.lean_85).filter(p => p !== null) as number[];
+        const lean50Values = data.map(d => d.lean_50).filter(p => p !== null).map(p => p! / 100) as number[];
+        const lean85Values = data.map(d => d.lean_85).filter(p => p !== null).map(p => p! / 100) as number[];
 
-        const current50 = data[data.length - 1]?.lean_50 ?? null;
-        const current85 = data[data.length - 1]?.lean_85 ?? null;
-        const first50 = data[0]?.lean_50 ?? null;
-        const first85 = data[0]?.lean_85 ?? null;
+        const current50 = data[data.length - 1]?.lean_50 !== null ? data[data.length - 1].lean_50! / 100 : null;
+        const current85 = data[data.length - 1]?.lean_85 !== null ? data[data.length - 1].lean_85! / 100 : null;
+        const first50 = data[0]?.lean_50 !== null ? data[0].lean_50! / 100 : null;
+        const first85 = data[0]?.lean_85 !== null ? data[0].lean_85! / 100 : null;
 
         return {
             current50,
@@ -594,16 +599,16 @@ export default function BeefPricesChart() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                                     <div style={{ display: 'flex', gap: '32px' }}>
                                         <PriceDisplay
-                                            price={stats.current50}
-                                            change={stats.change50}
-                                            color="var(--line-chart-1)"
-                                            label="50% LEAN"
-                                        />
-                                        <PriceDisplay
                                             price={stats.current85}
                                             change={stats.change85}
                                             color="var(--line-chart-2)"
                                             label="85% LEAN"
+                                        />
+                                        <PriceDisplay
+                                            price={stats.current50}
+                                            change={stats.change50}
+                                            color="var(--line-chart-1)"
+                                            label="50% LEAN"
                                         />
                                     </div>
                                     <TimeRangeSelector
