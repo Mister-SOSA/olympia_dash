@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
+import appConfig from "@/config";
+import { authService } from "@/lib/auth";
 
 /* -------------------------------------- */
 /* 📊 Beef Price Data Types               */
@@ -9,19 +11,25 @@ interface BeefPriceData {
     date: string;       // MM/DD/YYYY format from API
     lean_50: number | null;
     lean_85: number | null;
+    beef_heart: number | null;
 }
 
 interface BeefPriceStats {
     current50: number | null;
     current85: number | null;
+    currentHeart: number | null;
     avg50: number;
     avg85: number;
+    avgHeart: number;
     min50: number;
     max50: number;
     min85: number;
     max85: number;
+    minHeart: number;
+    maxHeart: number;
     change50: number;
     change85: number;
+    changeHeart: number;
 }
 
 type TimeRange = '7d' | '30d' | '90d' | '180d' | 'all';
@@ -204,11 +212,15 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
 
-    // Convert prices from cents to dollars per pound (divide by 100)
-    const convertPrice = (price: number) => price / 100;
+    // Convert prices from cents to dollars per pound (divide by 100 for lean, beef_heart is already $/lb)
+    const convertPrice = (price: number, isHeart: boolean = false) => isHeart ? price : price / 100;
 
     // Get min/max values for scaling
-    const allPrices = data.flatMap(d => [d.lean_50, d.lean_85].filter(p => p !== null).map(p => convertPrice(p!))) as number[];
+    const allPrices = data.flatMap(d => [
+        d.lean_50 ? convertPrice(d.lean_50) : null,
+        d.lean_85 ? convertPrice(d.lean_85) : null,
+        d.beef_heart ? d.beef_heart : null
+    ].filter(p => p !== null)) as number[];
     const minPrice = Math.min(...allPrices);
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
@@ -225,6 +237,9 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
         .filter(p => p !== null);
     const lean85Points = data
         .map((d, i) => (d.lean_85 !== null ? `${xScale(i)},${yScale(convertPrice(d.lean_85))}` : null))
+        .filter(p => p !== null);
+    const beefHeartPoints = data
+        .map((d, i) => (d.beef_heart !== null ? `${xScale(i)},${yScale(d.beef_heart)}` : null))
         .filter(p => p !== null);
 
     // Format date for display
@@ -324,6 +339,20 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </>
                 )}
+                {beefHeartPoints.length > 1 && (
+                    <>
+                        <defs>
+                            <linearGradient id="gradientHeart" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="var(--line-chart-3)" stopOpacity="0.15" />
+                                <stop offset="100%" stopColor="var(--line-chart-3)" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <polygon
+                            points={`${padding.left},${padding.top + chartHeight} ${beefHeartPoints.join(' ')} ${dimensions.width - padding.right},${padding.top + chartHeight}`}
+                            fill="url(#gradientHeart)"
+                        />
+                    </>
+                )}
 
                 {/* Smooth lines */}
                 {lean50Points.length > 1 && (
@@ -341,6 +370,16 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         points={lean85Points.join(' ')}
                         fill="none"
                         stroke="var(--line-chart-2)"
+                        strokeWidth={config.strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                )}
+                {beefHeartPoints.length > 1 && (
+                    <polyline
+                        points={beefHeartPoints.join(' ')}
+                        fill="none"
+                        stroke="var(--line-chart-3)"
                         strokeWidth={config.strokeWidth}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -382,6 +421,23 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </g>
                 )}
+                {data[data.length - 1].beef_heart !== null && (
+                    <g className="endpoint-blink">
+                        <circle
+                            cx={xScale(data.length - 1)}
+                            cy={yScale(data[data.length - 1].beef_heart!)}
+                            r="10"
+                            fill="var(--line-chart-3)"
+                            opacity="0.2"
+                        />
+                        <circle
+                            cx={xScale(data.length - 1)}
+                            cy={yScale(data[data.length - 1].beef_heart!)}
+                            r="5"
+                            fill="var(--line-chart-3)"
+                        />
+                    </g>
+                )}
 
                 {/* Hover indicator */}
                 {hoveredIndex !== null && hoveredIndex !== data.length - 1 && (() => {
@@ -415,6 +471,16 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                     cy={yScale(convertPrice(d.lean_85))}
                                     r="4"
                                     fill="var(--line-chart-2)"
+                                    stroke="var(--ui-bg-primary)"
+                                    strokeWidth="2"
+                                />
+                            )}
+                            {d.beef_heart !== null && (
+                                <circle
+                                    cx={x}
+                                    cy={yScale(d.beef_heart)}
+                                    r="4"
+                                    fill="var(--line-chart-3)"
                                     stroke="var(--ui-bg-primary)"
                                     strokeWidth="2"
                                 />
@@ -479,11 +545,20 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             </div>
                         )}
                         {data[hoveredIndex].lean_50 !== null && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-1)' }} />
                                 <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>50% Lean:</span>
                                 <span style={{ color: "var(--line-chart-1)", fontSize: "13px", fontWeight: 700 }}>
                                     ${(convertPrice(data[hoveredIndex].lean_50!)).toFixed(2)}/lb
+                                </span>
+                            </div>
+                        )}
+                        {data[hoveredIndex].beef_heart !== null && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-3)' }} />
+                                <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>Beef Heart:</span>
+                                <span style={{ color: "var(--line-chart-3)", fontSize: "13px", fontWeight: 700 }}>
+                                    ${data[hoveredIndex].beef_heart!.toFixed(2)}/lb
                                 </span>
                             </div>
                         )}
@@ -510,28 +585,103 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
 export default function BeefPricesChart() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [timeRange, setTimeRange] = useState<TimeRange>('180d');
+    const [combinedData, setCombinedData] = useState<BeefPriceData[]>([]);
+    const [loading, setLoading] = useState(true);
     const config = useResponsiveConfig(containerRef);
+
+    // Fetch and merge beef prices with beef heart prices
+    useEffect(() => {
+        const fetchAllPrices = async () => {
+            try {
+                setLoading(true);
+
+                // Fetch both datasets in parallel using authService
+                const [beefPricesRes, beefHeartRes] = await Promise.all([
+                    authService.fetchWithAuth(`${appConfig.API_BASE_URL}/api/beef-prices`),
+                    authService.fetchWithAuth(`${appConfig.API_BASE_URL}/api/beef-heart-prices`)
+                ]);
+
+                const beefPricesData = await beefPricesRes.json();
+                const beefHeartData = await beefHeartRes.json();
+
+                if (beefPricesData.success && beefHeartData.success) {
+                    // Create a map of beef heart prices by date
+                    const heartPriceMap = new Map<string, number>();
+                    beefHeartData.data.forEach((item: { date: string; beef_heart: number }) => {
+                        heartPriceMap.set(item.date, item.beef_heart);
+                    });
+
+                    // Merge the data
+                    const merged: BeefPriceData[] = beefPricesData.data.map((item: any) => ({
+                        date: item.date,
+                        lean_50: item.lean_50,
+                        lean_85: item.lean_85,
+                        beef_heart: heartPriceMap.get(item.date) || null
+                    }));
+
+                    // Also add any heart prices that don't have corresponding beef prices
+                    beefHeartData.data.forEach((item: { date: string; beef_heart: number }) => {
+                        if (!merged.find(m => m.date === item.date)) {
+                            merged.push({
+                                date: item.date,
+                                lean_50: null,
+                                lean_85: null,
+                                beef_heart: item.beef_heart
+                            });
+                        }
+                    });
+
+                    // Sort by date
+                    merged.sort((a, b) => {
+                        const [monthA, dayA, yearA] = a.date.split('/').map(Number);
+                        const [monthB, dayB, yearB] = b.date.split('/').map(Number);
+                        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+                    });
+
+                    setCombinedData(merged);
+                }
+            } catch (error) {
+                console.error('Error fetching beef prices:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllPrices();
+
+        // Refresh every hour
+        const interval = setInterval(fetchAllPrices, 3600000);
+        return () => clearInterval(interval);
+    }, []);
 
     const calculateStats = useCallback((data: BeefPriceData[]): BeefPriceStats => {
         const lean50Values = data.map(d => d.lean_50).filter(p => p !== null).map(p => p! / 100) as number[];
         const lean85Values = data.map(d => d.lean_85).filter(p => p !== null).map(p => p! / 100) as number[];
+        const beefHeartValues = data.map(d => d.beef_heart).filter(p => p !== null) as number[];
 
         const current50 = data[data.length - 1]?.lean_50 !== null ? data[data.length - 1].lean_50! / 100 : null;
         const current85 = data[data.length - 1]?.lean_85 !== null ? data[data.length - 1].lean_85! / 100 : null;
+        const currentHeart = data[data.length - 1]?.beef_heart !== null ? data[data.length - 1].beef_heart! : null;
         const first50 = data[0]?.lean_50 !== null ? data[0].lean_50! / 100 : null;
         const first85 = data[0]?.lean_85 !== null ? data[0].lean_85! / 100 : null;
+        const firstHeart = data[0]?.beef_heart !== null ? data[0].beef_heart! : null;
 
         return {
             current50,
             current85,
-            avg50: lean50Values.reduce((a, b) => a + b, 0) / lean50Values.length,
-            avg85: lean85Values.reduce((a, b) => a + b, 0) / lean85Values.length,
-            min50: Math.min(...lean50Values),
-            max50: Math.max(...lean50Values),
-            min85: Math.min(...lean85Values),
-            max85: Math.max(...lean85Values),
+            currentHeart,
+            avg50: lean50Values.length > 0 ? lean50Values.reduce((a, b) => a + b, 0) / lean50Values.length : 0,
+            avg85: lean85Values.length > 0 ? lean85Values.reduce((a, b) => a + b, 0) / lean85Values.length : 0,
+            avgHeart: beefHeartValues.length > 0 ? beefHeartValues.reduce((a, b) => a + b, 0) / beefHeartValues.length : 0,
+            min50: lean50Values.length > 0 ? Math.min(...lean50Values) : 0,
+            max50: lean50Values.length > 0 ? Math.max(...lean50Values) : 0,
+            min85: lean85Values.length > 0 ? Math.min(...lean85Values) : 0,
+            max85: lean85Values.length > 0 ? Math.max(...lean85Values) : 0,
+            minHeart: beefHeartValues.length > 0 ? Math.min(...beefHeartValues) : 0,
+            maxHeart: beefHeartValues.length > 0 ? Math.max(...beefHeartValues) : 0,
             change50: first50 && current50 ? ((current50 - first50) / first50) * 100 : 0,
             change85: first85 && current85 ? ((current85 - first85) / first85) * 100 : 0,
+            changeHeart: firstHeart && currentHeart ? ((currentHeart - firstHeart) / firstHeart) * 100 : 0,
         };
     }, []);
 
@@ -557,74 +707,116 @@ export default function BeefPricesChart() {
 
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%", display: 'flex', flexDirection: 'column' }}>
-            <Widget
-                endpoint="/api/beef-prices"
-                title="USDA Beef Prices (National)"
-                refreshInterval={3600000} // Refresh every hour
-            >
-                {(data, loading) => {
-                    if (!data || data.length === 0) {
+            <div style={{
+                backgroundColor: 'var(--ui-bg-primary)',
+                borderRadius: '12px',
+                border: '1px solid var(--ui-border-primary)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+            }}>
+                {/* Widget Header */}
+                <div style={{
+                    padding: '16px 20px',
+                    borderBottom: '1px solid var(--ui-border-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <h3 style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        margin: 0
+                    }}>
+                        USDA Beef Prices (National)
+                    </h3>
+                </div>
+
+                {/* Widget Content */}
+                {loading ? (
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: "100%",
+                            flex: 1
+                        }}
+                    >
+                        <div style={{ fontSize: "14px", color: "var(--text-muted)" }}>
+                            Loading price data...
+                        </div>
+                    </div>
+                ) : !combinedData || combinedData.length === 0 ? (
+                    <div
+                        className="widget-empty"
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            height: "100%",
+                            flex: 1,
+                            gap: "8px",
+                        }}
+                    >
+                        <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-secondary)" }}>
+                            No Price Data Available
+                        </div>
+                        <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                            Unable to load beef price data
+                        </div>
+                    </div>
+                ) : (
+                    (() => {
+                        const filteredData = filterDataByTimeRange(combinedData, timeRange);
+                        const stats = calculateStats(filteredData);
+
                         return (
-                            <div
-                                className="widget-empty"
-                                style={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    height: "100%",
-                                    gap: "8px",
-                                }}
-                            >
-                                <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-secondary)" }}>
-                                    No Price Data Available
+                            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                {/* Header with prices and time range */}
+                                <div style={{
+                                    padding: '12px 16px 8px',
+                                    borderBottom: '1px solid var(--ui-border-primary)',
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
+                                        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+                                            <PriceDisplay
+                                                price={stats.current85}
+                                                change={stats.change85}
+                                                color="var(--line-chart-2)"
+                                                label="85% LEAN"
+                                            />
+                                            <PriceDisplay
+                                                price={stats.current50}
+                                                change={stats.change50}
+                                                color="var(--line-chart-1)"
+                                                label="50% LEAN"
+                                            />
+                                            <PriceDisplay
+                                                price={stats.currentHeart}
+                                                change={stats.changeHeart}
+                                                color="var(--line-chart-3)"
+                                                label="BEEF HEART"
+                                            />
+                                        </div>
+                                        <TimeRangeSelector
+                                            selected={timeRange}
+                                            onChange={setTimeRange}
+                                        />
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                                    Unable to load beef price data
+                                {/* Chart */}
+                                <div style={{ flex: 1, minHeight: 0 }}>
+                                    <CustomLineChart data={filteredData} config={config} />
                                 </div>
                             </div>
                         );
-                    }
-
-                    const filteredData = filterDataByTimeRange(data, timeRange);
-                    const stats = calculateStats(filteredData);
-
-                    return (
-                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            {/* Header with prices and time range */}
-                            <div style={{
-                                padding: '12px 16px 8px',
-                                borderBottom: '1px solid var(--ui-border-primary)',
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
-                                    <div style={{ display: 'flex', gap: '32px' }}>
-                                        <PriceDisplay
-                                            price={stats.current85}
-                                            change={stats.change85}
-                                            color="var(--line-chart-2)"
-                                            label="85% LEAN"
-                                        />
-                                        <PriceDisplay
-                                            price={stats.current50}
-                                            change={stats.change50}
-                                            color="var(--line-chart-1)"
-                                            label="50% LEAN"
-                                        />
-                                    </div>
-                                    <TimeRangeSelector
-                                        selected={timeRange}
-                                        onChange={setTimeRange}
-                                    />
-                                </div>
-                            </div>
-                            {/* Chart */}
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                                <CustomLineChart data={filteredData} config={config} />
-                            </div>
-                        </div>
-                    );
-                }}
-            </Widget>
+                    })()
+                )}
+            </div>
         </div>
     );
 }

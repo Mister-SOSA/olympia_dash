@@ -21,7 +21,7 @@ from auth.device_routes import device_bp
 from auth.admin_routes import admin_bp
 from auth.preferences_routes import preferences_bp
 from auth.middleware import require_auth
-from services.usda_mpr import get_beef_prices
+from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -233,6 +233,24 @@ def get_beef_prices_endpoint():
 
     except Exception as e:
         logger.error('Endpoint: /api/beef-prices | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/beef-heart-prices', methods=['GET'])
+@require_auth
+def get_beef_heart_prices_endpoint():
+    """
+    Retrieve USDA beef heart price data from by-product reports.
+    
+    Data is cached for 24 hours. Pass ?refresh=true to force a refresh.
+    """
+    try:
+        force_refresh = request.args.get('refresh', '').lower() == 'true'
+        result = get_beef_heart_prices(force_refresh=force_refresh)
+        return jsonify({"success": True, "data": result['data']}), 200
+
+    except Exception as e:
+        logger.error('Endpoint: /api/beef-heart-prices | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
 
 
