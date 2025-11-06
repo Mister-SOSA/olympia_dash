@@ -297,8 +297,8 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <>
                         <defs>
                             <linearGradient id="gradient50" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity="0.15" />
-                                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--line-chart-1)" stopOpacity="0.15" />
+                                <stop offset="100%" stopColor="var(--line-chart-1)" stopOpacity="0" />
                             </linearGradient>
                         </defs>
                         <polygon
@@ -311,8 +311,8 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <>
                         <defs>
                             <linearGradient id="gradient85" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="var(--chart-2)" stopOpacity="0.15" />
-                                <stop offset="100%" stopColor="var(--chart-2)" stopOpacity="0" />
+                                <stop offset="0%" stopColor="var(--line-chart-2)" stopOpacity="0.15" />
+                                <stop offset="100%" stopColor="var(--line-chart-2)" stopOpacity="0" />
                             </linearGradient>
                         </defs>
                         <polygon
@@ -327,7 +327,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <polyline
                         points={lean50Points.join(' ')}
                         fill="none"
-                        stroke="var(--chart-1)"
+                        stroke="var(--line-chart-1)"
                         strokeWidth={config.strokeWidth}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -337,7 +337,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     <polyline
                         points={lean85Points.join(' ')}
                         fill="none"
-                        stroke="var(--chart-2)"
+                        stroke="var(--line-chart-2)"
                         strokeWidth={config.strokeWidth}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -351,14 +351,14 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             cx={xScale(data.length - 1)}
                             cy={yScale(data[data.length - 1].lean_50!)}
                             r="10"
-                            fill="var(--chart-1)"
+                            fill="var(--line-chart-1)"
                             opacity="0.2"
                         />
                         <circle
                             cx={xScale(data.length - 1)}
                             cy={yScale(data[data.length - 1].lean_50!)}
                             r="5"
-                            fill="var(--chart-1)"
+                            fill="var(--line-chart-1)"
                         />
                     </g>
                 )}
@@ -368,14 +368,14 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             cx={xScale(data.length - 1)}
                             cy={yScale(data[data.length - 1].lean_85!)}
                             r="10"
-                            fill="var(--chart-2)"
+                            fill="var(--line-chart-2)"
                             opacity="0.2"
                         />
                         <circle
                             cx={xScale(data.length - 1)}
                             cy={yScale(data[data.length - 1].lean_85!)}
                             r="5"
-                            fill="var(--chart-2)"
+                            fill="var(--line-chart-2)"
                         />
                     </g>
                 )}
@@ -401,7 +401,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                     cx={x}
                                     cy={yScale(d.lean_50)}
                                     r="4"
-                                    fill="var(--chart-1)"
+                                    fill="var(--line-chart-1)"
                                     stroke="var(--ui-bg-primary)"
                                     strokeWidth="2"
                                 />
@@ -411,7 +411,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                     cx={x}
                                     cy={yScale(d.lean_85)}
                                     r="4"
-                                    fill="var(--chart-2)"
+                                    fill="var(--line-chart-2)"
                                     stroke="var(--ui-bg-primary)"
                                     strokeWidth="2"
                                 />
@@ -468,16 +468,16 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         </div>
                         {data[hoveredIndex].lean_50 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--chart-1)' }} />
-                                <span style={{ color: "var(--chart-1)", fontSize: "13px", fontWeight: 700 }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-1)' }} />
+                                <span style={{ color: "var(--line-chart-1)", fontSize: "13px", fontWeight: 700 }}>
                                     ${data[hoveredIndex].lean_50?.toFixed(2)}
                                 </span>
                             </div>
                         )}
                         {data[hoveredIndex].lean_85 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--chart-2)' }} />
-                                <span style={{ color: "var(--chart-2)", fontSize: "13px", fontWeight: 700 }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-2)' }} />
+                                <span style={{ color: "var(--line-chart-2)", fontSize: "13px", fontWeight: 700 }}>
                                     ${data[hoveredIndex].lean_85?.toFixed(2)}
                                 </span>
                             </div>
@@ -587,23 +587,23 @@ export default function BeefPricesChart() {
                     return (
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                             {/* Header with prices and time range */}
-                            <div style={{ 
+                            <div style={{
                                 padding: '12px 16px 8px',
                                 borderBottom: '1px solid var(--ui-border-primary)',
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                                     <div style={{ display: 'flex', gap: '32px' }}>
-                                        <PriceDisplay 
-                                            price={stats.current50} 
-                                            change={stats.change50} 
-                                            color="var(--chart-1)" 
-                                            label="50% LEAN" 
+                                        <PriceDisplay
+                                            price={stats.current50}
+                                            change={stats.change50}
+                                            color="var(--line-chart-1)"
+                                            label="50% LEAN"
                                         />
-                                        <PriceDisplay 
-                                            price={stats.current85} 
-                                            change={stats.change85} 
-                                            color="var(--chart-2)" 
-                                            label="85% LEAN" 
+                                        <PriceDisplay
+                                            price={stats.current85}
+                                            change={stats.change85}
+                                            color="var(--line-chart-2)"
+                                            label="85% LEAN"
                                         />
                                     </div>
                                     <TimeRangeSelector

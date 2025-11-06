@@ -109,6 +109,12 @@
     --chart-3: #FFC107;
     --chart-4: #FF5722;
     --chart-5: #9C27B0;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fbbf24;
+    /* amber */
+    --line-chart-2: #a78bfa;
+    /* purple */
     --chart-6: #E91E63;
     --chart-7: #00BCD4;
     --chart-8: #8BC34A;
@@ -274,6 +280,12 @@
     --chart-4: #ff4757;
     --chart-5: #52c9ff;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #00e6be;
+    /* teal */
+    --line-chart-2: #ffa500;
+    /* orange */
+
     /* Table-specific colors */
     --table-header-bg: #132f42;
     --table-row-bg: #0c1e2e;
@@ -371,6 +383,12 @@
     --chart-3: #fbbf24;
     --chart-4: #ef4444;
     --chart-5: #fb923c;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #86efac;
+    /* mint green */
+    --line-chart-2: #c084fc;
+    /* purple */
 
     /* Table-specific colors */
     --table-header-bg: #243b24;
@@ -470,6 +488,12 @@
     --chart-4: #ef4444;
     --chart-5: #f472b6;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #f472b6;
+    /* hot pink */
+    --line-chart-2: #fbbf24;
+    /* golden yellow */
+
     /* Table-specific colors */
     --table-header-bg: #3d2540;
     --table-row-bg: #2d1b2e;
@@ -567,6 +591,12 @@
     --chart-3: #f59e0b;
     --chart-4: #ef4444;
     --chart-5: #22d3ee;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #22d3ee;
+    /* cyan */
+    --line-chart-2: #f59e0b;
+    /* orange */
 
     /* Table-specific colors */
     --table-header-bg: #131829;
@@ -666,6 +696,12 @@
     --chart-4: #dc2626;
     --chart-5: #ec4899;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #f472b6;
+    /* pink */
+    --line-chart-2: #fbbf24;
+    /* gold */
+
     /* Table-specific colors - LIGHT MODE */
     --table-header-bg: #fce7f3;
     --table-row-bg: #ffffff;
@@ -763,6 +799,12 @@
     --chart-3: #f59e0b;
     --chart-4: #ef4444;
     --chart-5: #06b6d4;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #0ea5e9;
+    /* sky blue */
+    --line-chart-2: #f59e0b;
+    /* orange */
 
     /* Table-specific colors - LIGHT MODE */
     --table-header-bg: #f1f5f9;
@@ -862,6 +904,12 @@
     --chart-4: #dc2626;
     --chart-5: #fb923c;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fb923c;
+    /* coral orange */
+    --line-chart-2: #06b6d4;
+    /* cyan */
+
     /* Table-specific colors - LIGHT MODE */
     --table-header-bg: #ffedd5;
     --table-row-bg: #fffbeb;
@@ -959,6 +1007,12 @@
     --chart-3: #eab308;
     --chart-4: #ef4444;
     --chart-5: #fb923c;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fb923c;
+    /* orange */
+    --line-chart-2: #06b6d4;
+    /* cyan */
 
     /* Table-specific colors */
     --table-header-bg: #2d1319;
@@ -1058,6 +1112,12 @@
     --chart-4: #ff0066;
     --chart-5: #00ff88;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #00ffff;
+    /* cyan */
+    --line-chart-2: #ff00ff;
+    /* magenta */
+
     /* Table-specific colors */
     --table-header-bg: #14141f;
     --table-row-bg: #0a0a0f;
@@ -1155,6 +1215,12 @@
     --chart-3: #e6db74;
     --chart-4: #66d9ef;
     --chart-5: #ae81ff;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #66d9ef;
+    /* cyan */
+    --line-chart-2: #f92672;
+    /* hot pink */
 
     /* Table-specific colors */
     --table-header-bg: #272822;
@@ -1254,6 +1320,12 @@
     --chart-4: #f1fa8c;
     --chart-5: #ff5555;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #8be9fd;
+    /* cyan */
+    --line-chart-2: #ffb86c;
+    /* orange */
+
     /* Table-specific colors */
     --table-header-bg: #282a36;
     --table-row-bg: #1e1f29;
@@ -1351,6 +1423,12 @@
     --chart-3: #7dcfff;
     --chart-4: #73daca;
     --chart-5: #9ece6a;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #7aa2f7;
+    /* blue */
+    --line-chart-2: #f1fa8c;
+    /* bright yellow */
 
     /* Table-specific colors */
     --table-header-bg: #1a1b26;
@@ -1450,6 +1528,12 @@
     --chart-4: #fb4934;
     --chart-5: #83a598;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fe8019;
+    /* orange */
+    --line-chart-2: #83a598;
+    /* blue-gray */
+
     /* Table-specific colors */
     --table-header-bg: #282828;
     --table-row-bg: #1d2021;
@@ -1547,6 +1631,12 @@
     --chart-3: #f9e2af;
     --chart-4: #f38ba8;
     --chart-5: #cba6f7;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #89b4fa;
+    /* blue */
+    --line-chart-2: #fab387;
+    /* peach */
 
     /* Table-specific colors */
     --table-header-bg: #1e1e2e;
@@ -1646,6 +1736,12 @@
     --chart-4: #ffd60a;
     --chart-5: #d946ef;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #00ff9f;
+    /* neon green */
+    --line-chart-2: #ff2a6d;
+    /* hot pink */
+
     /* Table-specific colors */
     --table-header-bg: #0a0e27;
     --table-row-bg: #06070d;
@@ -1743,6 +1839,12 @@
     --chart-4: #cf222e;
     --chart-5: #8250df;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #0969da;
+    /* github blue */
+    --line-chart-2: #9a6700;
+    /* brown/gold */
+
     --table-header-bg: #f6f8fa;
     --table-row-bg: #ffffff;
     --table-row-alt-bg: #fafbfc;
@@ -1837,6 +1939,12 @@
     --chart-3: #b58900;
     --chart-4: #dc322f;
     --chart-5: #6c71c4;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #268bd2;
+    /* solarized blue */
+    --line-chart-2: #cb4b16;
+    /* solarized orange */
 
     --table-header-bg: #eee8d5;
     --table-row-bg: #fdf6e3;
@@ -1933,6 +2041,12 @@
     --chart-4: #e45649;
     --chart-5: #a626a4;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #4078f2;
+    /* blue */
+    --line-chart-2: #c18401;
+    /* gold */
+
     --table-header-bg: #f0f0f0;
     --table-row-bg: #fafafa;
     --table-row-alt-bg: #f5f5f5;
@@ -2027,6 +2141,12 @@
     --chart-3: #ea580c;
     --chart-4: #dc2626;
     --chart-5: #a78bfa;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #9b87f5;
+    /* lavender */
+    --line-chart-2: #ea580c;
+    /* orange */
 
     --table-header-bg: #ede9fe;
     --table-row-bg: #f5f3ff;
@@ -2123,6 +2243,12 @@
     --chart-4: #ef4444;
     --chart-5: #22d3ee;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #6ee7b7;
+    /* mint */
+    --line-chart-2: #a78bfa;
+    /* purple */
+
     --table-header-bg: #dcfce7;
     --table-row-bg: #f0fdf4;
     --table-row-alt-bg: #f7fee7;
@@ -2217,6 +2343,12 @@
     --chart-3: #ea580c;
     --chart-4: #dc2626;
     --chart-5: #ca8a04;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #d97706;
+    /* amber */
+    --line-chart-2: #0891b2;
+    /* cyan */
 
     --table-header-bg: #fef3c7;
     --table-row-bg: #fffbeb;
@@ -2313,6 +2445,12 @@
     --chart-4: #dc2626;
     --chart-5: #db2777;
 
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fb7185;
+    /* rose pink */
+    --line-chart-2: #06b6d4;
+    /* cyan */
+
     --table-header-bg: #ffe4e6;
     --table-row-bg: #fff1f2;
     --table-row-alt-bg: #fef2f2;
@@ -2407,6 +2545,12 @@
     --chart-3: #ea580c;
     --chart-4: #dc2626;
     --chart-5: #06b6d4;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #0ea5e9;
+    /* sky blue */
+    --line-chart-2: #f97316;
+    /* orange */
 
     --table-header-bg: #e0f2fe;
     --table-row-bg: #f0f9ff;
