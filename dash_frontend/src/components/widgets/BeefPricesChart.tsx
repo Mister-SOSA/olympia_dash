@@ -638,7 +638,25 @@ export default function BeefPricesChart() {
                         return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
                     });
 
-                    setCombinedData(merged);
+                    // Forward-fill missing values for all three datasets
+                    let lastLean50: number | null = null;
+                    let lastLean85: number | null = null;
+                    let lastBeefHeart: number | null = null;
+
+                    const filled = merged.map(item => {
+                        if (item.lean_50 !== null) lastLean50 = item.lean_50;
+                        if (item.lean_85 !== null) lastLean85 = item.lean_85;
+                        if (item.beef_heart !== null) lastBeefHeart = item.beef_heart;
+
+                        return {
+                            date: item.date,
+                            lean_50: item.lean_50 ?? lastLean50,
+                            lean_85: item.lean_85 ?? lastLean85,
+                            beef_heart: item.beef_heart ?? lastBeefHeart
+                        };
+                    });
+
+                    setCombinedData(filled);
                 }
             } catch (error) {
                 console.error('Error fetching beef prices:', error);
