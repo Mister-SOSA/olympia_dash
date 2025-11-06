@@ -638,25 +638,76 @@ export default function BeefPricesChart() {
                         return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
                     });
 
-                    // Forward-fill missing values for all three datasets
+                    // Forward-fill missing values for lean datasets
                     let lastLean50: number | null = null;
                     let lastLean85: number | null = null;
-                    let lastBeefHeart: number | null = null;
 
-                    const filled = merged.map(item => {
+                    const leanFilled = merged.map(item => {
                         if (item.lean_50 !== null) lastLean50 = item.lean_50;
                         if (item.lean_85 !== null) lastLean85 = item.lean_85;
-                        if (item.beef_heart !== null) lastBeefHeart = item.beef_heart;
 
                         return {
                             date: item.date,
                             lean_50: item.lean_50 ?? lastLean50,
                             lean_85: item.lean_85 ?? lastLean85,
-                            beef_heart: item.beef_heart ?? lastBeefHeart
+                            beef_heart: item.beef_heart
                         };
                     });
 
-                    setCombinedData(filled);
+                    // Linear interpolation for beef heart (weekly data)
+                    const heartInterpolated = leanFilled.map((item, index) => {
+                        if (item.beef_heart !== null) {
+                            // This is a real data point, keep it
+                            return item;
+                        }
+
+                        // Find the previous and next actual beef heart values
+                        let prevIndex = index - 1;
+                        let nextIndex = index + 1;
+                        
+                        while (prevIndex >= 0 && leanFilled[prevIndex].beef_heart === null) {
+                            prevIndex--;
+                        }
+                        
+                        while (nextIndex < leanFilled.length && leanFilled[nextIndex].beef_heart === null) {
+                            nextIndex++;
+                        }
+
+                        // If we have both previous and next values, interpolate
+                        if (prevIndex >= 0 && nextIndex < leanFilled.length) {
+                            const prevValue = leanFilled[prevIndex].beef_heart!;
+                            const nextValue = leanFilled[nextIndex].beef_heart!;
+                            const totalGap = nextIndex - prevIndex;
+                            const currentGap = index - prevIndex;
+                            const interpolatedValue = prevValue + ((nextValue - prevValue) * currentGap / totalGap);
+                            
+                            return {
+                                ...item,
+                                beef_heart: interpolatedValue
+                            };
+                        }
+                        
+                        // If we only have previous value (at the end), forward fill
+                        if (prevIndex >= 0) {
+                            return {
+                                ...item,
+                                beef_heart: leanFilled[prevIndex].beef_heart
+                            };
+                        }
+                        
+                        // If we only have next value (at the beginning), backward fill
+                        if (nextIndex < leanFilled.length) {
+                            return {
+                                ...item,
+                                beef_heart: leanFilled[nextIndex].beef_heart
+                            };
+                        }
+
+                        // No values found at all
+                        return item;
+                    });
+
+                    setCombinedData(heartInterpolated);
                 }
             } catch (error) {
                 console.error('Error fetching beef prices:', error);
