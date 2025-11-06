@@ -150,6 +150,14 @@ export const WIDGETS: WidgetDefinition[] = [
         category: "🔧 Utilities",
         description: "Shows current humidity level",
         defaultSize: { w: 3, h: 2 }
+    },
+    {
+        id: "BeefPricesChart",
+        component: React.lazy(() => import("@/components/widgets/BeefPricesChart")),
+        title: "USDA Beef Prices",
+        category: "🔧 Utilities",
+        description: "Shows USDA National beef prices for Chemical Lean Fresh 50% and 85%",
+        defaultSize: { w: 6, h: 4 }
     }
 ];
 

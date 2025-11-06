@@ -21,6 +21,7 @@ from auth.device_routes import device_bp
 from auth.admin_routes import admin_bp
 from auth.preferences_routes import preferences_bp
 from auth.middleware import require_auth
+from services.usda_mpr import get_beef_prices
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -214,6 +215,24 @@ def get_humidity():
 
     except Exception as e:
         logger.error('Endpoint: /api/humidity | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/beef-prices', methods=['GET'])
+@require_auth
+def get_beef_prices_endpoint():
+    """
+    Retrieve USDA beef price data for Chemical Lean Fresh 50% and 85%.
+    
+    Data is cached for 24 hours. Pass ?refresh=true to force a refresh.
+    """
+    try:
+        force_refresh = request.args.get('refresh', '').lower() == 'true'
+        result = get_beef_prices(force_refresh=force_refresh)
+        return jsonify({"success": True, "data": result['data']}), 200
+
+    except Exception as e:
+        logger.error('Endpoint: /api/beef-prices | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
 
 
