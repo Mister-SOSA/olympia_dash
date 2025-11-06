@@ -395,16 +395,50 @@ export default function Dashboard() {
     const handleSave = useCallback(() => {
         saveLayoutToStorage(tempLayout);
         setMenuOpen(false);
+
         if (!layoutsEqual(layout, tempLayout)) {
             setLayout([...tempLayout]);
-            // When manually editing widgets, switch to grid mode and clear active preset
-            setCurrentPresetType("grid");
-            saveCurrentPresetType("grid");
-            setActivePresetIndex(null);
-            saveActivePresetIndex(null);
-            setHasUnsavedChanges(false);
+
+            if (activePresetIndex !== null && presets[activePresetIndex]) {
+                const now = new Date().toISOString();
+                const updatedPresets = [...presets];
+                const existingPreset = updatedPresets[activePresetIndex];
+
+                updatedPresets[activePresetIndex] = {
+                    ...existingPreset!,
+                    layout: deepClone(tempLayout),
+                    type: existingPreset?.type || "grid",
+                    name: existingPreset?.name || generatePresetName(tempLayout),
+                    updatedAt: now
+                };
+
+                setPresets(updatedPresets);
+                savePresetsToStorage(updatedPresets);
+                const presetType = updatedPresets[activePresetIndex]!.type;
+                setCurrentPresetType(presetType);
+                saveCurrentPresetType(presetType);
+                saveActivePresetIndex(activePresetIndex);
+                setHasUnsavedChanges(false);
+                toast.success(`Saved Preset ${activePresetIndex + 1}`);
+            } else {
+                // Manual layout edits without an active preset fall back to grid mode
+                setCurrentPresetType("grid");
+                saveCurrentPresetType("grid");
+                setActivePresetIndex(null);
+                saveActivePresetIndex(null);
+                setHasUnsavedChanges(false);
+            }
         }
-    }, [tempLayout, layout]);
+    }, [
+        tempLayout,
+        layout,
+        activePresetIndex,
+        presets,
+        saveActivePresetIndex,
+        saveCurrentPresetType,
+        savePresetsToStorage,
+        generatePresetName
+    ]);
 
     const handleCancel = useCallback(() => {
         setMenuOpen(false);
