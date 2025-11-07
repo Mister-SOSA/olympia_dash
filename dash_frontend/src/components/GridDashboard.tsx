@@ -77,52 +77,52 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             }
         };
 
-    const handleRefreshWidget = (widgetId: string) => {
-        console.log(`Attempting to refresh widget: ${widgetId}`);
+        const handleRefreshWidget = (widgetId: string) => {
+            console.log(`Attempting to refresh widget: ${widgetId}`);
 
-        // Find the grid-stack-item (outer container)
-        const gridItem = document.querySelector(`.grid-stack-item[data-widget-id="${widgetId}"]`) as HTMLElement;
-        
-        if (!gridItem || !gridInstance.current) {
-            console.warn(`Grid item not found for widget: ${widgetId}`);
-            return;
-        }
+            // Find the grid-stack-item (outer container)
+            const gridItem = document.querySelector(`.grid-stack-item[data-widget-id="${widgetId}"]`) as HTMLElement;
 
-        // Find the inner content element
-        const contentElement = gridItem.querySelector('.grid-stack-item-content') as HTMLElement;
-        if (!contentElement) {
-            console.warn(`Content element not found for widget: ${widgetId}`);
-            return;
-        }
+            if (!gridItem || !gridInstance.current) {
+                console.warn(`Grid item not found for widget: ${widgetId}`);
+                return;
+            }
 
-        const root = widgetRoots.current.get(widgetId);
-        const widgetDef = getWidgetById(widgetId);
+            // Find the inner content element
+            const contentElement = gridItem.querySelector('.grid-stack-item-content') as HTMLElement;
+            if (!contentElement) {
+                console.warn(`Content element not found for widget: ${widgetId}`);
+                return;
+            }
 
-        if (root && widgetDef) {
-            console.log(`Refreshing widget: ${widgetId}`);
+            const root = widgetRoots.current.get(widgetId);
+            const widgetDef = getWidgetById(widgetId);
 
-            // Unmount the old root
-            root.unmount();
-            
-            // Clear the content element
-            contentElement.innerHTML = '';
-            
-            // Create a new root on the content element
-            const newRoot = createRoot(contentElement);
-            const WidgetComponent = widgetDef.component;
+            if (root && widgetDef) {
+                console.log(`Refreshing widget: ${widgetId}`);
 
-            // Render with new key to force complete re-mount
-            newRoot.render(
-                <Suspense fallback={null}>
-                    <WidgetComponent key={`refresh-${Date.now()}`} />
-                </Suspense>
-            );
+                // Unmount the old root
+                root.unmount();
 
-            // Update the root reference
-            widgetRoots.current.set(widgetId, newRoot);
-            console.log(`Widget ${widgetId} successfully refreshed`);
-        }
-    };
+                // Clear the content element
+                contentElement.innerHTML = '';
+
+                // Create a new root on the content element
+                const newRoot = createRoot(contentElement);
+                const WidgetComponent = widgetDef.component;
+
+                // Render with new key to force complete re-mount
+                newRoot.render(
+                    <Suspense fallback={null}>
+                        <WidgetComponent key={`refresh-${Date.now()}`} />
+                    </Suspense>
+                );
+
+                // Update the root reference
+                widgetRoots.current.set(widgetId, newRoot);
+                console.log(`Widget ${widgetId} successfully refreshed`);
+            }
+        };
 
         const handleResizeWidget = (widgetId: string, size: 'small' | 'medium' | 'large') => {
             if (!gridInstance.current) return;
@@ -232,11 +232,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const applyDragHandleRestriction = (element: HTMLElement) => {
             const content = element.querySelector('.grid-stack-item-content');
             if (!content) return;
-            
+
             // Mark as already processed to avoid duplicate listeners
             if ((content as any).__dragHandleRestricted) return;
             (content as any).__dragHandleRestricted = true;
-            
+
             const preventDragFromNonHandle = (e: Event) => {
                 const target = e.target as HTMLElement;
                 // Only allow drag to proceed if the event originated from the drag handle
@@ -244,7 +244,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     e.stopPropagation();
                 }
             };
-            
+
             // Add listeners in capture phase (true) to intercept BEFORE GridStack
             content.addEventListener('mousedown', preventDragFromNonHandle, true);
             content.addEventListener('touchstart', preventDragFromNonHandle, true);
@@ -348,7 +348,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 minH: MIN_WIDGET_HEIGHT,
             }));
             gridInstance.current.load(layoutWithMinimums);
-            
+
             // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
             gridInstance.current.el.querySelectorAll('.grid-stack-item').forEach((item: Element) => {
                 applyDragHandleRestriction(item as HTMLElement);
@@ -360,7 +360,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             let changeTimer: NodeJS.Timeout;
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
-                
+
                 // Debounce change events to prevent rapid-fire updates during resize
                 clearTimeout(changeTimer);
                 changeTimer = setTimeout(() => {
@@ -402,10 +402,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Check if widgets were added/removed (not just moved)
             const prevIds = new Set(prevLayoutRef.current.map(w => w.id));
             const currentIds = new Set(layout.map(w => w.id));
-            
+
             const widgetsAdded = layout.some(w => !prevIds.has(w.id));
             const widgetsRemoved = prevLayoutRef.current.some(w => !currentIds.has(w.id));
-            
+
             // Only reload if widgets were actually added or removed
             if (widgetsAdded || widgetsRemoved) {
                 // Create a set of widget IDs from the new layout
@@ -430,7 +430,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                 // Load the new layout into GridStack
                 gridInstance.current.load(layoutWithMinimums);
-                
+
                 // Re-apply drag handle restrictions after reload
                 setTimeout(() => {
                     if (gridInstance.current) {
@@ -440,7 +440,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     }
                 }, 100); // Small delay to ensure DOM is ready
             }
-            
+
             // Update the previous layout reference
             prevLayoutRef.current = layout;
         }, [layout]);
@@ -459,8 +459,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         <div className="text-center space-y-6 p-8 max-w-md">
                             <div className="flex justify-center">
                                 <div className="relative">
-                                    <LayoutDashboard 
-                                        className="w-16 h-16 text-ui-text-tertiary opacity-40" 
+                                    <LayoutDashboard
+                                        className="w-16 h-16 text-ui-text-tertiary opacity-40"
                                         strokeWidth={1.5}
                                     />
                                 </div>
@@ -474,8 +474,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                                 </p>
                             </div>
                             <div className="flex justify-center pt-4">
-                                <ArrowDown 
-                                    className="w-6 h-6 text-ui-text-tertiary opacity-30 animate-bounce" 
+                                <ArrowDown
+                                    className="w-6 h-6 text-ui-text-tertiary opacity-30 animate-bounce"
                                     strokeWidth={1.5}
                                 />
                             </div>

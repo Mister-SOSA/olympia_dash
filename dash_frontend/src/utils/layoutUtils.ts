@@ -8,34 +8,34 @@ import { preferencesService } from "@/lib/preferences";
  */
 export const generatePresetName = (layout: Widget[]): string => {
     const enabledWidgets = layout.filter(w => w.enabled);
-    
+
     if (enabledWidgets.length === 0) return "Empty Preset";
     if (enabledWidgets.length === 1) {
         return enabledWidgets[0].displayName || enabledWidgets[0].id;
     }
-    
+
     // Try to identify common patterns
     const names = enabledWidgets.map(w => w.displayName || w.id);
     const categories = enabledWidgets
         .map(w => w.category)
         .filter((c, i, arr) => c && arr.indexOf(c) === i); // unique categories
-    
+
     // If all widgets are from the same category, use that
     if (categories.length === 1 && categories[0]) {
         return `${categories[0]} Dashboard`;
     }
-    
+
     // Check for common themes
     const hasSales = names.some(n => n.toLowerCase().includes('sales'));
     const hasInventory = names.some(n => n.toLowerCase().includes('inventory') || n.toLowerCase().includes('stock'));
     const hasOrders = names.some(n => n.toLowerCase().includes('order'));
-    
+
     if (hasSales && hasInventory) return "Sales & Inventory";
     if (hasSales && hasOrders) return "Sales & Orders";
     if (hasSales) return "Sales Overview";
     if (hasInventory) return "Inventory Overview";
     if (hasOrders) return "Orders Overview";
-    
+
     // Default to count
     return `Dashboard (${enabledWidgets.length} widgets)`;
 };
@@ -125,16 +125,16 @@ export const areLayoutsEqual = (layoutA: Widget[], layoutB: Widget[]): boolean =
  */
 const migratePreset = (preset: any, index: number): DashboardPreset | null => {
     if (!preset) return null;
-    
+
     // Already in new format
     if (preset.name !== undefined || preset.createdAt !== undefined) {
         return preset as DashboardPreset;
     }
-    
+
     // Old format - add name and timestamps
     const layout = preset.layout || preset;
     const name = generatePresetName(layout);
-    
+
     return {
         type: preset.type || "grid",
         layout: layout,
@@ -208,19 +208,19 @@ export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
             if (Array.isArray(saved) && saved.length === 9) {
                 // Migrate each preset to new format
                 const migrated = saved.map((preset, index) => migratePreset(preset, index));
-                
+
                 // Check if any migration happened
                 const hasChanged = migrated.some((preset, index) => {
                     const original = saved[index];
                     return preset && original && !original.name && preset.name;
                 });
-                
+
                 // If migration happened, save the migrated presets
                 if (hasChanged) {
                     console.log("Migrating presets to include names and timestamps");
                     savePresetsToStorage(migrated);
                 }
-                
+
                 return migrated;
             }
         } catch (e) {
