@@ -19,9 +19,10 @@ import type { UserGroup, GroupMember } from '@/types';
 interface GroupManagerProps {
     onClose: () => void;
     onGroupsChanged: () => void;
+    inline?: boolean; // New prop for inline display
 }
 
-export function GroupManager({ onClose, onGroupsChanged }: GroupManagerProps) {
+export function GroupManager({ onClose, onGroupsChanged, inline = false }: GroupManagerProps) {
     const [groups, setGroups] = useState<UserGroup[]>([]);
     const [selectedGroup, setSelectedGroup] = useState<UserGroup | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -183,46 +184,53 @@ export function GroupManager({ onClose, onGroupsChanged }: GroupManagerProps) {
     );
 
     if (loading) {
+        const loadingContent = (
+            <div className="flex items-center justify-center p-12">
+                <Loader />
+            </div>
+        );
+        
+        if (inline) {
+            return <Card className="bg-ui-bg-secondary border-ui-border-primary">{loadingContent}</Card>;
+        }
+        
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-6xl max-h-[90vh] overflow-hidden">
-                    <div className="flex items-center justify-center p-12">
-                        <Loader />
-                    </div>
+                    {loadingContent}
                 </Card>
             </div>
         );
     }
 
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-6xl max-h-[90vh] flex flex-col">
-                <CardHeader className="border-b border-ui-border-primary flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-ui-text-primary text-2xl flex items-center">
-                                <MdPeople className="mr-2" />
-                                User Groups Manager
-                            </CardTitle>
-                            <CardDescription className="text-ui-text-secondary">
-                                Create and manage user groups for organizing permissions
-                            </CardDescription>
-                        </div>
-                        <Button
-                            onClick={onClose}
-                            variant="outline"
-                            size="sm"
-                            className="border-ui-border-primary hover:bg-ui-bg-tertiary"
-                        >
-                            <MdClose className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </CardHeader>
-
-                <CardContent className="flex-1 overflow-hidden p-6">
-                    <div className="grid grid-cols-12 gap-6 h-full">
+    const content = (
+        <>
+            <CardHeader className="border-b border-ui-border-primary">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-ui-text-primary text-2xl flex items-center">
+                            <MdPeople className="mr-2" />
+                            User Groups Manager
+                        </CardTitle>
+                        <CardDescription className="text-ui-text-secondary">
+                            Create and manage user groups for organizing permissions
+                        </CardDescription>
+                </div>
+                {!inline && (
+                    <Button
+                        onClick={onClose}
+                        variant="outline"
+                        size="sm"
+                        className="border-ui-border-primary hover:bg-ui-bg-tertiary"
+                    >
+                        <MdClose className="h-5 w-5" />
+                    </Button>
+                )}
+            </div>
+        </CardHeader>                <CardContent className="p-6">
+                    <div className="grid grid-cols-12 gap-6 max-h-[70vh]">
                         {/* Groups List */}
-                        <div className="col-span-4 flex flex-col space-y-4">
+                        <div className="col-span-4 flex flex-col space-y-4 max-h-[70vh]">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-lg font-semibold text-ui-text-primary">Groups</h3>
                                 <Button
@@ -477,7 +485,20 @@ export function GroupManager({ onClose, onGroupsChanged }: GroupManagerProps) {
                         </div>
                     </div>
                 </CardContent>
-            </Card>
+        </>
+    );
+
+    if (inline) {
+        return <Card className="bg-ui-bg-secondary border-ui-border-primary">{content}</Card>;
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="my-auto w-full max-w-6xl">
+                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                    {content}
+                </Card>
+            </div>
         </div>
     );
 }

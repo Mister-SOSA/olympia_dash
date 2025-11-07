@@ -21,12 +21,13 @@ import type { UserGroup, WidgetPermission } from '@/types';
 interface WidgetPermissionsManagerProps {
     onClose: () => void;
     onPermissionsChanged: () => void;
+    inline?: boolean; // New prop for inline display
 }
 
 type AccessLevel = 'view' | 'edit' | 'admin';
 type PermissionMode = 'user' | 'group';
 
-export function WidgetPermissionsManager({ onClose, onPermissionsChanged }: WidgetPermissionsManagerProps) {
+export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline = false }: WidgetPermissionsManagerProps) {
     const [loading, setLoading] = useState(true);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [allGroups, setAllGroups] = useState<UserGroup[]>([]);
@@ -166,31 +167,39 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged }: Widg
     };
 
     if (loading) {
+        const loadingContent = (
+            <div className="flex items-center justify-center p-12">
+                <Loader />
+            </div>
+        );
+        
+        if (inline) {
+            return <Card className="bg-ui-bg-secondary border-ui-border-primary">{loadingContent}</Card>;
+        }
+        
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-6xl max-h-[90vh] overflow-hidden">
-                    <div className="flex items-center justify-center p-12">
-                        <Loader />
-                    </div>
+                    {loadingContent}
                 </Card>
             </div>
         );
     }
 
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-7xl max-h-[90vh] flex flex-col">
-                <CardHeader className="border-b border-ui-border-primary flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-ui-text-primary text-2xl flex items-center">
-                                <MdSecurity className="mr-2" />
-                                Widget Permissions Manager
-                            </CardTitle>
-                            <CardDescription className="text-ui-text-secondary">
-                                Assign widget access to users and groups
-                            </CardDescription>
-                        </div>
+    const content = (
+        <>
+            <CardHeader className="border-b border-ui-border-primary">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="text-ui-text-primary text-2xl flex items-center">
+                            <MdSecurity className="mr-2" />
+                            Widget Permissions Manager
+                        </CardTitle>
+                        <CardDescription className="text-ui-text-secondary">
+                            Assign widget access to users and groups
+                        </CardDescription>
+                    </div>
+                    {!inline && (
                         <Button
                             onClick={onClose}
                             variant="outline"
@@ -199,13 +208,14 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged }: Widg
                         >
                             <MdClose className="h-5 w-5" />
                         </Button>
-                    </div>
-                </CardHeader>
+                    )}
+                </div>
+            </CardHeader>
 
-                <CardContent className="flex-1 overflow-hidden p-6">
-                    <div className="grid grid-cols-12 gap-6 h-full">
+                    <CardContent className="p-6">
+                        <div className="grid grid-cols-12 gap-6 max-h-[70vh]">
                         {/* Entity Selection */}
-                        <div className="col-span-4 flex flex-col space-y-4">
+                        <div className="col-span-4 flex flex-col space-y-4 max-h-[70vh]">
                             {/* Mode Toggle */}
                             <div className="flex gap-2">
                                 <Button
@@ -305,7 +315,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged }: Widg
                         </div>
 
                         {/* Widget Selection & Permissions */}
-                        <div className="col-span-8 flex flex-col space-y-4">
+                        <div className="col-span-8 flex flex-col space-y-4 max-h-[70vh] overflow-y-auto">
                             {selectedEntity ? (
                                 <>
                                     {/* Header */}
@@ -483,7 +493,20 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged }: Widg
                         </div>
                     </div>
                 </CardContent>
-            </Card>
+        </>
+    );
+
+    if (inline) {
+        return <Card className="bg-ui-bg-secondary border-ui-border-primary">{content}</Card>;
+    }
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="my-auto w-full max-w-7xl">
+                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                    {content}
+                </Card>
+            </div>
         </div>
     );
 }

@@ -10,7 +10,7 @@ import { Loader } from '@/components/ui/loader';
 import {
   MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
-  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity
+  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity, MdPerson
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
@@ -460,21 +460,21 @@ export default function AdminPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex space-x-2 border-b border-ui-border-primary">
+        <div className="flex space-x-2 border-b border-ui-border-primary overflow-x-auto">
           {[
-            { id: 'users', label: 'User Management', icon: MdPeople },
+            { id: 'users', label: 'Users', icon: MdPeople },
             { id: 'groups', label: 'Groups', icon: MdGroup },
-            { id: 'permissions', label: 'Widget Permissions', icon: MdSecurity },
+            { id: 'permissions', label: 'Permissions', icon: MdSecurity },
             { id: 'logs', label: 'Audit Logs', icon: MdHistory },
-            { id: 'devices', label: 'Device Sessions', icon: MdDevices },
-            { id: 'system', label: 'System Tools', icon: MdSettings },
+            { id: 'devices', label: 'Devices', icon: MdDevices },
+            { id: 'system', label: 'System', icon: MdSettings },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id
+              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
                   ? 'border-ui-accent-primary text-ui-accent-primary-text'
-                  : 'border-transparent text-ui-text-secondary hover:text-ui-text-secondary'
+                  : 'border-transparent text-ui-text-secondary hover:text-ui-text-primary'
                 }`}
             >
               <tab.icon className="mr-2 h-4 w-4" />
@@ -605,77 +605,19 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'groups' && (
-          <Card className="bg-ui-bg-secondary border-ui-border-primary">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-ui-text-primary text-xl">User Groups</CardTitle>
-                  <CardDescription className="text-ui-text-secondary">
-                    Organize users into groups for easier permission management
-                  </CardDescription>
-                </div>
-                <Button
-                  onClick={() => setShowGroupManager(true)}
-                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
-                >
-                  <MdGroup className="mr-2" />
-                  Manage Groups
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-ui-text-secondary">
-                <MdGroup className="mx-auto h-16 w-16 mb-4 text-ui-text-muted" />
-                <p className="text-lg mb-2">Comprehensive Group Management</p>
-                <p className="text-sm text-ui-text-muted mb-4">
-                  Create groups, add members, and assign widget permissions in bulk
-                </p>
-                <Button
-                  onClick={() => setShowGroupManager(true)}
-                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
-                >
-                  Open Group Manager
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <GroupManager 
+            onClose={() => {}} 
+            onGroupsChanged={loadData}
+            inline={true}
+          />
         )}
 
         {activeTab === 'permissions' && (
-          <Card className="bg-ui-bg-secondary border-ui-border-primary">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-ui-text-primary text-xl">Widget Permissions</CardTitle>
-                  <CardDescription className="text-ui-text-secondary">
-                    Control which widgets users and groups can access
-                  </CardDescription>
-                </div>
-                <Button
-                  onClick={() => setShowPermissionsManager(true)}
-                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
-                >
-                  <MdSecurity className="mr-2" />
-                  Manage Permissions
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-ui-text-secondary">
-                <MdSecurity className="mx-auto h-16 w-16 mb-4 text-ui-text-muted" />
-                <p className="text-lg mb-2">Granular Widget Access Control</p>
-                <p className="text-sm text-ui-text-muted mb-4">
-                  Assign widget-level permissions to users or entire groups with view, edit, or admin access
-                </p>
-                <Button
-                  onClick={() => setShowPermissionsManager(true)}
-                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
-                >
-                  Open Permissions Manager
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <WidgetPermissionsManager 
+            onClose={() => {}}
+            onPermissionsChanged={loadData}
+            inline={true}
+          />
         )}
 
         {activeTab === 'logs' && (
