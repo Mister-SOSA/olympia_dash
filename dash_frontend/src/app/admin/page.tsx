@@ -7,13 +7,15 @@ import { API_BASE_URL } from '@/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
-import { 
-  MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices, 
+import {
+  MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
-  MdFileDownload, MdCleaningServices
+  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
+import { GroupManager } from '@/components/GroupManager';
+import { WidgetPermissionsManager } from '@/components/WidgetPermissionsManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,10 +75,12 @@ export default function AdminPage() {
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'logs' | 'devices' | 'system'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'logs' | 'devices' | 'system' | 'groups' | 'permissions'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showGroupManager, setShowGroupManager] = useState(false);
+  const [showPermissionsManager, setShowPermissionsManager] = useState(false);
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -313,12 +317,12 @@ export default function AdminPage() {
   // Filter users
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesStatus = filterStatus === 'all' ||
-                          (filterStatus === 'active' && user.is_active) ||
-                          (filterStatus === 'inactive' && !user.is_active);
-    
+      (filterStatus === 'active' && user.is_active) ||
+      (filterStatus === 'inactive' && !user.is_active);
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -443,11 +447,10 @@ export default function AdminPage() {
             <CardContent>
               <div className="space-y-2">
                 {systemHealth.issues.map((issue, idx) => (
-                  <div key={idx} className={`p-3 rounded-lg ${
-                    issue.type === 'error' ? 'bg-red-500/20 text-red-300' :
-                    issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
-                    'bg-blue-500/20 text-blue-300'
-                  }`}>
+                  <div key={idx} className={`p-3 rounded-lg ${issue.type === 'error' ? 'bg-red-500/20 text-red-300' :
+                      issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
+                        'bg-blue-500/20 text-blue-300'
+                    }`}>
                     {issue.message}
                   </div>
                 ))}
@@ -460,6 +463,8 @@ export default function AdminPage() {
         <div className="flex space-x-2 border-b border-ui-border-primary">
           {[
             { id: 'users', label: 'User Management', icon: MdPeople },
+            { id: 'groups', label: 'Groups', icon: MdGroup },
+            { id: 'permissions', label: 'Widget Permissions', icon: MdSecurity },
             { id: 'logs', label: 'Audit Logs', icon: MdHistory },
             { id: 'devices', label: 'Device Sessions', icon: MdDevices },
             { id: 'system', label: 'System Tools', icon: MdSettings },
@@ -467,11 +472,10 @@ export default function AdminPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === tab.id
+              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id
                   ? 'border-ui-accent-primary text-ui-accent-primary-text'
                   : 'border-transparent text-ui-text-secondary hover:text-ui-text-secondary'
-              }`}
+                }`}
             >
               <tab.icon className="mr-2 h-4 w-4" />
               {tab.label}
@@ -500,7 +504,7 @@ export default function AdminPage() {
                   Export
                 </Button>
               </div>
-              
+
               {/* Search and Filters */}
               <div className="flex gap-4 mt-4">
                 <input
@@ -563,7 +567,7 @@ export default function AdminPage() {
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active
                               ? 'bg-green-500/20 text-green-400'
                               : 'bg-red-500/20 text-ui-danger-text'
-                            }`}
+                              }`}
                           >
                             {user.is_active ? 'Active' : 'Inactive'}
                           </span>
@@ -600,6 +604,80 @@ export default function AdminPage() {
           </Card>
         )}
 
+        {activeTab === 'groups' && (
+          <Card className="bg-ui-bg-secondary border-ui-border-primary">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-ui-text-primary text-xl">User Groups</CardTitle>
+                  <CardDescription className="text-ui-text-secondary">
+                    Organize users into groups for easier permission management
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => setShowGroupManager(true)}
+                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
+                >
+                  <MdGroup className="mr-2" />
+                  Manage Groups
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-ui-text-secondary">
+                <MdGroup className="mx-auto h-16 w-16 mb-4 text-ui-text-muted" />
+                <p className="text-lg mb-2">Comprehensive Group Management</p>
+                <p className="text-sm text-ui-text-muted mb-4">
+                  Create groups, add members, and assign widget permissions in bulk
+                </p>
+                <Button
+                  onClick={() => setShowGroupManager(true)}
+                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
+                >
+                  Open Group Manager
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'permissions' && (
+          <Card className="bg-ui-bg-secondary border-ui-border-primary">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-ui-text-primary text-xl">Widget Permissions</CardTitle>
+                  <CardDescription className="text-ui-text-secondary">
+                    Control which widgets users and groups can access
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={() => setShowPermissionsManager(true)}
+                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
+                >
+                  <MdSecurity className="mr-2" />
+                  Manage Permissions
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-ui-text-secondary">
+                <MdSecurity className="mx-auto h-16 w-16 mb-4 text-ui-text-muted" />
+                <p className="text-lg mb-2">Granular Widget Access Control</p>
+                <p className="text-sm text-ui-text-muted mb-4">
+                  Assign widget-level permissions to users or entire groups with view, edit, or admin access
+                </p>
+                <Button
+                  onClick={() => setShowPermissionsManager(true)}
+                  className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
+                >
+                  Open Permissions Manager
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {activeTab === 'logs' && (
           <Card className="bg-ui-bg-secondary border-ui-border-primary">
             <CardHeader>
@@ -627,12 +705,11 @@ export default function AdminPage() {
                   <div key={log.id} className="p-4 bg-ui-bg-tertiary rounded-lg hover:bg-slate-700 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                          log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-ui-danger-text' :
-                          log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
-                          log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-ui-danger-text' :
+                            log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
+                              log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
+                                'bg-blue-500/20 text-blue-400'
+                          }`}>
                           {log.action}
                         </span>
                         <span className="text-ui-text-secondary text-sm">
@@ -792,9 +869,8 @@ export default function AdminPage() {
                     </div>
                     <div className="p-4 bg-ui-bg-tertiary rounded-lg">
                       <p className="text-ui-text-secondary text-sm mb-1">System Status</p>
-                      <p className={`text-2xl font-bold ${
-                        systemHealth?.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
-                      }`}>
+                      <p className={`text-2xl font-bold ${systemHealth?.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
+                        }`}>
                         {systemHealth?.status || 'Loading...'}
                       </p>
                     </div>
@@ -805,6 +881,22 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Group Manager Modal */}
+      {showGroupManager && (
+        <GroupManager
+          onClose={() => setShowGroupManager(false)}
+          onGroupsChanged={loadData}
+        />
+      )}
+
+      {/* Widget Permissions Manager Modal */}
+      {showPermissionsManager && (
+        <WidgetPermissionsManager
+          onClose={() => setShowPermissionsManager(false)}
+          onPermissionsChanged={loadData}
+        />
+      )}
     </div>
   );
 }

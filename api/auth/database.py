@@ -138,6 +138,79 @@ def init_db():
         )
     ''')
     
+    # User groups table for organizing users
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            description TEXT,
+            color TEXT DEFAULT '#3b82f6',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_by INTEGER,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        )
+    ''')
+    
+    # Group membership table (many-to-many relationship)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            added_by INTEGER,
+            FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL,
+            UNIQUE(group_id, user_id)
+        )
+    ''')
+    
+    # Widget permissions for individual users
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS widget_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            widget_id TEXT NOT NULL,
+            access_level TEXT DEFAULT 'view',
+            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            granted_by INTEGER,
+            expires_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL,
+            UNIQUE(user_id, widget_id)
+        )
+    ''')
+    
+    # Widget permissions for groups
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_widget_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            widget_id TEXT NOT NULL,
+            access_level TEXT DEFAULT 'view',
+            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            granted_by INTEGER,
+            expires_at TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL,
+            UNIQUE(group_id, widget_id)
+        )
+    ''')
+    
+    # Role permissions table for system-wide capabilities
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS role_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT NOT NULL,
+            permission TEXT NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(role, permission)
+        )
+    ''')
+    
     # Create indexes for better performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON sessions(refresh_token)')
@@ -147,6 +220,11 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_rate_limits_identifier ON rate_limits(identifier, endpoint)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_preferences_updated_at ON user_preferences(updated_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_widget_permissions_user_id ON widget_permissions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_widget_permissions_group_id ON group_widget_permissions(group_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role)')
     
     conn.commit()
     conn.close()
@@ -653,3 +731,386 @@ def delete_user_preferences(user_id, preference_keys):
 
 # Initialize database on import
 init_db()
+
+# ============ User Groups Management ============
+
+def create_group(name, description=None, color='#3b82f6', created_by=None):
+    """Create a new user group."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO user_groups (name, description, color, created_by)
+            VALUES (?, ?, ?, ?)
+        ''', (name, description, color, created_by))
+        conn.commit()
+        group_id = cursor.lastrowid
+        return group_id
+    except sqlite3.IntegrityError:
+        return None
+    finally:
+        conn.close()
+
+def get_all_groups():
+    """Get all user groups."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT 
+            g.*,
+            COUNT(DISTINCT gm.user_id) as member_count,
+            COUNT(DISTINCT gwp.widget_id) as widget_count
+        FROM user_groups g
+        LEFT JOIN group_members gm ON g.id = gm.group_id
+        LEFT JOIN group_widget_permissions gwp ON g.id = gwp.group_id
+        GROUP BY g.id
+        ORDER BY g.name
+    ''')
+    groups = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return groups
+
+def get_group_by_id(group_id):
+    """Get a group by ID with member details."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get group info
+    cursor.execute('SELECT * FROM user_groups WHERE id = ?', (group_id,))
+    group = cursor.fetchone()
+    
+    if not group:
+        conn.close()
+        return None
+    
+    group_dict = dict(group)
+    
+    # Get members
+    cursor.execute('''
+        SELECT u.id, u.email, u.name, u.role, gm.added_at
+        FROM group_members gm
+        JOIN users u ON gm.user_id = u.id
+        WHERE gm.group_id = ?
+        ORDER BY u.email
+    ''', (group_id,))
+    group_dict['members'] = [dict(row) for row in cursor.fetchall()]
+    
+    # Get widget permissions
+    cursor.execute('''
+        SELECT widget_id, access_level, granted_at, expires_at
+        FROM group_widget_permissions
+        WHERE group_id = ?
+        ORDER BY widget_id
+    ''', (group_id,))
+    group_dict['widget_permissions'] = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    return group_dict
+
+def update_group(group_id, name=None, description=None, color=None):
+    """Update group details."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    updates = []
+    params = []
+    
+    if name is not None:
+        updates.append('name = ?')
+        params.append(name)
+    if description is not None:
+        updates.append('description = ?')
+        params.append(description)
+    if color is not None:
+        updates.append('color = ?')
+        params.append(color)
+    
+    if not updates:
+        conn.close()
+        return False
+    
+    updates.append('updated_at = CURRENT_TIMESTAMP')
+    params.append(group_id)
+    
+    query = f"UPDATE user_groups SET {', '.join(updates)} WHERE id = ?"
+    cursor.execute(query, params)
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def delete_group(group_id):
+    """Delete a group (cascades to members and permissions)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM user_groups WHERE id = ?', (group_id,))
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def add_user_to_group(group_id, user_id, added_by=None):
+    """Add a user to a group."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO group_members (group_id, user_id, added_by)
+            VALUES (?, ?, ?)
+        ''', (group_id, user_id, added_by))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+def remove_user_from_group(group_id, user_id):
+    """Remove a user from a group."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM group_members WHERE group_id = ? AND user_id = ?', (group_id, user_id))
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def get_user_groups(user_id):
+    """Get all groups a user belongs to."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT g.* FROM user_groups g
+        JOIN group_members gm ON g.id = gm.group_id
+        WHERE gm.user_id = ?
+        ORDER BY g.name
+    ''', (user_id,))
+    groups = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return groups
+
+# ============ Widget Permissions Management ============
+
+def grant_widget_permission(user_id, widget_id, access_level='view', granted_by=None, expires_at=None):
+    """Grant widget permission to a specific user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO widget_permissions (user_id, widget_id, access_level, granted_by, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, widget_id, access_level, granted_by, expires_at))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        # Update existing permission
+        cursor.execute('''
+            UPDATE widget_permissions 
+            SET access_level = ?, granted_by = ?, expires_at = ?, granted_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND widget_id = ?
+        ''', (access_level, granted_by, expires_at, user_id, widget_id))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def revoke_widget_permission(user_id, widget_id):
+    """Revoke widget permission from a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM widget_permissions WHERE user_id = ? AND widget_id = ?', (user_id, widget_id))
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def grant_group_widget_permission(group_id, widget_id, access_level='view', granted_by=None, expires_at=None):
+    """Grant widget permission to a group."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO group_widget_permissions (group_id, widget_id, access_level, granted_by, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (group_id, widget_id, access_level, granted_by, expires_at))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        # Update existing permission
+        cursor.execute('''
+            UPDATE group_widget_permissions 
+            SET access_level = ?, granted_by = ?, expires_at = ?, granted_at = CURRENT_TIMESTAMP
+            WHERE group_id = ? AND widget_id = ?
+        ''', (access_level, granted_by, expires_at, group_id, widget_id))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+def revoke_group_widget_permission(group_id, widget_id):
+    """Revoke widget permission from a group."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM group_widget_permissions WHERE group_id = ? AND widget_id = ?', (group_id, widget_id))
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def get_user_widget_permissions(user_id):
+    """
+    Get all widget permissions for a user (both direct and through groups).
+    Returns a dict mapping widget_id to access_level.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get direct permissions
+    cursor.execute('''
+        SELECT widget_id, access_level FROM widget_permissions
+        WHERE user_id = ? AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+    ''', (user_id,))
+    direct_permissions = {row[0]: row[1] for row in cursor.fetchall()}
+    
+    # Get group permissions
+    cursor.execute('''
+        SELECT gwp.widget_id, gwp.access_level 
+        FROM group_widget_permissions gwp
+        JOIN group_members gm ON gwp.group_id = gm.group_id
+        WHERE gm.user_id = ? AND (gwp.expires_at IS NULL OR gwp.expires_at > CURRENT_TIMESTAMP)
+    ''', (user_id,))
+    group_permissions = {row[0]: row[1] for row in cursor.fetchall()}
+    
+    conn.close()
+    
+    # Merge permissions (direct permissions override group permissions)
+    all_permissions = {**group_permissions, **direct_permissions}
+    return all_permissions
+
+def check_widget_access(user_id, widget_id, required_level='view'):
+    """
+    Check if a user has access to a specific widget.
+    Access levels: 'view', 'edit', 'admin'
+    """
+    # Admins have access to everything
+    user = get_user_by_id(user_id)
+    if user and user['role'] == 'admin':
+        return True
+    
+    permissions = get_user_widget_permissions(user_id)
+    user_level = permissions.get(widget_id)
+    
+    if not user_level:
+        return False
+    
+    # Define access level hierarchy
+    levels = {'view': 1, 'edit': 2, 'admin': 3}
+    return levels.get(user_level, 0) >= levels.get(required_level, 0)
+
+def get_all_widget_permissions():
+    """Get all widget permissions with user/group details."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get user permissions
+    cursor.execute('''
+        SELECT 
+            wp.id,
+            wp.widget_id,
+            wp.access_level,
+            wp.granted_at,
+            wp.expires_at,
+            u.id as user_id,
+            u.email,
+            u.name,
+            'user' as permission_type
+        FROM widget_permissions wp
+        JOIN users u ON wp.user_id = u.id
+        ORDER BY wp.widget_id, u.email
+    ''')
+    user_permissions = [dict(row) for row in cursor.fetchall()]
+    
+    # Get group permissions
+    cursor.execute('''
+        SELECT 
+            gwp.id,
+            gwp.widget_id,
+            gwp.access_level,
+            gwp.granted_at,
+            gwp.expires_at,
+            g.id as group_id,
+            g.name as group_name,
+            g.color,
+            'group' as permission_type
+        FROM group_widget_permissions gwp
+        JOIN user_groups g ON gwp.group_id = g.id
+        ORDER BY gwp.widget_id, g.name
+    ''')
+    group_permissions = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    
+    return {
+        'user_permissions': user_permissions,
+        'group_permissions': group_permissions
+    }
+
+def bulk_grant_widget_permissions(user_ids, widget_ids, access_level='view', granted_by=None):
+    """Grant multiple widget permissions to multiple users."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    success_count = 0
+    for user_id in user_ids:
+        for widget_id in widget_ids:
+            try:
+                cursor.execute('''
+                    INSERT OR REPLACE INTO widget_permissions (user_id, widget_id, access_level, granted_by)
+                    VALUES (?, ?, ?, ?)
+                ''', (user_id, widget_id, access_level, granted_by))
+                success_count += 1
+            except Exception:
+                pass
+    
+    conn.commit()
+    conn.close()
+    return success_count
+
+def bulk_revoke_widget_permissions(user_ids, widget_ids):
+    """Revoke multiple widget permissions from multiple users."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    placeholders_users = ','.join('?' * len(user_ids))
+    placeholders_widgets = ','.join('?' * len(widget_ids))
+    
+    cursor.execute(f'''
+        DELETE FROM widget_permissions 
+        WHERE user_id IN ({placeholders_users}) AND widget_id IN ({placeholders_widgets})
+    ''', user_ids + widget_ids)
+    
+    conn.commit()
+    deleted = cursor.rowcount
+    conn.close()
+    return deleted
+
+# ============ Role-Based Permissions ============
+
+def get_role_permissions(role):
+    """Get all system permissions for a role."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT permission FROM role_permissions WHERE role = ?', (role,))
+    permissions = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return permissions
+
+def has_role_permission(user_id, permission):
+    """Check if user has a specific role-based permission."""
+    user = get_user_by_id(user_id)
+    if not user:
+        return False
+    
+    role_perms = get_role_permissions(user['role'])
+    return permission in role_perms
+

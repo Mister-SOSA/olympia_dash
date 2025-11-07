@@ -124,3 +124,76 @@ export interface InventoryMove {
     docNumber: string;
     lotNumber: string;
 }
+
+// ============ Admin System Types ============
+
+export interface UserGroup {
+    id: number;
+    name: string;
+    description: string | null;
+    color: string;
+    created_at: string;
+    updated_at: string;
+    created_by: number | null;
+    member_count?: number;
+    widget_count?: number;
+    members?: GroupMember[];
+    widget_permissions?: GroupWidgetPermission[];
+}
+
+export interface GroupMember {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    added_at: string;
+}
+
+export interface WidgetPermission {
+    id: number;
+    user_id?: number;
+    group_id?: number;
+    widget_id: string;
+    access_level: 'view' | 'edit' | 'admin';
+    granted_at: string;
+    granted_by: number | null;
+    expires_at: string | null;
+    // For user permissions
+    email?: string;
+    name?: string;
+    // For group permissions
+    group_name?: string;
+    color?: string;
+    permission_type: 'user' | 'group';
+}
+
+export interface GroupWidgetPermission {
+    widget_id: string;
+    access_level: 'view' | 'edit' | 'admin';
+    granted_at: string;
+    expires_at: string | null;
+}
+
+export interface UserWithPermissions {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    is_active: boolean;
+    created_at: string;
+    last_login: string | null;
+    permissions: string[];
+    groups?: UserGroup[];
+    widget_permissions?: Record<string, 'view' | 'edit' | 'admin'>;
+}
+
+export interface BulkPermissionRequest {
+    user_ids: number[];
+    widget_ids: string[];
+    access_level: 'view' | 'edit' | 'admin';
+}
+
+export interface WidgetAccessControl {
+    permissions: Record<string, 'view' | 'edit' | 'admin'>;
+    all_access: boolean;
+}
