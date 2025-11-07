@@ -189,11 +189,11 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                 <Loader />
             </div>
         );
-        
+
         if (inline) {
             return <Card className="bg-ui-bg-secondary border-ui-border-primary">{loadingContent}</Card>;
         }
-        
+
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-6xl max-h-[90vh] overflow-hidden">
@@ -215,276 +215,276 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                         <CardDescription className="text-ui-text-secondary">
                             Create and manage user groups for organizing permissions
                         </CardDescription>
+                    </div>
+                    {!inline && (
+                        <Button
+                            onClick={onClose}
+                            variant="outline"
+                            size="sm"
+                            className="border-ui-border-primary hover:bg-ui-bg-tertiary"
+                        >
+                            <MdClose className="h-5 w-5" />
+                        </Button>
+                    )}
                 </div>
-                {!inline && (
-                    <Button
-                        onClick={onClose}
-                        variant="outline"
-                        size="sm"
-                        className="border-ui-border-primary hover:bg-ui-bg-tertiary"
-                    >
-                        <MdClose className="h-5 w-5" />
-                    </Button>
-                )}
-            </div>
-        </CardHeader>                <CardContent className="p-6">
-                    <div className="grid grid-cols-12 gap-6 max-h-[70vh]">
-                        {/* Groups List */}
-                        <div className="col-span-4 flex flex-col space-y-4 max-h-[70vh]">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-semibold text-ui-text-primary">Groups</h3>
-                                <Button
-                                    onClick={() => setIsCreating(true)}
-                                    size="sm"
-                                    className="bg-ui-accent-primary text-white hover:bg-ui-accent-primary/80"
-                                >
-                                    <MdAdd className="mr-1" /> New
-                                </Button>
-                            </div>
+            </CardHeader>                <CardContent className="p-6">
+                <div className="grid grid-cols-12 gap-6 max-h-[70vh]">
+                    {/* Groups List */}
+                    <div className="col-span-4 flex flex-col space-y-4 max-h-[70vh]">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-ui-text-primary">Groups</h3>
+                            <Button
+                                onClick={() => setIsCreating(true)}
+                                size="sm"
+                                className="bg-ui-accent-primary text-white hover:bg-ui-accent-primary/80"
+                            >
+                                <MdAdd className="mr-1" /> New
+                            </Button>
+                        </div>
 
-                            {/* Create Group Form */}
-                            {isCreating && (
-                                <Card className="bg-ui-bg-tertiary border-ui-border-primary p-4">
-                                    <div className="space-y-3">
-                                        <div>
-                                            <Label className="text-ui-text-secondary text-sm">Name</Label>
-                                            <Input
-                                                value={newGroupName}
-                                                onChange={(e) => setNewGroupName(e.target.value)}
-                                                placeholder="Engineering, Sales, etc."
-                                                className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label className="text-ui-text-secondary text-sm">Description</Label>
-                                            <Input
-                                                value={newGroupDescription}
-                                                onChange={(e) => setNewGroupDescription(e.target.value)}
-                                                placeholder="Optional description"
-                                                className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label className="text-ui-text-secondary text-sm">Color</Label>
-                                            <Input
-                                                type="color"
-                                                value={newGroupColor}
-                                                onChange={(e) => setNewGroupColor(e.target.value)}
-                                                className="bg-ui-bg-secondary border-ui-border-primary h-10"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                onClick={handleCreateGroup}
-                                                size="sm"
-                                                className="flex-1 bg-green-500 hover:bg-green-600"
-                                            >
-                                                <MdSave className="mr-1" /> Create
-                                            </Button>
-                                            <Button
-                                                onClick={() => setIsCreating(false)}
-                                                size="sm"
-                                                variant="outline"
-                                                className="flex-1 border-ui-border-primary"
-                                            >
-                                                <MdCancel className="mr-1" /> Cancel
-                                            </Button>
-                                        </div>
+                        {/* Create Group Form */}
+                        {isCreating && (
+                            <Card className="bg-ui-bg-tertiary border-ui-border-primary p-4">
+                                <div className="space-y-3">
+                                    <div>
+                                        <Label className="text-ui-text-secondary text-sm">Name</Label>
+                                        <Input
+                                            value={newGroupName}
+                                            onChange={(e) => setNewGroupName(e.target.value)}
+                                            placeholder="Engineering, Sales, etc."
+                                            className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
+                                        />
                                     </div>
-                                </Card>
-                            )}
+                                    <div>
+                                        <Label className="text-ui-text-secondary text-sm">Description</Label>
+                                        <Input
+                                            value={newGroupDescription}
+                                            onChange={(e) => setNewGroupDescription(e.target.value)}
+                                            placeholder="Optional description"
+                                            className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-ui-text-secondary text-sm">Color</Label>
+                                        <Input
+                                            type="color"
+                                            value={newGroupColor}
+                                            onChange={(e) => setNewGroupColor(e.target.value)}
+                                            className="bg-ui-bg-secondary border-ui-border-primary h-10"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={handleCreateGroup}
+                                            size="sm"
+                                            className="flex-1 bg-green-500 hover:bg-green-600"
+                                        >
+                                            <MdSave className="mr-1" /> Create
+                                        </Button>
+                                        <Button
+                                            onClick={() => setIsCreating(false)}
+                                            size="sm"
+                                            variant="outline"
+                                            className="flex-1 border-ui-border-primary"
+                                        >
+                                            <MdCancel className="mr-1" /> Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
 
-                            {/* Groups List */}
-                            <div className="flex-1 overflow-y-auto space-y-2">
-                                {groups.map(group => (
-                                    <div
-                                        key={group.id}
-                                        onClick={() => setSelectedGroup(group)}
-                                        className={`p-4 rounded-lg cursor-pointer transition-colors ${selectedGroup?.id === group.id
-                                                ? 'bg-ui-accent-primary/20 border-2 border-ui-accent-primary'
-                                                : 'bg-ui-bg-tertiary border-2 border-transparent hover:border-ui-border-primary'
-                                            }`}
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-center space-x-3 flex-1">
-                                                <div
-                                                    className="w-4 h-4 rounded-full flex-shrink-0"
-                                                    style={{ backgroundColor: group.color }}
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="font-semibold text-ui-text-primary truncate">{group.name}</h4>
-                                                    {group.description && (
-                                                        <p className="text-sm text-ui-text-muted truncate">{group.description}</p>
-                                                    )}
-                                                    <div className="flex gap-3 mt-1 text-xs text-ui-text-muted">
-                                                        <span>{group.member_count || 0} members</span>
-                                                        <span>{group.widget_count || 0} widgets</span>
-                                                    </div>
+                        {/* Groups List */}
+                        <div className="flex-1 overflow-y-auto space-y-2">
+                            {groups.map(group => (
+                                <div
+                                    key={group.id}
+                                    onClick={() => setSelectedGroup(group)}
+                                    className={`p-4 rounded-lg cursor-pointer transition-colors ${selectedGroup?.id === group.id
+                                        ? 'bg-ui-accent-primary/20 border-2 border-ui-accent-primary'
+                                        : 'bg-ui-bg-tertiary border-2 border-transparent hover:border-ui-border-primary'
+                                        }`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex items-center space-x-3 flex-1">
+                                            <div
+                                                className="w-4 h-4 rounded-full flex-shrink-0"
+                                                style={{ backgroundColor: group.color }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-ui-text-primary truncate">{group.name}</h4>
+                                                {group.description && (
+                                                    <p className="text-sm text-ui-text-muted truncate">{group.description}</p>
+                                                )}
+                                                <div className="flex gap-3 mt-1 text-xs text-ui-text-muted">
+                                                    <span>{group.member_count || 0} members</span>
+                                                    <span>{group.widget_count || 0} widgets</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
+                    </div>
 
-                        {/* Group Details */}
-                        <div className="col-span-8 flex flex-col space-y-4">
-                            {selectedGroup ? (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <div
-                                                className="w-6 h-6 rounded-full"
-                                                style={{ backgroundColor: selectedGroup.color }}
-                                            />
-                                            <h3 className="text-xl font-bold text-ui-text-primary">{selectedGroup.name}</h3>
+                    {/* Group Details */}
+                    <div className="col-span-8 flex flex-col space-y-4">
+                        {selectedGroup ? (
+                            <>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                        <div
+                                            className="w-6 h-6 rounded-full"
+                                            style={{ backgroundColor: selectedGroup.color }}
+                                        />
+                                        <h3 className="text-xl font-bold text-ui-text-primary">{selectedGroup.name}</h3>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {!isEditing ? (
+                                            <>
+                                                <Button
+                                                    onClick={() => startEditing(selectedGroup)}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-ui-border-primary hover:bg-ui-bg-tertiary"
+                                                >
+                                                    <MdEdit className="mr-1" /> Edit
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleDeleteGroup(selectedGroup.id)}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
+                                                >
+                                                    <MdDelete className="mr-1" /> Delete
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    onClick={handleUpdateGroup}
+                                                    size="sm"
+                                                    className="bg-green-500 hover:bg-green-600"
+                                                >
+                                                    <MdSave className="mr-1" /> Save
+                                                </Button>
+                                                <Button
+                                                    onClick={() => setIsEditing(false)}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-ui-border-primary"
+                                                >
+                                                    <MdCancel className="mr-1" /> Cancel
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {isEditing && (
+                                    <Card className="bg-ui-bg-tertiary border-ui-border-primary p-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label className="text-ui-text-secondary text-sm">Name</Label>
+                                                <Input
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-ui-text-secondary text-sm">Color</Label>
+                                                <Input
+                                                    type="color"
+                                                    value={editColor}
+                                                    onChange={(e) => setEditColor(e.target.value)}
+                                                    className="bg-ui-bg-secondary border-ui-border-primary h-10"
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <Label className="text-ui-text-secondary text-sm">Description</Label>
+                                                <Input
+                                                    value={editDescription}
+                                                    onChange={(e) => setEditDescription(e.target.value)}
+                                                    className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            {!isEditing ? (
-                                                <>
-                                                    <Button
-                                                        onClick={() => startEditing(selectedGroup)}
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="border-ui-border-primary hover:bg-ui-bg-tertiary"
+                                    </Card>
+                                )}
+
+                                <div className="flex-1 overflow-y-auto space-y-4">
+                                    {/* Current Members */}
+                                    <div>
+                                        <h4 className="font-semibold text-ui-text-primary mb-3">
+                                            Members ({selectedGroup.members?.length || 0})
+                                        </h4>
+                                        <div className="space-y-2">
+                                            {selectedGroup.members && selectedGroup.members.length > 0 ? (
+                                                selectedGroup.members.map(member => (
+                                                    <div
+                                                        key={member.id}
+                                                        className="flex items-center justify-between p-3 bg-ui-bg-tertiary rounded-lg"
                                                     >
-                                                        <MdEdit className="mr-1" /> Edit
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() => handleDeleteGroup(selectedGroup.id)}
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
-                                                    >
-                                                        <MdDelete className="mr-1" /> Delete
-                                                    </Button>
-                                                </>
+                                                        <div>
+                                                            <p className="font-medium text-ui-text-primary">{member.name}</p>
+                                                            <p className="text-sm text-ui-text-muted">{member.email}</p>
+                                                        </div>
+                                                        <Button
+                                                            onClick={() => handleRemoveMember(member.id)}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
+                                                        >
+                                                            <MdRemoveCircle className="mr-1" /> Remove
+                                                        </Button>
+                                                    </div>
+                                                ))
                                             ) : (
-                                                <>
-                                                    <Button
-                                                        onClick={handleUpdateGroup}
-                                                        size="sm"
-                                                        className="bg-green-500 hover:bg-green-600"
-                                                    >
-                                                        <MdSave className="mr-1" /> Save
-                                                    </Button>
-                                                    <Button
-                                                        onClick={() => setIsEditing(false)}
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="border-ui-border-primary"
-                                                    >
-                                                        <MdCancel className="mr-1" /> Cancel
-                                                    </Button>
-                                                </>
+                                                <p className="text-ui-text-muted text-center py-4">No members in this group</p>
                                             )}
                                         </div>
                                     </div>
 
-                                    {isEditing && (
-                                        <Card className="bg-ui-bg-tertiary border-ui-border-primary p-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <Label className="text-ui-text-secondary text-sm">Name</Label>
-                                                    <Input
-                                                        value={editName}
-                                                        onChange={(e) => setEditName(e.target.value)}
-                                                        className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <Label className="text-ui-text-secondary text-sm">Color</Label>
-                                                    <Input
-                                                        type="color"
-                                                        value={editColor}
-                                                        onChange={(e) => setEditColor(e.target.value)}
-                                                        className="bg-ui-bg-secondary border-ui-border-primary h-10"
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Label className="text-ui-text-secondary text-sm">Description</Label>
-                                                    <Input
-                                                        value={editDescription}
-                                                        onChange={(e) => setEditDescription(e.target.value)}
-                                                        className="bg-ui-bg-secondary border-ui-border-primary text-ui-text-secondary"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    )}
-
-                                    <div className="flex-1 overflow-y-auto space-y-4">
-                                        {/* Current Members */}
+                                    {/* Available Users */}
+                                    {availableUsers.length > 0 && (
                                         <div>
                                             <h4 className="font-semibold text-ui-text-primary mb-3">
-                                                Members ({selectedGroup.members?.length || 0})
+                                                Add Members ({availableUsers.length} available)
                                             </h4>
-                                            <div className="space-y-2">
-                                                {selectedGroup.members && selectedGroup.members.length > 0 ? (
-                                                    selectedGroup.members.map(member => (
-                                                        <div
-                                                            key={member.id}
-                                                            className="flex items-center justify-between p-3 bg-ui-bg-tertiary rounded-lg"
-                                                        >
-                                                            <div>
-                                                                <p className="font-medium text-ui-text-primary">{member.name}</p>
-                                                                <p className="text-sm text-ui-text-muted">{member.email}</p>
-                                                            </div>
-                                                            <Button
-                                                                onClick={() => handleRemoveMember(member.id)}
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
-                                                            >
-                                                                <MdRemoveCircle className="mr-1" /> Remove
-                                                            </Button>
+                                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                                {availableUsers.map(user => (
+                                                    <div
+                                                        key={user.id}
+                                                        className="flex items-center justify-between p-3 bg-ui-bg-tertiary rounded-lg"
+                                                    >
+                                                        <div>
+                                                            <p className="font-medium text-ui-text-primary">{user.name}</p>
+                                                            <p className="text-sm text-ui-text-muted">{user.email}</p>
                                                         </div>
-                                                    ))
-                                                ) : (
-                                                    <p className="text-ui-text-muted text-center py-4">No members in this group</p>
-                                                )}
+                                                        <Button
+                                                            onClick={() => handleAddMember(user.id)}
+                                                            size="sm"
+                                                            className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
+                                                        >
+                                                            <MdCheckCircle className="mr-1" /> Add
+                                                        </Button>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-
-                                        {/* Available Users */}
-                                        {availableUsers.length > 0 && (
-                                            <div>
-                                                <h4 className="font-semibold text-ui-text-primary mb-3">
-                                                    Add Members ({availableUsers.length} available)
-                                                </h4>
-                                                <div className="space-y-2 max-h-64 overflow-y-auto">
-                                                    {availableUsers.map(user => (
-                                                        <div
-                                                            key={user.id}
-                                                            className="flex items-center justify-between p-3 bg-ui-bg-tertiary rounded-lg"
-                                                        >
-                                                            <div>
-                                                                <p className="font-medium text-ui-text-primary">{user.name}</p>
-                                                                <p className="text-sm text-ui-text-muted">{user.email}</p>
-                                                            </div>
-                                                            <Button
-                                                                onClick={() => handleAddMember(user.id)}
-                                                                size="sm"
-                                                                className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
-                                                            >
-                                                                <MdCheckCircle className="mr-1" /> Add
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex-1 flex items-center justify-center text-ui-text-muted">
-                                    <p>Select a group to view details</p>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-ui-text-muted">
+                                <p>Select a group to view details</p>
+                            </div>
+                        )}
                     </div>
-                </CardContent>
+                </div>
+            </CardContent>
         </>
     );
 

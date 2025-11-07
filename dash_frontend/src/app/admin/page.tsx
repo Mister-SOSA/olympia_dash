@@ -16,6 +16,7 @@ import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
 import { GroupManager } from '@/components/GroupManager';
 import { WidgetPermissionsManager } from '@/components/WidgetPermissionsManager';
+import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -335,8 +336,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ui-bg-primary p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="h-screen bg-ui-bg-primary overflow-y-auto">
+      <div className="max-w-7xl mx-auto p-6 space-y-6 pb-12">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -448,8 +449,8 @@ export default function AdminPage() {
               <div className="space-y-2">
                 {systemHealth.issues.map((issue, idx) => (
                   <div key={idx} className={`p-3 rounded-lg ${issue.type === 'error' ? 'bg-red-500/20 text-red-300' :
-                      issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
-                        'bg-blue-500/20 text-blue-300'
+                    issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
+                      'bg-blue-500/20 text-blue-300'
                     }`}>
                     {issue.message}
                   </div>
@@ -473,8 +474,8 @@ export default function AdminPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
-                  ? 'border-ui-accent-primary text-ui-accent-primary-text'
-                  : 'border-transparent text-ui-text-secondary hover:text-ui-text-primary'
+                ? 'border-ui-accent-primary text-ui-accent-primary-text'
+                : 'border-transparent text-ui-text-secondary hover:text-ui-text-primary'
                 }`}
             >
               <tab.icon className="mr-2 h-4 w-4" />
@@ -605,19 +606,15 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'groups' && (
-          <GroupManager 
-            onClose={() => {}} 
+          <GroupManager
+            onClose={() => { }}
             onGroupsChanged={loadData}
             inline={true}
           />
         )}
 
         {activeTab === 'permissions' && (
-          <WidgetPermissionsManager 
-            onClose={() => {}}
-            onPermissionsChanged={loadData}
-            inline={true}
-          />
+          <PermissionsPanel />
         )}
 
         {activeTab === 'logs' && (
@@ -648,9 +645,9 @@ export default function AdminPage() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-ui-danger-text' :
-                            log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
-                              log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
-                                'bg-blue-500/20 text-blue-400'
+                          log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
+                            log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
+                              'bg-blue-500/20 text-blue-400'
                           }`}>
                           {log.action}
                         </span>
