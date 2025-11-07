@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Widget } from "@/types";
 import { WIDGETS, getWidgetsByCategory } from "@/constants/widgets";
-import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert, MdWarning } from "react-icons/md";
+import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
 
 interface ImprovedWidgetMenuProps {
     tempLayout: Widget[];
@@ -12,7 +12,6 @@ interface ImprovedWidgetMenuProps {
     handleSave: () => void;
     handleCancel: () => void;
     activePresetName?: string;
-    hasUnsavedChanges?: boolean;
 }
 
 export default function ImprovedWidgetMenu({
@@ -21,7 +20,6 @@ export default function ImprovedWidgetMenu({
     handleSave,
     handleCancel,
     activePresetName,
-    hasUnsavedChanges,
 }: ImprovedWidgetMenuProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -194,20 +192,9 @@ export default function ImprovedWidgetMenu({
 
                 {/* Active Preset Context Banner */}
                 {activePresetName && (
-                    <div className={`px-4 py-3 border-b border-ui-border-primary ${hasUnsavedChanges
-                        ? "bg-yellow-500/10 border-yellow-500/30"
-                        : "bg-ui-accent-primary-bg/30 border-ui-accent-primary-border"
-                        }`}>
-                        <div className="flex items-center gap-2 text-sm">
-                            {hasUnsavedChanges && <MdWarning className="w-4 h-4 text-yellow-500 flex-shrink-0" />}
-                            <span className="text-ui-text-primary font-medium">
-                                {hasUnsavedChanges ? "Editing:" : "Viewing:"} {activePresetName}
-                            </span>
-                            {hasUnsavedChanges && (
-                                <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                                    (Unsaved changes - will clear preset link)
-                                </span>
-                            )}
+                    <div className="px-4 py-3 border-b border-ui-border-primary bg-ui-accent-primary-bg/30 border-ui-accent-primary-border">
+                        <div className="text-sm text-ui-text-primary font-medium">
+                            Active preset: {activePresetName}
                         </div>
                     </div>
                 )}

@@ -6,7 +6,6 @@ import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
 import { COLUMN_COUNT, CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "@/constants/dashboard";
-import { saveLayoutToStorage } from "@/utils/layoutUtils";
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
@@ -34,6 +33,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
         const [selectedWidget, setSelectedWidget] = useState<{ id: string; title: string } | null>(null);
+        const externalLayoutChangeRef = useRef(onExternalLayoutChange);
+
+        useEffect(() => {
+            externalLayoutChangeRef.current = onExternalLayoutChange;
+        }, [onExternalLayoutChange]);
 
         // Context menu actions
         const handleDeleteWidget = (widgetId: string) => {
@@ -64,10 +68,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     const currentLayout = layout.filter(widget => widget.id !== widgetId);
                     console.log(`Updated layout:`, currentLayout);
 
-                    if (onExternalLayoutChange) {
-                        onExternalLayoutChange(currentLayout);
-                    }
-                    saveLayoutToStorage(currentLayout);
+                    externalLayoutChangeRef.current?.(currentLayout);
 
                     console.log(`Widget ${widgetId} successfully removed and layout compacted`);
                 } else {
@@ -172,8 +173,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     h: node.h || 1,
                     enabled: true,
                 }));
-                if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
-                saveLayoutToStorage(updatedLayout);
+                externalLayoutChangeRef.current?.(updatedLayout);
                 console.log('[Resize] Layout persisted after resize');
             }
 
@@ -222,10 +222,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         h: node.h || 1,
                         enabled: true,
                     }));
-                    if (onExternalLayoutChange) {
-                        onExternalLayoutChange(updatedLayout);
-                    }
-                    saveLayoutToStorage(updatedLayout);
+                    externalLayoutChangeRef.current?.(updatedLayout);
                 }
             },
         }));
@@ -377,8 +374,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         h: node.h || 1,
                         enabled: true,
                     }));
-                    if (onExternalLayoutChange) onExternalLayoutChange(updatedLayout);
-                    saveLayoutToStorage(updatedLayout);
+                    externalLayoutChangeRef.current?.(updatedLayout);
                 }, 200); // Wait 200ms after last change before saving
             });
 

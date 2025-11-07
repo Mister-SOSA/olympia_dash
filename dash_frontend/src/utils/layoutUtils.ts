@@ -41,6 +41,86 @@ export const generatePresetName = (layout: Widget[]): string => {
 };
 
 /**
+ * Normalize a layout so that it always includes every widget in the master list,
+ * preserving any saved metadata and ensuring consistent ordering.
+ */
+export const normalizeLayout = (layout: Widget[]): Widget[] => {
+    const layoutMap = new Map(layout.map(widget => [widget.id, widget]));
+
+    return masterWidgetList.map((widgetDef) => {
+        const existing = layoutMap.get(widgetDef.id);
+
+        if (existing) {
+            return {
+                ...widgetDef,
+                ...existing,
+                enabled: existing.enabled ?? true,
+            };
+        }
+
+        return {
+            ...widgetDef,
+            enabled: false,
+        };
+    });
+};
+
+/**
+ * Merge an active layout (containing only enabled widgets) into the current
+ * canonical layout, preserving disabled widgets and metadata.
+ */
+export const mergeLayoutWithActive = (currentLayout: Widget[], activeLayout: Widget[]): Widget[] => {
+    const normalizedCurrent = normalizeLayout(currentLayout);
+    const activeMap = new Map(activeLayout.map(widget => [widget.id, widget]));
+
+    return normalizedCurrent.map((widget) => {
+        const active = activeMap.get(widget.id);
+
+        if (!active) {
+            return {
+                ...widget,
+                enabled: false,
+            };
+        }
+
+        return {
+            ...widget,
+            ...active,
+            enabled: true,
+        };
+    });
+};
+
+/**
+ * Deep comparison between two layouts using their normalized representations.
+ */
+export const areLayoutsEqual = (layoutA: Widget[], layoutB: Widget[]): boolean => {
+    const normalizedA = normalizeLayout(layoutA);
+    const normalizedB = normalizeLayout(layoutB);
+
+    if (normalizedA.length !== normalizedB.length) {
+        return false;
+    }
+
+    const layoutBMap = new Map(normalizedB.map(widget => [widget.id, widget]));
+
+    return normalizedA.every((widgetA) => {
+        const widgetB = layoutBMap.get(widgetA.id);
+        if (!widgetB) {
+            return false;
+        }
+
+        return (
+            widgetA.enabled === widgetB.enabled &&
+            widgetA.x === widgetB.x &&
+            widgetA.y === widgetB.y &&
+            widgetA.w === widgetB.w &&
+            widgetA.h === widgetB.h
+        );
+    });
+};
+
+/**
  * Migrate old preset format to new format with names
  */
 const migratePreset = (preset: any, index: number): DashboardPreset | null => {
@@ -73,7 +153,7 @@ export const readLayoutFromStorage = (): Widget[] => {
     const savedLayout = preferencesService.get<Widget[]>('dashboard.layout');
     if (savedLayout) {
         try {
-            return savedLayout;
+            return normalizeLayout(savedLayout);
         } catch (error) {
             console.error("Error parsing saved layout:", error);
         }
@@ -85,7 +165,7 @@ export const readLayoutFromStorage = (): Widget[] => {
  * Saves the full layout to preferences service.
  */
 export const saveLayoutToStorage = (layout: Widget[]) => {
-    preferencesService.set('dashboard.layout', layout);
+    preferencesService.set('dashboard.layout', normalizeLayout(layout));
 };
 
 /**
@@ -111,7 +191,8 @@ export const saveCurrentPresetType = (type: string) => {
  * Reads the current preset type from preferences service.
  */
 export const readCurrentPresetType = (): string => {
-    return preferencesService.get<string>('dashboard.currentPresetType', 'grid');
+    const stored = preferencesService.get<string>('dashboard.currentPresetType', 'grid');
+    return stored ?? 'grid';
 };
 
 /**
@@ -167,5 +248,6 @@ export const saveActivePresetIndex = (index: number | null) => {
  * Read the currently active preset index
  */
 export const readActivePresetIndex = (): number | null => {
-    return preferencesService.get<number | null>('dashboard.activePresetIndex', null);
+    const stored = preferencesService.get<number | null>('dashboard.activePresetIndex', null);
+    return stored ?? null;
 };

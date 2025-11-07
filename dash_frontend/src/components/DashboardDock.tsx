@@ -9,7 +9,6 @@ import { DashboardPreset } from "@/types";
 interface DashboardDockProps {
     presets: Array<DashboardPreset | null>;
     activePresetIndex: number | null;
-    hasUnsavedChanges: boolean;
     onWidgetsClick: () => void;
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
@@ -20,7 +19,6 @@ interface DashboardDockProps {
 export default function DashboardDock({
     presets,
     activePresetIndex,
-    hasUnsavedChanges,
     onWidgetsClick,
     onPresetManagerClick,
     onPresetClick,
@@ -94,9 +92,7 @@ export default function DashboardDock({
                             const presetName = preset?.name || `Preset ${index + 1}`;
 
                             let tooltipText = `${presetName}`;
-                            if (isActive && hasUnsavedChanges) {
-                                tooltipText += " (Active • Unsaved changes)";
-                            } else if (isActive) {
+                            if (isActive) {
                                 tooltipText += " (Active)";
                             } else if (isFilled) {
                                 tooltipText += " - Click to load, Right-click to overwrite";
@@ -119,10 +115,7 @@ export default function DashboardDock({
                                     }
                                 >
                                     <span className="font-semibold text-sm">{index + 1}</span>
-                                    {isActive && hasUnsavedChanges && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_8px_rgba(250,204,21,0.8)] animate-pulse" />
-                                    )}
-                                    {isActive && !hasUnsavedChanges && (
+                                    {isActive && (
                                         <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
                                     )}
                                     {!isActive && isFilled && (

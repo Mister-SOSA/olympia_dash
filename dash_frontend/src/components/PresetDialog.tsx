@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Widget, PresetType } from "@/types";
 import { MdGridView, MdFullscreen, MdAdd, MdWarning } from "react-icons/md";
 
-type DialogType = "empty" | "save" | "overwrite" | "unsaved";
+type DialogType = "empty" | "save" | "overwrite";
 
 interface PresetDialogProps {
     isOpen: boolean;
@@ -16,7 +16,6 @@ interface PresetDialogProps {
     onCreateBlank: (index: number) => void;
     onSavePreset: (index: number, layout: Widget[], type: PresetType) => void;
     onLoadPreset: (index: number) => void;
-    onDiscardAndLoad: (index: number) => void;
 }
 
 const PresetDialog = memo(function PresetDialog({
@@ -28,7 +27,6 @@ const PresetDialog = memo(function PresetDialog({
     onCreateBlank,
     onSavePreset,
     onLoadPreset,
-    onDiscardAndLoad,
 }: PresetDialogProps) {
     const handleSave = useCallback((type: PresetType) => {
         onSavePreset(presetIndex, currentLayout, type);
@@ -44,11 +42,6 @@ const PresetDialog = memo(function PresetDialog({
         onLoadPreset(presetIndex);
         onClose();
     }, [presetIndex, onLoadPreset, onClose]);
-
-    const handleDiscardAndLoad = useCallback(() => {
-        onDiscardAndLoad(presetIndex);
-        onClose();
-    }, [presetIndex, onDiscardAndLoad, onClose]);
 
     // Handle ESC key
     useEffect(() => {
@@ -166,36 +159,6 @@ const PresetDialog = memo(function PresetDialog({
                     </>
                 );
 
-            case "unsaved":
-                return (
-                    <>
-                        <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/20 mb-3">
-                                <MdWarning className="w-6 h-6 text-yellow-500" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-ui-text-primary mb-2">
-                                You Have Unsaved Changes
-                            </h3>
-                            <p className="text-sm text-ui-text-secondary mb-4">
-                                Loading Preset {presetIndex + 1} will discard your current changes.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <button
-                                onClick={handleDiscardAndLoad}
-                                className="w-full px-4 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            >
-                                Discard & Load Preset
-                            </button>
-                            <button
-                                onClick={onClose}
-                                className="w-full px-4 py-3 rounded-xl bg-ui-bg-tertiary hover:bg-ui-bg-tertiary/80 text-ui-text-primary font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            >
-                                Keep Editing
-                            </button>
-                        </div>
-                    </>
-                );
         }
     };
 
