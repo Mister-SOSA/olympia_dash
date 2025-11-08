@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { authService } from "@/lib/auth";
 import { preferencesService, migrateFromLocalStorage } from "@/lib/preferences";
 import { Loader } from "./ui/loader";
+import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -119,6 +120,10 @@ export default function Dashboard() {
     const [user, setUser] = useState(authService.getUser());
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
+
+    // ✅ FIX: Get widget permissions
+    const { hasAccess, loading: permissionsLoading } = useWidgetPermissions();
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [presetManagerOpen, setPresetManagerOpen] = useState(false);
@@ -131,6 +136,9 @@ export default function Dashboard() {
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
+    
+    // ✅ FIX: Track if preferences have been initialized to prevent duplicate loads
+    const preferencesInitialized = useRef(false);
 
     // Check authentication on mount
     useEffect(() => {
@@ -157,9 +165,12 @@ export default function Dashboard() {
 
     // Sync preferences from server and migrate old localStorage data
     useEffect(() => {
-        if (!isAuthenticated) return;
+        // ✅ FIX: Only initialize once
+        if (!isAuthenticated || permissionsLoading || preferencesInitialized.current) return;
 
         const initPreferences = async () => {
+            preferencesInitialized.current = true;
+            
             // Migrate old localStorage preferences to new system (await to ensure it completes)
             await migrateFromLocalStorage();
 
@@ -170,9 +181,8 @@ export default function Dashboard() {
             const storedLayout = readLayoutFromStorage();
             const normalizedLayout = normalizeLayout(storedLayout);
             setLayout(normalizedLayout);
-            setPresets(readPresetsFromStorage());
-
-            // Restore the last used preset type
+            
+            setPresets(readPresetsFromStorage());            // Restore the last used preset type
             const storedPresetType = readCurrentPresetType();
             setCurrentPresetType(storedPresetType as PresetType);
 
@@ -182,7 +192,7 @@ export default function Dashboard() {
         };
 
         initPreferences();
-    }, [isAuthenticated]);
+    }, [isAuthenticated, permissionsLoading]); // Remove filterLayoutByPermissions from deps
 
     // Prepare a temporary layout for the widget menu
     const updateTempLayout = useCallback(() => {
@@ -199,9 +209,7 @@ export default function Dashboard() {
         const normalizedLayout = normalizeLayout(mergedLayout);
 
         setLayout(normalizedLayout);
-        saveLayoutToStorage(normalizedLayout);
-
-        if (activePresetIndex !== null) {
+        saveLayoutToStorage(normalizedLayout);        if (activePresetIndex !== null) {
             setPresets((prevPresets) => {
                 const currentPreset = prevPresets[activePresetIndex];
                 if (!currentPreset || areLayoutsEqual(currentPreset.layout, normalizedLayout)) {
@@ -237,14 +245,13 @@ export default function Dashboard() {
 
             setTimeout(() => {
                 const merged = normalizeLayout(mergePreset(deepClone(preset.layout)));
+                
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
                 setActivePresetIndex(index);
-                saveLayoutToStorage(merged);
-
-                // Save the preset type so it persists across page reloads
+                saveLayoutToStorage(merged);                // Save the preset type so it persists across page reloads
                 saveCurrentPresetType(preset.type);
                 saveActivePresetIndex(index);
 
@@ -389,6 +396,8 @@ export default function Dashboard() {
     // Save/cancel from widget menu
     const handleSave = useCallback(() => {
         const normalizedLayout = normalizeLayout(tempLayout);
+
+        // ✅ DON'T filter here - save everything, filter only when displaying
         saveLayoutToStorage(normalizedLayout);
         setMenuOpen(false);
 
@@ -429,7 +438,7 @@ export default function Dashboard() {
         activePresetIndex,
         presets,
         generatePresetName
-    ]);
+    ]); // Removed permission-related deps since we're not filtering here anymore
 
     const handleCancel = useCallback(() => {
         setMenuOpen(false);
@@ -500,6 +509,7 @@ export default function Dashboard() {
     // Save current layout to preset
     const handleSaveToPreset = useCallback((index: number, layoutToSave: Widget[], presetType: PresetType) => {
         const normalizedLayout = normalizeLayout(layoutToSave);
+        
         const newPresets = [...presets];
         const existingPreset = newPresets[index];
         const now = new Date().toISOString();
@@ -521,9 +531,7 @@ export default function Dashboard() {
         setLayout(normalizedLayout);
         saveLayoutToStorage(normalizedLayout);
         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
-    }, [presets, generatePresetName]);
-
-    if (checkingAuth) {
+    }, [presets, generatePresetName]);    if (checkingAuth) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary">
                 <Loader />

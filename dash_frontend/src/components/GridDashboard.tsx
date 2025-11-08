@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
+import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -30,6 +31,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Keep track of React roots for proper unmounting of widget components.
         const widgetRoots = useRef<Map<string, Root>>(new Map());
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
+
+        // ✅ FIX: Get widget permissions
+        const { hasAccess } = useWidgetPermissions();
+
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
         const [selectedWidget, setSelectedWidget] = useState<{ id: string; title: string } | null>(null);
@@ -311,6 +316,13 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 const widgetId = node.id as string;
                 el.innerHTML = "";
 
+                // ✅ FIX: Check widget permissions before rendering
+                if (!hasAccess(widgetId, 'view')) {
+                    console.warn(`User does not have access to widget: ${widgetId}`);
+                    el.innerHTML = `<div class="widget-error">Access Denied</div>`;
+                    return;
+                }
+
                 const widgetDef = getWidgetById(widgetId);
                 if (widgetDef) {
                     const root = createRoot(el);
@@ -340,7 +352,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Load the initial layout using GridStack's built‑in load method.
             // Enforce minimum widget dimensions to prevent over-shrinking
-            const layoutWithMinimums = layout.map(widget => ({
+            // ✅ FIX: Filter out widgets user doesn't have access to
+            const accessibleLayout = layout.filter(widget => hasAccess(widget.id, 'view'));
+            const layoutWithMinimums = accessibleLayout.map(widget => ({
                 ...widget,
                 w: Math.max(widget.w, MIN_WIDGET_WIDTH),
                 h: Math.max(widget.h, MIN_WIDGET_HEIGHT),
@@ -386,7 +400,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 gridInstance.current!.destroy(false);
                 gridInstance.current = null;
             };
-        }, []);
+        }, [hasAccess]);
 
         // ✅ REMOVED: Manual cell height adjustment on resize
         // GridStack's built-in responsive columnOpts already handle layout adjustments
@@ -419,8 +433,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     }
                 });
 
+                // ✅ FIX: Filter out widgets user doesn't have access to
+                const accessibleLayout = layout.filter(widget => hasAccess(widget.id, 'view'));
+
                 // Enforce minimum widget dimensions before loading
-                const layoutWithMinimums = layout.map(widget => ({
+                const layoutWithMinimums = accessibleLayout.map(widget => ({
                     ...widget,
                     w: Math.max(widget.w, MIN_WIDGET_WIDTH),
                     h: Math.max(widget.h, MIN_WIDGET_HEIGHT),
@@ -443,7 +460,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Update the previous layout reference
             prevLayoutRef.current = layout;
-        }, [layout]);
+        }, [layout, hasAccess]);
 
         return (
             <>

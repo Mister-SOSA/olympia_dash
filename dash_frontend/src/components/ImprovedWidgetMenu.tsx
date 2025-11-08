@@ -1,10 +1,9 @@
-"use client";
-
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Widget } from "@/types";
 import { WIDGETS, getWidgetsByCategory } from "@/constants/widgets";
 import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
+import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 
 interface ImprovedWidgetMenuProps {
     tempLayout: Widget[];
@@ -14,7 +13,7 @@ interface ImprovedWidgetMenuProps {
     activePresetName?: string;
 }
 
-export default function ImprovedWidgetMenu({
+function ImprovedWidgetMenu({
     tempLayout,
     setTempLayout,
     handleSave,
@@ -24,11 +23,15 @@ export default function ImprovedWidgetMenu({
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
+    // ✅ FIX: Get widget permissions
+    const { filterAccessibleWidgets, loading: permissionsLoading } = useWidgetPermissions();
+
     const widgetsByCategory = getWidgetsByCategory();
     const categories = Object.keys(widgetsByCategory);
 
     const filteredWidgets = useMemo(() => {
-        let widgets = WIDGETS;
+        // ✅ FIX: Filter widgets by permissions first
+        let widgets = filterAccessibleWidgets(WIDGETS, 'view');
 
         if (selectedCategory !== "all") {
             widgets = widgets.filter((w) => w.category === selectedCategory);
@@ -44,7 +47,7 @@ export default function ImprovedWidgetMenu({
         }
 
         return widgets;
-    }, [searchTerm, selectedCategory]);
+    }, [searchTerm, selectedCategory, filterAccessibleWidgets]);
 
     const isWidgetEnabled = (widgetId: string) => {
         return tempLayout.find((w) => w.id === widgetId)?.enabled || false;
@@ -276,9 +279,14 @@ export default function ImprovedWidgetMenu({
 
                 {/* Widget List */}
                 <div className="flex-1 overflow-y-auto p-4">
-                    {filteredWidgets.length === 0 ? (
+                    {permissionsLoading ? (
                         <div className="text-center py-12 text-ui-text-muted">
-                            <p>No widgets found</p>
+                            <p>Loading permissions...</p>
+                        </div>
+                    ) : filteredWidgets.length === 0 ? (
+                        <div className="text-center py-12 text-ui-text-muted">
+                            <p>No widgets available</p>
+                            <p className="text-xs mt-2">Contact your administrator for access</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
@@ -345,3 +353,6 @@ export default function ImprovedWidgetMenu({
         </div>
     );
 }
+
+// Memoize to prevent unnecessary re-renders when parent updates
+export default React.memo(ImprovedWidgetMenu);
