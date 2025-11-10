@@ -224,6 +224,11 @@ def _register_static_queries() -> None:
         builder=lambda params: _top_customers_year(params),
     )
 
+    QueryRegistry.register(
+        "Top5PayablesYTD",
+        builder=lambda params: _top_5_payables_ytd(params),
+    )
+
 
 def _sales_by_day_bar(params: Dict[str, Any]) -> Dict[str, Any]:
     _validate_no_params(params)
@@ -519,6 +524,15 @@ def _top_customers_year(params: Dict[str, Any]) -> Dict[str, Any]:
         "filters": filters,
         "group_by": ["sumsales.cust_code", "orderfrom.bus_name"],
         "sort": ["totalSales DESC"],
+    }
+
+
+def _top_5_payables_ytd(params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_params(params)
+    return {
+        "table": "Olympia_Top5_Payables_YTD",
+        "columns": ["vend_name_group", "total_pay_value"],
+        "sort": ["total_pay_value DESC"],
     }
 
 

@@ -125,6 +125,11 @@ export interface InventoryMove {
     lotNumber: string;
 }
 
+export interface PayablesData {
+    vend_name_group: string;
+    total_pay_value: number;
+}
+
 // ============ Admin System Types ============
 
 export interface UserGroup {

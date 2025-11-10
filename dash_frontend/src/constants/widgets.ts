@@ -83,6 +83,14 @@ export const WIDGETS: WidgetDefinition[] = [
         description: "Shows maintenance items due in today",
         defaultSize: { w: 12, h: 5 }
     },
+    {
+        id: "Top5PayablesYTD",
+        component: React.lazy(() => import("@/components/widgets/Top5PayablesYTD")),
+        title: "Top 5 Payables YTD",
+        category: "🧾 Purchasing",
+        description: "Shows top 5 payable vendor accounts year-to-date",
+        defaultSize: { w: 6, h: 5 }
+    },
 
     // Inventory widgets
     {

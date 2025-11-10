@@ -136,7 +136,7 @@ export default function Dashboard() {
     const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
     const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
-    
+
     // ✅ FIX: Track if preferences have been initialized to prevent duplicate loads
     const preferencesInitialized = useRef(false);
 
@@ -170,7 +170,7 @@ export default function Dashboard() {
 
         const initPreferences = async () => {
             preferencesInitialized.current = true;
-            
+
             // Migrate old localStorage preferences to new system (await to ensure it completes)
             await migrateFromLocalStorage();
 
@@ -181,7 +181,7 @@ export default function Dashboard() {
             const storedLayout = readLayoutFromStorage();
             const normalizedLayout = normalizeLayout(storedLayout);
             setLayout(normalizedLayout);
-            
+
             setPresets(readPresetsFromStorage());            // Restore the last used preset type
             const storedPresetType = readCurrentPresetType();
             setCurrentPresetType(storedPresetType as PresetType);
@@ -209,7 +209,7 @@ export default function Dashboard() {
         const normalizedLayout = normalizeLayout(mergedLayout);
 
         setLayout(normalizedLayout);
-        saveLayoutToStorage(normalizedLayout);        if (activePresetIndex !== null) {
+        saveLayoutToStorage(normalizedLayout); if (activePresetIndex !== null) {
             setPresets((prevPresets) => {
                 const currentPreset = prevPresets[activePresetIndex];
                 if (!currentPreset || areLayoutsEqual(currentPreset.layout, normalizedLayout)) {
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
             setTimeout(() => {
                 const merged = normalizeLayout(mergePreset(deepClone(preset.layout)));
-                
+
                 setLayout(merged);
                 setTempLayout(merged);
                 setPresetIndex(index);
@@ -509,7 +509,7 @@ export default function Dashboard() {
     // Save current layout to preset
     const handleSaveToPreset = useCallback((index: number, layoutToSave: Widget[], presetType: PresetType) => {
         const normalizedLayout = normalizeLayout(layoutToSave);
-        
+
         const newPresets = [...presets];
         const existingPreset = newPresets[index];
         const now = new Date().toISOString();
@@ -531,7 +531,7 @@ export default function Dashboard() {
         setLayout(normalizedLayout);
         saveLayoutToStorage(normalizedLayout);
         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
-    }, [presets, generatePresetName]);    if (checkingAuth) {
+    }, [presets, generatePresetName]); if (checkingAuth) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary">
                 <Loader />
