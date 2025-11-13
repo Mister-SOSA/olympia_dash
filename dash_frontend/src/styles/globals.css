@@ -77,9 +77,12 @@ nextjs-portal {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -754,10 +757,12 @@ tbody>tr:nth-child(odd) {
     border-left-color: rgba(59, 130, 246, 1);
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
   }
+
   15% {
     background-color: rgba(59, 130, 246, 0.2);
     border-left-color: rgba(59, 130, 246, 0.9);
   }
+
   100% {
     background-color: transparent;
     border-left-color: transparent;
@@ -773,9 +778,12 @@ tbody>tr:nth-child(odd) {
 
 /* Add a subtle pulse glow effect */
 @keyframes newRowGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 rgba(59, 130, 246, 0);
   }
+
   50% {
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
   }
@@ -789,18 +797,22 @@ tbody>tr:nth-child(odd) {
 
   0%,
   100% {
-    outline: 4px solid rgba(34, 197, 94, 0);
-    outline-offset: -4px;
+    outline: 3px solid rgba(34, 197, 94, 0);
+    outline-offset: -3px;
   }
 
   50% {
-    outline: 4px solid rgba(34, 197, 94, 1);
-    outline-offset: -4px;
+    outline: 3px solid rgba(34, 197, 94, 0.8);
+    outline-offset: -3px;
   }
 }
 
 .new-status-v-row {
-  animation: newStatusVPulse 0.8s ease-in-out 9 !important;
+  animation: newStatusVPulse 0.6s ease-in-out 5 !important;
+  /* Use will-change to optimize animation performance */
+  will-change: outline;
+  /* Force GPU acceleration */
+  transform: translateZ(0);
 }
 
 .badge {
