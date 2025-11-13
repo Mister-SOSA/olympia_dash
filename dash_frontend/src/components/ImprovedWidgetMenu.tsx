@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Widget } from "@/types";
-import { WIDGETS, getWidgetsByCategory } from "@/constants/widgets";
+import { WIDGETS, getWidgetsByCategory, CATEGORY_ICONS } from "@/constants/widgets";
 import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 
@@ -262,18 +262,22 @@ function ImprovedWidgetMenu({
                         >
                             All
                         </button>
-                        {categories.map((category) => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${selectedCategory === category
-                                    ? "bg-ui-accent-primary text-white"
-                                    : "bg-ui-bg-secondary text-ui-text-secondary hover:bg-ui-bg-tertiary"
-                                    }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
+                        {categories.map((category) => {
+                            const IconComponent = CATEGORY_ICONS[category];
+                            return (
+                                <button
+                                    key={category}
+                                    onClick={() => setSelectedCategory(category)}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${selectedCategory === category
+                                        ? "bg-ui-accent-primary text-white"
+                                        : "bg-ui-bg-secondary text-ui-text-secondary hover:bg-ui-bg-tertiary"
+                                        }`}
+                                >
+                                    {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                                    {category}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

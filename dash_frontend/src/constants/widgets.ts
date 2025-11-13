@@ -1,5 +1,12 @@
 import React from "react";
 import { Widget } from "@/types";
+import {
+    DollarSign,
+    ShoppingCart,
+    Package,
+    Wrench,
+    Receipt,
+} from "lucide-react";
 
 // Single source of truth for all widgets
 export interface WidgetDefinition {
@@ -14,6 +21,15 @@ export interface WidgetDefinition {
     };
 }
 
+// Category icon mapping
+export const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    "Sales": DollarSign,
+    "Purchasing": ShoppingCart,
+    "Inventory": Package,
+    "Utilities": Wrench,
+    "AP": Receipt,
+};
+
 // Auto-register widgets - just import and add to this array
 export const WIDGETS: WidgetDefinition[] = [
     // Sales widgets
@@ -21,7 +37,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "Overview",
         component: React.lazy(() => import("@/components/widgets/Overview")),
         title: "Sales Overview",
-        category: "💸 Sales",
+        category: "Sales",
         description: "Displays an overview of sales metrics",
         defaultSize: { w: 12, h: 2 }
     },
@@ -29,7 +45,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "SalesByDayBar",
         component: React.lazy(() => import("@/components/widgets/SalesByDayBar")),
         title: "Sales by Day",
-        category: "💸 Sales",
+        category: "Sales",
         description: "Displays sales dollars by day",
         defaultSize: { w: 4, h: 4 }
     },
@@ -37,7 +53,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "SalesByMonthBar",
         component: React.lazy(() => import("@/components/widgets/SalesByMonthBar")),
         title: "Sales by Month",
-        category: "💸 Sales",
+        category: "Sales",
         description: "Displays sales dollars by month",
         defaultSize: { w: 4, h: 4 }
     },
@@ -45,7 +61,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "SalesByMonthComparisonBar",
         component: React.lazy(() => import("@/components/widgets/SalesByMonthComparisonBar")),
         title: "Sales Month Comparison",
-        category: "💸 Sales",
+        category: "Sales",
         description: "Compares sales across months",
         defaultSize: { w: 4, h: 4 }
     },
@@ -53,7 +69,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "TopCustomersThisYearPie",
         component: React.lazy(() => import("@/components/widgets/TopCustomersThisYearPie")),
         title: "Top Customers",
-        category: "💸 Sales",
+        category: "Sales",
         description: "Shows top customers by sales volume",
         defaultSize: { w: 6, h: 5 }
     },
@@ -63,7 +79,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "OutstandingOrdersTable",
         component: React.lazy(() => import("@/components/widgets/OutstandingOrdersTable")),
         title: "Outstanding Orders",
-        category: "🧾 Purchasing",
+        category: "Purchasing",
         description: "Shows outstanding purchase orders",
         defaultSize: { w: 12, h: 5 }
     },
@@ -71,7 +87,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "DailyDueInTable",
         component: React.lazy(() => import("@/components/widgets/DailyDueInTable")),
         title: "Daily Due In",
-        category: "🧾 Purchasing",
+        category: "Purchasing",
         description: "Shows items due in today",
         defaultSize: { w: 12, h: 5 }
     },
@@ -79,15 +95,17 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "DailyDueInHiddenVendTable",
         component: React.lazy(() => import("@/components/widgets/DailyDueInHiddenVendTable")),
         title: "Daily Due In (Maintenance Only)",
-        category: "🧾 Purchasing",
+        category: "Purchasing",
         description: "Shows maintenance items due in today",
         defaultSize: { w: 12, h: 5 }
     },
+
+    // AP widgets
     {
         id: "Top5PayablesYTD",
         component: React.lazy(() => import("@/components/widgets/Top5PayablesYTD")),
         title: "Top 5 Payables YTD",
-        category: "🧾 Purchasing",
+        category: "AP",
         description: "Shows top 5 payable vendor accounts year-to-date",
         defaultSize: { w: 6, h: 5 }
     },
@@ -97,7 +115,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "DailyMovesByUser",
         component: React.lazy(() => import("@/components/widgets/DailyMovesByUser")),
         title: "Daily Moves by User",
-        category: "📦 Inventory",
+        category: "Inventory",
         description: "Shows inventory moves by user",
         defaultSize: { w: 6, h: 4 }
     },
@@ -105,7 +123,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "InventoryMovesLog",
         component: React.lazy(() => import("@/components/widgets/InventoryMovesLog")),
         title: "Inventory Moves Log",
-        category: "📦 Inventory",
+        category: "Inventory",
         description: "Log of recent inventory movements",
         defaultSize: { w: 12, h: 6 }
     },
@@ -113,7 +131,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "DailyProductionPutawaysBar",
         component: React.lazy(() => import("@/components/widgets/DailyProductionPutawaysBar")),
         title: "Daily Production Putaways",
-        category: "📦 Inventory",
+        category: "Inventory",
         description: "Shows daily production putaway activity",
         defaultSize: { w: 4, h: 4 }
     },
@@ -121,7 +139,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "TopProductUnitSales",
         component: React.lazy(() => import("@/components/widgets/TopProductUnitSales")),
         title: "Top Product Sales",
-        category: "📦 Inventory",
+        category: "Inventory",
         description: "Shows top selling products by units",
         defaultSize: { w: 12, h: 6 }
     },
@@ -129,7 +147,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "MachineStockStatus",
         component: React.lazy(() => import("@/components/widgets/MachineStockStatus")),
         title: "Machine Stock Status",
-        category: "📦 Inventory",
+        category: "Inventory",
         description: "Shows stock status for machines",
         defaultSize: { w: 4, h: 6 }
     },
@@ -139,7 +157,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "ClockWidget",
         component: React.lazy(() => import("@/components/widgets/ClockWidget")),
         title: "Clock",
-        category: "🔧 Utilities",
+        category: "Utilities",
         description: "Displays current time",
         defaultSize: { w: 3, h: 2 }
     },
@@ -147,7 +165,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "DateWidget",
         component: React.lazy(() => import("@/components/widgets/DateWidget")),
         title: "Date",
-        category: "🔧 Utilities",
+        category: "Utilities",
         description: "Displays current date",
         defaultSize: { w: 3, h: 2 }
     },
@@ -155,7 +173,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "Humidity",
         component: React.lazy(() => import("@/components/widgets/Humidity")),
         title: "Humidity",
-        category: "🔧 Utilities",
+        category: "Utilities",
         description: "Shows current humidity level",
         defaultSize: { w: 3, h: 2 }
     },
@@ -163,7 +181,7 @@ export const WIDGETS: WidgetDefinition[] = [
         id: "BeefPricesChart",
         component: React.lazy(() => import("@/components/widgets/BeefPricesChart")),
         title: "USDA Beef Prices",
-        category: "🔧 Utilities",
+        category: "Utilities",
         description: "Shows USDA National beef prices for Chemical Lean Fresh 50% and 85%",
         defaultSize: { w: 6, h: 4 }
     }
