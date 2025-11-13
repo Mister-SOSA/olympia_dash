@@ -246,7 +246,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
     const formatDate = (dateStr: string, formatType: 'month' | 'monthYear' | 'short' = 'short') => {
         const [month, day, year] = dateStr.split('/');
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
+
         if (formatType === 'month') return monthNames[parseInt(month) - 1];
         if (formatType === 'monthYear') return `${monthNames[parseInt(month) - 1]} '${year.slice(-2)}`;
         return `${month}/${day}`;
@@ -271,15 +271,15 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
             const isFirstOfYear = year !== lastYear && i > 0;
 
             if (isMonthStart) {
-                labels.push({ 
-                    index: i, 
-                    date: d.date, 
+                labels.push({
+                    index: i,
+                    date: d.date,
                     isMonthStart: true,
-                    isFirstOfYear 
+                    isFirstOfYear
                 });
                 lastMonth = month;
             }
-            
+
             if (year !== lastYear) {
                 lastYear = year;
             }
@@ -292,15 +292,15 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                 const [month, day] = d.date.split('/').map(Number);
                 // Add label every 7 days if it's not already a month start
                 if (i % 7 === 0 && !labels.find(l => l.index === i)) {
-                    weekLabels.push({ 
-                        index: i, 
-                        date: d.date, 
+                    weekLabels.push({
+                        index: i,
+                        date: d.date,
                         isMonthStart: false,
-                        isFirstOfYear: false 
+                        isFirstOfYear: false
                     });
                 }
             });
-            
+
             // Merge and sort
             return [...labels, ...weekLabels].sort((a, b) => a.index - b.index);
         }
@@ -371,10 +371,10 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                 {/* X-axis date labels */}
                 {xAxisLabels.map((label) => {
                     const x = xScale(label.index);
-                    const labelText = label.isMonthStart 
+                    const labelText = label.isMonthStart
                         ? (label.isFirstOfYear ? formatDate(label.date, 'monthYear') : formatDate(label.date, 'month'))
                         : formatDate(label.date, 'short');
-                    
+
                     return (
                         <text
                             key={label.index}
