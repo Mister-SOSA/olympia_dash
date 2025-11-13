@@ -852,24 +852,22 @@ export default function BeefPricesChart() {
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                                         <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-                                            <PriceDisplay
-                                                price={stats.current85}
-                                                change={stats.change85}
-                                                color="var(--line-chart-2)"
-                                                label="85% LEAN"
-                                            />
-                                            <PriceDisplay
-                                                price={stats.current50}
-                                                change={stats.change50}
-                                                color="var(--line-chart-1)"
-                                                label="50% LEAN"
-                                            />
-                                            <PriceDisplay
-                                                price={stats.currentHeart}
-                                                change={stats.changeHeart}
-                                                color="var(--line-chart-3)"
-                                                label="BEEF HEART"
-                                            />
+                                            {[
+                                                { price: stats.current85, change: stats.change85, color: 'var(--line-chart-2)', label: '85% LEAN' },
+                                                { price: stats.current50, change: stats.change50, color: 'var(--line-chart-1)', label: '50% LEAN' },
+                                                { price: stats.currentHeart, change: stats.changeHeart, color: 'var(--line-chart-3)', label: 'BEEF HEART' }
+                                            ]
+                                                .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+                                                .map((item, index) => (
+                                                    <PriceDisplay
+                                                        key={index}
+                                                        price={item.price}
+                                                        change={item.change}
+                                                        color={item.color}
+                                                        label={item.label}
+                                                    />
+                                                ))
+                                            }
                                         </div>
                                         <TimeRangeSelector
                                             selected={timeRange}
