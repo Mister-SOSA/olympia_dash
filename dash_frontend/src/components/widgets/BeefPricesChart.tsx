@@ -243,10 +243,13 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
         .filter(p => p !== null);
 
     // Format date for display
-    const formatDate = (dateStr: string, short: boolean = false) => {
+    const formatDate = (dateStr: string, formatType: 'month' | 'monthYear' | 'short' = 'short') => {
         const [month, day, year] = dateStr.split('/');
-        if (short) return `${month}/${day}`;
-        return `${month}/${day}/${year.slice(-2)}`;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        if (formatType === 'month') return monthNames[parseInt(month) - 1];
+        if (formatType === 'monthYear') return `${monthNames[parseInt(month) - 1]} '${year.slice(-2)}`;
+        return `${month}/${day}`;
     };
 
     // Generate Y-axis labels
@@ -256,8 +259,61 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
         return value;
     });
 
-    // Sample dates for X-axis labels based on data length
-    const xLabelInterval = Math.max(1, Math.floor(data.length / (config.compactMode ? 5 : 8)));
+    // Intelligent X-axis label selection
+    const getXAxisLabels = () => {
+        const labels: { index: number; date: string; isMonthStart: boolean; isFirstOfYear: boolean }[] = [];
+        let lastMonth = -1;
+        let lastYear = -1;
+
+        data.forEach((d, i) => {
+            const [month, day, year] = d.date.split('/').map(Number);
+            const isMonthStart = month !== lastMonth;
+            const isFirstOfYear = year !== lastYear && i > 0;
+
+            if (isMonthStart) {
+                labels.push({ 
+                    index: i, 
+                    date: d.date, 
+                    isMonthStart: true,
+                    isFirstOfYear 
+                });
+                lastMonth = month;
+            }
+            
+            if (year !== lastYear) {
+                lastYear = year;
+            }
+        });
+
+        // For short time ranges, add week markers between months
+        if (data.length <= 90 && labels.length < 8) {
+            const weekLabels: typeof labels = [];
+            data.forEach((d, i) => {
+                const [month, day] = d.date.split('/').map(Number);
+                // Add label every 7 days if it's not already a month start
+                if (i % 7 === 0 && !labels.find(l => l.index === i)) {
+                    weekLabels.push({ 
+                        index: i, 
+                        date: d.date, 
+                        isMonthStart: false,
+                        isFirstOfYear: false 
+                    });
+                }
+            });
+            
+            // Merge and sort
+            return [...labels, ...weekLabels].sort((a, b) => a.index - b.index);
+        }
+
+        // For longer ranges, potentially thin out labels if too dense
+        if (labels.length > 12) {
+            return labels.filter((_, i) => i % 2 === 0 || i === labels.length - 1);
+        }
+
+        return labels;
+    };
+
+    const xAxisLabels = getXAxisLabels();
 
     return (
         <div ref={chartRef} style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -291,21 +347,45 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                     );
                 })}
 
+                {/* Vertical gridlines for month starts */}
+                {xAxisLabels
+                    .filter(label => label.isMonthStart)
+                    .map((label) => {
+                        const x = xScale(label.index);
+                        return (
+                            <line
+                                key={`vgrid-${label.index}`}
+                                x1={x}
+                                y1={padding.top}
+                                x2={x}
+                                y2={padding.top + chartHeight}
+                                stroke="var(--border-light)"
+                                strokeWidth="1.5"
+                                opacity="0.4"
+                                strokeDasharray="4 4"
+                            />
+                        );
+                    })
+                }
+
                 {/* X-axis date labels */}
-                {data.map((d, i) => {
-                    if (i % xLabelInterval !== 0 && i !== data.length - 1) return null;
-                    const x = xScale(i);
+                {xAxisLabels.map((label) => {
+                    const x = xScale(label.index);
+                    const labelText = label.isMonthStart 
+                        ? (label.isFirstOfYear ? formatDate(label.date, 'monthYear') : formatDate(label.date, 'month'))
+                        : formatDate(label.date, 'short');
+                    
                     return (
                         <text
-                            key={i}
+                            key={label.index}
                             x={x}
                             y={padding.top + chartHeight + 16}
                             textAnchor="middle"
-                            fill="var(--text-secondary)"
-                            fontSize="10"
-                            fontWeight="500"
+                            fill={label.isMonthStart ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                            fontSize={label.isMonthStart ? "10" : "9"}
+                            fontWeight={label.isMonthStart ? "600" : "500"}
                         >
-                            {formatDate(d.date, true)}
+                            {labelText}
                         </text>
                     );
                 })}
@@ -532,8 +612,8 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
                         }}
                     >
-                        <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "4px" }}>
-                            {formatDate(data[hoveredIndex].date)}
+                        <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "4px", fontWeight: 600 }}>
+                            {formatDate(data[hoveredIndex].date, 'monthYear')}
                         </div>
                         {data[hoveredIndex].lean_85 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
