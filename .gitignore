@@ -68,6 +68,9 @@ auth.db-journal
 auth.db-wal
 auth.db-shm
 
+# USDA cache data
+api/cache/*.json
+
 # Gunicorn
 .cache.sqlite
 .DS_Store
