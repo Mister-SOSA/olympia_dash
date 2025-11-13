@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from "react";
+import React, { useMemo, useRef, useState, useCallback, memo, useEffect } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
@@ -74,19 +74,39 @@ function deduplicateData(data: POItemData[]): POItemData[] {
 /**
  * For each order, find the previous order (if any) for the same part code,
  * and attach its date and unit price.
+ * OPTIMIZED: Use a Map to avoid O(n²) complexity
  */
 function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
+    // Group orders by part code for O(n) lookup instead of O(n²)
+    const ordersByPartCode = new Map<string, POItemData[]>();
+    
     data.forEach((item) => {
-        const currentDate = new Date(item.date_orderd);
-        const previousOrders = data.filter(
-            (o) =>
-                o.part_code === item.part_code &&
-                new Date(o.date_orderd) < currentDate
-        );
-        if (previousOrders.length > 0) {
-            const lastOrder = previousOrders.reduce((prev, curr) =>
-                new Date(curr.date_orderd) > new Date(prev.date_orderd) ? curr : prev
-            );
+        if (!ordersByPartCode.has(item.part_code)) {
+            ordersByPartCode.set(item.part_code, []);
+        }
+        ordersByPartCode.get(item.part_code)!.push(item);
+    });
+
+    // Sort each group once by date
+    ordersByPartCode.forEach((orders) => {
+        orders.sort((a, b) => new Date(a.date_orderd).getTime() - new Date(b.date_orderd).getTime());
+    });
+
+    // Now find previous orders in O(n) time
+    data.forEach((item) => {
+        const ordersForPart = ordersByPartCode.get(item.part_code)!;
+        const currentDate = new Date(item.date_orderd).getTime();
+        
+        // Find the last order before current one
+        let lastOrder: POItemData | null = null;
+        for (let i = ordersForPart.length - 1; i >= 0; i--) {
+            if (new Date(ordersForPart[i].date_orderd).getTime() < currentDate) {
+                lastOrder = ordersForPart[i];
+                break;
+            }
+        }
+
+        if (lastOrder) {
             item.last_order_date = lastOrder.date_orderd;
             item.last_order_unit_price = lastOrder.unit_price;
         } else {
@@ -94,6 +114,7 @@ function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
             item.last_order_unit_price = null;
         }
     });
+    
     return data;
 }
 
@@ -168,6 +189,71 @@ interface TableRowData {
     itemNo: string; // Add unique identifier
 }
 
+// Memoized table row component to prevent unnecessary re-renders
+const MemoizedTableRow = memo(({
+    row,
+    newStatusVRowsRef
+}: {
+    row: TableRowData;
+    newStatusVRowsRef: React.MutableRefObject<Set<string>>;
+}) => {
+    const [isAnimating, setIsAnimating] = useState(false);
+    const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        const shouldAnimate = newStatusVRowsRef.current.has(row.itemNo);
+        if (shouldAnimate && !isAnimating) {
+            setIsAnimating(true);
+            if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+            animationTimeoutRef.current = setTimeout(() => {
+                setIsAnimating(false);
+            }, 3000);
+        }
+        
+        return () => {
+            if (animationTimeoutRef.current) {
+                clearTimeout(animationTimeoutRef.current);
+            }
+        };
+    }, [row.itemNo, newStatusVRowsRef, isAnimating]);
+
+    return (
+        <TableRow
+            className={`
+                border-border/30 transition-all duration-300 hover:bg-muted/50
+                ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
+                ${row.isGrouped ? "grouped-po" : ""}
+                ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
+                ${isAnimating ? "new-status-v-row" : ""}
+            `}
+        >
+            <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
+            <TableCell className="font-bold py-1.5">{statusBadge(row.poStatusLabel)}</TableCell>
+            <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+            <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+            <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+            <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyRecvd}</TableCell>
+            <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
+            <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
+            <TableCell className="text-right row-secondary py-1.5">
+                <div className="table-dollars">
+                    <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                    <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
+                </div>
+            </TableCell>
+            <TableCell className="text-right row-secondary py-1.5">
+                <div className="table-dollars">
+                    <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                    <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
+                </div>
+            </TableCell>
+        </TableRow>
+    );
+}, (prevProps, nextProps) => {
+    // Only re-render if the row data changes
+    return prevProps.row === nextProps.row && prevProps.newStatusVRowsRef === nextProps.newStatusVRowsRef;
+});
+
 /**
  * Map the processed data into the format expected by the table.
  */
@@ -238,7 +324,11 @@ function mapToTableData(data: POItemData[]): TableRowData[] {
 export default function DailyDueInHiddenVendTable() {
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
-    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+    const previousDataRef = useRef<POItemData[] | null>(null);
+    const processedDataRef = useRef<TableRowData[] | null>(null);
+    const newStatusVRowsRef = useRef<Set<string>>(new Set());
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [, forceUpdate] = useState({});
 
     // Memoize the widget payload to query the needed data without raw SQL.
     const widgetPayload = useMemo(
@@ -249,18 +339,10 @@ export default function DailyDueInHiddenVendTable() {
         []
     );
 
-    // Process and transform data for the table.
-    const renderFunction = useCallback((data: POItemData[]) => {
-        let processedData = deduplicateData(data);
-        processedData = computePreviousOrderDetails(processedData);
-        const recentOrders = filterRecentOrders(processedData);
-        let mergedData = removeHiddenVendors(recentOrders);
-        mergedData = sortOrders(mergedData);
-
-        const tableData = mapToTableData(mergedData);
-
-        // Check for status changes into a received state
+    // Handle status change detection - separate from rendering
+    const checkForStatusChanges = useCallback((tableData: TableRowData[]) => {
         const newStatusVSet = new Set<string>();
+
         tableData.forEach((row) => {
             const itemKey = row.itemNo;
             const currentStatus = row.poStatusLabel;
@@ -278,16 +360,55 @@ export default function DailyDueInHiddenVendTable() {
             previousStatusesRef.current.set(itemKey, currentStatus);
         });
 
-        // Update the state with new status V rows and play sound once
+        // Update the ref with new status V rows and play sound once
         if (newStatusVSet.size > 0) {
-            playNotificationSound(); // Play once for all status changes
-            setNewStatusVRows(newStatusVSet);
+            playNotificationSound();
+            newStatusVRowsRef.current = newStatusVSet;
+            forceUpdate({}); // Trigger re-render only for affected rows
 
-            // Clear the highlight after animation completes (9 pulses * 0.8s = 7.2 seconds)
-            setTimeout(() => {
-                setNewStatusVRows(new Set());
-            }, 7200);
+            // Clear previous timeout if exists
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+
+            // Clear the highlight after animation completes
+            timeoutRef.current = setTimeout(() => {
+                newStatusVRowsRef.current = new Set();
+                forceUpdate({}); // Remove animations
+            }, 3000);
         }
+    }, []);
+
+    // Process data only when it actually changes
+    const processData = useCallback((rawData: POItemData[]): TableRowData[] => {
+        // Check if data actually changed
+        if (previousDataRef.current === rawData && processedDataRef.current) {
+            return processedDataRef.current;
+        }
+
+        let processedData = deduplicateData(rawData);
+        processedData = computePreviousOrderDetails(processedData);
+        const recentOrders = filterRecentOrders(processedData);
+        let mergedData = removeHiddenVendors(recentOrders);
+        mergedData = sortOrders(mergedData);
+        const result = mapToTableData(mergedData);
+        
+        previousDataRef.current = rawData;
+        processedDataRef.current = result;
+        
+        return result;
+    }, []);
+
+    // Memoized render function
+    const renderTable = useCallback((data: POItemData[] | null, loading: boolean) => {
+        if (!data || data.length === 0) {
+            return <div className="widget-empty">No purchase orders found</div>;
+        }
+
+        const tableData = processData(data);
+        
+        // Check for status changes
+        checkForStatusChanges(tableData);
 
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
@@ -357,44 +478,27 @@ export default function DailyDueInHiddenVendTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tableData.map((row, index) => (
-                            <TableRow
+                        {tableData.map((row) => (
+                            <MemoizedTableRow
                                 key={row.itemNo}
-                                className={`
-                  border-border/30 transition-all duration-300 hover:bg-muted/50
-                  ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
-                  ${row.isGrouped ? "grouped-po" : ""}
-                  ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
-                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                `}
-                            >
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
-                                <TableCell className="font-bold py-1.5">{statusBadge(row.poStatusLabel)}</TableCell>
-                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
-                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
-                                <TableCell className="text-right row-secondary py-1.5">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right row-secondary py-1.5">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                                row={row}
+                                newStatusVRowsRef={newStatusVRowsRef}
+                            />
                         ))}
                     </TableBody>
                 </Table>
             </ScrollArea>
         );
-    }, [newStatusVRows]);
+    }, [processData, checkForStatusChanges]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
 
     return (
         <Widget
@@ -403,13 +507,7 @@ export default function DailyDueInHiddenVendTable() {
             title="Daily Due In (Maintenance Only)"
             refreshInterval={15000}
         >
-            {(data, loading) => {
-                if (!data || data.length === 0) {
-                    return <div className="widget-empty">No purchase orders found</div>;
-                }
-
-                return renderFunction(data);
-            }}
+            {renderTable}
         </Widget>
     );
 }

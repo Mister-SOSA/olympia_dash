@@ -79,7 +79,7 @@ function deduplicateData(data: POItemData[]): POItemData[] {
 function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
     // Group orders by part code for O(n) lookup instead of O(n²)
     const ordersByPartCode = new Map<string, POItemData[]>();
-    
+
     data.forEach((item) => {
         if (!ordersByPartCode.has(item.part_code)) {
             ordersByPartCode.set(item.part_code, []);
@@ -96,7 +96,7 @@ function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
     data.forEach((item) => {
         const ordersForPart = ordersByPartCode.get(item.part_code)!;
         const currentDate = new Date(item.date_orderd).getTime();
-        
+
         // Find the last order before current one
         let lastOrder: POItemData | null = null;
         for (let i = ordersForPart.length - 1; i >= 0; i--) {
@@ -114,7 +114,7 @@ function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
             item.last_order_unit_price = null;
         }
     });
-    
+
     return data;
 }
 
@@ -209,7 +209,7 @@ const MemoizedTableRow = memo(({
                 setIsAnimating(false);
             }, 3000);
         }
-        
+
         return () => {
             if (animationTimeoutRef.current) {
                 clearTimeout(animationTimeoutRef.current);
@@ -391,10 +391,10 @@ export default function DailyDueInTable() {
         let mergedData = removeHiddenVendors(recentOrders);
         mergedData = sortOrders(mergedData);
         const result = mapToTableData(mergedData);
-        
+
         previousDataRef.current = rawData;
         processedDataRef.current = result;
-        
+
         return result;
     }, []);
 
@@ -405,7 +405,7 @@ export default function DailyDueInTable() {
         }
 
         const tableData = processData(data);
-        
+
         // Check for status changes
         checkForStatusChanges(tableData);
 
