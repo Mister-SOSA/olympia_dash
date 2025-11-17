@@ -82,7 +82,7 @@ function LoginContent() {
             // For non-iOS PWAs: Open OAuth in a popup window that can be closed after auth
             if (isPWAMode) {
                 console.log('Non-iOS PWA mode detected, opening popup for OAuth');
-                
+
                 const width = 600;
                 const height = 700;
                 const left = (window.screen.width - width) / 2;
@@ -106,7 +106,7 @@ function LoginContent() {
                 // Listen for messages from the popup
                 const handleMessage = (event: MessageEvent) => {
                     console.log('Received message from popup:', event.data);
-                    
+
                     // Verify origin
                     if (event.origin !== window.location.origin) {
                         console.log('Message origin mismatch:', event.origin, 'vs', window.location.origin);
@@ -151,7 +151,7 @@ function LoginContent() {
 
             // Normal flow for non-PWA: Full page redirect
             console.log('Non-PWA mode, redirecting to:', authUrl);
-            
+
             // Store current path to return after auth
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('oauth_redirect', '/');
