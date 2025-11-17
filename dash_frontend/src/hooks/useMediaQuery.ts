@@ -6,43 +6,43 @@ import { useState, useEffect } from 'react';
  * @returns boolean indicating if the query matches
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+    const [matches, setMatches] = useState(false);
 
-  useEffect(() => {
-    // Check if window is defined (client-side only)
-    if (typeof window === 'undefined') {
-      return;
-    }
+    useEffect(() => {
+        // Check if window is defined (client-side only)
+        if (typeof window === 'undefined') {
+            return;
+        }
 
-    const mediaQuery = window.matchMedia(query);
-    
-    // Set initial value
-    setMatches(mediaQuery.matches);
+        const mediaQuery = window.matchMedia(query);
 
-    // Create event listener
-    const handler = (event: MediaQueryListEvent) => {
-      setMatches(event.matches);
-    };
+        // Set initial value
+        setMatches(mediaQuery.matches);
 
-    // Add listener (handles both old and new API)
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handler);
-    } else {
-      // Fallback for older browsers
-      mediaQuery.addListener(handler);
-    }
+        // Create event listener
+        const handler = (event: MediaQueryListEvent) => {
+            setMatches(event.matches);
+        };
 
-    // Cleanup
-    return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handler);
-      } else {
-        mediaQuery.removeListener(handler);
-      }
-    };
-  }, [query]);
+        // Add listener (handles both old and new API)
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handler);
+        } else {
+            // Fallback for older browsers
+            mediaQuery.addListener(handler);
+        }
 
-  return matches;
+        // Cleanup
+        return () => {
+            if (mediaQuery.removeEventListener) {
+                mediaQuery.removeEventListener('change', handler);
+            } else {
+                mediaQuery.removeListener(handler);
+            }
+        };
+    }, [query]);
+
+    return matches;
 }
 
 /**

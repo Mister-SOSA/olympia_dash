@@ -20,7 +20,7 @@ export default function MobileDashboard({
     onWidgetsClick,
 }: MobileDashboardProps) {
     const { hasAccess } = useWidgetPermissions();
-    
+
     // Filter enabled widgets that user has access to
     const enabledWidgets = layout.filter(
         (widget) => widget.enabled && hasAccess(widget.id, 'view')
@@ -263,11 +263,10 @@ export default function MobileDashboard({
                                     <button
                                         key={widget.id}
                                         onClick={() => goToWidget(index)}
-                                        className={`mobile-dot ${
-                                            index === currentIndex
+                                        className={`mobile-dot ${index === currentIndex
                                                 ? 'mobile-dot-active'
                                                 : 'mobile-dot-inactive'
-                                        }`}
+                                            }`}
                                         aria-label={`Go to ${def?.title || 'widget'}`}
                                         title={def?.title}
                                     >

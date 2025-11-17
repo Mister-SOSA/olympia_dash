@@ -834,9 +834,12 @@ main {
 }
 
 @keyframes fadeOut {
-  0%, 50% {
+
+  0%,
+  50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -850,6 +853,7 @@ main {
 
 /* Mobile-specific widget overrides */
 @media (max-width: 768px) {
+
   /* Ensure widgets scale properly */
   .widget-container {
     width: 100% !important;
@@ -913,6 +917,7 @@ main {
 
 /* Disable mobile dashboard on desktop */
 @media (min-width: 769px) {
+
   .mobile-dashboard,
   .mobile-dashboard-empty {
     display: none;
