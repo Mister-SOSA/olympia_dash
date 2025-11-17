@@ -3,12 +3,14 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
+import MobileDashboard from "./MobileDashboard";
 import DashboardDock from "./DashboardDock";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetDialog from "./PresetDialog";
 import PresetManagerMenu from "./PresetManagerMenu";
 import SettingsMenu from "./SettingsMenu";
 import { Widget, DashboardPreset, PresetType } from "@/types";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 import {
     readLayoutFromStorage,
     saveLayoutToStorage,
@@ -115,6 +117,7 @@ const shouldIgnoreGlobalHotkeys = (element: HTMLElement | null): boolean => {
 
 export default function Dashboard() {
     const router = useRouter();
+    const isMobile = useIsMobile();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [user, setUser] = useState(authService.getUser());
@@ -543,6 +546,53 @@ export default function Dashboard() {
         return null;
     }
 
+    // Mobile Experience - Completely different UI
+    if (isMobile) {
+        return (
+            <div className="dashboard-container mobile">
+                {/* Mobile Dashboard with Swipeable Widgets */}
+                <MobileDashboard
+                    layout={layout}
+                    onSettingsClick={() => setSettingsOpen(true)}
+                    onWidgetsClick={() => {
+                        setMenuOpen(true);
+                        updateTempLayout();
+                    }}
+                />
+
+                {/* Widget Menu Modal - Shared */}
+                <AnimatePresence>
+                    {menuOpen && (
+                        <ImprovedWidgetMenu
+                            tempLayout={tempLayout}
+                            setTempLayout={setTempLayout}
+                            handleSave={handleSave}
+                            handleCancel={handleCancel}
+                            activePresetName={
+                                activePresetIndex !== null && presets[activePresetIndex]
+                                    ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
+                                    : undefined
+                            }
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Settings Menu Modal - Shared */}
+                <AnimatePresence>
+                    {settingsOpen && (
+                        <SettingsMenu
+                            user={user}
+                            onLogout={handleLogout}
+                            onClose={() => setSettingsOpen(false)}
+                            onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+                        />
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    }
+
+    // Desktop Experience - Original Grid Layout
     return (
         <div className="dashboard-container">
             {/* Dock - Auto-hides at bottom */}
