@@ -58,14 +58,13 @@ export const getOAuthRedirect = (): string => {
  * For iOS PWA: Open OAuth in Safari browser (which will redirect back to PWA)
  * This prevents the browser-within-PWA issue
  */
-export const openOAuthInBrowser = (authUrl: string): void => {
+export const openOAuthInBrowser = (authUrl: string, redirectUrl?: string): void => {
     if (typeof window === 'undefined') return;
 
-    // Store where we want to go after OAuth
-    storeOAuthRedirect(window.location.pathname);
+    // Store where we want to go after OAuth (defaults to the current path)
+    const targetPath = redirectUrl || window.location.pathname || '/';
+    storeOAuthRedirect(targetPath);
 
-    // For iOS PWA, use target="_blank" which opens in Safari
-    // The OAuth callback URL should be the PWA URL scheme if registered,
-    // or a universal link that redirects back to the PWA
+    // For iOS PWA, use a full navigation so Safari takes over the auth flow
     window.location.href = authUrl;
 };

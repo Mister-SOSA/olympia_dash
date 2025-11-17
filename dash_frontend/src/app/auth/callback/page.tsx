@@ -6,6 +6,14 @@ import { authService } from '@/lib/auth';
 import { Loader } from '@/components/ui/loader';
 import { getOAuthRedirect } from '@/utils/pwaUtils';
 
+const isOAuthPopupContext = (): boolean => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    return window.name === 'oauth_popup' && !!window.opener;
+};
+
 export const dynamic = 'force-dynamic';
 
 function CallbackContent() {
@@ -22,10 +30,11 @@ function CallbackContent() {
 
             if (error) {
                 setError(errorDescription || error);
+                const inPopup = isOAuthPopupContext();
 
                 // If we're in a popup (from PWA), close it and notify parent
-                if (window.opener) {
-                    window.opener.postMessage({
+                if (inPopup) {
+                    window.opener?.postMessage({
                         type: 'oauth_error',
                         error: errorDescription || error
                     }, window.location.origin);
@@ -39,10 +48,11 @@ function CallbackContent() {
 
             if (!code) {
                 setError('No authorization code received');
+                const inPopup = isOAuthPopupContext();
 
                 // If we're in a popup, close it
-                if (window.opener) {
-                    window.opener.postMessage({
+                if (inPopup) {
+                    window.opener?.postMessage({
                         type: 'oauth_error',
                         error: 'No authorization code received'
                     }, window.location.origin);
@@ -56,11 +66,12 @@ function CallbackContent() {
 
             try {
                 const response = await authService.handleCallback(code);
+                const inPopup = isOAuthPopupContext();
 
                 if (response.success) {
                     // If we're in a popup (from PWA), notify parent and close
-                    if (window.opener) {
-                        window.opener.postMessage({
+                    if (inPopup) {
+                        window.opener?.postMessage({
                             type: 'oauth_success',
                             accessToken: response.access_token,
                             refreshToken: response.refresh_token,
@@ -82,8 +93,8 @@ function CallbackContent() {
                 } else {
                     setError(response.error || 'Authentication failed');
 
-                    if (window.opener) {
-                        window.opener.postMessage({
+                    if (inPopup) {
+                        window.opener?.postMessage({
                             type: 'oauth_error',
                             error: response.error || 'Authentication failed'
                         }, window.location.origin);
@@ -97,9 +108,10 @@ function CallbackContent() {
                 console.error('Callback error:', err);
                 const errorMsg = 'An error occurred during authentication';
                 setError(errorMsg);
+                const inPopup = isOAuthPopupContext();
 
-                if (window.opener) {
-                    window.opener.postMessage({
+                if (inPopup) {
+                    window.opener?.postMessage({
                         type: 'oauth_error',
                         error: errorMsg
                     }, window.location.origin);

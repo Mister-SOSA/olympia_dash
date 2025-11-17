@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { FaMicrosoft } from 'react-icons/fa';
-import { MdDevices, MdRefresh, MdWarning } from 'react-icons/md';
+import { MdDevices, MdRefresh } from 'react-icons/md';
 import { IoTimeOutline } from 'react-icons/io5';
-import { isIOSPWA, isPWA } from '@/utils/pwaUtils';
+import { isIOSPWA, isPWA, openOAuthInBrowser, storeOAuthRedirect } from '@/utils/pwaUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,12 +70,12 @@ function LoginContent() {
 
         try {
             const authUrl = await authService.getLoginUrl();
+            const redirectAfterAuth = '/';
 
-            // Check if we're in iOS PWA - popups don't work there
+            // Check if we're in iOS PWA - use full Safari redirect instead of popups
             if (isIOSPWA()) {
-                console.log('iOS PWA detected - use device pairing instead');
-                setError('OAuth login doesn\'t work well in iOS web app mode. Please use Device Pairing on the right.');
-                setLoading(false);
+                console.log('iOS PWA detected - redirecting OAuth flow through Safari');
+                openOAuthInBrowser(authUrl, redirectAfterAuth);
                 return;
             }
 
@@ -153,9 +153,7 @@ function LoginContent() {
             console.log('Non-PWA mode, redirecting to:', authUrl);
 
             // Store current path to return after auth
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('oauth_redirect', '/');
-            }
+            storeOAuthRedirect(redirectAfterAuth);
 
             window.location.href = authUrl;
         } catch (err: any) {
