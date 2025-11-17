@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Loader } from '@/components/ui/loader';
+import { getOAuthRedirect } from '@/utils/pwaUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,9 +36,14 @@ function CallbackContent() {
                 const response = await authService.handleCallback(code);
 
                 if (response.success) {
-                    // Redirect to state parameter or dashboard
-                    const redirectTo = state || '/';
-                    router.push(redirectTo);
+                    // Get stored redirect or use state parameter or default to dashboard
+                    const storedRedirect = getOAuthRedirect();
+                    const redirectTo = storedRedirect !== '/' ? storedRedirect : (state || '/');
+                    
+                    // Small delay to ensure tokens are properly set
+                    setTimeout(() => {
+                        router.push(redirectTo);
+                    }, 100);
                 } else {
                     setError(response.error || 'Authentication failed');
                     setTimeout(() => router.push('/login'), 3000);

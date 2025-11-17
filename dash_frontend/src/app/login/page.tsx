@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { FaMicrosoft } from 'react-icons/fa';
-import { MdDevices, MdRefresh } from 'react-icons/md';
+import { MdDevices, MdRefresh, MdWarning } from 'react-icons/md';
 import { IoTimeOutline } from 'react-icons/io5';
+import { isIOSPWA, isPWA } from '@/utils/pwaUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,12 @@ function LoginContent() {
     const [userCode, setUserCode] = useState<string>('');
     const [deviceLoading, setDeviceLoading] = useState(false);
     const [error, setError] = useState<string>('');
+    const [isPWAMode, setIsPWAMode] = useState(false);
 
     useEffect(() => {
+        // Detect PWA mode
+        setIsPWAMode(isPWA());
+
         // Check if user is already authenticated
         if (authService.isAuthenticated()) {
             router.push('/');
@@ -35,7 +40,7 @@ function LoginContent() {
             return;
         }
 
-        // Auto-generate device code on mount
+        // Auto-generate device code on mount (especially useful for PWA/iOS)
         handleRequestDeviceCode();
     }, [searchParams, router]);
 
@@ -65,6 +70,20 @@ function LoginContent() {
 
         try {
             const authUrl = await authService.getLoginUrl();
+            
+            // For iOS PWA: OAuth redirect creates a browser-in-app issue
+            // Show warning instead
+            if (isIOSPWA()) {
+                setError('OAuth login not recommended in iOS web app mode. Please use Device Pairing instead.');
+                setLoading(false);
+                return;
+            }
+            
+            // Store current path to return after auth
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('oauth_redirect', '/');
+            }
+            
             window.location.href = authUrl;
         } catch (err: any) {
             setError(err.message || 'Failed to initiate login');
@@ -158,9 +177,24 @@ function LoginContent() {
                     <p className="text-ui-text-secondary">Sign in to access your dashboard</p>
                 </div>
 
+                {/* iOS PWA Warning Banner */}
+                {isPWAMode && (
+                    <div className="mb-8 bg-amber-500/10 border border-amber-500/50 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <MdWarning className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="text-amber-500 font-semibold mb-1">Web App Mode Detected</h3>
+                                <p className="text-sm text-ui-text-secondary">
+                                    For the best experience in web app mode, use <strong>Device Pairing</strong> instead of Microsoft OAuth login.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="grid lg:grid-cols-2 gap-8">
                     {/* Microsoft OAuth Login */}
-                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                    <Card className={`bg-ui-bg-secondary border-ui-border-primary ${isPWAMode ? 'opacity-60' : ''}`}>
                         <CardHeader className="space-y-1 pb-6">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="p-2 bg-ui-accent-primary-bg rounded-lg">
@@ -170,6 +204,11 @@ function LoginContent() {
                             </div>
                             <CardDescription className="text-ui-text-secondary">
                                 Sign in with your Microsoft work account
+                                {isPWAMode && (
+                                    <span className="block mt-2 text-amber-500 text-xs font-medium">
+                                        ⚠️ Not recommended in web app mode
+                                    </span>
+                                )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -188,16 +227,26 @@ function LoginContent() {
                     </Card>
 
                     {/* Device Pairing */}
-                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                    <Card className={`bg-ui-bg-secondary border-ui-border-primary ${isPWAMode ? 'ring-2 ring-ui-accent-secondary' : ''}`}>
                         <CardHeader className="space-y-1 pb-6">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="p-2 bg-ui-accent-secondary-bg rounded-lg">
                                     <MdDevices className="w-6 h-6 text-ui-accent-secondary-text" />
                                 </div>
-                                <CardTitle className="text-2xl text-ui-text-primary">TV Dashboard</CardTitle>
+                                <CardTitle className="text-2xl text-ui-text-primary">
+                                    Device Pairing
+                                    {isPWAMode && (
+                                        <span className="ml-2 text-xs font-normal text-ui-accent-secondary-text">
+                                            ✓ Recommended
+                                        </span>
+                                    )}
+                                </CardTitle>
                             </div>
                             <CardDescription className="text-ui-text-secondary">
-                                Display dashboard on a TV or kiosk screen
+                                {isPWAMode 
+                                    ? 'Perfect for web app mode - pair this device with your account'
+                                    : 'Display dashboard on a TV or kiosk screen'
+                                }
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
