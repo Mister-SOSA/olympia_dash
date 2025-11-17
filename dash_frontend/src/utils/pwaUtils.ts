@@ -7,11 +7,11 @@
  */
 export const isIOSPWA = (): boolean => {
     if (typeof window === 'undefined') return false;
-    
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isStandalone = (window.navigator as any).standalone === true || 
-                        window.matchMedia('(display-mode: standalone)').matches;
-    
+    const isStandalone = (window.navigator as any).standalone === true ||
+        window.matchMedia('(display-mode: standalone)').matches;
+
     return isIOS && isStandalone;
 };
 
@@ -20,9 +20,9 @@ export const isIOSPWA = (): boolean => {
  */
 export const isPWA = (): boolean => {
     if (typeof window === 'undefined') return false;
-    
-    return (window.navigator as any).standalone === true || 
-           window.matchMedia('(display-mode: standalone)').matches;
+
+    return (window.navigator as any).standalone === true ||
+        window.matchMedia('(display-mode: standalone)').matches;
 };
 
 /**
@@ -48,7 +48,7 @@ export const storeOAuthRedirect = (redirectUrl: string = '/'): void => {
  */
 export const getOAuthRedirect = (): string => {
     if (typeof window === 'undefined') return '/';
-    
+
     const redirect = sessionStorage.getItem('oauth_redirect') || '/';
     sessionStorage.removeItem('oauth_redirect');
     return redirect;
@@ -60,10 +60,10 @@ export const getOAuthRedirect = (): string => {
  */
 export const openOAuthInBrowser = (authUrl: string): void => {
     if (typeof window === 'undefined') return;
-    
+
     // Store where we want to go after OAuth
     storeOAuthRedirect(window.location.pathname);
-    
+
     // For iOS PWA, use target="_blank" which opens in Safari
     // The OAuth callback URL should be the PWA URL scheme if registered,
     // or a universal link that redirects back to the PWA

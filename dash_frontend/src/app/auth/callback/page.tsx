@@ -39,7 +39,7 @@ function CallbackContent() {
                     // Get stored redirect or use state parameter or default to dashboard
                     const storedRedirect = getOAuthRedirect();
                     const redirectTo = storedRedirect !== '/' ? storedRedirect : (state || '/');
-                    
+
                     // Small delay to ensure tokens are properly set
                     setTimeout(() => {
                         router.push(redirectTo);
