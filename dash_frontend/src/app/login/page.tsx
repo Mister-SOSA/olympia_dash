@@ -71,8 +71,18 @@ function LoginContent() {
         try {
             const authUrl = await authService.getLoginUrl();
 
-            // For PWAs: Open OAuth in a popup window that can be closed after auth
+            // Check if we're in iOS PWA - popups don't work there
+            if (isIOSPWA()) {
+                console.log('iOS PWA detected - use device pairing instead');
+                setError('OAuth login doesn\'t work well in iOS web app mode. Please use Device Pairing on the right.');
+                setLoading(false);
+                return;
+            }
+
+            // For non-iOS PWAs: Open OAuth in a popup window that can be closed after auth
             if (isPWAMode) {
+                console.log('Non-iOS PWA mode detected, opening popup for OAuth');
+                
                 const width = 600;
                 const height = 700;
                 const left = (window.screen.width - width) / 2;
@@ -84,12 +94,27 @@ function LoginContent() {
                     `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=yes,status=no,menubar=no,scrollbars=yes,resizable=yes`
                 );
 
+                if (!popup) {
+                    console.error('Popup was blocked');
+                    setError('Popup was blocked. Please allow popups for this site and try again, or use Device Pairing instead.');
+                    setLoading(false);
+                    return;
+                }
+
+                console.log('Popup opened successfully');
+
                 // Listen for messages from the popup
                 const handleMessage = (event: MessageEvent) => {
+                    console.log('Received message from popup:', event.data);
+                    
                     // Verify origin
-                    if (event.origin !== window.location.origin) return;
+                    if (event.origin !== window.location.origin) {
+                        console.log('Message origin mismatch:', event.origin, 'vs', window.location.origin);
+                        return;
+                    }
 
                     if (event.data.type === 'oauth_success') {
+                        console.log('OAuth success, setting tokens');
                         // Auth successful - set tokens and redirect
                         authService.setTokens(
                             event.data.accessToken,
@@ -100,6 +125,7 @@ function LoginContent() {
                         setLoading(false);
                         router.push('/');
                     } else if (event.data.type === 'oauth_error') {
+                        console.error('OAuth error:', event.data.error);
                         // Auth failed
                         setError(event.data.error || 'Authentication failed');
                         window.removeEventListener('message', handleMessage);
@@ -112,10 +138,11 @@ function LoginContent() {
                 // Handle popup being closed manually
                 const checkPopupClosed = setInterval(() => {
                     if (popup && popup.closed) {
+                        console.log('Popup was closed manually');
                         clearInterval(checkPopupClosed);
                         window.removeEventListener('message', handleMessage);
                         setLoading(false);
-                        setError('Login window was closed');
+                        setError('Login window was closed. You can try again or use Device Pairing.');
                     }
                 }, 500);
 
@@ -123,6 +150,8 @@ function LoginContent() {
             }
 
             // Normal flow for non-PWA: Full page redirect
+            console.log('Non-PWA mode, redirecting to:', authUrl);
+            
             // Store current path to return after auth
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('oauth_redirect', '/');
@@ -130,6 +159,7 @@ function LoginContent() {
 
             window.location.href = authUrl;
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || 'Failed to initiate login');
             setLoading(false);
         }
