@@ -71,14 +71,58 @@ function LoginContent() {
         try {
             const authUrl = await authService.getLoginUrl();
 
-            // For iOS PWA: OAuth redirect creates a browser-in-app issue
-            // Show warning instead
-            if (isIOSPWA()) {
-                setError('OAuth login not recommended in iOS web app mode. Please use Device Pairing instead.');
-                setLoading(false);
+            // For PWAs: Open OAuth in a popup window that can be closed after auth
+            if (isPWAMode) {
+                const width = 600;
+                const height = 700;
+                const left = (window.screen.width - width) / 2;
+                const top = (window.screen.height - height) / 2;
+
+                const popup = window.open(
+                    authUrl,
+                    'oauth_popup',
+                    `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=yes,status=no,menubar=no,scrollbars=yes,resizable=yes`
+                );
+
+                // Listen for messages from the popup
+                const handleMessage = (event: MessageEvent) => {
+                    // Verify origin
+                    if (event.origin !== window.location.origin) return;
+
+                    if (event.data.type === 'oauth_success') {
+                        // Auth successful - set tokens and redirect
+                        authService.setTokens(
+                            event.data.accessToken,
+                            event.data.refreshToken,
+                            event.data.user
+                        );
+                        window.removeEventListener('message', handleMessage);
+                        setLoading(false);
+                        router.push('/');
+                    } else if (event.data.type === 'oauth_error') {
+                        // Auth failed
+                        setError(event.data.error || 'Authentication failed');
+                        window.removeEventListener('message', handleMessage);
+                        setLoading(false);
+                    }
+                };
+
+                window.addEventListener('message', handleMessage);
+
+                // Handle popup being closed manually
+                const checkPopupClosed = setInterval(() => {
+                    if (popup && popup.closed) {
+                        clearInterval(checkPopupClosed);
+                        window.removeEventListener('message', handleMessage);
+                        setLoading(false);
+                        setError('Login window was closed');
+                    }
+                }, 500);
+
                 return;
             }
 
+            // Normal flow for non-PWA: Full page redirect
             // Store current path to return after auth
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('oauth_redirect', '/');
@@ -181,26 +225,9 @@ function LoginContent() {
                     </p>
                 </div>
 
-                {/* iOS PWA Warning Banner */}
-                {isPWAMode && (
-                    <div className="mb-6 sm:mb-8 bg-amber-500/10 border border-amber-500/50 rounded-lg p-3 sm:p-4">
-                        <div className="flex items-start gap-2 sm:gap-3">
-                            <MdWarning className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 flex-shrink-0 mt-0.5" />
-                            <div className="min-w-0">
-                                <h3 className="text-sm sm:text-base text-amber-500 font-semibold mb-1">
-                                    Web App Mode Detected
-                                </h3>
-                                <p className="text-xs sm:text-sm text-ui-text-secondary">
-                                    For the best experience in web app mode, use <strong>Device Pairing</strong> instead of Microsoft OAuth login.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                     {/* Microsoft OAuth Login */}
-                    <Card className={`bg-ui-bg-secondary border-ui-border-primary ${isPWAMode ? 'opacity-60' : ''}`}>
+                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
                         <CardHeader className="space-y-1 pb-4 sm:pb-6">
                             <div className="flex items-center gap-2 sm:gap-3 mb-2">
                                 <div className="p-1.5 sm:p-2 bg-ui-accent-primary-bg rounded-lg">
@@ -212,11 +239,6 @@ function LoginContent() {
                             </div>
                             <CardDescription className="text-xs sm:text-sm text-ui-text-secondary">
                                 Sign in with your Microsoft work account
-                                {isPWAMode && (
-                                    <span className="block mt-2 text-amber-500 text-xs font-medium">
-                                        ⚠️ Not recommended in web app mode
-                                    </span>
-                                )}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -237,28 +259,20 @@ function LoginContent() {
                     </Card>
 
                     {/* Device Pairing */}
-                    <Card className={`bg-ui-bg-secondary border-ui-border-primary ${isPWAMode ? 'ring-2 ring-ui-accent-secondary' : ''}`}>
+                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
                         <CardHeader className="space-y-1 pb-4 sm:pb-6">
                             <div className="flex items-center gap-2 sm:gap-3 mb-2">
                                 <div className="p-1.5 sm:p-2 bg-ui-accent-secondary-bg rounded-lg">
                                     <MdDevices className="w-5 h-5 sm:w-6 sm:h-6 text-ui-accent-secondary-text" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <CardTitle className="text-xl sm:text-2xl text-ui-text-primary flex items-center flex-wrap gap-2">
-                                        <span>Device Pairing</span>
-                                        {isPWAMode && (
-                                            <span className="text-xs font-normal text-ui-accent-secondary-text whitespace-nowrap">
-                                                ✓ Recommended
-                                            </span>
-                                        )}
+                                    <CardTitle className="text-xl sm:text-2xl text-ui-text-primary">
+                                        Device Pairing
                                     </CardTitle>
                                 </div>
                             </div>
                             <CardDescription className="text-xs sm:text-sm text-ui-text-secondary">
-                                {isPWAMode
-                                    ? 'Perfect for web app mode - pair this device with your account'
-                                    : 'Display dashboard on a TV or kiosk screen'
-                                }
+                                Display dashboard on a TV or kiosk screen
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

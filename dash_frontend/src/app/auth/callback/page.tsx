@@ -22,12 +22,34 @@ function CallbackContent() {
 
             if (error) {
                 setError(errorDescription || error);
+
+                // If we're in a popup (from PWA), close it and notify parent
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth_error',
+                        error: errorDescription || error
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
                 setTimeout(() => router.push('/login'), 3000);
                 return;
             }
 
             if (!code) {
                 setError('No authorization code received');
+
+                // If we're in a popup, close it
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth_error',
+                        error: 'No authorization code received'
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
                 setTimeout(() => router.push('/login'), 3000);
                 return;
             }
@@ -36,21 +58,55 @@ function CallbackContent() {
                 const response = await authService.handleCallback(code);
 
                 if (response.success) {
-                    // Get stored redirect or use state parameter or default to dashboard
+                    // If we're in a popup (from PWA), notify parent and close
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'oauth_success',
+                            accessToken: response.access_token,
+                            refreshToken: response.refresh_token,
+                            user: response.user
+                        }, window.location.origin);
+
+                        // Give parent time to receive message before closing
+                        setTimeout(() => window.close(), 500);
+                        return;
+                    }
+
+                    // Normal flow - not in popup
                     const storedRedirect = getOAuthRedirect();
                     const redirectTo = storedRedirect !== '/' ? storedRedirect : (state || '/');
 
-                    // Small delay to ensure tokens are properly set
                     setTimeout(() => {
                         router.push(redirectTo);
                     }, 100);
                 } else {
                     setError(response.error || 'Authentication failed');
+
+                    if (window.opener) {
+                        window.opener.postMessage({
+                            type: 'oauth_error',
+                            error: response.error || 'Authentication failed'
+                        }, window.location.origin);
+                        window.close();
+                        return;
+                    }
+
                     setTimeout(() => router.push('/login'), 3000);
                 }
             } catch (err) {
                 console.error('Callback error:', err);
-                setError('An error occurred during authentication');
+                const errorMsg = 'An error occurred during authentication';
+                setError(errorMsg);
+
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth_error',
+                        error: errorMsg
+                    }, window.location.origin);
+                    window.close();
+                    return;
+                }
+
                 setTimeout(() => router.push('/login'), 3000);
             }
         };
