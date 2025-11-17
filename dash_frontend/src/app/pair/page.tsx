@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,9 @@ import { Loader } from '@/components/ui/loader';
 
 export const dynamic = 'force-dynamic';
 
-export default function PairPage() {
+function PairContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [userCode, setUserCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -30,7 +31,13 @@ export default function PairPage() {
         };
 
         checkAuth();
-    }, []);
+
+        // Check for code parameter in URL
+        const codeParam = searchParams.get('code');
+        if (codeParam) {
+            setUserCode(codeParam.toUpperCase());
+        }
+    }, [searchParams]);
 
     const handleLogin = async () => {
         setLoading(true);
@@ -180,5 +187,17 @@ export default function PairPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function PairPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+                <Loader />
+            </div>
+        }>
+            <PairContent />
+        </Suspense>
     );
 }

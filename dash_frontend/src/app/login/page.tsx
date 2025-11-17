@@ -10,6 +10,7 @@ import { FaMicrosoft } from 'react-icons/fa';
 import { MdDevices, MdRefresh } from 'react-icons/md';
 import { IoTimeOutline } from 'react-icons/io5';
 import { isIOSPWA, isPWA, openOAuthInBrowser, storeOAuthRedirect } from '@/utils/pwaUtils';
+import QRCodeSVG from 'react-qr-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -314,6 +315,31 @@ function LoginContent() {
                             ) : userCode ? (
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="bg-ui-bg-primary border border-ui-border-primary rounded-lg p-4 sm:p-6">
+                                        {/* QR Code Section */}
+                                        <div className="flex flex-col items-center mb-4 sm:mb-6">
+                                            <p className="text-xs sm:text-sm text-ui-text-secondary mb-3">
+                                                Scan with your phone:
+                                            </p>
+                                            <div className="bg-white p-3 sm:p-4 rounded-lg">
+                                                <QRCodeSVG 
+                                                    value={`${window.location.origin}/pair?code=${userCode}`}
+                                                    size={160}
+                                                    level="M"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="relative my-4 sm:my-6">
+                                            <div className="absolute inset-0 flex items-center">
+                                                <div className="w-full border-t border-ui-border-primary"></div>
+                                            </div>
+                                            <div className="relative flex justify-center text-xs">
+                                                <span className="bg-ui-bg-primary px-2 text-ui-text-muted">
+                                                    or manually enter
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         <div className="text-center mb-3 sm:mb-4">
                                             <p className="text-xs sm:text-sm text-ui-text-secondary mb-1">
                                                 Visit on your computer:
