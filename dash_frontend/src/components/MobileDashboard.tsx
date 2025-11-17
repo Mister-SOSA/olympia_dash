@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Widget } from "@/types";
 import { getWidgetById } from "@/constants/widgets";
-import { ChevronLeft, ChevronRight, Grid3x3, Settings, Menu, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid3x3, Settings, Menu } from "lucide-react";
 import { Suspense } from "react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 
@@ -26,12 +26,17 @@ export default function MobileDashboard({
         (widget) => widget.enabled && hasAccess(widget.id, 'view')
     );
 
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [direction, setDirection] = useState(0);
+    const [[currentIndex, direction], setPage] = useState([0, 0]);
     const [showNav, setShowNav] = useState(false);
-    const x = useMotionValue(0);
-    const opacity = useTransform(x, [-100, 0, 100], [0.5, 1, 0.5]);
+    const [isDragging, setIsDragging] = useState(false);
     const hideNavTimeout = useRef<NodeJS.Timeout | null>(null);
+
+    // Ensure currentIndex stays within bounds when widgets change
+    useEffect(() => {
+        if (currentIndex >= enabledWidgets.length && enabledWidgets.length > 0) {
+            setPage([enabledWidgets.length - 1, -1]);
+        }
+    }, [enabledWidgets.length, currentIndex]);
 
     // Show navigation on any interaction
     useEffect(() => {
@@ -63,32 +68,36 @@ export default function MobileDashboard({
     const paginate = (newDirection: number) => {
         const newIndex = currentIndex + newDirection;
         if (newIndex >= 0 && newIndex < enabledWidgets.length) {
-            setDirection(newDirection);
-            setCurrentIndex(newIndex);
+            setPage([newIndex, newDirection]);
         }
     };
 
-    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        const swipeThreshold = 50;
-        const swipeVelocityThreshold = 500;
+    const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        setIsDragging(false);
 
-        if (
-            info.offset.x > swipeThreshold ||
-            info.velocity.x > swipeVelocityThreshold
-        ) {
-            paginate(-1);
-        } else if (
-            info.offset.x < -swipeThreshold ||
-            info.velocity.x < -swipeVelocityThreshold
-        ) {
-            paginate(1);
+        const swipeThreshold = 75; // Increased for more deliberate swipes
+        const swipeVelocityThreshold = 400;
+
+        const offset = info.offset.x;
+        const velocity = info.velocity.x;
+
+        // Swipe right (go to previous)
+        if (offset > swipeThreshold || velocity > swipeVelocityThreshold) {
+            if (currentIndex > 0) {
+                paginate(-1);
+            }
+        }
+        // Swipe left (go to next)
+        else if (offset < -swipeThreshold || velocity < -swipeVelocityThreshold) {
+            if (currentIndex < enabledWidgets.length - 1) {
+                paginate(1);
+            }
         }
     };
 
     const goToWidget = (index: number) => {
-        if (index !== currentIndex) {
-            setDirection(index > currentIndex ? 1 : -1);
-            setCurrentIndex(index);
+        if (index !== currentIndex && index >= 0 && index < enabledWidgets.length) {
+            setPage([index, index > currentIndex ? 1 : -1]);
         }
     };
 
@@ -162,23 +171,21 @@ export default function MobileDashboard({
 
             {/* Widget Carousel */}
             <div className="mobile-widget-container">
-                <AnimatePresence initial={false} custom={direction} mode="wait">
+                <AnimatePresence initial={false} custom={direction}>
                     <motion.div
                         key={currentIndex}
                         custom={direction}
                         variants={{
-                            enter: (direction: number) => ({
-                                x: direction > 0 ? 300 : -300,
+                            enter: (dir: number) => ({
+                                x: dir > 0 ? '100%' : '-100%',
                                 opacity: 0,
                             }),
                             center: {
-                                zIndex: 1,
                                 x: 0,
                                 opacity: 1,
                             },
-                            exit: (direction: number) => ({
-                                zIndex: 0,
-                                x: direction < 0 ? 300 : -300,
+                            exit: (dir: number) => ({
+                                x: dir > 0 ? '-100%' : '100%',
                                 opacity: 0,
                             }),
                         }}
@@ -186,15 +193,28 @@ export default function MobileDashboard({
                         animate="center"
                         exit="exit"
                         transition={{
-                            x: { type: "spring", stiffness: 300, damping: 30 },
-                            opacity: { duration: 0.2 },
+                            x: {
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 40,
+                                mass: 0.8,
+                            },
+                            opacity: { duration: 0.15 },
                         }}
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.2}
+                        dragElastic={{
+                            left: currentIndex === 0 ? 0.1 : 0.2,
+                            right: currentIndex === enabledWidgets.length - 1 ? 0.1 : 0.2,
+                        }}
+                        dragMomentum={false}
+                        onDragStart={() => setIsDragging(true)}
                         onDragEnd={handleDragEnd}
-                        style={{ x, opacity }}
                         className="mobile-widget-slide"
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                        }}
                     >
                         {widgetDef && (
                             <div className="mobile-widget-content">
@@ -264,8 +284,8 @@ export default function MobileDashboard({
                                         key={widget.id}
                                         onClick={() => goToWidget(index)}
                                         className={`mobile-dot ${index === currentIndex
-                                                ? 'mobile-dot-active'
-                                                : 'mobile-dot-inactive'
+                                            ? 'mobile-dot-active'
+                                            : 'mobile-dot-inactive'
                                             }`}
                                         aria-label={`Go to ${def?.title || 'widget'}`}
                                         title={def?.title}

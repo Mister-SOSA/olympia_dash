@@ -662,9 +662,12 @@ main {
   flex: 1;
   width: 100%;
   overflow: hidden;
+  /* Critical: prevents scrolling during transitions */
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: pan-y;
+  /* Allow vertical scrolling within widgets, but enable horizontal swipe detection */
 }
 
 .mobile-widget-slide {
@@ -676,6 +679,9 @@ main {
   padding: 1rem;
   padding-top: calc(1rem + env(safe-area-inset-top));
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  will-change: transform, opacity;
+  /* Optimize for animations */
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-widget-content {
@@ -685,6 +691,15 @@ main {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--ui-border-primary) transparent;
+  /* Prevent scroll bounce from interfering with swipe gestures */
+  overscroll-behavior: contain;
+  /* Enable GPU acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Allow touch events to pass through for parent drag detection */
+  touch-action: pan-y;
+  /* Only allow vertical scrolling, let parent handle horizontal swipe */
+  pointer-events: auto;
 }
 
 .mobile-widget-content::-webkit-scrollbar {
