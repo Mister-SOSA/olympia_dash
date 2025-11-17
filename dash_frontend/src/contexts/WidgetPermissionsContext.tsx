@@ -49,7 +49,17 @@ export function WidgetPermissionsProvider({ children }: { children: React.ReactN
 
             // Fetch user's widget permissions
             const access = await adminService.getAvailableWidgets();
-            setWidgetAccess(access);
+
+            // If the user hasn't been assigned any explicit widget permissions yet,
+            // fall back to full access so legacy dashboards and menus still work.
+            // This keeps existing users from seeing a blank screen immediately
+            // after OAuth until an admin configures granular permissions.
+            if (!access.all_access && Object.keys(access.permissions || {}).length === 0) {
+                console.warn('[WidgetPermissions] No explicit widget permissions found; defaulting to full access');
+                setWidgetAccess({ permissions: {}, all_access: true });
+            } else {
+                setWidgetAccess(access);
+            }
         } catch (err) {
             console.error('Failed to load widget permissions:', err);
             setError('Failed to load widget permissions');

@@ -127,7 +127,7 @@ export default function Dashboard() {
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
     // ✅ FIX: Get widget permissions
-    const { hasAccess, loading: permissionsLoading } = useWidgetPermissions();
+    const { hasAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -167,6 +167,15 @@ export default function Dashboard() {
 
         checkAuth();
     }, [router]);
+
+    // Ensure widget permissions are refreshed once authentication succeeds.
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        refreshWidgetPermissions().catch((error) => {
+            console.error('Failed to refresh widget permissions after auth:', error);
+        });
+    }, [isAuthenticated, refreshWidgetPermissions]);
 
     // Sync preferences from server and migrate old localStorage data
     useEffect(() => {
