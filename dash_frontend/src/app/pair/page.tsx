@@ -20,6 +20,7 @@ function PairContent() {
     const [success, setSuccess] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [checkingAuth, setCheckingAuth] = useState(true);
+    const [autoSubmit, setAutoSubmit] = useState(false);
 
     useEffect(() => {
         // Check if user is authenticated
@@ -36,8 +37,19 @@ function PairContent() {
         const codeParam = searchParams.get('code');
         if (codeParam) {
             setUserCode(codeParam.toUpperCase());
+            // Auto-submit if code is valid
+            if (codeParam.length === 6) {
+                setAutoSubmit(true);
+            }
         }
     }, [searchParams]);
+
+    // Auto-submit effect when code is set from QR scan
+    useEffect(() => {
+        if (autoSubmit && userCode.length === 6 && isAuthenticated && !loading) {
+            handlePairAutomatic();
+        }
+    }, [autoSubmit, userCode, isAuthenticated, loading]);
 
     const handleLogin = async () => {
         setLoading(true);
@@ -48,6 +60,43 @@ function PairContent() {
             window.location.href = authUrl;
         } catch (err: any) {
             setError(err.message || 'Failed to initiate login');
+            setLoading(false);
+        }
+    };
+
+    const handlePairAutomatic = async () => {
+        if (!userCode || userCode.length !== 6) {
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const response = await authService.fetchWithAuth('/api/auth/device/pair', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_code: userCode.toUpperCase() }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                setSuccess(true);
+                setTimeout(() => {
+                    router.push('/');
+                }, 2000);
+            } else {
+                setError(data.error || 'Failed to pair device');
+                setAutoSubmit(false); // Allow manual retry
+            }
+        } catch (err) {
+            setError('An error occurred while pairing the device');
+            console.error('Pairing error:', err);
+            setAutoSubmit(false); // Allow manual retry
+        } finally {
             setLoading(false);
         }
     };
