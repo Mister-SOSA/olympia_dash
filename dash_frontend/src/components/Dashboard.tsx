@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import MobileDashboard from "./MobileDashboard";
 import MobileWidgetMenu from "./MobileWidgetMenu";
+import MobileSettingsMenu from "./MobileSettingsMenu";
 import DashboardDock from "./DashboardDock";
 import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
 import PresetDialog from "./PresetDialog";
@@ -578,10 +579,10 @@ export default function Dashboard() {
                     )}
                 </AnimatePresence>
 
-                {/* Settings Menu Modal - Shared */}
+                {/* Settings Menu Modal - Mobile Version */}
                 <AnimatePresence>
                     {settingsOpen && (
-                        <SettingsMenu
+                        <MobileSettingsMenu
                             user={user}
                             onLogout={handleLogout}
                             onClose={() => setSettingsOpen(false)}

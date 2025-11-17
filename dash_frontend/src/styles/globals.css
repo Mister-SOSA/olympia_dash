@@ -1607,3 +1607,195 @@ tbody td {
     transform: rotate(360deg);
   }
 }
+
+/* ============================================
+   MOBILE SETTINGS MENU STYLES
+   ============================================ */
+
+.mobile-settings-menu {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-settings-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-settings-header {
+  flex-shrink: 0;
+  padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  background: var(--ui-bg-primary);
+  border-bottom: 1px solid var(--ui-border-primary);
+  position: relative;
+}
+
+.mobile-settings-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-menu-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.mobile-menu-button:active {
+  background: var(--ui-bg-tertiary);
+  transform: scale(0.98);
+}
+
+.mobile-menu-icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-accent-primary-bg);
+  border: 1px solid var(--ui-accent-primary-border);
+  border-radius: 0.5rem;
+  color: var(--ui-accent-primary);
+}
+
+.mobile-settings-action-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border: 1px solid;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  color: white;
+}
+
+.mobile-settings-action-button:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Mobile Theme Card */
+.mobile-theme-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-bg-secondary);
+  border: 2px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-theme-card:active {
+  transform: scale(0.95);
+}
+
+.mobile-theme-card-active {
+  border-color: var(--ui-accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mobile-theme-preview {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-theme-name {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--ui-bg-secondary);
+  border-top: 1px solid var(--ui-border-primary);
+  font-size: 0.875rem;
+}
+
+/* Mobile Settings Group */
+.mobile-settings-group {
+  padding: 1rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+}
+
+/* Mobile Toggle Switch */
+.mobile-toggle {
+  position: relative;
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-toggle-active {
+  background: var(--ui-accent-primary);
+  border-color: var(--ui-accent-primary);
+}
+
+.mobile-toggle-knob {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Select Dropdown */
+.mobile-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.5rem;
+  color: var(--ui-text-primary);
+  font-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.mobile-select:focus {
+  outline: none;
+  border-color: var(--ui-accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
