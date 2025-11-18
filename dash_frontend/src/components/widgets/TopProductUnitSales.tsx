@@ -191,10 +191,8 @@ export default function TopProductUnitSalesTable() {
                                     style={rank === 1 ? {
                                         backgroundColor: 'var(--badge-warning-bg)',
                                         borderLeft: '2px solid var(--badge-warning-border)',
-                                        opacity: 0.5
                                     } : isTopThree ? {
                                         backgroundColor: 'var(--ui-bg-secondary)',
-                                        opacity: 0.3
                                     } : {}}
                                 >
                                     <TableCell className="py-1.5 text-center">
