@@ -87,10 +87,12 @@ const processCustomerData = (data: CustomerData[]): CustomerData[] => {
         return b.totalSales - a.totalSales;
     });
 
-    // Assign colors to each slice.
+    // Assign colors to each slice - "Other" always gets grey
     return aggregatedData.map((item, index) => ({
         ...item,
-        color: CHART_COLORS[index] || CHART_COLORS[CHART_COLORS.length - 1],
+        color: item.businessName === "Other"
+            ? CHART_COLORS[CHART_COLORS.length - 1] // Grey for Other
+            : CHART_COLORS[index] || CHART_COLORS[0],
     }));
 };
 
@@ -123,8 +125,20 @@ function useContainerDimensions(ref: React.RefObject<HTMLElement | null>) {
 function calculateOptimalLayout(width: number, height: number, itemCount: number) {
     const aspectRatio = width / height;
 
-    // Calculate space requirements for each layout option
+    // Check if we should use bar layout (small cards or very wide)
     const minPieSize = 180; // Minimum acceptable pie diameter
+    const useBarLayout = height < 200 || width < 300 || (aspectRatio > 2.5 && height < 250);
+
+    if (useBarLayout) {
+        return {
+            type: "bar" as const,
+            position: "bottom" as const,
+            legendSize: 0,
+            pieSize: 0,
+        };
+    }
+
+    // Calculate space requirements for each layout option
 
     // Option 1: Legend on right (vertical)
     const rightLegendWidth = 200; // Fixed width for vertical legend
@@ -143,12 +157,14 @@ function calculateOptimalLayout(width: number, height: number, itemCount: number
     // Choose layout with largest pie size
     if (rightLayoutScore > bottomLayoutScore && aspectRatio > 1.2 && width > 500) {
         return {
+            type: "pie" as const,
             position: "right" as const,
             legendSize: rightLegendWidth,
             pieSize: rightLayoutPieSize,
         };
     } else {
         return {
+            type: "pie" as const,
             position: "bottom" as const,
             legendSize: bottomLegendHeight,
             pieSize: bottomLayoutPieSize,
@@ -166,6 +182,109 @@ interface ProcessedCustomerData {
 interface CustomerPieChartProps {
     data: CustomerData[];
 }
+
+// Bar Chart Component for small sizes
+const PartitionedBar: React.FC<{ data: ProcessedCustomerData[] }> = ({ data }) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [availableHeight, setAvailableHeight] = useState(0);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const updateHeight = () => {
+            const { height } = containerRef.current!.getBoundingClientRect();
+            setAvailableHeight(height);
+        };
+        updateHeight();
+        const resizeObserver = new ResizeObserver(updateHeight);
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    // Calculate optimal bar height based on available space
+    const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
+    const showPercentages = barHeight >= 70; // Only show percentages if bar is tall enough
+
+    return (
+        <div ref={containerRef} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.625rem", padding: "0.5rem" }}>
+            {/* Bar */}
+            <div style={{ display: "flex", width: "100%", height: `${barHeight}px`, borderRadius: "0.5rem", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                {data.map((item, index) => (
+                    <div
+                        key={index}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        style={{
+                            flex: item.percent,
+                            backgroundColor: item.color,
+                            opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
+                            transition: "opacity 0.2s ease",
+                            cursor: "pointer",
+                            position: "relative",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                        title={`${item.name}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
+                    >
+                        {showPercentages && item.percent > 8 && (
+                            <span style={{
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                color: "rgba(255, 255, 255, 0.95)",
+                                textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                            }}>
+                                {Math.round(item.percent)}%
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Labels */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem 0.875rem", justifyContent: "center", alignItems: "center" }}>
+                {data.map((item, index) => (
+                    <div
+                        key={index}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.375rem",
+                            cursor: "pointer",
+                            opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
+                            transition: "opacity 0.2s ease",
+                        }}
+                    >
+                        <div style={{
+                            width: "0.625rem",
+                            height: "0.625rem",
+                            borderRadius: "0.125rem",
+                            backgroundColor: item.color,
+                            flexShrink: 0,
+                        }} />
+                        <span style={{
+                            fontSize: "0.6875rem",
+                            fontWeight: 600,
+                            color: "var(--text-primary)",
+                            whiteSpace: "nowrap",
+                        }}>
+                            {item.name}
+                        </span>
+                        <span style={{
+                            fontSize: "0.6875rem",
+                            color: "var(--text-secondary)",
+                            fontWeight: 500,
+                        }}>
+                            ${nFormatter(item.value, 1)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // Main chart component with intelligent layout
 const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
@@ -196,6 +315,15 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
 
     if (!processedData.length) {
         return <div>No data available for chart</div>;
+    }
+
+    // Use bar layout for small cards
+    if (layout.type === "bar") {
+        return (
+            <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+                <PartitionedBar data={processedData} />
+            </div>
+        );
     }
 
     const onPieEnter = (_: any, index: number) => {
