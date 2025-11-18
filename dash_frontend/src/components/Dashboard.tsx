@@ -117,6 +117,73 @@ const shouldIgnoreGlobalHotkeys = (element: HTMLElement | null): boolean => {
     return false;
 };
 
+// Table widgets that support arrow key scrolling in fullscreen mode
+const TABLE_WIDGET_IDS = new Set([
+    "OutstandingOrdersTable",
+    "DailyDueInTable",
+    "DailyDueInHiddenVendTable",
+    "InventoryMovesLog",
+    "TopProductUnitSales"
+]);
+
+// Fullscreen Widget Component with Arrow Key Scrolling
+function FullscreenWidget({ layout }: { layout: Widget[] }) {
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const enabledWidget = layout.find(w => w.enabled);
+    const widgetDef = enabledWidget ? getWidgetById(enabledWidget.id) : null;
+    const isTableWidget = enabledWidget ? TABLE_WIDGET_IDS.has(enabledWidget.id) : false;
+
+    useEffect(() => {
+        if (!isTableWidget || !containerRef.current) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only handle up/down arrows for scrolling
+            // Left/right arrows are reserved for preset navigation
+            if (!['ArrowUp', 'ArrowDown'].includes(e.key)) {
+                return;
+            }
+
+            // Don't interfere if user is in an input field
+            if (shouldIgnoreGlobalHotkeys(e.target as HTMLElement)) {
+                return;
+            }
+
+            // Find the ScrollArea viewport within the widget
+            const scrollArea = containerRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+            if (!scrollArea) return;
+
+            e.preventDefault();
+
+            const scrollAmount = 40; // pixels to scroll per key press
+            
+            switch (e.key) {
+                case 'ArrowUp':
+                    scrollArea.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+                    break;
+                case 'ArrowDown':
+                    scrollArea.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isTableWidget]);
+
+    if (!enabledWidget || !widgetDef) return null;
+
+    const WidgetComponent = widgetDef.component;
+
+    return (
+        <div ref={containerRef} className="fixed inset-0 z-40 bg-ui-bg-primary">
+            <div className="w-full h-full overflow-auto">
+                <WidgetComponent />
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     const router = useRouter();
     const isMobile = useIsMobile();
@@ -726,23 +793,7 @@ export default function Dashboard() {
 
             {/* Fullscreen Widget Overlay */}
             {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
-                <div className="fixed inset-0 z-40 bg-ui-bg-primary">
-                    {(() => {
-                        const enabledWidget = layout.find(w => w.enabled);
-                        if (!enabledWidget) return null;
-
-                        const widgetDef = getWidgetById(enabledWidget.id);
-                        if (!widgetDef) return null;
-
-                        const WidgetComponent = widgetDef.component;
-
-                        return (
-                            <div className="w-full h-full overflow-auto">
-                                <WidgetComponent />
-                            </div>
-                        );
-                    })()}
-                </div>
+                <FullscreenWidget layout={layout} />
             )}
 
             {transitionPhase !== "none" && (
