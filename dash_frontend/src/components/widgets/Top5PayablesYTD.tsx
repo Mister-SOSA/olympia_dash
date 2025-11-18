@@ -131,9 +131,31 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
         return () => resizeObserver.disconnect();
     }, []);
 
+    // Intelligent text shortening for readability
+    const shortenName = (name: string, maxLength: number = 20): string => {
+        if (name.length <= maxLength) return name;
+
+        // Remove common business suffixes
+        const cleaned = name
+            .replace(/,?\s+(INC\.?|LLC\.?|CORP\.?|CORPORATION|LIMITED|LTD\.?|CO\.?)$/i, '')
+            .trim();
+
+        if (cleaned.length <= maxLength) return cleaned;
+
+        // Extract initials from multi-word names if still too long
+        const words = cleaned.split(/\s+/);
+        if (words.length > 2 && cleaned.length > maxLength) {
+            // Keep first word + initials (e.g., "AMERICAN EAGLE PACKAGING" -> "AMERICAN E.P.")
+            return words[0] + ' ' + words.slice(1).map(w => w[0] + '.').join('');
+        }
+
+        return cleaned.substring(0, maxLength) + '...';
+    };
+
     // Calculate optimal bar height based on available space
     const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
     const showPercentages = barHeight >= 70; // Only show percentages if bar is tall enough
+    const showInlineLabels = barHeight >= 90; // Show labels inside bar if tall enough
 
     return (
         <div ref={containerRef} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.625rem", padding: "0.5rem" }}>
@@ -152,12 +174,40 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
                             cursor: "pointer",
                             position: "relative",
                             display: "flex",
+                            flexDirection: "column",
                             alignItems: "center",
                             justifyContent: "center",
+                            gap: "0.25rem",
+                            padding: "0.25rem",
                         }}
                         title={`${item.name}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
                     >
-                        {showPercentages && item.percent > 8 && (
+                        {showInlineLabels && item.percent > 12 && (
+                            <>
+                                <span style={{
+                                    fontSize: "0.75rem",
+                                    fontWeight: 700,
+                                    color: "rgba(255, 255, 255, 0.95)",
+                                    textShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                                    lineHeight: 1.1,
+                                    textAlign: "center",
+                                    maxWidth: "100%",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                }}>
+                                    {shortenName(item.name, 15)}
+                                </span>
+                                <span style={{
+                                    fontSize: "1rem",
+                                    fontWeight: 800,
+                                    color: "rgba(255, 255, 255, 0.98)",
+                                    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                                }}>
+                                    {Math.round(item.percent)}%
+                                </span>
+                            </>
+                        )}
+                        {!showInlineLabels && showPercentages && item.percent > 8 && (
                             <span style={{
                                 fontSize: "0.875rem",
                                 fontWeight: 700,
@@ -172,7 +222,7 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
             </div>
 
             {/* Labels */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem 0.875rem", justifyContent: "center", alignItems: "center" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", justifyContent: "center", alignItems: "center" }}>
                 {data.map((item, index) => (
                     <div
                         key={index}
@@ -181,31 +231,35 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
                         style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.375rem",
+                            gap: "0.4rem",
                             cursor: "pointer",
                             opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
                             transition: "opacity 0.2s ease",
+                            padding: "0.125rem 0",
                         }}
                     >
                         <div style={{
-                            width: "0.625rem",
-                            height: "0.625rem",
+                            width: "0.75rem",
+                            height: "0.75rem",
                             borderRadius: "0.125rem",
                             backgroundColor: item.color,
                             flexShrink: 0,
+                            boxShadow: hoveredIndex === index ? `0 0 0 2px ${item.color}50` : 'none',
+                            transition: "box-shadow 0.2s ease",
                         }} />
                         <span style={{
-                            fontSize: "0.6875rem",
-                            fontWeight: 600,
+                            fontSize: "0.8125rem",
+                            fontWeight: 700,
                             color: "var(--text-primary)",
                             whiteSpace: "nowrap",
+                            letterSpacing: "-0.01em",
                         }}>
-                            {item.name}
+                            {shortenName(item.name)}
                         </span>
                         <span style={{
-                            fontSize: "0.6875rem",
+                            fontSize: "0.75rem",
                             color: "var(--text-secondary)",
-                            fontWeight: 500,
+                            fontWeight: 600,
                         }}>
                             ${nFormatter(item.value, 1)}
                         </span>
