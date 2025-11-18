@@ -3,7 +3,6 @@ import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
 import appConfig from "@/config";
 import { authService } from "@/lib/auth";
-import { MdDragIndicator } from "react-icons/md";
 
 /* -------------------------------------- */
 /* 📊 Beef Price Data Types               */
@@ -857,10 +856,8 @@ export default function BeefPricesChart() {
 
     return (
         <div ref={containerRef} style={{ height: "100%", width: "100%", display: 'flex', flexDirection: 'column' }}>
-            {/* Drag Handle */}
-            <div className="widget-drag-handle" title="Drag to move widget">
-                <MdDragIndicator className="drag-icon" />
-            </div>
+            {/* Drag Handle - Apple-style: minimal, centered, appears on hover */}
+            <div className="widget-drag-handle" title="Drag to move widget" />
 
             <div style={{
                 backgroundColor: 'var(--ui-bg-primary)',
