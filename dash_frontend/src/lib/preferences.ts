@@ -113,9 +113,17 @@ class PreferencesService {
         }
 
         try {
-            const response = await authService.fetchWithAuth(
-                `${API_BASE_URL}/api/preferences`
-            );
+            // Add impersonation parameter if active
+            let url = `${API_BASE_URL}/api/preferences`;
+            if (authService.isImpersonating()) {
+                const impersonatedId = authService.getImpersonatedUser()?.id;
+                if (impersonatedId) {
+                    url += `?impersonated_user_id=${impersonatedId}`;
+                    console.log(`🎭 Fetching preferences for impersonated user ${impersonatedId}`);
+                }
+            }
+            
+            const response = await authService.fetchWithAuth(url);
 
             const data: PreferencesResponse = await response.json();
 
@@ -465,6 +473,15 @@ class PreferencesService {
 
             if (useVersionCheck && this.version > 0) {
                 body.version = this.version;
+            }
+
+            // Add impersonation info if active
+            if (authService.isImpersonating()) {
+                const impersonatedId = authService.getImpersonatedUser()?.id;
+                if (impersonatedId) {
+                    body.impersonated_user_id = impersonatedId;
+                    console.log(`🎭 Saving preferences for impersonated user ${impersonatedId}`);
+                }
             }
 
             const response = await authService.fetchWithAuth(

@@ -24,10 +24,20 @@ def get_preferences():
     """
     Get all user preferences.
     Returns preferences object with version and timestamp.
+    Supports admin impersonation via query parameter.
     """
     try:
         user = request.current_user  # type: ignore
-        result = get_user_preferences(user['id'])
+        
+        # Check for impersonation (admin only)
+        impersonated_user_id = request.args.get('impersonated_user_id', type=int)
+        target_user_id = user['id']
+        
+        if impersonated_user_id and user['role'] == 'admin':
+            target_user_id = impersonated_user_id
+            logger.info(f'🎭 Admin {user["id"]} fetching preferences for user {target_user_id}')
+        
+        result = get_user_preferences(target_user_id)
         
         return jsonify({
             'success': True,
@@ -68,10 +78,21 @@ def replace_preferences():
         preferences = data['preferences']
         expected_version = data.get('version')
         session_id = data.get('session_id')
+        impersonated_user_id = data.get('impersonated_user_id')
         
-        logger.info(f'💾 SAVE REQUEST - User: {user["id"]}, Session: {session_id[:8] if session_id else "none"}..., Version: {expected_version}')
+        # Determine which user's preferences to save
+        target_user_id = user['id']
+        is_impersonating = False
         
-        new_version = set_user_preferences(user['id'], preferences, expected_version)
+        if impersonated_user_id and user['role'] == 'admin':
+            # Admin is impersonating another user
+            target_user_id = impersonated_user_id
+            is_impersonating = True
+            logger.info(f'🎭 IMPERSONATION - Admin {user["id"]} saving as user {target_user_id}')
+        
+        logger.info(f'💾 SAVE REQUEST - Target User: {target_user_id}, Session: {session_id[:8] if session_id else "none"}..., Version: {expected_version}')
+        
+        new_version = set_user_preferences(target_user_id, preferences, expected_version)
         
         if new_version is None:
             logger.warning('⚠️ Version conflict!')
@@ -129,8 +150,15 @@ def update_preferences():
         preference_updates = data['preferences']
         expected_version = data.get('version')
         session_id = data.get('session_id')
+        impersonated_user_id = data.get('impersonated_user_id')
         
-        new_version = update_user_preferences(user['id'], preference_updates, expected_version)
+        # Determine target user (support impersonation)
+        target_user_id = user['id']
+        if impersonated_user_id and user['role'] == 'admin':
+            target_user_id = impersonated_user_id
+            logger.info(f'🎭 IMPERSONATION - Admin {user["id"]} updating as user {target_user_id}')
+        
+        new_version = update_user_preferences(target_user_id, preference_updates, expected_version)
         
         if new_version is None:
             return jsonify({
