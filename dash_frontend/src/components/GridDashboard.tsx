@@ -31,6 +31,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Keep track of React roots for proper unmounting of widget components.
         const widgetRoots = useRef<Map<string, Root>>(new Map());
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
+        
+        // Track if user is actively interacting with grid
+        const isInteracting = useRef<boolean>(false);
+        const hasPendingSave = useRef<boolean>(false);
 
         // ✅ FIX: Get widget permissions
         const { hasAccess } = useWidgetPermissions();
@@ -368,12 +372,32 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 applyDragHandleRestriction(item as HTMLElement);
             });
 
+            // Track when user starts/stops interacting
+            gridInstance.current.on("dragstart", () => {
+                isInteracting.current = true;
+            });
+            
+            gridInstance.current.on("dragstop", () => {
+                isInteracting.current = false;
+            });
+            
+            gridInstance.current.on("resizestart", () => {
+                isInteracting.current = true;
+            });
+            
+            gridInstance.current.on("resizestop", () => {
+                isInteracting.current = false;
+            });
+
             // Listen to layout changes – on any change, grab the new state
             // and propagate it to the parent and local storage.
             // ✅ DEBOUNCED: Prevent feedback loops during resize/responsive changes
             let changeTimer: NodeJS.Timeout;
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
+
+                // Mark that we have a pending save
+                hasPendingSave.current = true;
 
                 // Debounce change events to prevent rapid-fire updates during resize
                 clearTimeout(changeTimer);
@@ -389,6 +413,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         enabled: true,
                     }));
                     externalLayoutChangeRef.current?.(updatedLayout);
+                    
+                    // Keep flag set for additional time to cover server roundtrip
+                    setTimeout(() => {
+                        hasPendingSave.current = false;
+                    }, 1000); // 1 second to cover debounce + server roundtrip
                 }, 200); // Wait 200ms after last change before saving
             });
 
@@ -427,8 +456,20 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                        prev.w !== widget.w || prev.h !== widget.h;
             });
 
+            // Skip reload if user is actively interacting OR has unsaved changes
+            if (isInteracting.current || hasPendingSave.current) {
+                if (isInteracting.current) {
+                    console.log('⏸️ Skipping layout update - user is actively interacting');
+                } else {
+                    console.log('⏸️ Skipping layout update - pending save in progress');
+                }
+                return;
+            }
+
             // Reload if widgets were added/removed OR positions/sizes changed
             if (widgetsAdded || widgetsRemoved || layoutChanged) {
+                console.log('🔄 Reloading GridStack with updated layout');
+                
                 // Create a set of widget IDs from the new layout
                 const newWidgetIds = new Set(layout.map(widget => widget.id));
 

@@ -170,7 +170,11 @@ class PreferencesService {
             version: number,
             origin_session_id?: string
         }) => {
-            console.log(`📥 Broadcast received from session ${data.origin_session_id?.substring(0, 8)}... (v${data.version})`);
+            console.log(`📥 Broadcast received`);
+            console.log(`   From session: ${data.origin_session_id?.substring(0, 8) || 'unknown'}...`);
+            console.log(`   My session: ${this.sessionId.substring(0, 8)}...`);
+            console.log(`   Version: ${data.version} (my version: ${this.version})`);
+            console.log(`   Is own broadcast: ${data.origin_session_id === this.sessionId}`);
             
             // Ignore our own broadcasts
             if (data.origin_session_id === this.sessionId) {
