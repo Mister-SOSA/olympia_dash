@@ -167,6 +167,35 @@ class PreferencesService {
     }
 
     /**
+     * Join the appropriate WebSocket rooms based on impersonation state
+     */
+    private joinAppropriateRooms(): void {
+        if (!this.socket?.connected) return;
+        
+        const user = authService.getUser();
+        if (!user?.id) return;
+
+        // Always join own room (admin's room)
+        console.log(`Joining room for user ${user.id} with session ${this.sessionId.substring(0, 8)}...`);
+        this.socket.emit('join', { 
+            user_id: user.id,
+            session_id: this.sessionId
+        });
+
+        // If impersonating, also join the impersonated user's room
+        if (authService.isImpersonating()) {
+            const impersonatedUser = authService.getImpersonatedUser();
+            if (impersonatedUser?.id) {
+                console.log(`🎭 Also joining room for impersonated user ${impersonatedUser.id}`);
+                this.socket.emit('join', { 
+                    user_id: impersonatedUser.id,
+                    session_id: this.sessionId
+                });
+            }
+        }
+    }
+
+    /**
      * Connect to WebSocket for real-time sync
      */
     private connectWebSocket(): void {
@@ -184,11 +213,7 @@ class PreferencesService {
 
         this.socket.on('connect', () => {
             console.log('✅ WebSocket connected');
-            console.log(`Joining room for user ${user.id} with session ${this.sessionId.substring(0, 8)}...`);
-            this.socket?.emit('join', { 
-                user_id: user.id,
-                session_id: this.sessionId
-            });
+            this.joinAppropriateRooms();
         });
 
         this.socket.on('joined', (data: any) => {
@@ -258,6 +283,16 @@ class PreferencesService {
     }
 
     /**
+     * Rejoin WebSocket rooms (called when impersonation state changes)
+     */
+    rejoinRooms(): void {
+        if (this.socket?.connected) {
+            console.log('🔄 Rejoining WebSocket rooms due to impersonation change...');
+            this.joinAppropriateRooms();
+        }
+    }
+
+    /**
      * Subscribe to preference changes
      */
     subscribe(callback: () => void): () => void {
@@ -299,6 +334,9 @@ class PreferencesService {
         // Fetch fresh from server and reconnect WebSocket
         console.log(`Fetching preferences for user ${newUserId}...`);
         await this.syncOnLogin();
+        
+        // Rejoin rooms with new impersonation state
+        this.rejoinRooms();
         
         // Notify subscribers
         this.changeCallbacks.forEach(cb => cb());
@@ -504,12 +542,19 @@ class PreferencesService {
                 
                 // Trigger broadcast via WebSocket event (works reliably!)
                 if (this.socket?.connected) {
+                    // Use impersonated user ID if impersonating, otherwise use admin's ID
+                    const targetUserId = authService.isImpersonating() 
+                        ? authService.getImpersonatedUser()?.id 
+                        : authService.getUser()?.id;
+                    
                     this.socket.emit('broadcast_preferences', {
-                        user_id: authService.getUser()?.id,
+                        user_id: targetUserId,
                         preferences: this.preferences,
                         version: this.version,
                         origin_session_id: this.sessionId
                     });
+                    
+                    console.log(`📡 Broadcasting to room user_${targetUserId}${authService.isImpersonating() ? ' (impersonated)' : ''}`);
                 }
                 
                 return true;
