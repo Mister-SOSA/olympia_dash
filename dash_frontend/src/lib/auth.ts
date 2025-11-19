@@ -21,6 +21,8 @@ class AuthService {
     private accessToken: string | null = null;
     private refreshToken: string | null = null;
     private user: User | null = null;
+    private impersonatedUser: User | null = null;
+    private adminUser: User | null = null;
 
     constructor() {
         // Load tokens from localStorage on initialization
@@ -33,6 +35,18 @@ class AuthService {
                     this.user = JSON.parse(userStr);
                 } catch (e) {
                     console.error('Failed to parse user from localStorage', e);
+                }
+            }
+            
+            // Load impersonation state
+            const impersonatedStr = localStorage.getItem('impersonated_user');
+            const adminStr = localStorage.getItem('admin_user');
+            if (impersonatedStr && adminStr) {
+                try {
+                    this.impersonatedUser = JSON.parse(impersonatedStr);
+                    this.adminUser = JSON.parse(adminStr);
+                } catch (e) {
+                    console.error('Failed to parse impersonation data', e);
                 }
             }
         }
@@ -71,7 +85,25 @@ class AuthService {
     }
 
     getUser(): User | null {
+        // Return impersonated user if active, otherwise real user
+        return this.impersonatedUser || this.user;
+    }
+
+    getRealUser(): User | null {
+        // Always return the actual logged-in user
         return this.user;
+    }
+
+    getAdminUser(): User | null {
+        return this.adminUser;
+    }
+
+    getImpersonatedUser(): User | null {
+        return this.impersonatedUser;
+    }
+
+    isImpersonating(): boolean {
+        return this.impersonatedUser !== null && this.adminUser !== null;
     }
 
     isAuthenticated(): boolean {
@@ -79,6 +111,7 @@ class AuthService {
     }
 
     isAdmin(): boolean {
+        // Check real user role, not impersonated
         return this.user?.role === 'admin';
     }
 
@@ -197,6 +230,107 @@ class AuthService {
         } catch (error) {
             console.error('Failed to get current user', error);
             return null;
+        }
+    }
+
+    async impersonateUser(userId: number): Promise<boolean> {
+        if (!this.isAdmin()) {
+            console.error('❌ Only admins can impersonate');
+            return false;
+        }
+
+        console.log(`🎭 Starting impersonation of user ${userId}...`);
+        console.log(`   Current user: ${this.user?.email} (ID: ${this.user?.id})`);
+
+        try {
+            const response = await this.fetchWithAuth(
+                `${API_BASE_URL}/api/auth/admin/impersonate/${userId}`,
+                { method: 'POST' }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log(`✅ Impersonation approved by server`);
+                console.log(`   Admin: ${data.admin_user.email} (ID: ${data.admin_user.id})`);
+                console.log(`   Impersonating: ${data.impersonated_user.email} (ID: ${data.impersonated_user.id})`);
+                
+                // Store admin user and impersonated user
+                this.adminUser = data.admin_user;
+                this.impersonatedUser = data.impersonated_user;
+
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('admin_user', JSON.stringify(this.adminUser));
+                    localStorage.setItem('impersonated_user', JSON.stringify(this.impersonatedUser));
+                }
+                
+                // Switch preferences service to impersonated user
+                console.log(`🔄 Switching preferences to user ${this.impersonatedUser.id}...`);
+                const { preferencesService } = await import('./preferences');
+                await preferencesService.switchUser();
+                console.log(`✅ Preferences switched to ${this.impersonatedUser.email}`);
+                
+                return true;
+            }
+
+            console.error('❌ Impersonation failed:', data.error);
+            return false;
+        } catch (error) {
+            console.error('❌ Impersonation request failed', error);
+            return false;
+        }
+    }
+
+    async endImpersonation(): Promise<boolean> {
+        if (!this.isImpersonating()) {
+            console.warn('⚠️ Not currently impersonating');
+            return false;
+        }
+
+        console.log(`🎭 Ending impersonation...`);
+        console.log(`   Was impersonating: ${this.impersonatedUser?.email} (ID: ${this.impersonatedUser?.id})`);
+        console.log(`   Returning to: ${this.adminUser?.email} (ID: ${this.adminUser?.id})`);
+
+        try {
+            const impersonatedEmail = this.impersonatedUser?.email;
+
+            const response = await this.fetchWithAuth(
+                `${API_BASE_URL}/api/auth/admin/end-impersonation`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ impersonated_email: impersonatedEmail })
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Server confirmed impersonation end');
+                
+                // Clear impersonation state
+                this.impersonatedUser = null;
+                this.adminUser = null;
+
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('admin_user');
+                    localStorage.removeItem('impersonated_user');
+                }
+                
+                // Switch back to admin's preferences
+                console.log(`🔄 Switching preferences back to admin (user ${this.user?.id})...`);
+                const { preferencesService } = await import('./preferences');
+                await preferencesService.switchUser();
+                console.log(`✅ Impersonation fully ended`);
+                
+                return true;
+            }
+
+            console.error('❌ Server failed to end impersonation:', data.error);
+            return false;
+        } catch (error) {
+            console.error('❌ End impersonation request failed', error);
+            return false;
         }
     }
 }

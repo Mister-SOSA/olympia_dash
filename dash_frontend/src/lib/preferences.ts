@@ -36,28 +36,52 @@ class PreferencesService {
     private syncInProgress: boolean = false;
     private socket: Socket | null = null;
     private changeCallbacks: Set<() => void> = new Set();
-    private readonly CACHE_KEY = 'user_preferences';
-    private readonly VERSION_KEY = 'user_preferences_version';
-    private readonly DEBOUNCE_MS = 500; // Wait 500ms after last change
+    private currentUserId: number | null = null;
+    private readonly DEBOUNCE_MS = 500;
 
     constructor() {
         if (typeof window !== 'undefined') {
-            this.loadFromCache();
+            // Get current user to set cache keys
+            const user = this.getCurrentUserFromAuth();
+            if (user) {
+                this.currentUserId = user.id;
+                this.loadFromCache();
+            }
             console.log(`Session ID: ${this.sessionId.substring(0, 8)}...`);
         }
     }
 
+    private getCurrentUserFromAuth(): { id: number } | null {
+        // Import auth service to get current user
+        const { authService: auth } = require('./auth');
+        return auth.getUser();
+    }
+
+    private getCacheKey(): string {
+        return `user_preferences_${this.currentUserId || 'unknown'}`;
+    }
+
+    private getVersionKey(): string {
+        return `user_preferences_version_${this.currentUserId || 'unknown'}`;
+    }
+
     /**
-     * Load preferences from localStorage cache
+     * Load preferences from localStorage cache (user-specific)
      */
     private loadFromCache(): void {
         try {
-            const cached = localStorage.getItem(this.CACHE_KEY);
-            const cachedVersion = localStorage.getItem(this.VERSION_KEY);
+            const cacheKey = this.getCacheKey();
+            const versionKey = this.getVersionKey();
+            
+            const cached = localStorage.getItem(cacheKey);
+            const cachedVersion = localStorage.getItem(versionKey);
             
             if (cached) {
                 this.preferences = JSON.parse(cached);
                 this.version = cachedVersion ? parseInt(cachedVersion, 10) : 0;
+                console.log(`📦 Loaded from cache for user ${this.currentUserId} (v${this.version})`);
+            } else {
+                console.log(`📦 No cache found for user ${this.currentUserId}`);
             }
         } catch (e) {
             console.error('Failed to load preferences from cache', e);
@@ -65,12 +89,15 @@ class PreferencesService {
     }
 
     /**
-     * Save preferences to localStorage cache
+     * Save preferences to localStorage cache (user-specific)
      */
     private saveToCache(): void {
         try {
-            localStorage.setItem(this.CACHE_KEY, JSON.stringify(this.preferences));
-            localStorage.setItem(this.VERSION_KEY, this.version.toString());
+            const cacheKey = this.getCacheKey();
+            const versionKey = this.getVersionKey();
+            
+            localStorage.setItem(cacheKey, JSON.stringify(this.preferences));
+            localStorage.setItem(versionKey, this.version.toString());
         } catch (e) {
             console.error('Failed to save preferences to cache', e);
         }
@@ -110,11 +137,21 @@ class PreferencesService {
      * Sync preferences from server on login and connect WebSocket
      */
     async syncOnLogin(): Promise<void> {
-        if (this.syncInProgress) return;
+        if (this.syncInProgress) {
+            console.log('⏸️ Sync already in progress, waiting...');
+            return;
+        }
         this.syncInProgress = true;
 
         try {
-            await this.fetchFromServer();
+            console.log(`📡 Syncing preferences for user ${this.currentUserId}...`);
+            const success = await this.fetchFromServer();
+            if (success) {
+                console.log(`✅ Fetched preferences for user ${this.currentUserId} (v${this.version})`);
+            } else {
+                console.warn(`⚠️ Failed to fetch preferences for user ${this.currentUserId}`);
+            }
+            
             this.connectWebSocket();
         } finally {
             this.syncInProgress = false;
@@ -218,6 +255,47 @@ class PreferencesService {
     subscribe(callback: () => void): () => void {
         this.changeCallbacks.add(callback);
         return () => this.changeCallbacks.delete(callback);
+    }
+
+    /**
+     * Switch to a different user (for impersonation)
+     * Disconnects, clears state, fetches new user's preferences, reconnects
+     */
+    async switchUser(): Promise<void> {
+        const oldUserId = this.currentUserId;
+        const newUser = this.getCurrentUserFromAuth();
+        const newUserId = newUser?.id || null;
+        
+        console.log(`🔄 Switching user context: ${oldUserId} → ${newUserId}`);
+        
+        // Disconnect current WebSocket
+        if (this.socket?.connected) {
+            console.log('Disconnecting WebSocket...');
+            this.socket.disconnect();
+            this.socket = null;
+        }
+
+        // Clear local state
+        this.preferences = {};
+        this.version = 0;
+        this.saveTimers.forEach(timer => clearTimeout(timer));
+        this.saveTimers.clear();
+        this.syncInProgress = false;
+        
+        // Update user ID BEFORE loading cache (changes cache keys)
+        this.currentUserId = newUserId;
+
+        // Load new user's cached preferences (if any)
+        this.loadFromCache();
+
+        // Fetch fresh from server and reconnect WebSocket
+        console.log(`Fetching preferences for user ${newUserId}...`);
+        await this.syncOnLogin();
+        
+        // Notify subscribers
+        this.changeCallbacks.forEach(cb => cb());
+        
+        console.log(`✅ User context switched to user ${newUserId}`);
     }
 
     /**
@@ -478,6 +556,27 @@ class PreferencesService {
     getVersion(): number {
         return this.version;
     }
+
+    /**
+     * Get current user ID (for debugging)
+     */
+    getCurrentUserId(): number | null {
+        return this.currentUserId;
+    }
+
+    /**
+     * Debug info
+     */
+    getDebugInfo() {
+        return {
+            sessionId: this.sessionId,
+            currentUserId: this.currentUserId,
+            version: this.version,
+            cacheKey: this.getCacheKey(),
+            preferencesKeys: Object.keys(this.preferences),
+            socketConnected: this.socket?.connected || false
+        };
+    }
 }
 
 export const preferencesService = new PreferencesService();
@@ -512,6 +611,14 @@ if (typeof window !== 'undefined') {
         }
         console.log('🧪 Sending test broadcast request...');
         (preferencesService as any).socket?.emit('test_broadcast', { user_id: user.id });
+    };
+    (window as any).debugPrefs = () => {
+        console.log('🔍 Preferences Debug Info:');
+        const info = preferencesService.getDebugInfo();
+        console.table(info);
+        console.log('Current preferences:', preferencesService.getAll());
+        console.log('Dashboard layout:', preferencesService.get('dashboard.layout'));
+        console.log('Dashboard presets:', preferencesService.get('dashboard.presets'));
     };
     (window as any).prefs = preferencesService;
 }

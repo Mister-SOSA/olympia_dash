@@ -199,6 +199,36 @@ export default function AdminPage() {
     }
   };
 
+  const handleImpersonateUser = async (userId: number, userName: string) => {
+    if (!confirm(`Impersonate ${userName}?\n\nYou will:\n- View their dashboard\n- See their widgets and presets\n- Edit their configuration\n- Join their WebSocket room\n\nAll changes will be saved to their account.`)) {
+      return;
+    }
+
+    try {
+      console.log(`🎭 Initiating impersonation of ${userName} (ID: ${userId})`);
+      const success = await authService.impersonateUser(userId);
+      
+      if (success) {
+        toast.success(`Now impersonating ${userName}`, {
+          description: 'Viewing their dashboard configuration'
+        });
+        
+        console.log('🚀 Navigating to dashboard as impersonated user...');
+        
+        // Small delay to ensure all state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Use full page navigation to ensure clean state
+        window.location.href = '/';
+      } else {
+        toast.error('Failed to impersonate user');
+      }
+    } catch (err) {
+      toast.error('Failed to impersonate user');
+      console.error('Impersonate error:', err);
+    }
+  };
+
   const handleRevokeAllSessions = async (userId: number) => {
     if (!confirm('Are you sure you want to revoke all sessions for this user?')) {
       return;
@@ -579,6 +609,17 @@ export default function AdminPage() {
                             : 'Never'}
                         </td>
                         <td className="p-4 text-right space-x-2">
+                          <Button
+                            onClick={() => handleImpersonateUser(user.id, user.name)}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-purple-400 hover:text-purple-300"
+                            disabled={user.role === 'admin'}
+                            title={user.role === 'admin' ? 'Cannot impersonate admins' : 'View dashboard as this user'}
+                          >
+                            <MdPerson className="mr-1 h-3 w-3" />
+                            Impersonate
+                          </Button>
                           <Button
                             onClick={() => handleToggleActive(user.id)}
                             variant="outline"

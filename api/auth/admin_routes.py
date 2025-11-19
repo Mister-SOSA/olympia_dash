@@ -130,7 +130,91 @@ def change_user_role(user_id):
         
         return jsonify({
             'success': True,
-            'message': f'User role changed to {new_role}'
+            'message': 'User role updated successfully'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/impersonate/<int:user_id>', methods=['POST'])
+@require_role('admin')
+def impersonate_user(user_id):
+    """Allow admin to impersonate a user"""
+    try:
+        admin_user = request.current_user  # type: ignore
+        
+        # Get target user
+        target_user = get_user_by_id(user_id)
+        if not target_user:
+            return jsonify({
+                'success': False,
+                'error': 'User not found'
+            }), 404
+        
+        # Prevent impersonating yourself
+        if user_id == admin_user['id']:
+            return jsonify({
+                'success': False,
+                'error': 'Cannot impersonate yourself'
+            }), 400
+        
+        # Prevent impersonating other admins (safety)
+        if target_user['role'] == 'admin':
+            return jsonify({
+                'success': False,
+                'error': 'Cannot impersonate other admins'
+            }), 403
+        
+        # Log the impersonation
+        log_action(
+            admin_user['id'], 
+            'impersonation_started', 
+            f'Admin {admin_user["email"]} impersonating user {target_user["email"]} (ID: {user_id})', 
+            get_client_ip()
+        )
+        
+        # Return impersonation data (admin keeps their token, but acts as target user)
+        return jsonify({
+            'success': True,
+            'impersonated_user': {
+                'id': target_user['id'],
+                'email': target_user['email'],
+                'name': target_user['name'],
+                'role': target_user['role']
+            },
+            'admin_user': {
+                'id': admin_user['id'],
+                'email': admin_user['email'],
+                'name': admin_user['name']
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@admin_bp.route('/end-impersonation', methods=['POST'])
+@require_role('admin')
+def end_impersonation():
+    """End admin impersonation session"""
+    try:
+        admin_user = request.current_user  # type: ignore
+        data = request.get_json() or {}
+        impersonated_email = data.get('impersonated_email', 'unknown')
+        
+        log_action(
+            admin_user['id'],
+            'impersonation_ended',
+            f'Admin {admin_user["email"]} ended impersonation of {impersonated_email}',
+            get_client_ip()
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Impersonation ended'
         }), 200
     except Exception as e:
         return jsonify({

@@ -33,6 +33,7 @@ import { authService } from "@/lib/auth";
 import { preferencesService, migrateFromLocalStorage } from "@/lib/preferences";
 import { Loader } from "./ui/loader";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -190,6 +191,7 @@ export default function Dashboard() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [user, setUser] = useState(authService.getUser());
+    const [isImpersonating, setIsImpersonating] = useState(authService.isImpersonating());
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
@@ -227,7 +229,9 @@ export default function Dashboard() {
                 return;
             }
 
-            setUser(currentUser);
+            // Set user and impersonation state
+            setUser(authService.getUser()); // Gets impersonated user if active
+            setIsImpersonating(authService.isImpersonating());
             setIsAuthenticated(true);
             setCheckingAuth(false);
         };
@@ -252,35 +256,53 @@ export default function Dashboard() {
         const initPreferences = async () => {
             preferencesInitialized.current = true;
 
+            console.log('🚀 Initializing dashboard preferences...');
+            console.log(`   User: ${user?.email} (ID: ${user?.id})`);
+            console.log(`   Impersonating: ${authService.isImpersonating()}`);
+            if (authService.isImpersonating()) {
+                console.log(`   Admin: ${authService.getAdminUser()?.email}`);
+                console.log(`   Target: ${authService.getImpersonatedUser()?.email}`);
+            }
+
             // Migrate old localStorage preferences to new system (await to ensure it completes)
             await migrateFromLocalStorage();
 
             // Sync preferences from server
             await preferencesService.syncOnLogin();
 
+            console.log('📊 Loading dashboard state from preferences...');
+            
             // Load preferences into state
             const storedLayout = readLayoutFromStorage();
             const normalizedLayout = normalizeLayout(storedLayout);
             setLayout(normalizedLayout);
+            console.log(`   Layout: ${normalizedLayout.filter(w => w.enabled).length} enabled widgets`);
 
-            setPresets(readPresetsFromStorage());            // Restore the last used preset type
+            const loadedPresets = readPresetsFromStorage();
+            setPresets(loadedPresets);
+            const presetCount = loadedPresets.filter(p => p !== null).length;
+            console.log(`   Presets: ${presetCount}/9 slots filled`);
+            
+            // Restore the last used preset type
             const storedPresetType = readCurrentPresetType();
             setCurrentPresetType(storedPresetType as PresetType);
 
             // Restore the active preset index
             const storedActiveIndex = readActivePresetIndex();
             setActivePresetIndex(storedActiveIndex);
+            
+            console.log('✅ Dashboard initialization complete');
         };
 
         initPreferences();
-    }, [isAuthenticated, permissionsLoading]);
+    }, [isAuthenticated, permissionsLoading, user]);
 
-    // Subscribe to real-time preference changes from other sessions
+    // Subscribe to real-time preference changes from other sessions AND user switches
     useEffect(() => {
         if (!isAuthenticated) return;
 
         const unsubscribe = preferencesService.subscribe(() => {
-            console.log('🔄 Reloading dashboard from remote changes...');
+            console.log('🔄 Preferences changed, reloading dashboard...');
             
             const storedLayout = readLayoutFromStorage();
             const normalizedLayout = normalizeLayout(storedLayout);
@@ -290,7 +312,11 @@ export default function Dashboard() {
             setCurrentPresetType(readCurrentPresetType() as PresetType);
             setActivePresetIndex(readActivePresetIndex());
             
-            console.log('✅ Dashboard updated');
+            // Update user state to reflect impersonation changes
+            setUser(authService.getUser());
+            setIsImpersonating(authService.isImpersonating());
+            
+            console.log('✅ Dashboard state updated');
         });
 
         return unsubscribe;
@@ -551,6 +577,14 @@ export default function Dashboard() {
         router.push('/login');
     };
 
+    const handleEndImpersonation = async () => {
+        await authService.endImpersonation();
+        setIsImpersonating(false);
+        setUser(authService.getRealUser());
+        // Reload dashboard with admin's preferences
+        window.location.reload();
+    };
+
     // Handle preset click with intelligent dialog
     const handlePresetClick = useCallback((index: number) => {
         const preset = presets[index];
@@ -648,7 +682,9 @@ export default function Dashboard() {
     // Mobile Experience - Completely different UI
     if (isMobile) {
         return (
-            <div className="dashboard-container mobile">
+            <>
+                {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
+                <div className="dashboard-container mobile" style={isImpersonating ? { paddingTop: '60px' } : {}}>
                 {/* Mobile Dashboard with Swipeable Widgets */}
                 <MobileDashboard
                     layout={layout}
@@ -688,12 +724,15 @@ export default function Dashboard() {
                     )}
                 </AnimatePresence>
             </div>
+            </>
         );
     }
 
     // Desktop Experience - Original Grid Layout
     return (
-        <div className="dashboard-container">
+        <>
+            {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
+            <div className="dashboard-container" style={isImpersonating ? { paddingTop: '60px' } : {}}>
             {/* Dock - Auto-hides at bottom */}
             <DashboardDock
                 presets={presets}
@@ -834,5 +873,6 @@ export default function Dashboard() {
                 />
             )}
         </div>
+        </>
     );
 }
