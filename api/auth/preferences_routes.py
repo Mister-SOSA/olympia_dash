@@ -28,30 +28,31 @@ def get_socketio():
 
 def broadcast_preferences(user_id, preferences, version, origin_session_id=None):
     """Broadcast preference changes to all sessions for this user"""
+    from app import active_sessions
     socketio = get_socketio()
     
     room = f'user_{user_id}'
+    
+    # Only broadcast if there are multiple sessions in the room
+    session_count = len(active_sessions.get(room, set()))
+    
+    if session_count <= 1:
+        logger.info(f'⏭️ Skipping broadcast - only {session_count} session in {room}')
+        return
+    
     payload = {
         'preferences': preferences,
         'version': version,
         'origin_session_id': origin_session_id
     }
     
-    logger.info(f'📡 Broadcasting to room {room}, version {version}')
+    logger.info(f'📡 Broadcasting to room {room} ({session_count} sessions)')
+    logger.info(f'   Version: {version}')
+    logger.info(f'   Origin: {origin_session_id[:8] if origin_session_id else "unknown"}...')
     
-    try:
-        # Try different approaches
-        # Approach 1: Standard emit
-        socketio.emit('preferences_updated', payload, room=room, namespace='/')
-        logger.info(f'✅ Method 1: Standard emit done')
-        
-        # Approach 2: Server-level emit
-        socketio.server.emit('preferences_updated', payload, room=room, namespace='/')
-        logger.info(f'✅ Method 2: Server emit done')
-    except Exception as e:
-        logger.error(f'❌ Broadcast error: {e}')
-        import traceback
-        traceback.print_exc()
+    # Broadcast to all clients in room
+    socketio.emit('preferences_updated', payload, to=room)
+    logger.info(f'✅ Broadcast sent')
 
 @preferences_bp.route('/preferences', methods=['GET'])
 @require_auth

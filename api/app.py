@@ -73,6 +73,9 @@ CORS(app, resources={
 # Initialize SocketIO for real-time preference sync
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# Track active sessions per room
+active_sessions = {}
+
 # WebSocket handlers
 @socketio.on('connect')
 def handle_connect():
@@ -81,7 +84,7 @@ def handle_connect():
 @socketio.on('join')
 def handle_join(data):
     """Join user-specific room for receiving preference updates"""
-    from flask_socketio import emit
+    from flask_socketio import emit, rooms
     user_id = data.get('user_id')
     session_id = data.get('session_id', 'unknown')
     logger.info(f'🔵 JOIN REQUEST - User: {user_id}, Session: {session_id[:8]}..., SID: {request.sid}')
@@ -89,11 +92,25 @@ def handle_join(data):
     if user_id:
         room = f'user_{user_id}'
         join_room(room)
-        logger.info(f'✅ JOINED - Session {session_id[:8]}... (SID: {request.sid}) joined room {room}')
         
-        # Send confirmation back to client
-        emit('joined', {'room': room})
-        logger.info(f'📤 SENT joined confirmation to {request.sid}')
+        # Track this session
+        if room not in active_sessions:
+            active_sessions[room] = set()
+        active_sessions[room].add(request.sid)
+        
+        session_count = len(active_sessions[room])
+        logger.info(f'✅ JOINED - Session {session_id[:8]}... (SID: {request.sid}) joined room {room}')
+        logger.info(f'   📊 Total sessions in {room}: {session_count}')
+        
+        # Send confirmation to joining client
+        emit('joined', {'room': room, 'session_count': session_count})
+        
+        # If this is a second+ session, notify all clients in room about new member
+        if session_count > 1:
+            emit('session_count_updated', {'session_count': session_count}, to=room)
+            logger.info(f'📤 Notified all sessions - count updated to {session_count}')
+        else:
+            logger.info(f'📤 SENT joined confirmation to {request.sid}')
     else:
         logger.warning('⚠️ Join request missing user_id')
 
@@ -112,33 +129,28 @@ def handle_test_broadcast(data):
         emit('test_received', test_payload, to=room, namespace='/')
         logger.info(f'✅ Test broadcast sent')
 
-@socketio.on('saved_preferences')
-def handle_saved_preferences(data):
-    """Broadcast preferences after save - triggered by client"""
-    from flask_socketio import emit
-    
-    user_id = data.get('user_id')
-    preferences = data.get('preferences')
-    version = data.get('version')
-    origin_session_id = data.get('origin_session_id')
-    
-    logger.info(f'📡 Broadcasting preferences for user {user_id}, version {version}')
-    
-    if user_id:
-        room = f'user_{user_id}'
-        payload = {
-            'preferences': preferences,
-            'version': version,
-            'origin_session_id': origin_session_id
-        }
-        
-        # This works because we're in socket context!
-        emit('preferences_updated', payload, to=room, namespace='/')
-        logger.info(f'✅ Broadcast sent to room {room}')
-
 @socketio.on('disconnect')
 def handle_disconnect():
-    logger.info(f'❌ Client disconnected: {request.sid}')
+    from flask_socketio import emit
+    
+    # Clean up session tracking
+    for room, sessions in list(active_sessions.items()):
+        if request.sid in sessions:
+            sessions.remove(request.sid)
+            remaining_count = len(sessions)
+            logger.info(f'❌ Client {request.sid} disconnected from {room}')
+            logger.info(f'   📊 Remaining sessions in {room}: {remaining_count}')
+            
+            # Notify remaining sessions about count change
+            if remaining_count > 0:
+                emit('session_count_updated', {'session_count': remaining_count}, to=room)
+                logger.info(f'📤 Notified remaining sessions - count: {remaining_count}')
+            
+            if remaining_count == 0:
+                del active_sessions[room]
+    
+    if not any(request.sid in sessions for sessions in active_sessions.values()):
+        logger.info(f'❌ Client disconnected: {request.sid}')
 
 # Register authentication blueprints with /api/auth prefix
 app.register_blueprint(auth_bp, url_prefix='/api/auth')

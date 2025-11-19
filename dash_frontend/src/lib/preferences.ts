@@ -149,7 +149,23 @@ class PreferencesService {
         });
 
         this.socket.on('joined', (data: any) => {
-            console.log(`✅ Joined room: ${data.room}`);
+            const sessionCount = data.session_count || 1;
+            console.log(`✅ Joined room: ${data.room} (${sessionCount} session${sessionCount > 1 ? 's' : ''} active)`);
+            
+            if (sessionCount === 1) {
+                console.log('ℹ️ You are the only session - broadcasts disabled for efficiency');
+            }
+        });
+
+        this.socket.on('session_count_updated', (data: any) => {
+            const sessionCount = data.session_count || 1;
+            console.log(`📊 Session count updated: ${sessionCount} session${sessionCount > 1 ? 's' : ''} active`);
+            
+            if (sessionCount === 1) {
+                console.log('ℹ️ You are now alone - broadcasts will be disabled');
+            } else if (sessionCount === 2) {
+                console.log('ℹ️ Another session joined - broadcasts now active');
+            }
         });
 
         this.socket.on('connect_error', (error: any) => {
@@ -405,21 +421,6 @@ class PreferencesService {
                 this.version = data.version;
                 this.saveToCache();
                 console.log(`✅ Saved (v${this.version})`);
-                
-                // Trigger broadcast via WebSocket (this works!)
-                if (this.socket?.connected) {
-                    const user = authService.getUser();
-                    if (user?.id) {
-                        console.log('📡 Triggering broadcast to other sessions...');
-                        this.socket.emit('saved_preferences', {
-                            user_id: user.id,
-                            preferences: this.preferences,
-                            version: this.version,
-                            origin_session_id: this.sessionId
-                        });
-                    }
-                }
-                
                 return true;
             } else if (data.conflict) {
                 console.warn('⚠️ Version conflict, syncing...');
