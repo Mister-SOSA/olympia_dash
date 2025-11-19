@@ -29,7 +29,6 @@ def get_socketio():
 def broadcast_preferences(user_id, preferences, version, origin_session_id=None):
     """Broadcast preference changes to all sessions for this user"""
     from app import active_sessions
-    socketio = get_socketio()
     
     room = f'user_{user_id}'
     
@@ -40,6 +39,7 @@ def broadcast_preferences(user_id, preferences, version, origin_session_id=None)
         logger.info(f'⏭️ Skipping broadcast - only {session_count} session in {room}')
         return
     
+    socketio = get_socketio()
     payload = {
         'preferences': preferences,
         'version': version,
@@ -50,8 +50,8 @@ def broadcast_preferences(user_id, preferences, version, origin_session_id=None)
     logger.info(f'   Version: {version}')
     logger.info(f'   Origin: {origin_session_id[:8] if origin_session_id else "unknown"}...')
     
-    # Broadcast to all clients in room
-    socketio.emit('preferences_updated', payload, to=room)
+    # Emit from HTTP context using namespace
+    socketio.emit('preferences_updated', payload, namespace='/', room=room)
     logger.info(f'✅ Broadcast sent')
 
 @preferences_bp.route('/preferences', methods=['GET'])

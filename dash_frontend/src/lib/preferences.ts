@@ -34,13 +34,11 @@ class PreferencesService {
     private version: number = 0;
     private saveTimers: Map<string, NodeJS.Timeout> = new Map();
     private syncInProgress: boolean = false;
-    private lastSaveTime: number = 0;
     private socket: Socket | null = null;
     private changeCallbacks: Set<() => void> = new Set();
     private readonly CACHE_KEY = 'user_preferences';
     private readonly VERSION_KEY = 'user_preferences_version';
-    private readonly DEBOUNCE_MS = 1000;
-    private readonly MIN_SAVE_INTERVAL_MS = 500;
+    private readonly DEBOUNCE_MS = 500; // Wait 500ms after last change
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -358,19 +356,17 @@ class PreferencesService {
      * Save preferences to server with debouncing
      */
     private debouncedSaveToServer(key: string): void {
-        // Clear existing timer for this key
-        const existingTimer = this.saveTimers.get(key);
-        if (existingTimer) {
-            clearTimeout(existingTimer);
-        }
+        // Clear ALL existing timers (not just for this key)
+        this.saveTimers.forEach(timer => clearTimeout(timer));
+        this.saveTimers.clear();
 
-        // Set new timer
+        // Set single new timer
         const timer = setTimeout(() => {
             this.saveToServer();
-            this.saveTimers.delete(key);
+            this.saveTimers.clear();
         }, this.DEBOUNCE_MS);
 
-        this.saveTimers.set(key, timer);
+        this.saveTimers.set('save', timer);
     }
 
     /**
@@ -381,19 +377,8 @@ class PreferencesService {
             return false;
         }
 
-        // Prevent rapid-fire saves (but allow first save)
-        const now = Date.now();
-        const timeSinceLastSave = now - this.lastSaveTime;
-        if (this.lastSaveTime > 0 && timeSinceLastSave < this.MIN_SAVE_INTERVAL_MS) {
-            console.log(`Rate limiting: ${timeSinceLastSave}ms since last save, retrying...`);
-            // Retry after the interval
-            setTimeout(() => this.saveToServer(useVersionCheck), this.MIN_SAVE_INTERVAL_MS - timeSinceLastSave);
-            return false;
-        }
-
         try {
-            this.lastSaveTime = now;
-            console.log('Saving to server...');
+            console.log('💾 Saving to server...');
 
             const body: any = {
                 preferences: this.preferences,
