@@ -273,7 +273,28 @@ export default function Dashboard() {
         };
 
         initPreferences();
-    }, [isAuthenticated, permissionsLoading]); // Remove filterLayoutByPermissions from deps
+    }, [isAuthenticated, permissionsLoading]);
+
+    // Subscribe to real-time preference changes from other sessions
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        const unsubscribe = preferencesService.subscribe(() => {
+            console.log('🔄 Reloading dashboard from remote changes...');
+            
+            const storedLayout = readLayoutFromStorage();
+            const normalizedLayout = normalizeLayout(storedLayout);
+            setLayout(normalizedLayout);
+            
+            setPresets(readPresetsFromStorage());
+            setCurrentPresetType(readCurrentPresetType() as PresetType);
+            setActivePresetIndex(readActivePresetIndex());
+            
+            console.log('✅ Dashboard updated');
+        });
+
+        return unsubscribe;
+    }, [isAuthenticated]);
 
     // Prepare a temporary layout for the widget menu
     const updateTempLayout = useCallback(() => {

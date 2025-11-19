@@ -419,9 +419,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             const widgetsAdded = layout.some(w => !prevIds.has(w.id));
             const widgetsRemoved = prevLayoutRef.current.some(w => !currentIds.has(w.id));
+            
+            // Check if any widget positions/sizes changed
+            const layoutChanged = layout.some(widget => {
+                const prev = prevLayoutRef.current.find(w => w.id === widget.id);
+                return !prev || prev.x !== widget.x || prev.y !== widget.y || 
+                       prev.w !== widget.w || prev.h !== widget.h;
+            });
 
-            // Only reload if widgets were actually added or removed
-            if (widgetsAdded || widgetsRemoved) {
+            // Reload if widgets were added/removed OR positions/sizes changed
+            if (widgetsAdded || widgetsRemoved || layoutChanged) {
                 // Create a set of widget IDs from the new layout
                 const newWidgetIds = new Set(layout.map(widget => widget.id));
 

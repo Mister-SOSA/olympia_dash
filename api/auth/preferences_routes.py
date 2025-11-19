@@ -12,8 +12,46 @@ from auth.database import (
     log_action
 )
 from auth.middleware import require_auth, get_client_ip, rate_limit
+import logging
 
 preferences_bp = Blueprint('preferences', __name__)
+logger = logging.getLogger(__name__)
+
+# Get socketio instance
+_socketio = None
+def get_socketio():
+    global _socketio
+    if _socketio is None:
+        from app import socketio
+        _socketio = socketio
+    return _socketio
+
+def broadcast_preferences(user_id, preferences, version, origin_session_id=None):
+    """Broadcast preference changes to all sessions for this user"""
+    socketio = get_socketio()
+    
+    room = f'user_{user_id}'
+    payload = {
+        'preferences': preferences,
+        'version': version,
+        'origin_session_id': origin_session_id
+    }
+    
+    logger.info(f'📡 Broadcasting to room {room}, version {version}')
+    
+    try:
+        # Try different approaches
+        # Approach 1: Standard emit
+        socketio.emit('preferences_updated', payload, room=room, namespace='/')
+        logger.info(f'✅ Method 1: Standard emit done')
+        
+        # Approach 2: Server-level emit
+        socketio.server.emit('preferences_updated', payload, room=room, namespace='/')
+        logger.info(f'✅ Method 2: Server emit done')
+    except Exception as e:
+        logger.error(f'❌ Broadcast error: {e}')
+        import traceback
+        traceback.print_exc()
 
 @preferences_bp.route('/preferences', methods=['GET'])
 @require_auth
@@ -65,15 +103,25 @@ def replace_preferences():
         
         preferences = data['preferences']
         expected_version = data.get('version')
+        session_id = data.get('session_id')
+        
+        logger.info(f'💾 SAVE REQUEST - User: {user["id"]}, Session: {session_id[:8] if session_id else "none"}..., Version: {expected_version}')
         
         new_version = set_user_preferences(user['id'], preferences, expected_version)
         
         if new_version is None:
+            logger.warning('⚠️ Version conflict!')
             return jsonify({
                 'success': False,
                 'error': 'Version conflict detected. Please refresh and try again.',
                 'conflict': True
             }), 409
+        
+        logger.info(f'✅ SAVED - New version: {new_version}')
+        logger.info(f'🔊 CALLING broadcast_preferences...')
+        
+        # Broadcast to all other sessions
+        broadcast_preferences(user['id'], preferences, new_version, session_id)
         
         log_action(user['id'], 'preferences_updated', 'Full preferences update', get_client_ip())
         
@@ -119,6 +167,7 @@ def update_preferences():
         
         preference_updates = data['preferences']
         expected_version = data.get('version')
+        session_id = data.get('session_id')
         
         new_version = update_user_preferences(user['id'], preference_updates, expected_version)
         
@@ -128,6 +177,10 @@ def update_preferences():
                 'error': 'Version conflict detected. Please refresh and try again.',
                 'conflict': True
             }), 409
+        
+        # Get full preferences and broadcast
+        result = get_user_preferences(user['id'])
+        broadcast_preferences(user['id'], result['preferences'], new_version, session_id)
         
         log_action(user['id'], 'preferences_updated', 'Partial preferences update', get_client_ip())
         

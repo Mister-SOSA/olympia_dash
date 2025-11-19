@@ -11,6 +11,7 @@ import logging
 import colorlog
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, join_room, leave_room
 import requests_cache
 import openmeteo_requests
 from retry_requests import retry
@@ -68,6 +69,76 @@ CORS(app, resources={
         "max_age": 3600
     }
 })
+
+# Initialize SocketIO for real-time preference sync
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# WebSocket handlers
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f'Client connected: {request.sid}')
+
+@socketio.on('join')
+def handle_join(data):
+    """Join user-specific room for receiving preference updates"""
+    from flask_socketio import emit
+    user_id = data.get('user_id')
+    session_id = data.get('session_id', 'unknown')
+    logger.info(f'🔵 JOIN REQUEST - User: {user_id}, Session: {session_id[:8]}..., SID: {request.sid}')
+    
+    if user_id:
+        room = f'user_{user_id}'
+        join_room(room)
+        logger.info(f'✅ JOINED - Session {session_id[:8]}... (SID: {request.sid}) joined room {room}')
+        
+        # Send confirmation back to client
+        emit('joined', {'room': room})
+        logger.info(f'📤 SENT joined confirmation to {request.sid}')
+    else:
+        logger.warning('⚠️ Join request missing user_id')
+
+@socketio.on('test_broadcast')
+def handle_test_broadcast(data):
+    """Test broadcast functionality"""
+    from flask_socketio import emit
+    user_id = data.get('user_id')
+    logger.info(f'🧪 TEST BROADCAST requested for user {user_id}')
+    
+    if user_id:
+        room = f'user_{user_id}'
+        test_payload = {'message': 'Test broadcast working!', 'timestamp': str(data)}
+        
+        logger.info(f'📡 Sending test to room {room}')
+        emit('test_received', test_payload, to=room, namespace='/')
+        logger.info(f'✅ Test broadcast sent')
+
+@socketio.on('saved_preferences')
+def handle_saved_preferences(data):
+    """Broadcast preferences after save - triggered by client"""
+    from flask_socketio import emit
+    
+    user_id = data.get('user_id')
+    preferences = data.get('preferences')
+    version = data.get('version')
+    origin_session_id = data.get('origin_session_id')
+    
+    logger.info(f'📡 Broadcasting preferences for user {user_id}, version {version}')
+    
+    if user_id:
+        room = f'user_{user_id}'
+        payload = {
+            'preferences': preferences,
+            'version': version,
+            'origin_session_id': origin_session_id
+        }
+        
+        # This works because we're in socket context!
+        emit('preferences_updated', payload, to=room, namespace='/')
+        logger.info(f'✅ Broadcast sent to room {room}')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f'❌ Client disconnected: {request.sid}')
 
 # Register authentication blueprints with /api/auth prefix
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -265,4 +336,5 @@ if __name__ == "__main__":
     port = int(os.getenv('FLASK_PORT', '5001'))
     host = os.getenv('FLASK_HOST', '0.0.0.0')  # 0.0.0.0 allows external connections
     
-    app.run(debug=debug_mode, port=port, host=host)
+    # Use socketio.run instead of app.run for WebSocket support
+    socketio.run(app, debug=debug_mode, port=port, host=host, allow_unsafe_werkzeug=True)

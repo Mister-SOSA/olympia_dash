@@ -1,14 +1,14 @@
 import { API_BASE_URL } from '@/config';
 import { authService } from './auth';
+import { io, Socket } from 'socket.io-client';
 
 /**
- * User Preferences Service
+ * User Preferences Service - Real-time Sync Edition
  * 
- * Provides a hybrid approach for managing user preferences:
- * - Server-side persistence for cross-device sync
- * - LocalStorage caching for offline capability and instant load
- * - Automatic debouncing to avoid excessive API calls
- * - Version-based conflict resolution
+ * - WebSocket for instant cross-session sync
+ * - Session-aware: ignores own broadcasts
+ * - LocalStorage caching
+ * - Automatic debouncing
  */
 
 interface PreferencesResponse {
@@ -29,19 +29,23 @@ interface SaveResponse {
 }
 
 class PreferencesService {
+    private readonly sessionId: string = crypto.randomUUID();
     private preferences: Record<string, any> = {};
     private version: number = 0;
     private saveTimers: Map<string, NodeJS.Timeout> = new Map();
     private syncInProgress: boolean = false;
     private lastSaveTime: number = 0;
+    private socket: Socket | null = null;
+    private changeCallbacks: Set<() => void> = new Set();
     private readonly CACHE_KEY = 'user_preferences';
     private readonly VERSION_KEY = 'user_preferences_version';
-    private readonly DEBOUNCE_MS = 1000; // 1 second debounce for saves
-    private readonly MIN_SAVE_INTERVAL_MS = 500; // Minimum time between saves
+    private readonly DEBOUNCE_MS = 1000;
+    private readonly MIN_SAVE_INTERVAL_MS = 500;
 
     constructor() {
         if (typeof window !== 'undefined') {
             this.loadFromCache();
+            console.log(`Session ID: ${this.sessionId.substring(0, 8)}...`);
         }
     }
 
@@ -105,39 +109,97 @@ class PreferencesService {
     }
 
     /**
-     * Sync preferences from server on login
-     * Merges server preferences with local cache intelligently
+     * Sync preferences from server on login and connect WebSocket
      */
     async syncOnLogin(): Promise<void> {
         if (this.syncInProgress) return;
         this.syncInProgress = true;
 
         try {
-            const localPrefs = { ...this.preferences };
-            const localVersion = this.version;
-
-            const fetchSuccess = await this.fetchFromServer();
-
-            if (fetchSuccess) {
-                const serverVersion = this.version;
-
-                // Only save if local version is newer (indicating offline changes)
-                // AND the local preferences are actually different from server
-                if (localVersion > serverVersion && Object.keys(localPrefs).length > 0) {
-                    // Check if local preferences are actually different
-                    const hasChanges = JSON.stringify(localPrefs) !== JSON.stringify(this.preferences);
-                    
-                    if (hasChanges) {
-                        // Merge local changes into server preferences
-                        this.preferences = { ...this.preferences, ...localPrefs };
-                        // Push merged preferences to server
-                        await this.saveToServer(false); // Don't use version check for initial sync
-                    }
-                }
-            }
+            await this.fetchFromServer();
+            this.connectWebSocket();
         } finally {
             this.syncInProgress = false;
         }
+    }
+
+    /**
+     * Connect to WebSocket for real-time sync
+     */
+    private connectWebSocket(): void {
+        if (this.socket?.connected) return;
+        if (!authService.isAuthenticated()) return;
+
+        const user = authService.getUser();
+        if (!user?.id) return;
+
+        const wsUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+        this.socket = io(wsUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true
+        });
+
+        this.socket.on('connect', () => {
+            console.log('✅ WebSocket connected');
+            console.log(`Joining room for user ${user.id} with session ${this.sessionId.substring(0, 8)}...`);
+            this.socket?.emit('join', { 
+                user_id: user.id,
+                session_id: this.sessionId
+            });
+        });
+
+        this.socket.on('joined', (data: any) => {
+            console.log(`✅ Joined room: ${data.room}`);
+        });
+
+        this.socket.on('connect_error', (error: any) => {
+            console.error('❌ WebSocket connection error:', error);
+        });
+
+        this.socket.on('disconnect', (reason: string) => {
+            console.warn('⚠️ WebSocket disconnected:', reason);
+        });
+
+        this.socket.on('test_received', (data: any) => {
+            console.log('🧪 TEST BROADCAST RECEIVED:', data);
+            alert('Test broadcast received! Check console.');
+        });
+
+        this.socket.on('preferences_updated', (data: {
+            preferences: Record<string, any>,
+            version: number,
+            origin_session_id?: string
+        }) => {
+            console.log(`📥 Broadcast received from session ${data.origin_session_id?.substring(0, 8)}... (v${data.version})`);
+            
+            // Ignore our own broadcasts
+            if (data.origin_session_id === this.sessionId) {
+                console.log('⏭️ Ignoring own broadcast');
+                return;
+            }
+
+            // Only apply if version is newer
+            if (data.version <= this.version) {
+                console.log('⏭️ Version not newer, ignoring');
+                return;
+            }
+
+            console.log(`✅ Applying update from another session (v${this.version} → v${data.version})`);
+            this.preferences = data.preferences;
+            this.version = data.version;
+            this.saveToCache();
+            
+            // Notify all subscribers
+            this.changeCallbacks.forEach(cb => cb());
+        });
+    }
+
+    /**
+     * Subscribe to preference changes
+     */
+    subscribe(callback: () => void): () => void {
+        this.changeCallbacks.add(callback);
+        return () => this.changeCallbacks.delete(callback);
     }
 
     /**
@@ -299,19 +361,23 @@ class PreferencesService {
             return false;
         }
 
-        // Prevent rapid-fire saves
+        // Prevent rapid-fire saves (but allow first save)
         const now = Date.now();
         const timeSinceLastSave = now - this.lastSaveTime;
-        if (timeSinceLastSave < this.MIN_SAVE_INTERVAL_MS) {
-            console.log(`Skipping save - too soon (${timeSinceLastSave}ms since last save)`);
+        if (this.lastSaveTime > 0 && timeSinceLastSave < this.MIN_SAVE_INTERVAL_MS) {
+            console.log(`Rate limiting: ${timeSinceLastSave}ms since last save, retrying...`);
+            // Retry after the interval
+            setTimeout(() => this.saveToServer(useVersionCheck), this.MIN_SAVE_INTERVAL_MS - timeSinceLastSave);
             return false;
         }
 
         try {
             this.lastSaveTime = now;
+            console.log('Saving to server...');
 
             const body: any = {
-                preferences: this.preferences
+                preferences: this.preferences,
+                session_id: this.sessionId
             };
 
             if (useVersionCheck && this.version > 0) {
@@ -334,10 +400,25 @@ class PreferencesService {
             if (data.success) {
                 this.version = data.version;
                 this.saveToCache();
+                console.log(`✅ Saved (v${this.version})`);
+                
+                // Trigger broadcast via WebSocket (this works!)
+                if (this.socket?.connected) {
+                    const user = authService.getUser();
+                    if (user?.id) {
+                        console.log('📡 Triggering broadcast to other sessions...');
+                        this.socket.emit('saved_preferences', {
+                            user_id: user.id,
+                            preferences: this.preferences,
+                            version: this.version,
+                            origin_session_id: this.sessionId
+                        });
+                    }
+                }
+                
                 return true;
             } else if (data.conflict) {
-                // Handle version conflict by fetching latest and retrying
-                console.warn('Preference version conflict detected, syncing...');
+                console.warn('⚠️ Version conflict, syncing...');
                 await this.fetchFromServer();
                 return false;
             }
@@ -415,6 +496,24 @@ export const preferenceHelpers = {
         preferencesService.set(key, value);
     }
 };
+
+// Expose for debugging in browser console
+if (typeof window !== 'undefined') {
+    (window as any).testSync = () => {
+        console.log('🧪 Testing sync by setting test value...');
+        preferencesService.set('test', Date.now());
+    };
+    (window as any).testBroadcast = () => {
+        const user = authService.getUser();
+        if (!user?.id) {
+            console.error('Not logged in!');
+            return;
+        }
+        console.log('🧪 Sending test broadcast request...');
+        (preferencesService as any).socket?.emit('test_broadcast', { user_id: user.id });
+    };
+    (window as any).prefs = preferencesService;
+}
 
 // Export helper functions for backward compatibility with existing localStorage code
 export const migrateFromLocalStorage = async () => {
