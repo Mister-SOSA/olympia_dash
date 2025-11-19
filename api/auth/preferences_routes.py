@@ -17,43 +17,6 @@ import logging
 preferences_bp = Blueprint('preferences', __name__)
 logger = logging.getLogger(__name__)
 
-# Get socketio instance
-_socketio = None
-def get_socketio():
-    global _socketio
-    if _socketio is None:
-        from app import socketio
-        _socketio = socketio
-    return _socketio
-
-def broadcast_preferences(user_id, preferences, version, origin_session_id=None):
-    """Broadcast preference changes to all sessions for this user"""
-    from app import active_sessions
-    
-    room = f'user_{user_id}'
-    
-    # Only broadcast if there are multiple sessions in the room
-    session_count = len(active_sessions.get(room, set()))
-    
-    if session_count <= 1:
-        logger.info(f'⏭️ Skipping broadcast - only {session_count} session in {room}')
-        return
-    
-    socketio = get_socketio()
-    payload = {
-        'preferences': preferences,
-        'version': version,
-        'origin_session_id': origin_session_id
-    }
-    
-    logger.info(f'📡 Broadcasting to room {room} ({session_count} sessions)')
-    logger.info(f'   Version: {version}')
-    logger.info(f'   Origin: {origin_session_id[:8] if origin_session_id else "unknown"}...')
-    
-    # Emit from HTTP context using namespace
-    socketio.emit('preferences_updated', payload, namespace='/', room=room)
-    logger.info(f'✅ Broadcast sent')
-
 @preferences_bp.route('/preferences', methods=['GET'])
 @require_auth
 @rate_limit(max_requests=300, window_minutes=1)
@@ -119,10 +82,7 @@ def replace_preferences():
             }), 409
         
         logger.info(f'✅ SAVED - New version: {new_version}')
-        logger.info(f'🔊 CALLING broadcast_preferences...')
-        
-        # Broadcast to all other sessions
-        broadcast_preferences(user['id'], preferences, new_version, session_id)
+        # Client will trigger broadcast via WebSocket after receiving save response
         
         log_action(user['id'], 'preferences_updated', 'Full preferences update', get_client_ip())
         
@@ -179,10 +139,7 @@ def update_preferences():
                 'conflict': True
             }), 409
         
-        # Get full preferences and broadcast
-        result = get_user_preferences(user['id'])
-        broadcast_preferences(user['id'], result['preferences'], new_version, session_id)
-        
+        # Client will trigger broadcast via WebSocket after receiving save response
         log_action(user['id'], 'preferences_updated', 'Partial preferences update', get_client_ip())
         
         return jsonify({

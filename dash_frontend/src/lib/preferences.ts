@@ -406,6 +406,17 @@ class PreferencesService {
                 this.version = data.version;
                 this.saveToCache();
                 console.log(`✅ Saved (v${this.version})`);
+                
+                // Trigger broadcast via WebSocket event (works reliably!)
+                if (this.socket?.connected) {
+                    this.socket.emit('broadcast_preferences', {
+                        user_id: authService.getUser()?.id,
+                        preferences: this.preferences,
+                        version: this.version,
+                        origin_session_id: this.sessionId
+                    });
+                }
+                
                 return true;
             } else if (data.conflict) {
                 console.warn('⚠️ Version conflict, syncing...');
