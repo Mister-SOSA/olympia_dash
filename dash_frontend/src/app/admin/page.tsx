@@ -7,6 +7,8 @@ import { API_BASE_URL } from '@/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
+import { Select } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
@@ -14,8 +16,7 @@ import {
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
-import { GroupManager } from '@/components/GroupManager';
-import { WidgetPermissionsManager } from '@/components/WidgetPermissionsManager';
+import { GroupsPanel } from '@/components/admin/GroupsPanel';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 
 export const dynamic = 'force-dynamic';
@@ -76,12 +77,10 @@ export default function AdminPage() {
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'logs' | 'devices' | 'system' | 'groups' | 'permissions'>('users');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [showGroupManager, setShowGroupManager] = useState(false);
-  const [showPermissionsManager, setShowPermissionsManager] = useState(false);
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -207,17 +206,17 @@ export default function AdminPage() {
     try {
       console.log(`🎭 Initiating impersonation of ${userName} (ID: ${userId})`);
       const success = await authService.impersonateUser(userId);
-      
+
       if (success) {
         toast.success(`Now impersonating ${userName}`, {
           description: 'Viewing their dashboard configuration'
         });
-        
+
         console.log('🚀 Navigating to dashboard as impersonated user...');
-        
+
         // Small delay to ensure all state is updated
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         // Use full page navigation to ensure clean state
         window.location.href = '/';
       } else {
@@ -365,518 +364,525 @@ export default function AdminPage() {
     );
   }
 
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: MdAdminPanelSettings },
+    { id: 'users', label: 'Users', icon: MdPeople },
+    { id: 'groups', label: 'Groups', icon: MdGroup },
+    { id: 'permissions', label: 'Permissions', icon: MdSecurity },
+    { id: 'logs', label: 'Audit Logs', icon: MdHistory },
+    { id: 'devices', label: 'Devices', icon: MdDevices },
+  ];
+
   return (
-    <div className="h-screen bg-ui-bg-primary overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-6 space-y-6 pb-12">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-ui-text-primary mb-1">Admin Dashboard</h1>
-            <p className="text-ui-text-secondary">Comprehensive system management and monitoring</p>
-          </div>
-          <Button
-            onClick={() => router.push('/')}
-            variant="outline"
-            className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
-          >
-            <MdArrowBack className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
+    <div className="flex h-screen bg-ui-bg-primary overflow-hidden">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 bg-ui-bg-secondary border-r border-ui-border-primary flex-shrink-0 flex flex-col">
+        <div className="p-6 border-b border-ui-border-primary">
+          <h1 className="text-xl font-bold text-ui-text-primary flex items-center gap-2">
+            <MdAdminPanelSettings className="text-ui-accent-primary" />
+            Admin Console
+          </h1>
+          <p className="text-xs text-ui-text-secondary mt-1">System Management</p>
         </div>
 
-        {error && (
-          <div className="bg-ui-danger-bg border border-red-500 text-ui-danger-text p-4 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {/* Stats Grid */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-ui-text-secondary text-sm mb-1">Total Users</p>
-                    <p className="text-3xl font-bold text-ui-text-primary">{stats.total_users}</p>
-                  </div>
-                  <div className="p-3 bg-ui-accent-primary-bg rounded-lg">
-                    <MdPeople className="w-6 h-6 text-ui-accent-primary-text" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-ui-text-secondary text-sm mb-1">Active Users</p>
-                    <p className="text-3xl font-bold text-green-400">{stats.active_users}</p>
-                  </div>
-                  <div className="p-3 bg-ui-success-bg rounded-lg">
-                    <MdCheckCircle className="w-6 h-6 text-ui-success-text" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-ui-text-secondary text-sm mb-1">Admins</p>
-                    <p className="text-3xl font-bold text-purple-400">{stats.admin_count}</p>
-                  </div>
-                  <div className="p-3 bg-ui-accent-secondary-bg rounded-lg">
-                    <MdAdminPanelSettings className="w-6 h-6 text-ui-accent-secondary-text" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-ui-text-secondary text-sm mb-1">Sessions</p>
-                    <p className="text-3xl font-bold text-orange-400">{stats.active_sessions}</p>
-                  </div>
-                  <div className="p-3 bg-ui-warning-bg rounded-lg">
-                    <IoTime className="w-6 h-6 text-ui-warning-text" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-ui-bg-secondary border-ui-border-primary hover:border-ui-border-primary transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-ui-text-secondary text-sm mb-1">DB Size</p>
-                    <p className="text-3xl font-bold text-cyan-400">{stats.db_size_mb}</p>
-                    <p className="text-ui-text-muted text-xs">MB</p>
-                  </div>
-                  <div className="p-3 bg-ui-accent-primary-bg rounded-lg">
-                    <MdStorage className="w-6 h-6 text-ui-accent-primary-text" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* System Health Alert */}
-        {systemHealth && systemHealth.status !== 'healthy' && (
-          <Card className="bg-ui-danger-bg border-red-500">
-            <CardHeader>
-              <CardTitle className="text-ui-danger-text flex items-center">
-                <MdHealthAndSafety className="mr-2" />
-                System Health: {systemHealth.status}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {systemHealth.issues.map((issue, idx) => (
-                  <div key={idx} className={`p-3 rounded-lg ${issue.type === 'error' ? 'bg-red-500/20 text-red-300' :
-                    issue.type === 'warning' ? 'bg-yellow-500/20 text-yellow-300' :
-                      'bg-blue-500/20 text-blue-300'
-                    }`}>
-                    {issue.message}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Tabs */}
-        <div className="flex space-x-2 border-b border-ui-border-primary overflow-x-auto">
-          {[
-            { id: 'users', label: 'Users', icon: MdPeople },
-            { id: 'groups', label: 'Groups', icon: MdGroup },
-            { id: 'permissions', label: 'Permissions', icon: MdSecurity },
-            { id: 'logs', label: 'Audit Logs', icon: MdHistory },
-            { id: 'devices', label: 'Devices', icon: MdDevices },
-            { id: 'system', label: 'System', icon: MdSettings },
-          ].map(tab => (
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center px-4 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
-                ? 'border-ui-accent-primary text-ui-accent-primary-text'
-                : 'border-transparent text-ui-text-secondary hover:text-ui-text-primary'
+              className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${activeTab === tab.id
+                  ? 'bg-ui-accent-primary text-white shadow-lg shadow-ui-accent-primary/20'
+                  : 'text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary'
                 }`}
             >
-              <tab.icon className="mr-2 h-4 w-4" />
+              <tab.icon className={`mr-3 h-5 w-5 ${activeTab === tab.id ? 'text-white' : 'text-ui-text-muted'}`} />
               {tab.label}
             </button>
           ))}
+        </nav>
+
+        <div className="p-4 border-t border-ui-border-primary">
+          <Button
+            onClick={() => router.push('/')}
+            variant="outline"
+            className="w-full border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary justify-start"
+          >
+            <MdArrowBack className="mr-2 h-4 w-4" />
+            Back to App
+          </Button>
         </div>
+      </aside>
 
-        {/* Tab Content */}
-        {activeTab === 'users' && (
-          <Card className="bg-ui-bg-secondary border-ui-border-primary">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-ui-text-primary text-xl">User Management</CardTitle>
-                  <CardDescription className="text-ui-text-secondary">
-                    Manage user accounts, roles, and permissions ({filteredUsers.length} users)
-                  </CardDescription>
-                </div>
-                <Button
-                  onClick={handleExportUsers}
-                  variant="outline"
-                  size="sm"
-                  className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
-                >
-                  <MdFileDownload className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </div>
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto bg-ui-bg-primary p-8">
+        <div className="max-w-6xl mx-auto space-y-6">
 
-              {/* Search and Filters */}
-              <div className="flex gap-4 mt-4">
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
-                />
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value as any)}
-                  className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
-                >
-                  <option value="all">All Roles</option>
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-ui-border-primary">
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Email</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Name</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Role</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Status</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Last Login</th>
-                      <th className="text-right p-4 text-ui-text-secondary font-semibold text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-b border-ui-border-primary hover:bg-ui-bg-tertiary/50 transition-colors">
-                        <td className="p-4 text-ui-text-secondary text-sm">{user.email}</td>
-                        <td className="p-4 text-ui-text-secondary text-sm">{user.name}</td>
-                        <td className="p-4">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleChangeRole(user.id, e.target.value)}
-                            className="bg-ui-bg-tertiary border border-ui-border-primary rounded px-3 py-1.5 text-ui-text-secondary text-sm hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-ui-accent-primary"
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-ui-danger-text'
-                              }`}
-                          >
-                            {user.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="p-4 text-ui-text-secondary text-sm">
-                          {user.last_login
-                            ? new Date(user.last_login).toLocaleString()
-                            : 'Never'}
-                        </td>
-                        <td className="p-4 text-right space-x-2">
-                          <Button
-                            onClick={() => handleImpersonateUser(user.id, user.name)}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-purple-400 hover:text-purple-300"
-                            disabled={user.role === 'admin'}
-                            title={user.role === 'admin' ? 'Cannot impersonate admins' : 'View dashboard as this user'}
-                          >
-                            <MdPerson className="mr-1 h-3 w-3" />
-                            Impersonate
-                          </Button>
-                          <Button
-                            onClick={() => handleToggleActive(user.id)}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary"
-                          >
-                            {user.is_active ? 'Deactivate' : 'Activate'}
-                          </Button>
-                          <Button
-                            onClick={() => handleRevokeAllSessions(user.id)}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-danger-text hover:text-red-300"
-                          >
-                            Revoke Sessions
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* Header for Mobile/Context */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-ui-text-primary">
+              {tabs.find(t => t.id === activeTab)?.label}
+            </h2>
+            <p className="text-ui-text-secondary">
+              {activeTab === 'overview' && 'System health and performance metrics'}
+              {activeTab === 'users' && 'Manage user accounts and access'}
+              {activeTab === 'groups' && 'Organize users into functional groups'}
+              {activeTab === 'permissions' && 'Control widget access levels'}
+              {activeTab === 'logs' && 'Track system activity and security events'}
+              {activeTab === 'devices' && 'Manage paired displays and sessions'}
+            </p>
+          </div>
 
-        {activeTab === 'groups' && (
-          <GroupManager
-            onClose={() => { }}
-            onGroupsChanged={loadData}
-            inline={true}
-          />
-        )}
+          {error && (
+            <div className="bg-ui-danger-bg border border-ui-danger-border text-ui-danger-text p-4 rounded-lg mb-6">
+              {error}
+            </div>
+          )}
 
-        {activeTab === 'permissions' && (
-          <PermissionsPanel />
-        )}
-
-        {activeTab === 'logs' && (
-          <Card className="bg-ui-bg-secondary border-ui-border-primary">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle className="text-ui-text-primary text-xl">Audit Logs</CardTitle>
-                  <CardDescription className="text-ui-text-secondary">
-                    System activity and user actions ({auditLogs.length} recent logs)
-                  </CardDescription>
-                </div>
-                <Button
-                  onClick={handleExportLogs}
-                  variant="outline"
-                  size="sm"
-                  className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
-                >
-                  <MdFileDownload className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="p-4 bg-ui-bg-tertiary rounded-lg hover:bg-slate-700 transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${log.action.includes('error') || log.action.includes('failed') ? 'bg-red-500/20 text-ui-danger-text' :
-                          log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-orange-500/20 text-orange-400' :
-                            log.action.includes('granted') || log.action.includes('created') ? 'bg-green-500/20 text-green-400' :
-                              'bg-blue-500/20 text-blue-400'
-                          }`}>
-                          {log.action}
-                        </span>
-                        <span className="text-ui-text-secondary text-sm">
-                          User ID: {log.user_id || 'System'}
-                        </span>
-                      </div>
-                      <span className="text-ui-text-muted text-xs">
-                        {new Date(log.created_at).toLocaleString()}
-                      </span>
-                    </div>
-                    {log.details && (
-                      <p className="text-ui-text-secondary text-sm">{log.details}</p>
-                    )}
-                    {log.ip_address && (
-                      <p className="text-ui-text-muted text-xs mt-1">IP: {log.ip_address}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === 'devices' && (
-          <Card className="bg-ui-bg-secondary border-ui-border-primary">
-            <CardHeader>
-              <CardTitle className="text-ui-text-primary text-xl">Device Sessions</CardTitle>
-              <CardDescription className="text-ui-text-secondary">
-                Manage paired TV and device dashboards ({deviceSessions.length} active)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-ui-border-primary">
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Device Name</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">User</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Created</th>
-                      <th className="text-left p-4 text-ui-text-secondary font-semibold text-sm">Last Used</th>
-                      <th className="text-right p-4 text-ui-text-secondary font-semibold text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deviceSessions.map((session) => (
-                      <tr key={session.id} className="border-b border-ui-border-primary hover:bg-ui-bg-tertiary/50 transition-colors">
-                        <td className="p-4 text-ui-text-secondary text-sm">{session.device_name || 'Unknown Device'}</td>
-                        <td className="p-4 text-ui-text-secondary text-sm">
-                          <div>
-                            <div className="font-medium">{session.user_name}</div>
-                            <div className="text-ui-text-muted text-xs">{session.user_email}</div>
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Stats Grid */}
+              {stats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Total Users</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-ui-text-primary">{stats.total_users}</p>
+                            <span className="text-xs text-ui-success-text">
+                              {stats.active_users} active
+                            </span>
                           </div>
-                        </td>
-                        <td className="p-4 text-ui-text-secondary text-sm">
-                          {new Date(session.created_at).toLocaleString()}
-                        </td>
-                        <td className="p-4 text-ui-text-secondary text-sm">
-                          {new Date(session.last_used).toLocaleString()}
-                        </td>
-                        <td className="p-4 text-right">
-                          <Button
-                            onClick={() => handleDeleteDeviceSession(session.id)}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-danger-text hover:text-red-300"
-                          >
-                            Revoke
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <div className="p-3 bg-ui-accent-primary-bg rounded-xl">
+                          <MdPeople className="w-6 h-6 text-ui-accent-primary-text" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">System Load</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-ui-warning-text">{stats.active_sessions}</p>
+                            <span className="text-xs text-ui-text-muted">sessions</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-ui-warning-bg rounded-xl">
+                          <IoTime className="w-6 h-6 text-ui-warning-text" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Database</p>
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-ui-accent-secondary-text">{stats.db_size_mb}</p>
+                            <span className="text-xs text-ui-text-muted">MB</span>
+                          </div>
+                        </div>
+                        <div className="p-3 bg-ui-accent-secondary-bg rounded-xl">
+                          <MdStorage className="w-6 h-6 text-ui-accent-secondary-text" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Health Status</p>
+                          <p className={`text-3xl font-bold ${systemHealth?.status === 'healthy' ? 'text-ui-success-text' : 'text-ui-danger-text'}`}>
+                            {systemHealth?.status || 'Unknown'}
+                          </p>
+                        </div>
+                        <div className={`p-3 rounded-xl ${systemHealth?.status === 'healthy' ? 'bg-ui-success-bg' : 'bg-ui-danger-bg'}`}>
+                          <MdHealthAndSafety className={`w-6 h-6 ${systemHealth?.status === 'healthy' ? 'text-ui-success-text' : 'text-ui-danger-text'}`} />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* System Health Issues */}
+              {systemHealth && systemHealth.issues.length > 0 && (
+                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-ui-text-primary text-lg">System Alerts</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {systemHealth.issues.map((issue, idx) => (
+                        <div key={idx} className={`p-4 rounded-lg flex items-start gap-3 ${issue.type === 'error' ? 'bg-ui-danger-bg text-ui-danger-text' :
+                            issue.type === 'warning' ? 'bg-ui-warning-bg text-ui-warning-text' :
+                              'bg-ui-accent-primary-bg text-ui-accent-primary-text'
+                          }`}>
+                          <MdSettings className="mt-1 flex-shrink-0" />
+                          <span>{issue.message}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-ui-text-primary">Maintenance</CardTitle>
+                    <CardDescription className="text-ui-text-secondary">System cleanup and optimization tasks</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button
+                      onClick={handleSystemCleanup}
+                      className="w-full justify-start h-auto p-4 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary text-ui-text-primary border border-ui-border-primary"
+                    >
+                      <div className="p-2 bg-ui-warning-bg rounded-lg mr-4">
+                        <MdCleaningServices className="w-5 h-5 text-ui-warning-text" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold">Run System Cleanup</div>
+                        <div className="text-xs text-ui-text-muted">Remove expired sessions and logs</div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      onClick={loadData}
+                      className="w-full justify-start h-auto p-4 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary text-ui-text-primary border border-ui-border-primary"
+                    >
+                      <div className="p-2 bg-ui-success-bg rounded-lg mr-4">
+                        <MdHealthAndSafety className="w-5 h-5 text-ui-success-text" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold">Refresh Metrics</div>
+                        <div className="text-xs text-ui-text-muted">Reload all system stats</div>
+                      </div>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-ui-text-primary">Data Export</CardTitle>
+                    <CardDescription className="text-ui-text-secondary">Download system data for analysis</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button
+                      onClick={handleExportUsers}
+                      className="w-full justify-start h-auto p-4 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary text-ui-text-primary border border-ui-border-primary"
+                    >
+                      <div className="p-2 bg-ui-accent-primary-bg rounded-lg mr-4">
+                        <MdFileDownload className="w-5 h-5 text-ui-accent-primary-text" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold">Export Users</div>
+                        <div className="text-xs text-ui-text-muted">Download user list as JSON</div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      onClick={handleExportLogs}
+                      className="w-full justify-start h-auto p-4 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary text-ui-text-primary border border-ui-border-primary"
+                    >
+                      <div className="p-2 bg-ui-accent-secondary-bg rounded-lg mr-4">
+                        <MdFileDownload className="w-5 h-5 text-ui-accent-secondary-text" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold">Export Logs</div>
+                        <div className="text-xs text-ui-text-muted">Download recent audit logs</div>
+                      </div>
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'system' && (
-          <div className="space-y-6">
-            <Card className="bg-ui-bg-secondary border-ui-border-primary">
-              <CardHeader>
-                <CardTitle className="text-ui-text-primary text-xl">System Tools</CardTitle>
-                <CardDescription className="text-ui-text-secondary">
-                  Database maintenance and system utilities
-                </CardDescription>
+          {activeTab === 'users' && (
+            <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+              <CardHeader className="border-b border-ui-border-primary pb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex gap-4 flex-1 w-full">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-ui-bg-tertiary border border-ui-border-primary rounded-lg px-4 py-2 text-ui-text-secondary text-sm focus:outline-none focus:ring-2 focus:ring-ui-accent-primary pl-10"
+                      />
+                      <MdPerson className="absolute left-3 top-2.5 text-ui-text-muted" />
+                    </div>
+                    <div className="w-32">
+                      <Select
+                        value={filterRole}
+                        onChange={(val) => setFilterRole(val as any)}
+                        options={[
+                          { value: 'all', label: 'All Roles' },
+                          { value: 'user', label: 'User' },
+                          { value: 'admin', label: 'Admin' },
+                        ]}
+                      />
+                    </div>
+                    <div className="w-32">
+                      <Select
+                        value={filterStatus}
+                        onChange={(val) => setFilterStatus(val as any)}
+                        options={[
+                          { value: 'all', label: 'All Status' },
+                          { value: 'active', label: 'Active' },
+                          { value: 'inactive', label: 'Inactive' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    onClick={handleSystemCleanup}
-                    className="h-20 bg-ui-warning-bg hover:bg-orange-500/20 border border-orange-500/30 text-orange-300 flex flex-col items-center justify-center"
-                  >
-                    <MdCleaningServices className="h-6 w-6 mb-2" />
-                    <span>Run System Cleanup</span>
-                    <span className="text-xs text-ui-text-muted">Remove expired data</span>
-                  </Button>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-ui-bg-tertiary">
+                      <tr>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Role</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Status</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Login</th>
+                        <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ui-border-primary">
+                      {filteredUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-ui-accent-primary-bg flex items-center justify-center text-ui-accent-primary-text font-bold">
+                                {user.name?.[0] || user.email[0]}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-ui-text-primary">{user.name}</div>
+                                <div className="text-xs text-ui-text-muted">{user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="w-28">
+                              <Select
+                                value={user.role}
+                                onChange={(val) => handleChangeRole(user.id, val)}
+                                options={[
+                                  { value: 'user', label: 'User' },
+                                  { value: 'admin', label: 'Admin' },
+                                ]}
+                              />
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${user.is_active
+                                ? 'bg-ui-success-bg text-ui-success-text'
+                                : 'bg-ui-danger-bg text-ui-danger-text'
+                                }`}
+                            >
+                              {user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-ui-text-secondary text-sm">
+                            {user.last_login
+                              ? new Date(user.last_login).toLocaleDateString()
+                              : 'Never'}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      onClick={() => handleImpersonateUser(user.id, user.name)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-ui-accent-secondary-text hover:bg-ui-accent-secondary-bg"
+                                      disabled={user.role === 'admin'}
+                                    >
+                                      <MdPerson className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Impersonate User</TooltipContent>
+                                </Tooltip>
 
-                  <Button
-                    onClick={handleExportUsers}
-                    className="h-20 bg-ui-accent-primary-bg hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 flex flex-col items-center justify-center"
-                  >
-                    <MdFileDownload className="h-6 w-6 mb-2" />
-                    <span>Export All Users</span>
-                    <span className="text-xs text-ui-text-muted">JSON format</span>
-                  </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      onClick={() => handleToggleActive(user.id)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className={`h-8 w-8 p-0 ${user.is_active ? 'text-ui-warning-text hover:bg-ui-warning-bg' : 'text-ui-success-text hover:bg-ui-success-bg'}`}
+                                    >
+                                      <MdCheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{user.is_active ? 'Deactivate User' : 'Activate User'}</TooltipContent>
+                                </Tooltip>
 
-                  <Button
-                    onClick={handleExportLogs}
-                    className="h-20 bg-ui-accent-secondary-bg hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 flex flex-col items-center justify-center"
-                  >
-                    <MdFileDownload className="h-6 w-6 mb-2" />
-                    <span>Export Audit Logs</span>
-                    <span className="text-xs text-ui-text-muted">Last 1000 entries</span>
-                  </Button>
-
-                  <Button
-                    onClick={loadData}
-                    className="h-20 bg-ui-success-bg hover:bg-green-500/20 border border-green-500/30 text-green-300 flex flex-col items-center justify-center"
-                  >
-                    <MdHealthAndSafety className="h-6 w-6 mb-2" />
-                    <span>Refresh System Data</span>
-                    <span className="text-xs text-ui-text-muted">Reload all metrics</span>
-                  </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      onClick={() => handleRevokeAllSessions(user.id)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 text-ui-danger-text hover:bg-ui-danger-bg"
+                                    >
+                                      <MdCleaningServices className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Revoke All Sessions</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* System Info */}
-            {stats && (
-              <Card className="bg-ui-bg-secondary border-ui-border-primary">
-                <CardHeader>
-                  <CardTitle className="text-ui-text-primary text-xl">System Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">Total Preferences</p>
-                      <p className="text-2xl font-bold text-ui-text-primary">{stats.total_preferences}</p>
-                    </div>
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">Total Audit Logs</p>
-                      <p className="text-2xl font-bold text-ui-text-primary">{stats.total_audit_logs}</p>
-                    </div>
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">Database Size</p>
-                      <p className="text-2xl font-bold text-ui-text-primary">{stats.db_size_mb} MB</p>
-                    </div>
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">Device Sessions</p>
-                      <p className="text-2xl font-bold text-ui-text-primary">{stats.active_device_sessions}</p>
-                    </div>
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">Recent Logins</p>
-                      <p className="text-2xl font-bold text-ui-text-primary">{stats.recent_logins}</p>
-                      <p className="text-ui-text-muted text-xs">Last 24 hours</p>
-                    </div>
-                    <div className="p-4 bg-ui-bg-tertiary rounded-lg">
-                      <p className="text-ui-text-secondary text-sm mb-1">System Status</p>
-                      <p className={`text-2xl font-bold ${systemHealth?.status === 'healthy' ? 'text-green-400' : 'text-yellow-400'
-                        }`}>
-                        {systemHealth?.status || 'Loading...'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
+          {activeTab === 'groups' && (
+            <GroupsPanel />
+          )}
 
-      {/* Group Manager Modal */}
-      {showGroupManager && (
-        <GroupManager
-          onClose={() => setShowGroupManager(false)}
-          onGroupsChanged={loadData}
-        />
-      )}
+          {activeTab === 'permissions' && (
+            <PermissionsPanel />
+          )}
 
-      {/* Widget Permissions Manager Modal */}
-      {showPermissionsManager && (
-        <WidgetPermissionsManager
-          onClose={() => setShowPermissionsManager(false)}
-          onPermissionsChanged={loadData}
-        />
-      )}
+          {activeTab === 'logs' && (
+            <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+              <CardHeader className="border-b border-ui-border-primary pb-4">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-ui-text-primary text-lg">System Activity</CardTitle>
+                  <Button
+                    onClick={handleExportLogs}
+                    variant="outline"
+                    size="sm"
+                    className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
+                  >
+                    <MdFileDownload className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-ui-bg-tertiary">
+                      <tr>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Time</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Action</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Details</th>
+                        <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ui-border-primary">
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
+                          <td className="p-4 text-ui-text-muted text-xs whitespace-nowrap">
+                            {new Date(log.created_at).toLocaleString()}
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${log.action.includes('error') || log.action.includes('failed') ? 'bg-ui-danger-bg text-ui-danger-text' :
+                                log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-ui-warning-bg text-ui-warning-text' :
+                                  log.action.includes('granted') || log.action.includes('created') ? 'bg-ui-success-bg text-ui-success-text' :
+                                    'bg-ui-accent-primary-bg text-ui-accent-primary-text'
+                              }`}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="p-4 text-ui-text-secondary text-sm">
+                            {log.user_id ? `User #${log.user_id}` : 'System'}
+                          </td>
+                          <td className="p-4 text-ui-text-secondary text-sm max-w-md truncate" title={log.details || ''}>
+                            {log.details || '-'}
+                          </td>
+                          <td className="p-4 text-right text-ui-text-muted text-xs font-mono">
+                            {log.ip_address || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'devices' && (
+            <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-ui-text-primary text-lg">Active Sessions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-ui-bg-tertiary">
+                      <tr>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Device</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Active</th>
+                        <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-ui-border-primary">
+                      {deviceSessions.map((session) => (
+                        <tr key={session.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-ui-bg-tertiary rounded-lg">
+                                <MdDevices className="text-ui-text-secondary" />
+                              </div>
+                              <span className="text-ui-text-primary font-medium">{session.device_name || 'Unknown Device'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="text-sm text-ui-text-primary">{session.user_name}</div>
+                            <div className="text-xs text-ui-text-muted">{session.user_email}</div>
+                          </td>
+                          <td className="p-4 text-ui-text-secondary text-sm">
+                            {new Date(session.last_used).toLocaleString()}
+                          </td>
+                          <td className="p-4 text-right">
+                            <Button
+                              onClick={() => handleDeleteDeviceSession(session.id)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-ui-danger-text hover:bg-ui-danger-bg"
+                            >
+                              Revoke
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
