@@ -55,8 +55,8 @@ async function proxyToBackend(
 
     const response = await fetch(url, options);
     
-    // Get response body
-    const data = await response.text();
+    // Get response body as buffer to preserve binary data
+    const data = await response.arrayBuffer();
     
     // Create response with same status and headers
     const proxyResponse = new NextResponse(data, {
@@ -64,9 +64,11 @@ async function proxyToBackend(
       statusText: response.statusText,
     });
 
-    // Forward response headers
+    // Forward response headers (exclude content-encoding to prevent double-decoding)
     response.headers.forEach((value, key) => {
-      proxyResponse.headers.set(key, value);
+      if (key.toLowerCase() !== 'content-encoding') {
+        proxyResponse.headers.set(key, value);
+      }
     });
 
     return proxyResponse;
