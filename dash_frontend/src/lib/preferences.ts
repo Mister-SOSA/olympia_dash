@@ -37,6 +37,7 @@ class PreferencesService {
     private socket: Socket | null = null;
     private changeCallbacks: Set<() => void> = new Set();
     private currentUserId: number | null = null;
+    private sessionCount: number = 1; // Track session count to skip broadcasts when alone
     private readonly DEBOUNCE_MS = 500;
 
     constructor() {
@@ -208,9 +209,9 @@ class PreferencesService {
         // Use the same origin as the current page for WebSocket connection
         // This ensures it works in both development (localhost) and production (dash.olympiasuite.com)
         const wsUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
-        
+
         console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
-        
+
         this.socket = io(wsUrl, {
             // Use polling only for Cloudflare Tunnel compatibility
             // Cloudflare tunnels don't support WebSocket upgrades reliably
@@ -231,6 +232,7 @@ class PreferencesService {
 
         this.socket.on('joined', (data: any) => {
             const sessionCount = data.session_count || 1;
+            this.sessionCount = sessionCount;
             console.log(`✅ Joined room: ${data.room} (${sessionCount} session${sessionCount > 1 ? 's' : ''} active)`);
 
             if (sessionCount === 1) {
@@ -240,6 +242,7 @@ class PreferencesService {
 
         this.socket.on('session_count_updated', (data: any) => {
             const sessionCount = data.session_count || 1;
+            this.sessionCount = sessionCount;
             console.log(`📊 Session count updated: ${sessionCount} session${sessionCount > 1 ? 's' : ''} active`);
 
             if (sessionCount === 1) {
@@ -554,7 +557,7 @@ class PreferencesService {
                 console.log(`✅ Saved (v${this.version})`);
 
                 // Trigger broadcast via WebSocket event (works reliably!)
-                if (this.socket?.connected) {
+                if (this.socket?.connected && this.sessionCount > 1) {
                     // Use impersonated user ID if impersonating, otherwise use admin's ID
                     const targetUserId = authService.isImpersonating()
                         ? authService.getImpersonatedUser()?.id
@@ -567,10 +570,10 @@ class PreferencesService {
                         origin_session_id: this.sessionId
                     });
 
-                    console.log(`📡 Broadcasting to room user_${targetUserId}${authService.isImpersonating() ? ' (impersonated)' : ''}`);
-                }
-
-                return true;
+                    console.log(`📡 Broadcasting to room user_${targetUserId}${authService.isImpersonating() ? ' (impersonated)' : ''} (${this.sessionCount} sessions)`);
+                } else if (this.socket?.connected) {
+                    console.log(`⏭️ Skipping broadcast - only ${this.sessionCount} session(s) active`);
+                } return true;
             } else if (data.conflict) {
                 console.warn('⚠️ Version conflict, syncing...');
                 await this.fetchFromServer();
