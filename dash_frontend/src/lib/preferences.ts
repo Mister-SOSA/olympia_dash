@@ -208,9 +208,18 @@ class PreferencesService {
         // Use the same origin as the current page for WebSocket connection
         // This ensures it works in both development (localhost) and production (dash.olympiasuite.com)
         const wsUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
+        
+        console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
+        
         this.socket = io(wsUrl, {
-            transports: ['websocket', 'polling'],
+            // Use polling only for Cloudflare Tunnel compatibility
+            // Cloudflare tunnels don't support WebSocket upgrades reliably
+            transports: ['polling'],
             reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5,
+            timeout: 20000,
             path: '/socket.io/'
         });
 
