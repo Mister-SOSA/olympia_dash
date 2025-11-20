@@ -173,6 +173,28 @@ def delete_group_endpoint(group_id):
             'error': str(e)
         }), 500
 
+@groups_bp.route('/<int:group_id>/members', methods=['GET'])
+@require_role('admin')
+def get_group_members(group_id):
+    """Get all members of a group."""
+    try:
+        group = get_group_by_id(group_id)
+        if not group:
+            return jsonify({
+                'success': False,
+                'error': 'Group not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'members': group.get('members', [])
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @groups_bp.route('/<int:group_id>/members', methods=['POST'])
 @require_role('admin')
 def add_member_to_group(group_id):

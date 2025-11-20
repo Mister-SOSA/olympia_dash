@@ -82,16 +82,19 @@ export function GroupsPanel() {
         }
 
         try {
-            const newGroup = await adminService.createGroup({
-                name: formName,
-                description: formDescription,
-                color: formColor
-            });
+            const groupId = await adminService.createGroup(
+                formName,
+                formDescription,
+                formColor
+            );
 
             toast.success('Group created successfully');
             setIsCreating(false);
             resetForm();
             await loadGroups();
+            
+            // Load the newly created group
+            const newGroup = await adminService.getGroup(groupId);
             setSelectedGroup(newGroup as GroupWithMembers);
         } catch (error: any) {
             toast.error(error.message || 'Failed to create group');

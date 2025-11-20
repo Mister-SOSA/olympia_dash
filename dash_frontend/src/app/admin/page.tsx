@@ -944,8 +944,8 @@ export default function AdminPage() {
                           <td className="p-4">
                             <span
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${user.is_active
-                                  ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border'
-                                  : 'bg-ui-danger-bg text-ui-danger-text border-ui-danger-border'
+                                ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border'
+                                : 'bg-ui-danger-bg text-ui-danger-text border-ui-danger-border'
                                 }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-ui-success-text' : 'bg-ui-danger-text'
