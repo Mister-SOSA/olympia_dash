@@ -5,15 +5,33 @@
 const TIMEZONE = 'America/Chicago';
 
 /**
+ * Parse a date string from the backend (SQLite UTC timestamp)
+ * SQLite returns timestamps without timezone info, so we need to explicitly treat them as UTC
+ */
+function parseUTCDate(dateString: string | Date): Date {
+    if (dateString instanceof Date) {
+        return dateString;
+    }
+
+    // If the string doesn't have a 'Z' or timezone offset, assume it's UTC from SQLite
+    if (!dateString.includes('Z') && !dateString.match(/[+-]\d{2}:\d{2}$/)) {
+        // Append 'Z' to treat it as UTC
+        return new Date(dateString + 'Z');
+    }
+
+    return new Date(dateString);
+}
+
+/**
  * Format a date/time string to local time with date and time
- * @param dateString - ISO date string or timestamp
+ * @param dateString - ISO date string or timestamp (assumes UTC if no timezone specified)
  * @param options - Intl.DateTimeFormatOptions to customize format
  */
 export function formatDateTime(
     dateString: string | Date,
     options?: Intl.DateTimeFormatOptions
 ): string {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     const defaultOptions: Intl.DateTimeFormatOptions = {
         timeZone: TIMEZONE,
@@ -34,7 +52,7 @@ export function formatDateTime(
  * Format a date string to local date only (no time)
  */
 export function formatDate(dateString: string | Date): string {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     return new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
@@ -48,7 +66,7 @@ export function formatDate(dateString: string | Date): string {
  * Format a date string to local time only (no date)
  */
 export function formatTime(dateString: string | Date): string {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     return new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
@@ -62,7 +80,7 @@ export function formatTime(dateString: string | Date): string {
  * Format a date for display in charts (short format)
  */
 export function formatChartDate(dateString: string | Date, granularity: 'hour' | 'day' = 'day'): string {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     if (granularity === 'hour') {
         return new Intl.DateTimeFormat('en-US', {
@@ -85,7 +103,7 @@ export function formatChartDate(dateString: string | Date, granularity: 'hour' |
  * Get the hour in local timezone
  */
 export function getLocalHour(dateString: string | Date): number {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     const hourString = new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
@@ -105,7 +123,7 @@ export function getLocalDateParts(dateString: string | Date): {
     day: number;
     hour: number;
 } {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date = parseUTCDate(dateString);
 
     const formatter = new Intl.DateTimeFormat('en-US', {
         timeZone: TIMEZONE,
