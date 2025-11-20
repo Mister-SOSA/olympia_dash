@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { formatChartDate, getLocalHour } from '@/utils/dateUtils';
 import {
     MdTrendingUp, MdPeople, MdAccessTime, MdDevices, MdBarChart,
     MdRefresh, MdCalendarToday, MdLogin, MdTimer
@@ -86,7 +87,7 @@ export function AnalyticsPanel() {
     const activityData = useMemo(() => {
         const now = new Date();
         const cutoff = new Date(now);
-        
+
         switch (timeRange) {
             case '24h':
                 cutoff.setHours(now.getHours() - 24);
@@ -103,20 +104,13 @@ export function AnalyticsPanel() {
         }
 
         const filteredLogs = logs.filter(log => new Date(log.created_at) >= cutoff);
-        
+
         // Group by hour for 24h, by day for others
         const groupByHour = timeRange === '24h';
         const grouped = new Map<string, number>();
 
         filteredLogs.forEach(log => {
-            const date = new Date(log.created_at);
-            let key: string;
-            
-            if (groupByHour) {
-                key = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:00`;
-            } else {
-                key = `${date.getMonth() + 1}/${date.getDate()}`;
-            }
+            const key = formatChartDate(log.created_at, groupByHour ? 'hour' : 'day');
 
             grouped.set(key, (grouped.get(key) || 0) + 1);
         });
@@ -130,11 +124,11 @@ export function AnalyticsPanel() {
     // Calculate action type distribution
     const actionDistribution = useMemo(() => {
         const distribution = new Map<string, number>();
-        
+
         logs.forEach(log => {
             const action = log.action.toLowerCase();
             let category = 'Other';
-            
+
             if (action.includes('login') || action.includes('logout') || action.includes('session')) {
                 category = 'Authentication';
             } else if (action.includes('admin') || action.includes('permission') || action.includes('role')) {
@@ -158,7 +152,7 @@ export function AnalyticsPanel() {
     // Calculate user activity ranking
     const userActivity = useMemo(() => {
         const activity = new Map<number, number>();
-        
+
         logs.forEach(log => {
             if (log.user_id) {
                 activity.set(log.user_id, (activity.get(log.user_id) || 0) + 1);
@@ -174,9 +168,9 @@ export function AnalyticsPanel() {
     // Calculate hourly activity pattern (all time)
     const hourlyPattern = useMemo(() => {
         const hours = new Array(24).fill(0);
-        
+
         logs.forEach(log => {
-            const hour = new Date(log.created_at).getHours();
+            const hour = getLocalHour(log.created_at);
             hours[hour]++;
         });
 
@@ -314,21 +308,21 @@ export function AnalyticsPanel() {
                         <AreaChart data={activityData}>
                             <defs>
                                 <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="var(--ui-accent-primary)" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="var(--ui-accent-primary)" stopOpacity={0}/>
+                                    <stop offset="5%" stopColor="var(--ui-accent-primary)" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="var(--ui-accent-primary)" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--ui-border-primary)" opacity={0.3} />
-                            <XAxis 
-                                dataKey="time" 
-                                stroke="var(--ui-text-secondary)" 
+                            <XAxis
+                                dataKey="time"
+                                stroke="var(--ui-text-secondary)"
                                 fontSize={12}
                             />
-                            <YAxis 
-                                stroke="var(--ui-text-secondary)" 
+                            <YAxis
+                                stroke="var(--ui-text-secondary)"
                                 fontSize={12}
                             />
-                            <Tooltip 
+                            <Tooltip
                                 contentStyle={{
                                     backgroundColor: 'var(--ui-bg-tertiary)',
                                     border: '1px solid var(--ui-border-primary)',
@@ -336,10 +330,10 @@ export function AnalyticsPanel() {
                                     color: 'var(--ui-text-primary)'
                                 }}
                             />
-                            <Area 
-                                type="monotone" 
-                                dataKey="count" 
-                                stroke="var(--ui-accent-primary)" 
+                            <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="var(--ui-accent-primary)"
                                 strokeWidth={2}
                                 fill="url(#activityGradient)"
                                 name="Events"
@@ -378,7 +372,7 @@ export function AnalyticsPanel() {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip 
+                                <Tooltip
                                     contentStyle={{
                                         backgroundColor: 'var(--ui-bg-tertiary)',
                                         border: '1px solid var(--ui-border-primary)',
@@ -407,14 +401,14 @@ export function AnalyticsPanel() {
                             <BarChart data={userActivity} layout="horizontal">
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--ui-border-primary)" opacity={0.3} />
                                 <XAxis type="number" stroke="var(--ui-text-secondary)" fontSize={12} />
-                                <YAxis 
-                                    type="category" 
-                                    dataKey="userId" 
-                                    stroke="var(--ui-text-secondary)" 
+                                <YAxis
+                                    type="category"
+                                    dataKey="userId"
+                                    stroke="var(--ui-text-secondary)"
                                     fontSize={12}
                                     width={80}
                                 />
-                                <Tooltip 
+                                <Tooltip
                                     contentStyle={{
                                         backgroundColor: 'var(--ui-bg-tertiary)',
                                         border: '1px solid var(--ui-border-primary)',
@@ -444,16 +438,16 @@ export function AnalyticsPanel() {
                     <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={hourlyPattern}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--ui-border-primary)" opacity={0.3} />
-                            <XAxis 
-                                dataKey="hour" 
-                                stroke="var(--ui-text-secondary)" 
+                            <XAxis
+                                dataKey="hour"
+                                stroke="var(--ui-text-secondary)"
                                 fontSize={12}
                             />
-                            <YAxis 
-                                stroke="var(--ui-text-secondary)" 
+                            <YAxis
+                                stroke="var(--ui-text-secondary)"
                                 fontSize={12}
                             />
-                            <Tooltip 
+                            <Tooltip
                                 contentStyle={{
                                     backgroundColor: 'var(--ui-bg-tertiary)',
                                     border: '1px solid var(--ui-border-primary)',
@@ -461,9 +455,9 @@ export function AnalyticsPanel() {
                                     color: 'var(--ui-text-primary)'
                                 }}
                             />
-                            <Bar 
-                                dataKey="count" 
-                                fill="var(--ui-warning)" 
+                            <Bar
+                                dataKey="count"
+                                fill="var(--ui-warning)"
                                 radius={[4, 4, 0, 0]}
                             />
                         </BarChart>

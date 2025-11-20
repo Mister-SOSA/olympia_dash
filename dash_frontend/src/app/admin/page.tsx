@@ -20,6 +20,7 @@ import { GroupsPanel } from '@/components/admin/GroupsPanel';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 import { ActivityPanel } from '@/components/admin/ActivityPanel';
 import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -321,7 +322,7 @@ export default function AdminPage() {
 
   const handleBulkActivate = async (activate: boolean) => {
     if (selectedUsers.size === 0) return;
-    
+
     const action = activate ? 'activate' : 'deactivate';
     if (!confirm(`${action} ${selectedUsers.size} user(s)?`)) return;
 
@@ -340,7 +341,7 @@ export default function AdminPage() {
 
     setBulkActionLoading(false);
     setSelectedUsers(new Set());
-    
+
     if (successCount > 0) {
       toast.success(`${successCount} user(s) ${action}d successfully`);
     }
@@ -351,7 +352,7 @@ export default function AdminPage() {
 
   const handleBulkRevokeSession = async () => {
     if (selectedUsers.size === 0) return;
-    
+
     if (!confirm(`Revoke all sessions for ${selectedUsers.size} user(s)?`)) return;
 
     setBulkActionLoading(true);
@@ -374,7 +375,7 @@ export default function AdminPage() {
     setBulkActionLoading(false);
     setSelectedUsers(new Set());
     loadData();
-    
+
     if (successCount > 0) {
       toast.success(`Revoked sessions for ${successCount} user(s)`);
     }
@@ -500,8 +501,8 @@ export default function AdminPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${activeTab === tab.id
-                  ? 'bg-ui-accent-primary text-white shadow-lg shadow-ui-accent-primary/20'
-                  : 'text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary'
+                ? 'bg-ui-accent-primary text-white shadow-lg shadow-ui-accent-primary/20'
+                : 'text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary'
                 }`}
             >
               <tab.icon className={`mr-3 h-5 w-5 ${activeTab === tab.id ? 'text-white' : 'text-ui-text-muted'}`} />
@@ -636,8 +637,8 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {systemHealth.issues.map((issue, idx) => (
                         <div key={idx} className={`p-4 rounded-lg flex items-start gap-3 ${issue.type === 'error' ? 'bg-ui-danger-bg text-ui-danger-text' :
-                            issue.type === 'warning' ? 'bg-ui-warning-bg text-ui-warning-text' :
-                              'bg-ui-accent-primary-bg text-ui-accent-primary-text'
+                          issue.type === 'warning' ? 'bg-ui-warning-bg text-ui-warning-text' :
+                            'bg-ui-accent-primary-bg text-ui-accent-primary-text'
                           }`}>
                           <MdSettings className="mt-1 flex-shrink-0" />
                           <span>{issue.message}</span>
@@ -761,7 +762,7 @@ export default function AdminPage() {
                   </div>
                 </div>
               </CardHeader>
-              
+
               {/* Bulk Actions Bar */}
               {selectedUsers.size > 0 && (
                 <div className="bg-ui-accent-primary-bg border-b border-ui-accent-primary-border p-4 animate-in slide-in-from-top-2">
@@ -878,7 +879,7 @@ export default function AdminPage() {
                           </td>
                           <td className="p-4 text-ui-text-secondary text-sm">
                             {user.last_login
-                              ? new Date(user.last_login).toLocaleDateString()
+                              ? formatDate(user.last_login)
                               : 'Never'}
                           </td>
                           <td className="p-4 text-right">
@@ -986,13 +987,13 @@ export default function AdminPage() {
                       {auditLogs.map((log) => (
                         <tr key={log.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
                           <td className="p-4 text-ui-text-muted text-xs whitespace-nowrap">
-                            {new Date(log.created_at).toLocaleString()}
+                            {formatDateTime(log.created_at)}
                           </td>
                           <td className="p-4">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${log.action.includes('error') || log.action.includes('failed') ? 'bg-ui-danger-bg text-ui-danger-text' :
-                                log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-ui-warning-bg text-ui-warning-text' :
-                                  log.action.includes('granted') || log.action.includes('created') ? 'bg-ui-success-bg text-ui-success-text' :
-                                    'bg-ui-accent-primary-bg text-ui-accent-primary-text'
+                              log.action.includes('deleted') || log.action.includes('revoked') ? 'bg-ui-warning-bg text-ui-warning-text' :
+                                log.action.includes('granted') || log.action.includes('created') ? 'bg-ui-success-bg text-ui-success-text' :
+                                  'bg-ui-accent-primary-bg text-ui-accent-primary-text'
                               }`}>
                               {log.action}
                             </span>
@@ -1047,7 +1048,7 @@ export default function AdminPage() {
                             <div className="text-xs text-ui-text-muted">{session.user_email}</div>
                           </td>
                           <td className="p-4 text-ui-text-secondary text-sm">
-                            {new Date(session.last_used).toLocaleString()}
+                            {formatDateTime(session.last_used)}
                           </td>
                           <td className="p-4 text-right">
                             <Button

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { MdHistory, MdFilterList, MdFileDownload, MdRefresh, MdSearch, MdCalendarToday, MdPerson, MdWarning, MdCheckCircle, MdError, MdInfo } from 'react-icons/md';
+import { formatDateTime } from '@/utils/dateUtils';
 
 interface AuditLog {
     id: number;
@@ -128,7 +129,7 @@ export function ActivityPanel() {
 
         // User filter
         if (selectedUser !== 'all') {
-            filtered = filtered.filter(log => 
+            filtered = filtered.filter(log =>
                 selectedUser === 'system' ? !log.user_id : log.user_id?.toString() === selectedUser
             );
         }
@@ -137,7 +138,7 @@ export function ActivityPanel() {
         if (timeRange !== 'all') {
             const now = new Date();
             const cutoff = new Date(now);
-            
+
             switch (timeRange) {
                 case '1h':
                     cutoff.setHours(now.getHours() - 1);
@@ -173,13 +174,13 @@ export function ActivityPanel() {
     // Action statistics
     const stats = useMemo(() => {
         const total = filteredLogs.length;
-        const errors = filteredLogs.filter(log => 
+        const errors = filteredLogs.filter(log =>
             log.action.includes('error') || log.action.includes('failed')
         ).length;
-        const successes = filteredLogs.filter(log => 
+        const successes = filteredLogs.filter(log =>
             log.action.includes('success') || log.action.includes('granted') || log.action.includes('created')
         ).length;
-        const warnings = filteredLogs.filter(log => 
+        const warnings = filteredLogs.filter(log =>
             log.action.includes('warning') || log.action.includes('revoked') || log.action.includes('deleted')
         ).length;
 
@@ -420,13 +421,13 @@ export function ActivityPanel() {
                                 </thead>
                                 <tbody className="divide-y divide-ui-border-primary">
                                     {filteredLogs.map((log, index) => (
-                                        <tr 
-                                            key={log.id} 
+                                        <tr
+                                            key={log.id}
                                             className="hover:bg-ui-bg-tertiary/50 transition-colors"
                                             style={{ animationDelay: `${index * 20}ms` }}
                                         >
                                             <td className="p-3 text-ui-text-muted text-xs whitespace-nowrap font-mono">
-                                                {new Date(log.created_at).toLocaleString()}
+                                                {formatDateTime(log.created_at)}
                                             </td>
                                             <td className="p-3">
                                                 <div className="flex items-center gap-2">
