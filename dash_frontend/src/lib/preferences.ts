@@ -72,10 +72,10 @@ class PreferencesService {
         try {
             const cacheKey = this.getCacheKey();
             const versionKey = this.getVersionKey();
-            
+
             const cached = localStorage.getItem(cacheKey);
             const cachedVersion = localStorage.getItem(versionKey);
-            
+
             if (cached) {
                 this.preferences = JSON.parse(cached);
                 this.version = cachedVersion ? parseInt(cachedVersion, 10) : 0;
@@ -95,7 +95,7 @@ class PreferencesService {
         try {
             const cacheKey = this.getCacheKey();
             const versionKey = this.getVersionKey();
-            
+
             localStorage.setItem(cacheKey, JSON.stringify(this.preferences));
             localStorage.setItem(versionKey, this.version.toString());
         } catch (e) {
@@ -122,7 +122,7 @@ class PreferencesService {
                     console.log(`🎭 Fetching preferences for impersonated user ${impersonatedId}`);
                 }
             }
-            
+
             const response = await authService.fetchWithAuth(url);
 
             const data: PreferencesResponse = await response.json();
@@ -159,7 +159,7 @@ class PreferencesService {
             } else {
                 console.warn(`⚠️ Failed to fetch preferences for user ${this.currentUserId}`);
             }
-            
+
             this.connectWebSocket();
         } finally {
             this.syncInProgress = false;
@@ -171,13 +171,13 @@ class PreferencesService {
      */
     private joinAppropriateRooms(): void {
         if (!this.socket?.connected) return;
-        
+
         const user = authService.getUser();
         if (!user?.id) return;
 
         // Always join own room (admin's room)
         console.log(`Joining room for user ${user.id} with session ${this.sessionId.substring(0, 8)}...`);
-        this.socket.emit('join', { 
+        this.socket.emit('join', {
             user_id: user.id,
             session_id: this.sessionId
         });
@@ -187,7 +187,7 @@ class PreferencesService {
             const impersonatedUser = authService.getImpersonatedUser();
             if (impersonatedUser?.id) {
                 console.log(`🎭 Also joining room for impersonated user ${impersonatedUser.id}`);
-                this.socket.emit('join', { 
+                this.socket.emit('join', {
                     user_id: impersonatedUser.id,
                     session_id: this.sessionId
                 });
@@ -205,10 +205,13 @@ class PreferencesService {
         const user = authService.getUser();
         if (!user?.id) return;
 
-        const wsUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+        // Use the same origin as the current page for WebSocket connection
+        // This ensures it works in both development (localhost) and production (dash.olympiasuite.com)
+        const wsUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
         this.socket = io(wsUrl, {
             transports: ['websocket', 'polling'],
-            reconnection: true
+            reconnection: true,
+            path: '/socket.io/'
         });
 
         this.socket.on('connect', () => {
@@ -219,7 +222,7 @@ class PreferencesService {
         this.socket.on('joined', (data: any) => {
             const sessionCount = data.session_count || 1;
             console.log(`✅ Joined room: ${data.room} (${sessionCount} session${sessionCount > 1 ? 's' : ''} active)`);
-            
+
             if (sessionCount === 1) {
                 console.log('ℹ️ You are the only session - broadcasts disabled for efficiency');
             }
@@ -228,7 +231,7 @@ class PreferencesService {
         this.socket.on('session_count_updated', (data: any) => {
             const sessionCount = data.session_count || 1;
             console.log(`📊 Session count updated: ${sessionCount} session${sessionCount > 1 ? 's' : ''} active`);
-            
+
             if (sessionCount === 1) {
                 console.log('ℹ️ You are now alone - broadcasts will be disabled');
             } else if (sessionCount === 2) {
@@ -259,7 +262,7 @@ class PreferencesService {
             console.log(`   My session: ${this.sessionId.substring(0, 8)}...`);
             console.log(`   Version: ${data.version} (my version: ${this.version})`);
             console.log(`   Is own broadcast: ${data.origin_session_id === this.sessionId}`);
-            
+
             // Ignore our own broadcasts
             if (data.origin_session_id === this.sessionId) {
                 console.log('⏭️ Ignoring own broadcast');
@@ -276,7 +279,7 @@ class PreferencesService {
             this.preferences = data.preferences;
             this.version = data.version;
             this.saveToCache();
-            
+
             // Notify all subscribers
             this.changeCallbacks.forEach(cb => cb());
         });
@@ -308,9 +311,9 @@ class PreferencesService {
         const oldUserId = this.currentUserId;
         const newUser = this.getCurrentUserFromAuth();
         const newUserId = newUser?.id || null;
-        
+
         console.log(`🔄 Switching user context: ${oldUserId} → ${newUserId}`);
-        
+
         // Disconnect current WebSocket
         if (this.socket?.connected) {
             console.log('Disconnecting WebSocket...');
@@ -324,7 +327,7 @@ class PreferencesService {
         this.saveTimers.forEach(timer => clearTimeout(timer));
         this.saveTimers.clear();
         this.syncInProgress = false;
-        
+
         // Update user ID BEFORE loading cache (changes cache keys)
         this.currentUserId = newUserId;
 
@@ -334,13 +337,13 @@ class PreferencesService {
         // Fetch fresh from server and reconnect WebSocket
         console.log(`Fetching preferences for user ${newUserId}...`);
         await this.syncOnLogin();
-        
+
         // Rejoin rooms with new impersonation state
         this.rejoinRooms();
-        
+
         // Notify subscribers
         this.changeCallbacks.forEach(cb => cb());
-        
+
         console.log(`✅ User context switched to user ${newUserId}`);
     }
 
@@ -450,7 +453,7 @@ class PreferencesService {
                 );
 
                 const data: SaveResponse = await response.json();
-                
+
                 if (data.success) {
                     this.version = data.version;
                     return true;
@@ -470,7 +473,7 @@ class PreferencesService {
         this.preferences = {};
         this.version = 0;
         this.saveToCache();
-        
+
         if (authService.isAuthenticated()) {
             await this.saveToServer();
         }
@@ -539,24 +542,24 @@ class PreferencesService {
                 this.version = data.version;
                 this.saveToCache();
                 console.log(`✅ Saved (v${this.version})`);
-                
+
                 // Trigger broadcast via WebSocket event (works reliably!)
                 if (this.socket?.connected) {
                     // Use impersonated user ID if impersonating, otherwise use admin's ID
-                    const targetUserId = authService.isImpersonating() 
-                        ? authService.getImpersonatedUser()?.id 
+                    const targetUserId = authService.isImpersonating()
+                        ? authService.getImpersonatedUser()?.id
                         : authService.getUser()?.id;
-                    
+
                     this.socket.emit('broadcast_preferences', {
                         user_id: targetUserId,
                         preferences: this.preferences,
                         version: this.version,
                         origin_session_id: this.sessionId
                     });
-                    
+
                     console.log(`📡 Broadcasting to room user_${targetUserId}${authService.isImpersonating() ? ' (impersonated)' : ''}`);
                 }
-                
+
                 return true;
             } else if (data.conflict) {
                 console.warn('⚠️ Version conflict, syncing...');
@@ -587,7 +590,7 @@ class PreferencesService {
      */
     private deepMerge(target: any, source: any): any {
         const output = { ...target };
-        
+
         if (this.isObject(target) && this.isObject(source)) {
             Object.keys(source).forEach(key => {
                 if (this.isObject(source[key])) {
@@ -601,7 +604,7 @@ class PreferencesService {
                 }
             });
         }
-        
+
         return output;
     }
 

@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         destination: `${apiBaseUrl}/auth/:path*`,
       },
       {
+        source: '/socket.io/:path*',
+        destination: `${apiBaseUrl}/socket.io/:path*`,
+      },
+      {
         source: '/admin/:path((?!_next).*)',
         destination: '/admin/page',
       },
