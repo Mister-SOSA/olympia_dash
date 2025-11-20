@@ -436,7 +436,7 @@ function ToggleSetting({
                     }`}
             >
                 <motion.div
-                    className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md"
+                    className="absolute top-0.5 left-0.5 w-5 h-5 bg-ui-text-primary rounded-full shadow-md"
                     animate={{ x: isEnabled ? 24 : 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />

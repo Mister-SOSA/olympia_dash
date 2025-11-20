@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { Select } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmModal } from '@/components/ui/modal';
 import {
   MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
-  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity, MdPerson, MdBarChart
+  MdFileDownload, MdCleaningServices, MdGroups, MdSecurity, MdPerson, MdBarChart, MdDescription
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
@@ -79,6 +81,13 @@ export default function AdminPage() {
   const [users, setUsers] = useState<ExtendedUser[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'warning' | 'danger' | 'info';
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', type: 'warning', onConfirm: () => { } });
   const [stats, setStats] = useState<Stats | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
@@ -198,9 +207,16 @@ export default function AdminPage() {
   };
 
   const handleChangeRole = async (userId: number, newRole: string) => {
-    if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Change User Role',
+      message: `Are you sure you want to change this user's role to ${newRole}?`,
+      type: 'warning',
+      onConfirm: () => executeChangeRole(userId, newRole)
+    });
+  };
+
+  const executeChangeRole = async (userId: number, newRole: string) => {
 
     try {
       const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/users/${userId}/role`, {
@@ -226,9 +242,16 @@ export default function AdminPage() {
   };
 
   const handleImpersonateUser = async (userId: number, userName: string) => {
-    if (!confirm(`Impersonate ${userName}?\n\nYou will:\n- View their dashboard\n- See their widgets and presets\n- Edit their configuration\n- Join their WebSocket room\n\nAll changes will be saved to their account.`)) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: `Impersonate ${userName}`,
+      message: `You will:\n• View their dashboard\n• See their widgets and presets\n• Edit their configuration\n• Join their WebSocket room\n\nAll changes will be saved to their account.`,
+      type: 'info',
+      onConfirm: () => executeImpersonate(userId, userName)
+    });
+  };
+
+  const executeImpersonate = async (userId: number, userName: string) => {
 
     try {
       console.log(`🎭 Initiating impersonation of ${userName} (ID: ${userId})`);
@@ -256,9 +279,16 @@ export default function AdminPage() {
   };
 
   const handleRevokeAllSessions = async (userId: number) => {
-    if (!confirm('Are you sure you want to revoke all sessions for this user?')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Revoke All Sessions',
+      message: 'Are you sure you want to revoke all sessions for this user? They will need to log in again.',
+      type: 'danger',
+      onConfirm: () => executeRevokeAllSessions(userId)
+    });
+  };
+
+  const executeRevokeAllSessions = async (userId: number) => {
 
     try {
       const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/users/${userId}/sessions`, {
@@ -280,9 +310,16 @@ export default function AdminPage() {
   };
 
   const handleDeleteDeviceSession = async (sessionId: number) => {
-    if (!confirm('Are you sure you want to revoke this device session?')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Revoke Device Session',
+      message: 'Are you sure you want to revoke this device session?',
+      type: 'warning',
+      onConfirm: () => executeDeleteDeviceSession(sessionId)
+    });
+  };
+
+  const executeDeleteDeviceSession = async (sessionId: number) => {
 
     try {
       const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/device-sessions/${sessionId}`, {
@@ -326,7 +363,17 @@ export default function AdminPage() {
     if (selectedUsers.size === 0) return;
 
     const action = activate ? 'activate' : 'deactivate';
-    if (!confirm(`${action} ${selectedUsers.size} user(s)?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: activate ? 'Activate Users' : 'Deactivate Users',
+      message: `${action} ${selectedUsers.size} user(s)?`,
+      type: 'warning',
+      onConfirm: () => executeBulkActivate(activate)
+    });
+  };
+
+  const executeBulkActivate = async (activate: boolean) => {
+    const action = activate ? 'activate' : 'deactivate';
 
     setBulkActionLoading(true);
     let successCount = 0;
@@ -355,7 +402,16 @@ export default function AdminPage() {
   const handleBulkRevokeSession = async () => {
     if (selectedUsers.size === 0) return;
 
-    if (!confirm(`Revoke all sessions for ${selectedUsers.size} user(s)?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Revoke Sessions',
+      message: `Revoke all sessions for ${selectedUsers.size} user(s)? They will need to log in again.`,
+      type: 'danger',
+      onConfirm: () => executeBulkRevokeSession()
+    });
+  };
+
+  const executeBulkRevokeSession = async () => {
 
     setBulkActionLoading(true);
     let successCount = 0;
@@ -387,10 +443,16 @@ export default function AdminPage() {
   };
 
   const handleSystemCleanup = async () => {
-    if (!confirm('This will clean up expired sessions, device codes, and old logs. Continue?')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Clean Up Database',
+      message: 'This will clean up expired sessions, device codes, and old logs. Continue?',
+      type: 'warning',
+      onConfirm: () => executeSystemCleanup()
+    });
+  };
 
+  const executeSystemCleanup = async () => {
     try {
       const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/system/cleanup`, {
         method: 'POST',
@@ -478,10 +540,10 @@ export default function AdminPage() {
     { id: 'overview', label: 'Overview', icon: MdAdminPanelSettings },
     { id: 'analytics', label: 'Analytics', icon: MdBarChart },
     { id: 'users', label: 'Users', icon: MdPeople },
-    { id: 'groups', label: 'Groups', icon: MdGroup },
+    { id: 'groups', label: 'Groups', icon: MdGroups },
     { id: 'permissions', label: 'Permissions', icon: MdSecurity },
     { id: 'activity', label: 'Activity', icon: MdHistory },
-    { id: 'logs', label: 'Audit Logs', icon: MdHistory },
+    { id: 'logs', label: 'Audit Logs', icon: MdDescription },
     { id: 'devices', label: 'Devices', icon: MdDevices },
   ];
 
@@ -765,55 +827,59 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
 
-              {/* Bulk Actions Bar */}
-              {selectedUsers.size > 0 && (
-                <div className="bg-ui-accent-primary-bg border-b border-ui-accent-primary-border p-4 animate-in slide-in-from-top-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className="text-ui-accent-primary-text font-semibold">
-                        {selectedUsers.size} user(s) selected
-                      </span>
-                      <Button
-                        onClick={() => setSelectedUsers(new Set())}
-                        variant="ghost"
-                        size="sm"
-                        className="text-ui-text-secondary hover:text-ui-text-primary"
-                      >
-                        Clear Selection
-                      </Button>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleBulkActivate(true)}
-                        disabled={bulkActionLoading}
-                        size="sm"
-                        className="bg-ui-success-bg hover:bg-ui-success-bg/90 text-ui-success-text border border-ui-success-border"
-                      >
-                        <MdCheckCircle className="mr-1" />
-                        Activate All
-                      </Button>
-                      <Button
-                        onClick={() => handleBulkActivate(false)}
-                        disabled={bulkActionLoading}
-                        size="sm"
-                        className="bg-ui-warning-bg hover:bg-ui-warning-bg/90 text-ui-warning-text border border-ui-warning-border"
-                      >
-                        Deactivate All
-                      </Button>
-                      <Button
-                        onClick={handleBulkRevokeSession}
-                        disabled={bulkActionLoading}
-                        size="sm"
-                        variant="outline"
-                        className="border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg"
-                      >
-                        <MdCleaningServices className="mr-1" />
-                        Revoke Sessions
-                      </Button>
-                    </div>
+              {/* Bulk Actions Bar - Always visible, disabled when no selection */}
+              <div className="bg-ui-bg-secondary border-b border-ui-border-primary h-[72px]">
+                <div className="p-4 h-full flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className={`font-semibold flex items-center gap-2 transition-colors ${selectedUsers.size > 0 ? 'text-ui-accent-primary' : 'text-ui-text-muted'
+                      }`}>
+                      <MdCheckCircle className={selectedUsers.size > 0 ? 'text-ui-accent-primary' : 'text-ui-text-muted'} />
+                      {selectedUsers.size > 0
+                        ? `${selectedUsers.size} user${selectedUsers.size !== 1 ? 's' : ''} selected`
+                        : 'No users selected'
+                      }
+                    </span>
+                    <Button
+                      onClick={() => setSelectedUsers(new Set())}
+                      variant="ghost"
+                      size="sm"
+                      disabled={selectedUsers.size === 0}
+                      className="text-ui-text-secondary hover:text-ui-text-primary h-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleBulkActivate(true)}
+                      disabled={bulkActionLoading || selectedUsers.size === 0}
+                      size="sm"
+                      className="bg-ui-success-bg hover:bg-ui-success-bg/90 text-ui-success-text border border-ui-success-border h-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <MdCheckCircle className="mr-1 h-4 w-4" />
+                      Activate
+                    </Button>
+                    <Button
+                      onClick={() => handleBulkActivate(false)}
+                      disabled={bulkActionLoading || selectedUsers.size === 0}
+                      size="sm"
+                      className="bg-ui-warning-bg hover:bg-ui-warning-bg/90 text-ui-warning-text border border-ui-warning-border h-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Deactivate
+                    </Button>
+                    <Button
+                      onClick={handleBulkRevokeSession}
+                      disabled={bulkActionLoading || selectedUsers.size === 0}
+                      size="sm"
+                      variant="outline"
+                      className="border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg h-8 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <MdCleaningServices className="mr-1 h-4 w-4" />
+                      Revoke Sessions
+                    </Button>
                   </div>
                 </div>
-              )}
+              </div>
 
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -821,11 +887,9 @@ export default function AdminPage() {
                     <thead className="bg-ui-bg-tertiary">
                       <tr>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider w-12">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
-                            onChange={handleSelectAllUsers}
-                            className="w-4 h-4 rounded border-ui-border-primary bg-ui-bg-tertiary text-ui-accent-primary focus:ring-ui-accent-primary cursor-pointer"
+                            onCheckedChange={handleSelectAllUsers}
                           />
                         </th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
@@ -837,13 +901,11 @@ export default function AdminPage() {
                     </thead>
                     <tbody className="divide-y divide-ui-border-primary">
                       {filteredUsers.map((user) => (
-                        <tr key={user.id} className={`hover:bg-ui-bg-tertiary/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-ui-accent-primary-bg/30' : ''}`}>
-                          <td className="p-4">
-                            <input
-                              type="checkbox"
+                        <tr key={user.id} className={`hover:bg-ui-bg-tertiary/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-ui-accent-primary-bg/20' : ''}`}>
+                          <td className={`p-4 ${selectedUsers.has(user.id) ? 'border-l-4 border-ui-accent-primary' : 'border-l-4 border-transparent'}`}>
+                            <Checkbox
                               checked={selectedUsers.has(user.id)}
-                              onChange={() => handleToggleUserSelection(user.id)}
-                              className="w-4 h-4 rounded border-ui-border-primary bg-ui-bg-secondary text-ui-accent-primary focus:ring-ui-accent-primary cursor-pointer"
+                              onCheckedChange={() => handleToggleUserSelection(user.id)}
                             />
                           </td>
                           <td className="p-4">
@@ -871,11 +933,13 @@ export default function AdminPage() {
                           </td>
                           <td className="p-4">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${user.is_active
-                                ? 'bg-ui-success-bg text-ui-success-text'
-                                : 'bg-ui-danger-bg text-ui-danger-text'
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${user.is_active
+                                  ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border'
+                                  : 'bg-ui-danger-bg text-ui-danger-text border-ui-danger-border'
                                 }`}
                             >
+                              <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-ui-success-text' : 'bg-ui-danger-text'
+                                }`} />
                               {user.is_active ? 'Active' : 'Inactive'}
                             </span>
                           </td>
@@ -1079,6 +1143,16 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
     </div>
   );
 }

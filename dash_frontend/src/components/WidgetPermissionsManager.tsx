@@ -445,7 +445,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                                 onClick={() => handleToggleWidget(widget.id)}
                                                 className={`flex items-start space-x-3 p-3 rounded cursor-pointer transition-colors ${selectedWidgets.has(widget.id)
                                                     ? 'bg-ui-accent-primary/20'
-                                                    : 'bg-ui-bg-tertiary hover:bg-slate-700'
+                                                    : 'bg-ui-bg-tertiary hover:bg-ui-bg-quaternary'
                                                     }`}
                                             >
                                                 <Checkbox
