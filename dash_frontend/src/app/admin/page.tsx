@@ -48,6 +48,8 @@ interface AuditLog {
   details: string | null;
   ip_address: string | null;
   created_at: string;
+  user_email?: string;
+  user_name?: string;
 }
 
 interface DeviceSession {
@@ -999,7 +1001,14 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="p-4 text-ui-text-secondary text-sm">
-                            {log.user_id ? `User #${log.user_id}` : 'System'}
+                            {log.user_id ? (
+                              <div>
+                                <div className="font-medium text-ui-text-primary">{log.user_name || `User #${log.user_id}`}</div>
+                                <div className="text-xs text-ui-text-muted">{log.user_email}</div>
+                              </div>
+                            ) : (
+                              <span className="text-ui-text-muted italic">System</span>
+                            )}
                           </td>
                           <td className="p-4 text-ui-text-secondary text-sm max-w-md truncate" title={log.details || ''}>
                             {log.details || '-'}

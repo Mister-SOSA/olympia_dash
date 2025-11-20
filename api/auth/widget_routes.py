@@ -107,7 +107,7 @@ def grant_user_widget_permission(user_id, widget_id):
             }), 400
         
         log_action(admin_user['id'], 'widget_permission_granted', 
-                   f'Granted {access_level} access to widget {widget_id} for user {user["email"]}', 
+                   f'Granted "{access_level}" access to widget "{widget_id}" for {user["email"]}', 
                    get_client_ip())
         
         return jsonify({
@@ -143,7 +143,7 @@ def revoke_user_widget_permission(user_id, widget_id):
             }), 404
         
         log_action(admin_user['id'], 'widget_permission_revoked', 
-                   f'Revoked widget {widget_id} permission from user {user["email"]}', 
+                   f'Revoked widget "{widget_id}" from {user["email"]}', 
                    get_client_ip())
         
         return jsonify({
@@ -189,7 +189,7 @@ def grant_group_widget_permission_route(group_id, widget_id):
             }), 400
         
         log_action(admin_user['id'], 'group_widget_permission_granted', 
-                   f'Granted {access_level} access to widget {widget_id} for group {group["name"]}', 
+                   f'Granted "{access_level}" access to widget "{widget_id}" for group "{group["name"]}"', 
                    get_client_ip())
         
         return jsonify({
@@ -225,7 +225,7 @@ def revoke_group_widget_permission_route(group_id, widget_id):
             }), 404
         
         log_action(admin_user['id'], 'group_widget_permission_revoked', 
-                   f'Revoked widget {widget_id} permission from group {group["name"]}', 
+                   f'Revoked widget "{widget_id}" from group "{group["name"]}"', 
                    get_client_ip())
         
         return jsonify({
@@ -293,8 +293,10 @@ def bulk_grant_permissions():
         
         count = bulk_grant_widget_permissions(user_ids, widget_ids, access_level, admin_user['id'])
         
+        # Create detailed log message
+        widget_list = ', '.join(widget_ids[:3]) + (f' and {len(widget_ids)-3} more' if len(widget_ids) > 3 else '')
         log_action(admin_user['id'], 'bulk_widget_permissions_granted', 
-                   f'Granted {count} widget permissions in bulk', 
+                   f'Granted {count} permissions: {len(widget_ids)} widgets ({widget_list}) to {len(user_ids)} users', 
                    get_client_ip())
         
         return jsonify({
@@ -327,8 +329,10 @@ def bulk_revoke_permissions():
         
         count = bulk_revoke_widget_permissions(user_ids, widget_ids)
         
+        # Create detailed log message
+        widget_list = ', '.join(widget_ids[:3]) + (f' and {len(widget_ids)-3} more' if len(widget_ids) > 3 else '')
         log_action(admin_user['id'], 'bulk_widget_permissions_revoked', 
-                   f'Revoked {count} widget permissions in bulk', 
+                   f'Revoked {count} permissions: {len(widget_ids)} widgets ({widget_list}) from {len(user_ids)} users', 
                    get_client_ip())
         
         return jsonify({

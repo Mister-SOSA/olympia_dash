@@ -226,6 +226,24 @@ def refresh():
         # Generate new access token
         access_token = generate_access_token(user['id'], user['email'], user['role'])
         
+        # Log token refresh (but don't spam - only log once per hour per user)
+        from datetime import datetime
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        # Check if we've logged a refresh in the last hour
+        cursor.execute('''
+            SELECT id FROM audit_log 
+            WHERE user_id = ? AND action = 'token_refreshed' 
+            AND created_at > datetime('now', '-1 hour')
+            LIMIT 1
+        ''', (user_id,))
+        recent_refresh = cursor.fetchone()
+        conn.close()
+        
+        if not recent_refresh:
+            log_action(user_id, 'token_refreshed', 'Access token refreshed', get_client_ip())
+        
         return jsonify({
             'success': True,
             'access_token': access_token

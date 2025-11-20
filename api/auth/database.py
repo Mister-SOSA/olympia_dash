@@ -507,16 +507,28 @@ def log_action(user_id, action, details=None, ip_address=None):
     conn.close()
 
 def get_audit_logs(limit=100, user_id=None):
-    """Get audit logs."""
+    """Get audit logs with user information."""
     conn = get_db()
     cursor = conn.cursor()
     if user_id:
         cursor.execute('''
-            SELECT * FROM audit_log WHERE user_id = ? 
-            ORDER BY created_at DESC LIMIT ?
+            SELECT 
+                al.id, al.user_id, al.action, al.details, al.ip_address, al.created_at,
+                u.email as user_email, u.name as user_name
+            FROM audit_log al
+            LEFT JOIN users u ON al.user_id = u.id
+            WHERE al.user_id = ? 
+            ORDER BY al.created_at DESC LIMIT ?
         ''', (user_id, limit))
     else:
-        cursor.execute('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ?', (limit,))
+        cursor.execute('''
+            SELECT 
+                al.id, al.user_id, al.action, al.details, al.ip_address, al.created_at,
+                u.email as user_email, u.name as user_name
+            FROM audit_log al
+            LEFT JOIN users u ON al.user_id = u.id
+            ORDER BY al.created_at DESC LIMIT ?
+        ''', (limit,))
     logs = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return logs

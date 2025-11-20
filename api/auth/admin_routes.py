@@ -126,7 +126,12 @@ def change_user_role(user_id):
             }), 400
         
         update_user_role(user_id, new_role)
-        log_action(admin_user['id'], 'role_changed', f'Changed user {user_id} role to {new_role}', get_client_ip())
+        # Log with user email and role transition
+        target_email = user['email'] if user else f'user_{user_id}'
+        old_role = user['role'] if user else 'unknown'
+        log_action(admin_user['id'], 'role_changed', 
+                   f'Changed {target_email} role from {old_role} to {new_role}', 
+                   get_client_ip())
         
         return jsonify({
             'success': True,
@@ -250,7 +255,10 @@ def toggle_user_status(user_id):
         if new_status == 'inactive':
             delete_all_user_sessions(user_id)
         
-        log_action(admin_user['id'], 'user_status_changed', f'User {user_id} set to {new_status}', get_client_ip())
+        # Log with user email
+        target_email = user['email'] if user else f'user_{user_id}'
+        log_action(admin_user['id'], 'user_status_changed', 
+                   f'Set {target_email} status to {new_status}', get_client_ip())
         
         return jsonify({
             'success': True,
@@ -292,7 +300,10 @@ def add_permission(user_id):
                 'error': 'Permission already granted or error occurred'
             }), 400
         
-        log_action(admin_user['id'], 'permission_granted', f'Granted {permission} to user {user_id}', get_client_ip())
+        # Log with user email
+        target_email = user['email'] if user else f'user_{user_id}'
+        log_action(admin_user['id'], 'permission_granted', 
+                   f'Granted permission "{permission}" to {target_email}', get_client_ip())
         
         return jsonify({
             'success': True,
@@ -319,7 +330,10 @@ def remove_permission(user_id, permission):
             }), 404
         
         revoke_permission(user_id, permission)
-        log_action(admin_user['id'], 'permission_revoked', f'Revoked {permission} from user {user_id}', get_client_ip())
+        # Log with user email
+        target_email = user['email'] if user else f'user_{user_id}'
+        log_action(admin_user['id'], 'permission_revoked', 
+                   f'Revoked permission "{permission}" from {target_email}', get_client_ip())
         
         return jsonify({
             'success': True,
@@ -346,7 +360,18 @@ def revoke_all_sessions(user_id):
             }), 404
         
         delete_all_user_sessions(user_id)
-        log_action(admin_user['id'], 'sessions_revoked', f'Revoked all sessions for user {user_id}', get_client_ip())
+        
+        # Get user email and count sessions for better logging
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM sessions WHERE user_id = ?', (user_id,))
+        session_count = cursor.fetchone()[0]
+        conn.close()
+        
+        target_email = user['email'] if user else f'user_{user_id}'
+        log_action(admin_user['id'], 'sessions_revoked', 
+                   f'Revoked {session_count} session(s) for {target_email}', get_client_ip())
         
         return jsonify({
             'success': True,

@@ -213,7 +213,7 @@ def add_member_to_group(group_id):
             }), 400
         
         log_action(admin_user['id'], 'user_added_to_group', 
-                   f'Added user {user["email"]} to group {group["name"]}', get_client_ip())
+                   f'Added {user["email"]} to group "{group["name"]}"', get_client_ip())
         
         return jsonify({
             'success': True,
@@ -255,7 +255,7 @@ def remove_member_from_group(group_id, user_id):
             }), 400
         
         log_action(admin_user['id'], 'user_removed_from_group', 
-                   f'Removed user {user["email"]} from group {group["name"]}', get_client_ip())
+                   f'Removed {user["email"]} from group "{group["name"]}"', get_client_ip())
         
         return jsonify({
             'success': True,
@@ -319,7 +319,7 @@ def bulk_add_members(group_id):
                 added_count += 1
         
         log_action(admin_user['id'], 'bulk_users_added_to_group', 
-                   f'Added {added_count} users to group {group["name"]}', get_client_ip())
+                   f'Added {added_count} user(s) to group "{group["name"]}"', get_client_ip())
         
         return jsonify({
             'success': True,

@@ -105,7 +105,10 @@ def replace_preferences():
         logger.info(f'✅ SAVED - New version: {new_version}')
         # Client will trigger broadcast via WebSocket after receiving save response
         
-        log_action(user['id'], 'preferences_updated', 'Full preferences update', get_client_ip())
+        # Log with more detail about what changed
+        pref_keys = list(preferences.keys()) if isinstance(preferences, dict) else ['unknown']
+        details = f'Updated preferences: {', '.join(pref_keys[:5])}' + (' and more' if len(pref_keys) > 5 else '')
+        log_action(user['id'], 'preferences_updated', details, get_client_ip())
         
         return jsonify({
             'success': True,
@@ -168,7 +171,10 @@ def update_preferences():
             }), 409
         
         # Client will trigger broadcast via WebSocket after receiving save response
-        log_action(user['id'], 'preferences_updated', 'Partial preferences update', get_client_ip())
+        # Log with more detail about what changed
+        pref_keys = list(preference_updates.keys()) if isinstance(preference_updates, dict) else ['unknown']
+        details = f'Updated preferences: {", ".join(pref_keys[:5])}' + (' and more' if len(pref_keys) > 5 else '')
+        log_action(target_user_id, 'preferences_updated', details, get_client_ip())
         
         return jsonify({
             'success': True,
