@@ -220,7 +220,8 @@ class PreferencesService {
             reconnectionDelayMax: 5000,
             reconnectionAttempts: 5,
             timeout: 20000,
-            path: '/socket.io/'
+            // Use /api/socket.io path since we're proxying through Next.js API routes
+            path: '/api/socket.io/'
         });
 
         this.socket.on('connect', () => {
