@@ -381,8 +381,18 @@ export default function AdminPage() {
 
     for (const userId of selectedUsers) {
       try {
-        await handleToggleActive(userId);
-        successCount++;
+        // Find the user to check current status
+        const user = users.find(u => u.id === userId);
+        if (!user) continue;
+
+        // Only toggle if the current state doesn't match the desired state
+        if ((activate && !user.is_active) || (!activate && user.is_active)) {
+          await handleToggleActive(userId);
+          successCount++;
+        } else {
+          // User already in desired state, count as success
+          successCount++;
+        }
       } catch {
         errorCount++;
       }
