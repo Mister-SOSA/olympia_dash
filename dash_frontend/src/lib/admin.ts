@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/config';
-import { authService } from './auth';
+import { authService, User } from './auth';
 import type { UserGroup, WidgetPermission, BulkPermissionRequest, WidgetAccessControl } from '@/types';
 
 /**
@@ -131,6 +131,25 @@ class AdminService {
         }
 
         return data.groups;
+    }
+
+    async getGroupMembers(groupId: number): Promise<User[]> {
+        const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/groups/${groupId}/members`);
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch group members');
+        }
+
+        return data.members;
+    }
+
+    async addGroupMember(groupId: number, userId: number): Promise<void> {
+        return this.addUserToGroup(groupId, userId);
+    }
+
+    async removeGroupMember(groupId: number, userId: number): Promise<void> {
+        return this.removeUserFromGroup(groupId, userId);
     }
 
     // ============ Widget Permissions ============

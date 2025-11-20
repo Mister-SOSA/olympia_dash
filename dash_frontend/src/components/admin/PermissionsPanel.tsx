@@ -343,14 +343,14 @@ export function PermissionsPanel() {
                               key={level}
                               onClick={() => handlePermissionChange(row.widgetId, level)}
                               disabled={saving === row.widgetId}
-                              className={`flex-1 text-[10px] font-medium py-1.5 rounded transition-all uppercase tracking-wide ${row.currentLevel === level
+                                                className={`flex-1 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide transform hover:scale-105 ${row.currentLevel === level
                                   ? level === 'none'
-                                    ? 'bg-ui-text-muted text-white shadow-sm'
+                                    ? 'bg-ui-text-muted text-white shadow-sm scale-105'
                                     : level === 'view'
-                                      ? 'bg-ui-accent-primary text-white shadow-sm'
+                                      ? 'bg-ui-accent-primary text-white shadow-sm scale-105'
                                       : level === 'edit'
-                                        ? 'bg-ui-warning-text text-white shadow-sm'
-                                        : 'bg-ui-accent-secondary-text text-white shadow-sm'
+                                        ? 'bg-ui-warning-text text-white shadow-sm scale-105'
+                                        : 'bg-ui-accent-secondary-text text-white shadow-sm scale-105'
                                   : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                                 }`}
                             >

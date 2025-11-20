@@ -12,12 +12,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import {
   MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
-  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity, MdPerson
+  MdFileDownload, MdCleaningServices, MdGroup, MdSecurity, MdPerson, MdBarChart
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
 import { GroupsPanel } from '@/components/admin/GroupsPanel';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
+import { ActivityPanel } from '@/components/admin/ActivityPanel';
+import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,12 +74,14 @@ export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<ExtendedUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions' | 'activity' | 'analytics'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -94,6 +98,26 @@ export default function AdminPage() {
     }
 
     loadData();
+
+    // Keyboard shortcuts
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Alt+Number to switch tabs
+      if (e.altKey && e.key >= '1' && e.key <= '8') {
+        const tabIndex = parseInt(e.key) - 1;
+        if (tabs[tabIndex]) {
+          setActiveTab(tabs[tabIndex].id as any);
+        }
+      }
+      // Alt+R to refresh
+      if (e.altKey && e.key === 'r') {
+        e.preventDefault();
+        loadData();
+        toast.success('Data refreshed');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, [router]);
 
   const loadData = async () => {
@@ -276,6 +300,89 @@ export default function AdminPage() {
     }
   };
 
+  // Bulk user actions
+  const handleSelectAllUsers = () => {
+    if (selectedUsers.size === filteredUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(filteredUsers.map(u => u.id)));
+    }
+  };
+
+  const handleToggleUserSelection = (userId: number) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  const handleBulkActivate = async (activate: boolean) => {
+    if (selectedUsers.size === 0) return;
+    
+    const action = activate ? 'activate' : 'deactivate';
+    if (!confirm(`${action} ${selectedUsers.size} user(s)?`)) return;
+
+    setBulkActionLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const userId of selectedUsers) {
+      try {
+        await handleToggleActive(userId);
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setBulkActionLoading(false);
+    setSelectedUsers(new Set());
+    
+    if (successCount > 0) {
+      toast.success(`${successCount} user(s) ${action}d successfully`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed to ${action} ${errorCount} user(s)`);
+    }
+  };
+
+  const handleBulkRevokeSession = async () => {
+    if (selectedUsers.size === 0) return;
+    
+    if (!confirm(`Revoke all sessions for ${selectedUsers.size} user(s)?`)) return;
+
+    setBulkActionLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const userId of selectedUsers) {
+      try {
+        const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/admin/users/${userId}/sessions`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+        if (data.success) successCount++;
+        else errorCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setBulkActionLoading(false);
+    setSelectedUsers(new Set());
+    loadData();
+    
+    if (successCount > 0) {
+      toast.success(`Revoked sessions for ${successCount} user(s)`);
+    }
+    if (errorCount > 0) {
+      toast.error(`Failed for ${errorCount} user(s)`);
+    }
+  };
+
   const handleSystemCleanup = async () => {
     if (!confirm('This will clean up expired sessions, device codes, and old logs. Continue?')) {
       return;
@@ -366,9 +473,11 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: MdAdminPanelSettings },
+    { id: 'analytics', label: 'Analytics', icon: MdBarChart },
     { id: 'users', label: 'Users', icon: MdPeople },
     { id: 'groups', label: 'Groups', icon: MdGroup },
     { id: 'permissions', label: 'Permissions', icon: MdSecurity },
+    { id: 'activity', label: 'Activity', icon: MdHistory },
     { id: 'logs', label: 'Audit Logs', icon: MdHistory },
     { id: 'devices', label: 'Devices', icon: MdDevices },
   ];
@@ -424,9 +533,11 @@ export default function AdminPage() {
             </h2>
             <p className="text-ui-text-secondary">
               {activeTab === 'overview' && 'System health and performance metrics'}
+              {activeTab === 'analytics' && 'User behavior insights and trends'}
               {activeTab === 'users' && 'Manage user accounts and access'}
               {activeTab === 'groups' && 'Organize users into functional groups'}
               {activeTab === 'permissions' && 'Control widget access levels'}
+              {activeTab === 'activity' && 'Monitor system activity and events'}
               {activeTab === 'logs' && 'Track system activity and security events'}
               {activeTab === 'devices' && 'Manage paired displays and sessions'}
             </p>
@@ -650,11 +761,70 @@ export default function AdminPage() {
                   </div>
                 </div>
               </CardHeader>
+              
+              {/* Bulk Actions Bar */}
+              {selectedUsers.size > 0 && (
+                <div className="bg-ui-accent-primary-bg border-b border-ui-accent-primary-border p-4 animate-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-ui-accent-primary-text font-semibold">
+                        {selectedUsers.size} user(s) selected
+                      </span>
+                      <Button
+                        onClick={() => setSelectedUsers(new Set())}
+                        variant="ghost"
+                        size="sm"
+                        className="text-ui-text-secondary hover:text-ui-text-primary"
+                      >
+                        Clear Selection
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleBulkActivate(true)}
+                        disabled={bulkActionLoading}
+                        size="sm"
+                        className="bg-ui-success-bg hover:bg-ui-success-bg/90 text-ui-success-text border border-ui-success-border"
+                      >
+                        <MdCheckCircle className="mr-1" />
+                        Activate All
+                      </Button>
+                      <Button
+                        onClick={() => handleBulkActivate(false)}
+                        disabled={bulkActionLoading}
+                        size="sm"
+                        className="bg-ui-warning-bg hover:bg-ui-warning-bg/90 text-ui-warning-text border border-ui-warning-border"
+                      >
+                        Deactivate All
+                      </Button>
+                      <Button
+                        onClick={handleBulkRevokeSession}
+                        disabled={bulkActionLoading}
+                        size="sm"
+                        variant="outline"
+                        className="border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg"
+                      >
+                        <MdCleaningServices className="mr-1" />
+                        Revoke Sessions
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-ui-bg-tertiary">
                       <tr>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                            onChange={handleSelectAllUsers}
+                            className="w-4 h-4 rounded border-ui-border-primary bg-ui-bg-tertiary text-ui-accent-primary focus:ring-ui-accent-primary cursor-pointer"
+                          />
+                        </th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Role</th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Status</th>
@@ -664,7 +834,15 @@ export default function AdminPage() {
                     </thead>
                     <tbody className="divide-y divide-ui-border-primary">
                       {filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
+                        <tr key={user.id} className={`hover:bg-ui-bg-tertiary/50 transition-colors ${selectedUsers.has(user.id) ? 'bg-ui-accent-primary-bg/30' : ''}`}>
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.has(user.id)}
+                              onChange={() => handleToggleUserSelection(user.id)}
+                              className="w-4 h-4 rounded border-ui-border-primary bg-ui-bg-secondary text-ui-accent-primary focus:ring-ui-accent-primary cursor-pointer"
+                            />
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-ui-accent-primary-bg flex items-center justify-center text-ui-accent-primary-text font-bold">
@@ -766,6 +944,14 @@ export default function AdminPage() {
 
           {activeTab === 'permissions' && (
             <PermissionsPanel />
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsPanel />
+          )}
+
+          {activeTab === 'activity' && (
+            <ActivityPanel />
           )}
 
           {activeTab === 'logs' && (
