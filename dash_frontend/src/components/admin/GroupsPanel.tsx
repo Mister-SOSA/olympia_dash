@@ -92,7 +92,7 @@ export function GroupsPanel() {
             setIsCreating(false);
             resetForm();
             await loadGroups();
-            
+
             // Load the newly created group
             const newGroup = await adminService.getGroup(groupId);
             setSelectedGroup(newGroup as GroupWithMembers);

@@ -430,13 +430,15 @@ main {
 }
 
 .overview-metric-change--positive {
-  background-color: var(--success);
-  color: var(--text-primary);
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-text);
+  border: 1px solid var(--badge-success-border);
 }
 
 .overview-metric-change--negative {
-  background-color: var(--error);
-  color: var(--text-primary);
+  background-color: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  border: 1px solid var(--badge-error-border);
 }
 
 .overview-metric-change--neutral {
