@@ -1,19 +1,19 @@
 'use client';
 
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
 import { User } from "@/lib/auth";
-import { useTheme, THEMES, Theme } from "@/contexts/ThemeContext";
+import { useTheme, THEMES } from "@/contexts/ThemeContext";
 import { preferencesService } from "@/lib/preferences";
 import {
     MdCheck,
-    MdPerson,
     MdPalette,
+    MdTune,
     MdKeyboard,
-    MdDashboard,
-    MdNotifications,
-    MdWidgets,
-    MdSettings as MdSettingsIcon
+    MdShield,
+    MdLogout,
+    MdClose,
+    MdPerson
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -23,12 +23,22 @@ interface SettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type Tab = 'general' | 'dashboard' | 'widgets' | 'notifications' | 'keyboard' | 'account';
+type SettingsSection = 'appearance' | 'behavior' | 'shortcuts' | 'account';
+
+const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
+    { id: 'appearance', label: 'Appearance', icon: MdPalette },
+    { id: 'behavior', label: 'Behavior', icon: MdTune },
+    { id: 'shortcuts', label: 'Shortcuts', icon: MdKeyboard },
+    { id: 'account', label: 'Account', icon: MdPerson },
+];
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
-    const [activeTab, setActiveTab] = useState<Tab>('general');
-    const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>('dark');
+    const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
+    const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>(
+        THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
+    );
+    const contentRef = useRef<HTMLDivElement>(null);
 
     // Load preferences
     const [autoSaveLayout, setAutoSaveLayout] = useState(
@@ -47,363 +57,326 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
         preferencesService.get<number>('widgets.defaultRefreshInterval', 30)
     );
 
-    const tabs = [
-        { id: 'general' as Tab, label: 'General', icon: MdSettingsIcon },
-        { id: 'dashboard' as Tab, label: 'Dashboard', icon: MdDashboard },
-        { id: 'widgets' as Tab, label: 'Widgets', icon: MdWidgets },
-        { id: 'notifications' as Tab, label: 'Notifications', icon: MdNotifications },
-        { id: 'keyboard' as Tab, label: 'Keyboard', icon: MdKeyboard },
-        { id: 'account' as Tab, label: 'Account', icon: MdPerson },
-    ];
-
-    const updatePreference = (key: string, value: any, setter: (val: any) => void) => {
+    const updatePreference = <T,>(key: string, value: T, setter: (val: T) => void) => {
         setter(value);
         preferencesService.set(key, value);
     };
+
+    // Scroll to top when section changes
+    useEffect(() => {
+        contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [activeSection]);
 
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-4xl max-h-[90vh] flex flex-col"
+                className="w-full max-w-2xl h-[85vh] max-h-[700px] flex flex-col"
             >
-                <div className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary overflow-hidden flex flex-col">
+                <div className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden flex flex-col h-full">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-ui-border-primary flex-shrink-0">
-                        <div>
-                            <h2 className="text-lg font-semibold text-ui-text-primary">Settings</h2>
-                            <p className="text-xs text-ui-text-secondary">Customize your dashboard experience</p>
-                        </div>
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-primary flex-shrink-0">
+                        <h2 className="text-lg font-semibold text-ui-text-primary">Settings</h2>
                         <button
                             onClick={onClose}
                             className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
                         >
-                            <span className="text-2xl">×</span>
+                            <MdClose className="w-5 h-5" />
                         </button>
                     </div>
 
-                    {/* Content Area with Sidebar */}
-                    <div className="flex flex-1 overflow-hidden">
-                        {/* Sidebar */}
-                        <div className="w-48 border-r border-ui-border-primary bg-ui-bg-secondary/30 flex-shrink-0">
-                            <nav className="p-2 space-y-1">
-                                {tabs.map((tab) => {
-                                    const Icon = tab.icon;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${activeTab === tab.id
-                                                ? 'bg-ui-accent-primary text-white'
+                    {/* Navigation Tabs */}
+                    <div className="px-6 py-3 border-b border-ui-border-primary flex-shrink-0 bg-ui-bg-secondary/30">
+                        <nav className="flex gap-1 overflow-x-auto scrollbar-hide">
+                            {SECTIONS.map((section) => {
+                                const Icon = section.icon;
+                                const isActive = activeSection === section.id;
+                                return (
+                                    <button
+                                        key={section.id}
+                                        onClick={() => setActiveSection(section.id)}
+                                        className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${isActive
+                                                ? 'text-ui-accent-primary'
                                                 : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
-                                                }`}
-                                        >
-                                            <Icon className="w-5 h-5 flex-shrink-0" />
-                                            <span>{tab.label}</span>
-                                        </button>
-                                    );
-                                })}
-                            </nav>
-                        </div>
+                                            }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span>{section.label}</span>
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTab"
+                                                className="absolute inset-0 bg-ui-accent-primary/10 rounded-lg border border-ui-accent-primary/20"
+                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                            />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
 
-                        {/* Content Panel */}
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="p-6">
-                                {/* General Tab */}
-                                {activeTab === 'general' && (
+                    {/* Scrollable Content */}
+                    <div ref={contentRef} className="flex-1 overflow-y-auto">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeSection}
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                transition={{ duration: 0.15 }}
+                                className="p-6"
+                            >
+                                {/* Appearance Section */}
+                                {activeSection === 'appearance' && (
                                     <div className="space-y-6">
+                                        {/* Theme Selection */}
                                         <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Appearance</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Customize how your dashboard looks</p>
-                                        </div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Theme</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-4">Choose your preferred color scheme</p>
 
-                                        {/* Theme Selector */}
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-sm font-medium text-ui-text-primary">Theme</label>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => setThemeCategory('dark')}
-                                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors ${themeCategory === 'dark'
-                                                            ? 'bg-ui-accent-primary text-white'
+                                            {/* Category Toggle */}
+                                            <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg mb-4 w-fit">
+                                                <button
+                                                    onClick={() => setThemeCategory('dark')}
+                                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'dark'
+                                                            ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
                                                             : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                            }`}
-                                                    >
-                                                        Dark
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setThemeCategory('light')}
-                                                        className={`px-2 py-1 text-xs font-medium rounded transition-colors ${themeCategory === 'light'
-                                                            ? 'bg-ui-accent-primary text-white'
+                                                        }`}
+                                                >
+                                                    Dark
+                                                </button>
+                                                <button
+                                                    onClick={() => setThemeCategory('light')}
+                                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'light'
+                                                            ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
                                                             : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                            }`}
-                                                    >
-                                                        Light
-                                                    </button>
-                                                </div>
+                                                        }`}
+                                                >
+                                                    Light
+                                                </button>
                                             </div>
 
-                                            <div className="grid grid-cols-4 gap-2.5">
+                                            {/* Theme Grid */}
+                                            <div className="grid grid-cols-5 gap-3">
                                                 {THEMES.filter(t => t.category === themeCategory).map((t) => (
                                                     <button
                                                         key={t.id}
                                                         onClick={() => setTheme(t.id)}
-                                                        className={`group relative aspect-square rounded-lg border-2 transition-all hover:scale-105 overflow-hidden ${theme === t.id
-                                                            ? 'border-ui-accent-primary shadow-lg ring-2 ring-ui-accent-primary/30'
-                                                            : 'border-ui-border-primary hover:border-ui-accent-primary/50'
+                                                        className={`group relative rounded-xl border-2 transition-all hover:scale-[1.02] overflow-hidden ${theme === t.id
+                                                                ? 'border-ui-accent-primary ring-2 ring-ui-accent-primary/20'
+                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
                                                             }`}
                                                     >
-                                                        {/* Mini Dashboard Preview */}
-                                                        <div className="absolute inset-0 flex flex-col" style={{ backgroundColor: t.colors[2] }}>
-                                                            <div className="flex-1 p-2 space-y-2">
-                                                                {/* Header Bar */}
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div className="h-1.5 w-10 rounded" style={{ backgroundColor: t.colors[0] }} />
-                                                                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.colors[1] }} />
-                                                                </div>
-
-                                                                {/* Single Widget Card */}
-                                                                <div className="rounded p-2 space-y-1" style={{
-                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'
-                                                                }}>
-                                                                    <div className="h-1 w-full rounded" style={{
-                                                                        backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
-                                                                    }} />
-                                                                    <div className="h-1 w-3/4 rounded" style={{
-                                                                        backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
-                                                                    }} />
-                                                                </div>
-
-                                                                {/* Compact Chart Area */}
-                                                                <div className="rounded p-2" style={{
-                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)'
-                                                                }}>
-                                                                    <div className="flex items-end justify-between h-8 gap-0.5">
-                                                                        <div className="w-full rounded-t" style={{
-                                                                            backgroundColor: t.colors[0],
-                                                                            height: '50%'
-                                                                        }} />
-                                                                        <div className="w-full rounded-t" style={{
-                                                                            backgroundColor: t.colors[1],
-                                                                            height: '80%'
-                                                                        }} />
-                                                                        <div className="w-full rounded-t" style={{
-                                                                            backgroundColor: t.colors[0],
-                                                                            height: '35%'
-                                                                        }} />
-                                                                    </div>
-                                                                </div>
+                                                        <div
+                                                            className="aspect-[4/3] p-2 flex flex-col gap-1.5"
+                                                            style={{ backgroundColor: t.colors[2] }}
+                                                        >
+                                                            <div className="flex gap-1">
+                                                                <div className="h-1.5 w-6 rounded-full" style={{ backgroundColor: t.colors[0] }} />
+                                                                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.colors[1] }} />
                                                             </div>
-
-                                                            {/* Theme Name */}
-                                                            <div
-                                                                className="px-1.5 py-1 text-center flex-shrink-0"
-                                                                style={{
-                                                                    borderTop: `1px solid ${t.category === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                                                                    backgroundColor: t.category === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
-                                                                }}
-                                                            >
-                                                                <div className="flex items-center justify-center gap-1">
-                                                                    <span
-                                                                        className="text-[10px] font-medium truncate"
-                                                                        style={{ color: t.category === 'dark' ? '#ffffff' : '#1f2937' }}
-                                                                    >
-                                                                        {t.name}
-                                                                    </span>
-                                                                    {theme === t.id && (
-                                                                        <MdCheck
-                                                                            className="w-2.5 h-2.5 flex-shrink-0"
-                                                                            style={{ color: t.colors[0] }}
-                                                                        />
-                                                                    )}
-                                                                </div>
+                                                            <div className="flex-1 flex items-end gap-0.5 pt-1">
+                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '40%' }} />
+                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '70%' }} />
+                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '55%' }} />
+                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '85%' }} />
                                                             </div>
+                                                        </div>
+                                                        <div className="px-2 py-1.5 bg-ui-bg-secondary/50 flex items-center justify-between gap-1">
+                                                            <span className="text-xs font-medium text-ui-text-primary truncate">{t.name}</span>
+                                                            {theme === t.id && (
+                                                                <MdCheck className="w-3.5 h-3.5 text-ui-accent-primary flex-shrink-0" />
+                                                            )}
                                                         </div>
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
 
-                                        {/* Animations Toggle */}
-                                        <ToggleSetting
-                                            label="Enable Animations"
-                                            description="Smooth transitions and effects"
-                                            enabled={enableAnimations}
-                                            onChange={(val) => updatePreference('appearance.animations', val, setEnableAnimations)}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Dashboard Tab */}
-                                {activeTab === 'dashboard' && (
-                                    <div className="space-y-6">
+                                        {/* Visual Settings */}
                                         <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Dashboard Settings</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Configure dashboard behavior</p>
-                                        </div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Visual</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Animation and display settings</p>
 
-                                        <ToggleSetting
-                                            label="Auto-Save Layout"
-                                            description="Automatically save widget positions when moved"
-                                            enabled={autoSaveLayout}
-                                            onChange={(val) => updatePreference('dashboard.autoSave', val, setAutoSaveLayout)}
-                                        />
-
-                                        <div className="p-4 rounded-lg bg-ui-bg-secondary border border-ui-border-primary">
-                                            <div className="text-sm font-medium text-ui-text-primary mb-2">Layout Info</div>
-                                            <div className="text-xs text-ui-text-secondary space-y-1">
-                                                <p>• Use presets (1-9) to save and switch between layouts</p>
-                                                <p>• Drag widgets to rearrange your dashboard</p>
-                                                <p>• Right-click widgets for more options</p>
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <ToggleSetting
+                                                    label="Animations"
+                                                    description="Smooth transitions and effects"
+                                                    enabled={enableAnimations}
+                                                    onChange={(val) => updatePreference('appearance.animations', val, setEnableAnimations)}
+                                                />
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Widgets Tab */}
-                                {activeTab === 'widgets' && (
+                                {/* Behavior Section */}
+                                {activeSection === 'behavior' && (
                                     <div className="space-y-6">
+                                        {/* Dashboard */}
                                         <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Widget Settings</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Control widget behavior and updates</p>
-                                        </div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dashboard</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Layout and save behavior</p>
 
-                                        <ToggleSetting
-                                            label="Show Refresh Indicators"
-                                            description="Display countdown rings on widgets"
-                                            enabled={showRefreshIndicators}
-                                            onChange={(val) => updatePreference('widgets.showRefreshIndicators', val, setShowRefreshIndicators)}
-                                        />
-
-                                        <div className="space-y-3">
-                                            <label className="block">
-                                                <div className="text-sm font-medium text-ui-text-primary mb-1">Default Refresh Interval</div>
-                                                <div className="text-xs text-ui-text-secondary mb-3">How often widgets update (in seconds)</div>
-                                                <select
-                                                    value={widgetRefreshInterval}
-                                                    onChange={(e) => updatePreference('widgets.defaultRefreshInterval', Number(e.target.value), setWidgetRefreshInterval)}
-                                                    className="w-full px-4 py-2 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all"
-                                                >
-                                                    <option value={10}>10 seconds (Fast)</option>
-                                                    <option value={30}>30 seconds (Default)</option>
-                                                    <option value={60}>1 minute</option>
-                                                    <option value={300}>5 minutes</option>
-                                                    <option value={600}>10 minutes</option>
-                                                    <option value={0}>Manual only</option>
-                                                </select>
-                                            </label>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Notifications Tab */}
-                                {activeTab === 'notifications' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Notification Settings</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Manage alerts and notifications</p>
-                                        </div>
-
-                                        <ToggleSetting
-                                            label="Sound Notifications"
-                                            description="Play sound for important alerts"
-                                            enabled={soundNotifications}
-                                            onChange={(val) => updatePreference('notifications.sound', val, setSoundNotifications)}
-                                        />
-
-                                        <div className="p-4 rounded-lg bg-ui-bg-secondary border border-ui-border-primary">
-                                            <div className="text-sm font-medium text-ui-text-primary mb-2">Toast Notifications</div>
-                                            <div className="text-xs text-ui-text-secondary space-y-1">
-                                                <p>• Preset changes show at the top</p>
-                                                <p>• Status updates appear briefly</p>
-                                                <p>• Click to dismiss early</p>
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Auto-save layout"
+                                                    description="Save widget positions automatically"
+                                                    enabled={autoSaveLayout}
+                                                    onChange={(val) => updatePreference('dashboard.autoSave', val, setAutoSaveLayout)}
+                                                />
                                             </div>
                                         </div>
-                                    </div>
-                                )}
 
-                                {/* Keyboard Tab */}
-                                {activeTab === 'keyboard' && (
-                                    <div className="space-y-6">
+                                        {/* Widgets */}
                                         <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Keyboard Shortcuts</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Quick actions at your fingertips</p>
-                                        </div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Widgets</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Widget refresh and display</p>
 
-                                        <div className="space-y-3">
-                                            <ShortcutItem shortcut="F" description="Open Widget Menu" />
-                                            <ShortcutItem shortcut="P" description="Open Preset Manager" />
-                                            <ShortcutItem shortcut="S" description="Open Settings" />
-                                            <ShortcutItem shortcut="X" description="Compact Dashboard" />
-                                            <ShortcutItem shortcut="1-9" description="Load Preset" />
-                                            <ShortcutItem shortcut="⇧ 1-9" description="Save Preset" />
-                                            <ShortcutItem shortcut="0" description="Reload Page" />
-                                            <ShortcutItem shortcut="← →" description="Previous/Next Preset" />
-                                        </div>
-                                    </div>
-                                )}
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Refresh indicators"
+                                                    description="Show countdown rings on widgets"
+                                                    enabled={showRefreshIndicators}
+                                                    onChange={(val) => updatePreference('widgets.showRefreshIndicators', val, setShowRefreshIndicators)}
+                                                />
 
-                                {/* Account Tab */}
-                                {activeTab === 'account' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-base font-semibold text-ui-text-primary mb-1">Account</h3>
-                                            <p className="text-sm text-ui-text-secondary mb-4">Manage your account settings</p>
-                                        </div>
-
-                                        <div className="p-4 rounded-lg bg-ui-bg-secondary border border-ui-border-primary">
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <div className="text-xs text-ui-text-secondary mb-1">Name</div>
-                                                    <div className="text-sm font-medium text-ui-text-primary">{user?.name}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-xs text-ui-text-secondary mb-1">Email</div>
-                                                    <div className="text-sm font-medium text-ui-text-primary">{user?.email}</div>
-                                                </div>
-                                                {user?.role && (
+                                                <div className="flex items-center justify-between p-4">
                                                     <div>
-                                                        <div className="text-xs text-ui-text-secondary mb-1">Role</div>
-                                                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${user.role === 'admin'
-                                                            ? 'bg-ui-accent-secondary-bg text-ui-accent-secondary-text'
-                                                            : 'bg-ui-accent-primary-bg text-ui-accent-primary-text'
-                                                            }`}>
-                                                            {user.role.toUpperCase()}
+                                                        <div className="text-sm font-medium text-ui-text-primary">Refresh interval</div>
+                                                        <div className="text-xs text-ui-text-secondary">How often widgets update</div>
+                                                    </div>
+                                                    <select
+                                                        value={widgetRefreshInterval}
+                                                        onChange={(e) => updatePreference('widgets.defaultRefreshInterval', Number(e.target.value), setWidgetRefreshInterval)}
+                                                        className="px-3 py-1.5 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all cursor-pointer"
+                                                    >
+                                                        <option value={10}>10 sec</option>
+                                                        <option value={30}>30 sec</option>
+                                                        <option value={60}>1 min</option>
+                                                        <option value={300}>5 min</option>
+                                                        <option value={600}>10 min</option>
+                                                        <option value={0}>Manual</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Notifications */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Notifications</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Alert preferences</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Sound notifications"
+                                                    description="Audio alerts for important events"
+                                                    enabled={soundNotifications}
+                                                    onChange={(val) => updatePreference('notifications.sound', val, setSoundNotifications)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Shortcuts Section */}
+                                {activeSection === 'shortcuts' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Keyboard Shortcuts</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-4">Quick actions at your fingertips</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ShortcutGroup title="Navigation">
+                                                    <ShortcutItem shortcut="F" description="Open widget menu" />
+                                                    <ShortcutItem shortcut="P" description="Open preset manager" />
+                                                    <ShortcutItem shortcut="S" description="Open settings" />
+                                                </ShortcutGroup>
+
+                                                <ShortcutGroup title="Presets">
+                                                    <ShortcutItem shortcut="1-9" description="Load preset" />
+                                                    <ShortcutItem shortcut="⇧ 1-9" description="Save to preset" />
+                                                    <ShortcutItem shortcut="← →" description="Previous / next preset" />
+                                                </ShortcutGroup>
+
+                                                <ShortcutGroup title="View">
+                                                    <ShortcutItem shortcut="X" description="Toggle compact view" />
+                                                    <ShortcutItem shortcut="0" description="Reload page" />
+                                                </ShortcutGroup>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Account Section */}
+                                {activeSection === 'account' && (
+                                    <div className="space-y-6">
+                                        {/* Profile Info */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Profile</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-4">Your account information</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <div className="p-4 flex items-center gap-4">
+                                                    <div className="w-14 h-14 rounded-full bg-ui-accent-primary/10 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-2xl font-semibold text-ui-accent-primary">
+                                                            {user?.name?.charAt(0).toUpperCase() || 'U'}
                                                         </span>
                                                     </div>
-                                                )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-base font-semibold text-ui-text-primary truncate">{user?.name}</div>
+                                                        <div className="text-sm text-ui-text-secondary truncate">{user?.email}</div>
+                                                        {user?.role && (
+                                                            <span className={`inline-flex items-center mt-2 px-2 py-0.5 rounded text-xs font-semibold ${user.role === 'admin'
+                                                                    ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
+                                                                    : 'bg-ui-accent-primary/20 text-ui-accent-primary'
+                                                                }`}>
+                                                                {user.role.toUpperCase()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            {user?.role === 'admin' && onAdminClick && (
+                                        {/* Actions */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Actions</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-4">Account actions</p>
+
+                                            <div className="space-y-3">
+                                                {user?.role === 'admin' && onAdminClick && (
+                                                    <button
+                                                        onClick={onAdminClick}
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white rounded-xl text-sm font-medium transition-colors"
+                                                    >
+                                                        <MdShield className="w-5 h-5" />
+                                                        Open Admin Panel
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={onAdminClick}
-                                                    className="w-full px-4 py-3 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white rounded-lg text-sm font-medium transition-colors"
+                                                    onClick={onLogout}
+                                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-xl text-sm font-medium transition-all"
                                                 >
-                                                    Open Admin Panel
+                                                    <MdLogout className="w-5 h-5" />
+                                                    Logout
                                                 </button>
-                                            )}
-                                            <button
-                                                onClick={onLogout}
-                                                className="w-full px-4 py-3 bg-ui-danger-bg hover:bg-ui-danger-bg border border-ui-danger-border text-ui-danger-text rounded-lg text-sm font-medium transition-colors"
-                                            >
-                                                Logout
-                                            </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        </div>
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </div>
             </motion.div>
@@ -425,19 +398,19 @@ function ToggleSetting({
 }) {
     const isEnabled = enabled ?? false;
     return (
-        <div className="flex items-center justify-between p-4 rounded-lg bg-ui-bg-secondary border border-ui-border-primary">
-            <div className="flex-1">
+        <div className="flex items-center justify-between p-4">
+            <div>
                 <div className="text-sm font-medium text-ui-text-primary">{label}</div>
-                <div className="text-xs text-ui-text-secondary mt-1">{description}</div>
+                <div className="text-xs text-ui-text-secondary">{description}</div>
             </div>
             <button
                 onClick={() => onChange(!isEnabled)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
                     }`}
             >
                 <motion.div
-                    className="absolute top-0.5 left-0.5 w-5 h-5 bg-ui-text-primary rounded-full shadow-md"
-                    animate={{ x: isEnabled ? 24 : 0 }}
+                    className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                    animate={{ x: isEnabled ? 20 : 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
             </button>
@@ -445,11 +418,22 @@ function ToggleSetting({
     );
 }
 
+function ShortcutGroup({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div className="p-4">
+            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">{title}</div>
+            <div className="space-y-2">
+                {children}
+            </div>
+        </div>
+    );
+}
+
 function ShortcutItem({ shortcut, description }: { shortcut: string; description: string }) {
     return (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-ui-bg-secondary/50">
+        <div className="flex items-center justify-between py-1">
             <span className="text-sm text-ui-text-primary">{description}</span>
-            <kbd className="px-3 py-1.5 bg-ui-bg-tertiary text-ui-text-primary rounded font-mono text-sm border border-ui-border-primary">
+            <kbd className="px-2.5 py-1 bg-ui-bg-tertiary text-ui-text-primary rounded-md text-xs font-mono border border-ui-border-primary min-w-[2.5rem] text-center">
                 {shortcut}
             </kbd>
         </div>
