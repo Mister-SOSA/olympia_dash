@@ -173,9 +173,9 @@ main {
   cursor: grab;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
-              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.2s ease;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease;
   border-radius: 14px;
   background-color: rgba(128, 128, 128, 0.2);
   backdrop-filter: blur(8px) saturate(180%);
@@ -1841,4 +1841,70 @@ tbody td {
   outline: none;
   border-color: var(--ui-accent-primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================
+   USER SETTINGS - Applied via SettingsContext
+   ============================================ */
+
+/* Font Size Settings */
+:root {
+  --base-font-size: 16px;
+}
+
+html.font-size-small {
+  font-size: 14px;
+}
+
+html.font-size-medium {
+  font-size: 16px;
+}
+
+html.font-size-large {
+  font-size: 18px;
+}
+
+/* Compact Mode - Reduces padding and margins throughout the UI */
+html.compact-mode .widget {
+  padding: 0.5rem;
+}
+
+html.compact-mode .widget-header {
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+html.compact-mode .widget-content {
+  padding: 0.25rem;
+}
+
+html.compact-mode .dashboard-container {
+  gap: 0.25rem;
+}
+
+html.compact-mode .grid-stack>.grid-stack-item {
+  padding: 2px;
+}
+
+/* Reduce Motion - Respects user's animations setting */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Also respect prefers-reduced-motion media query */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

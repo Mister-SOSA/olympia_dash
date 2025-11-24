@@ -4,7 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES } from "@/contexts/ThemeContext";
-import { preferencesService } from "@/lib/preferences";
+import { useSettings } from "@/hooks/useSettings";
+import {
+    TIMEZONE_OPTIONS,
+    DATE_FORMAT_OPTIONS,
+    REFRESH_INTERVAL_OPTIONS,
+    NOTIFICATION_SETTINGS,
+    WIDGET_SETTINGS,
+} from "@/constants/settings";
 import {
     X,
     User as UserIcon,
@@ -13,7 +20,10 @@ import {
     Shield,
     LogOut,
     ChevronRight,
-    Check
+    Check,
+    Clock,
+    Bell,
+    Database
 } from "lucide-react";
 
 interface MobileSettingsMenuProps {
@@ -23,38 +33,21 @@ interface MobileSettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type View = 'main' | 'themes' | 'preferences' | 'account';
+type View = 'main' | 'themes' | 'preferences' | 'datetime' | 'notifications' | 'data' | 'account';
 
 export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminClick }: MobileSettingsMenuProps) {
     const { theme, setTheme } = useTheme();
+    const { settings, updateSetting, isLoaded } = useSettings();
     const [currentView, setCurrentView] = useState<View>('main');
     const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>('dark');
-
-    // Load preferences
-    const [autoSaveLayout, setAutoSaveLayout] = useState(
-        preferencesService.get<boolean>('dashboard.autoSave', true)
-    );
-    const [showRefreshIndicators, setShowRefreshIndicators] = useState(
-        preferencesService.get<boolean>('widgets.showRefreshIndicators', true)
-    );
-    const [enableAnimations, setEnableAnimations] = useState(
-        preferencesService.get<boolean>('appearance.animations', true)
-    );
-    const [soundNotifications, setSoundNotifications] = useState(
-        preferencesService.get<boolean>('notifications.sound', true)
-    );
-    const [widgetRefreshInterval, setWidgetRefreshInterval] = useState(
-        preferencesService.get<number>('widgets.defaultRefreshInterval', 30)
-    );
-
-    const updatePreference = (key: string, value: any, setter: (val: any) => void) => {
-        setter(value);
-        preferencesService.set(key, value);
-    };
 
     const goBack = () => {
         setCurrentView('main');
     };
+
+    if (!isLoaded) {
+        return null;
+    }
 
     return (
         <motion.div
@@ -103,10 +96,31 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                 />
 
                                 <MenuButton
+                                    icon={Clock}
+                                    label="Date & Time"
+                                    description="Timezone and format settings"
+                                    onClick={() => setCurrentView('datetime')}
+                                />
+
+                                <MenuButton
                                     icon={SettingsIcon}
                                     label="Preferences"
                                     description="Dashboard & widget settings"
                                     onClick={() => setCurrentView('preferences')}
+                                />
+
+                                <MenuButton
+                                    icon={Bell}
+                                    label="Notifications"
+                                    description="Sound and alert settings"
+                                    onClick={() => setCurrentView('notifications')}
+                                />
+
+                                <MenuButton
+                                    icon={Database}
+                                    label="Data"
+                                    description="Number and currency formats"
+                                    onClick={() => setCurrentView('data')}
                                 />
 
                                 <MenuButton
@@ -272,29 +286,43 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                 <MobileToggleSetting
                                     label="Enable Animations"
                                     description="Smooth transitions and effects"
-                                    enabled={enableAnimations}
-                                    onChange={(val) => updatePreference('appearance.animations', val, setEnableAnimations)}
+                                    enabled={settings.animations}
+                                    onChange={(val) => updateSetting('animations', val)}
                                 />
 
                                 <MobileToggleSetting
                                     label="Auto-Save Layout"
                                     description="Save widget positions automatically"
-                                    enabled={autoSaveLayout}
-                                    onChange={(val) => updatePreference('dashboard.autoSave', val, setAutoSaveLayout)}
+                                    enabled={settings.autoSave}
+                                    onChange={(val) => updateSetting('autoSave', val)}
+                                />
+
+                                <MobileToggleSetting
+                                    label="Confirm Widget Removal"
+                                    description="Ask before removing widgets"
+                                    enabled={settings.confirmDelete}
+                                    onChange={(val) => updateSetting('confirmDelete', val)}
                                 />
 
                                 <MobileToggleSetting
                                     label="Refresh Indicators"
                                     description="Show countdown rings on widgets"
-                                    enabled={showRefreshIndicators}
-                                    onChange={(val) => updatePreference('widgets.showRefreshIndicators', val, setShowRefreshIndicators)}
+                                    enabled={settings.showRefreshIndicators}
+                                    onChange={(val) => updateSetting('showRefreshIndicators', val)}
                                 />
 
                                 <MobileToggleSetting
-                                    label="Sound Notifications"
-                                    description="Play sound for important alerts"
-                                    enabled={soundNotifications}
-                                    onChange={(val) => updatePreference('notifications.sound', val, setSoundNotifications)}
+                                    label="Widget Titles"
+                                    description="Show titles in widget headers"
+                                    enabled={settings.showWidgetTitles}
+                                    onChange={(val) => updateSetting('showWidgetTitles', val)}
+                                />
+
+                                <MobileToggleSetting
+                                    label="Enable Hotkeys"
+                                    description="Allow keyboard shortcuts"
+                                    enabled={settings.enableHotkeys}
+                                    onChange={(val) => updateSetting('enableHotkeys', val)}
                                 />
 
                                 {/* Refresh Interval */}
@@ -307,19 +335,328 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                             How often widgets update
                                         </div>
                                         <select
-                                            value={widgetRefreshInterval}
-                                            onChange={(e) => updatePreference('widgets.defaultRefreshInterval', Number(e.target.value), setWidgetRefreshInterval)}
+                                            value={settings.defaultRefreshInterval}
+                                            onChange={(e) => updateSetting('defaultRefreshInterval', Number(e.target.value))}
                                             className="mobile-select"
                                         >
-                                            <option value={10}>10 seconds (Fast)</option>
-                                            <option value={30}>30 seconds (Default)</option>
-                                            <option value={60}>1 minute</option>
-                                            <option value={300}>5 minutes</option>
-                                            <option value={600}>10 minutes</option>
-                                            <option value={0}>Manual only</option>
+                                            {REFRESH_INTERVAL_OPTIONS.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
                                         </select>
                                     </label>
                                 </div>
+
+                                {/* Table Rows */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Table Rows
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            Default rows in table widgets
+                                        </div>
+                                        <select
+                                            value={settings.tableRowsPerPage}
+                                            onChange={(e) => updateSetting('tableRowsPerPage', Number(e.target.value))}
+                                            className="mobile-select"
+                                        >
+                                            {WIDGET_SETTINGS.tableRowsPerPage.options.map(n => (
+                                                <option key={n} value={n}>{n} rows</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Date & Time View */}
+                {currentView === 'datetime' && (
+                    <motion.div
+                        key="datetime"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="mobile-settings-view"
+                    >
+                        <div className="mobile-settings-header">
+                            <div className="flex items-center gap-3 mb-4">
+                                <button onClick={goBack} className="mobile-icon-button">
+                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-ui-text-primary">Date & Time</h2>
+                                    <p className="text-sm text-ui-text-secondary">Regional settings</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mobile-settings-content">
+                            <div className="space-y-4">
+                                {/* Timezone */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Timezone
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            Display times in this timezone
+                                        </div>
+                                        <select
+                                            value={settings.timezone}
+                                            onChange={(e) => updateSetting('timezone', e.target.value as any)}
+                                            className="mobile-select"
+                                        >
+                                            {TIMEZONE_OPTIONS.map(tz => (
+                                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {/* Date Format */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Date Format
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            How dates are displayed
+                                        </div>
+                                        <select
+                                            value={settings.dateFormat}
+                                            onChange={(e) => updateSetting('dateFormat', e.target.value as any)}
+                                            className="mobile-select"
+                                        >
+                                            {DATE_FORMAT_OPTIONS.map(df => (
+                                                <option key={df.value} value={df.value}>{df.label} ({df.example})</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {/* Clock Format */}
+                                <div className="mobile-settings-group">
+                                    <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                        Clock Format
+                                    </div>
+                                    <div className="text-xs text-ui-text-secondary mb-3">
+                                        12-hour or 24-hour time
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => updateSetting('clockFormat', '12h')}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${settings.clockFormat === '12h'
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                }`}
+                                        >
+                                            12h
+                                        </button>
+                                        <button
+                                            onClick={() => updateSetting('clockFormat', '24h')}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${settings.clockFormat === '24h'
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                }`}
+                                        >
+                                            24h
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <MobileToggleSetting
+                                    label="Show Seconds"
+                                    description="Display seconds in clock widgets"
+                                    enabled={settings.showSeconds}
+                                    onChange={(val) => updateSetting('showSeconds', val)}
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Notifications View */}
+                {currentView === 'notifications' && (
+                    <motion.div
+                        key="notifications"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="mobile-settings-view"
+                    >
+                        <div className="mobile-settings-header">
+                            <div className="flex items-center gap-3 mb-4">
+                                <button onClick={goBack} className="mobile-icon-button">
+                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-ui-text-primary">Notifications</h2>
+                                    <p className="text-sm text-ui-text-secondary">Sound and alert settings</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mobile-settings-content">
+                            <div className="space-y-4">
+                                <MobileToggleSetting
+                                    label="Sound Notifications"
+                                    description="Play sound for important alerts"
+                                    enabled={settings.soundEnabled}
+                                    onChange={(val) => updateSetting('soundEnabled', val)}
+                                />
+
+                                {/* Volume Slider */}
+                                <div className={`mobile-settings-group ${!settings.soundEnabled ? 'opacity-50' : ''}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div>
+                                            <div className="text-sm font-semibold text-ui-text-primary">Volume</div>
+                                            <div className="text-xs text-ui-text-secondary">Notification volume level</div>
+                                        </div>
+                                        <span className="text-sm font-medium text-ui-text-primary">{settings.volume}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={100}
+                                        value={settings.volume}
+                                        onChange={(e) => settings.soundEnabled && updateSetting('volume', Number(e.target.value))}
+                                        disabled={!settings.soundEnabled}
+                                        className="w-full h-2 bg-ui-bg-tertiary rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md"
+                                    />
+                                </div>
+
+                                <MobileToggleSetting
+                                    label="Desktop Notifications"
+                                    description="Show browser notifications"
+                                    enabled={settings.desktopNotifications}
+                                    onChange={(val) => updateSetting('desktopNotifications', val)}
+                                />
+
+                                {/* Toast Position */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Toast Position
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            Where notifications appear
+                                        </div>
+                                        <select
+                                            value={settings.toastPosition}
+                                            onChange={(e) => updateSetting('toastPosition', e.target.value as any)}
+                                            className="mobile-select"
+                                        >
+                                            {NOTIFICATION_SETTINGS.toastPosition.options.map(pos => (
+                                                <option key={pos} value={pos}>
+                                                    {pos.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {/* Toast Duration */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Toast Duration
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            How long toasts stay visible
+                                        </div>
+                                        <select
+                                            value={settings.toastDuration}
+                                            onChange={(e) => updateSetting('toastDuration', Number(e.target.value))}
+                                            className="mobile-select"
+                                        >
+                                            <option value={2000}>2 seconds</option>
+                                            <option value={4000}>4 seconds</option>
+                                            <option value={6000}>6 seconds</option>
+                                            <option value={8000}>8 seconds</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Data View */}
+                {currentView === 'data' && (
+                    <motion.div
+                        key="data"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        className="mobile-settings-view"
+                    >
+                        <div className="mobile-settings-header">
+                            <div className="flex items-center gap-3 mb-4">
+                                <button onClick={goBack} className="mobile-icon-button">
+                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-ui-text-primary">Data</h2>
+                                    <p className="text-sm text-ui-text-secondary">Number and currency formats</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mobile-settings-content">
+                            <div className="space-y-4">
+                                {/* Number Format */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Number Format
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            How numbers are formatted
+                                        </div>
+                                        <select
+                                            value={settings.numberFormat}
+                                            onChange={(e) => updateSetting('numberFormat', e.target.value as any)}
+                                            className="mobile-select"
+                                        >
+                                            <option value="en-US">US (1,234.56)</option>
+                                            <option value="en-GB">UK (1,234.56)</option>
+                                            <option value="de-DE">German (1.234,56)</option>
+                                            <option value="fr-FR">French (1 234,56)</option>
+                                            <option value="es-ES">Spanish (1.234,56)</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {/* Currency Symbol */}
+                                <div className="mobile-settings-group">
+                                    <label className="block">
+                                        <div className="text-sm font-semibold text-ui-text-primary mb-1">
+                                            Currency Symbol
+                                        </div>
+                                        <div className="text-xs text-ui-text-secondary mb-3">
+                                            Symbol for monetary values
+                                        </div>
+                                        <select
+                                            value={settings.currencySymbol}
+                                            onChange={(e) => updateSetting('currencySymbol', e.target.value)}
+                                            className="mobile-select"
+                                        >
+                                            <option value="$">$ (Dollar)</option>
+                                            <option value="€">€ (Euro)</option>
+                                            <option value="£">£ (Pound)</option>
+                                            <option value="¥">¥ (Yen)</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <MobileToggleSetting
+                                    label="Enable Caching"
+                                    description="Cache data locally for faster loading"
+                                    enabled={settings.cacheEnabled}
+                                    onChange={(val) => updateSetting('cacheEnabled', val)}
+                                />
                             </div>
                         </div>
                     </motion.div>
@@ -362,8 +699,8 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                     <div className="mobile-settings-group">
                                         <div className="text-xs text-ui-text-tertiary mb-2">Role</div>
                                         <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${user.role === 'admin'
-                                                ? 'bg-ui-accent-secondary text-white'
-                                                : 'bg-ui-accent-primary text-white'
+                                            ? 'bg-ui-accent-secondary text-white'
+                                            : 'bg-ui-accent-primary text-white'
                                             }`}>
                                             {user.role.toUpperCase()}
                                         </span>

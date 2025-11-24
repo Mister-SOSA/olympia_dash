@@ -4,7 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES } from "@/contexts/ThemeContext";
-import { preferencesService } from "@/lib/preferences";
+import { useSettings } from "@/hooks/useSettings";
+import {
+    TIMEZONE_OPTIONS,
+    DATE_FORMAT_OPTIONS,
+    NOTIFICATION_SETTINGS,
+    WIDGET_SETTINGS,
+} from "@/constants/settings";
 import {
     MdCheck,
     MdPalette,
@@ -13,7 +19,10 @@ import {
     MdShield,
     MdLogout,
     MdClose,
-    MdPerson
+    MdPerson,
+    MdSchedule,
+    MdNotifications,
+    MdStorage,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -23,49 +32,35 @@ interface SettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type SettingsSection = 'appearance' | 'behavior' | 'shortcuts' | 'account';
+type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'notifications' | 'data' | 'shortcuts' | 'account';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
     { id: 'appearance', label: 'Appearance', icon: MdPalette },
+    { id: 'datetime', label: 'Date & Time', icon: MdSchedule },
     { id: 'behavior', label: 'Behavior', icon: MdTune },
+    { id: 'notifications', label: 'Notifications', icon: MdNotifications },
+    { id: 'data', label: 'Data', icon: MdStorage },
     { id: 'shortcuts', label: 'Shortcuts', icon: MdKeyboard },
     { id: 'account', label: 'Account', icon: MdPerson },
 ];
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
+    const { settings, updateSetting, isLoaded } = useSettings();
     const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
     const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>(
         THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
     );
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Load preferences
-    const [autoSaveLayout, setAutoSaveLayout] = useState(
-        preferencesService.get<boolean>('dashboard.autoSave', true)
-    );
-    const [showRefreshIndicators, setShowRefreshIndicators] = useState(
-        preferencesService.get<boolean>('widgets.showRefreshIndicators', true)
-    );
-    const [enableAnimations, setEnableAnimations] = useState(
-        preferencesService.get<boolean>('appearance.animations', true)
-    );
-    const [soundNotifications, setSoundNotifications] = useState(
-        preferencesService.get<boolean>('notifications.sound', true)
-    );
-    const [widgetRefreshInterval, setWidgetRefreshInterval] = useState(
-        preferencesService.get<number>('widgets.defaultRefreshInterval', 30)
-    );
-
-    const updatePreference = <T,>(key: string, value: T, setter: (val: T) => void) => {
-        setter(value);
-        preferencesService.set(key, value);
-    };
-
     // Scroll to top when section changes
     useEffect(() => {
         contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }, [activeSection]);
+
+    if (!isLoaded) {
+        return null;
+    }
 
     return (
         <motion.div
@@ -81,7 +76,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                 exit={{ scale: 0.95, opacity: 0, y: 10 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-2xl h-[85vh] max-h-[700px] flex flex-col"
+                className="w-full max-w-3xl h-[85vh] max-h-[750px] flex flex-col"
             >
                 <div className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden flex flex-col h-full">
                     {/* Header */}
@@ -106,8 +101,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                         key={section.id}
                                         onClick={() => setActiveSection(section.id)}
                                         className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${isActive
-                                                ? 'text-ui-accent-primary'
-                                                : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
+                                            ? 'text-ui-accent-primary'
+                                            : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                                             }`}
                                     >
                                         <Icon className="w-4 h-4" />
@@ -149,8 +144,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 <button
                                                     onClick={() => setThemeCategory('dark')}
                                                     className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'dark'
-                                                            ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                            : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                        ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                        : 'text-ui-text-secondary hover:text-ui-text-primary'
                                                         }`}
                                                 >
                                                     Dark
@@ -158,8 +153,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 <button
                                                     onClick={() => setThemeCategory('light')}
                                                     className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'light'
-                                                            ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                            : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                        ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                        : 'text-ui-text-secondary hover:text-ui-text-primary'
                                                         }`}
                                                 >
                                                     Light
@@ -173,8 +168,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                         key={t.id}
                                                         onClick={() => setTheme(t.id)}
                                                         className={`group relative rounded-xl border-2 transition-all hover:scale-[1.02] overflow-hidden ${theme === t.id
-                                                                ? 'border-ui-accent-primary ring-2 ring-ui-accent-primary/20'
-                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                            ? 'border-ui-accent-primary ring-2 ring-ui-accent-primary/20'
+                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
                                                             }`}
                                                     >
                                                         <div
@@ -208,12 +203,102 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                             <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Visual</h3>
                                             <p className="text-xs text-ui-text-secondary mb-3">Animation and display settings</p>
 
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
                                                     label="Animations"
                                                     description="Smooth transitions and effects"
-                                                    enabled={enableAnimations}
-                                                    onChange={(val) => updatePreference('appearance.animations', val, setEnableAnimations)}
+                                                    enabled={settings.animations}
+                                                    onChange={(val) => updateSetting('animations', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Compact Mode"
+                                                    description="Reduce padding for denser layouts"
+                                                    enabled={settings.compactMode}
+                                                    onChange={(val) => updateSetting('compactMode', val)}
+                                                />
+                                                <SelectSetting
+                                                    label="Font Size"
+                                                    description="Base font size for the dashboard"
+                                                    value={settings.fontSize}
+                                                    onChange={(val) => updateSetting('fontSize', val as 'small' | 'medium' | 'large')}
+                                                    options={[
+                                                        { value: 'small', label: 'Small' },
+                                                        { value: 'medium', label: 'Medium' },
+                                                        { value: 'large', label: 'Large' },
+                                                    ]}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Date & Time Section */}
+                                {activeSection === 'datetime' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Regional Settings</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Configure how dates and times are displayed</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <SelectSetting
+                                                    label="Timezone"
+                                                    description="Display times in this timezone"
+                                                    value={settings.timezone}
+                                                    onChange={(val) => updateSetting('timezone', val as any)}
+                                                    options={TIMEZONE_OPTIONS.map(tz => ({
+                                                        value: tz.value,
+                                                        label: tz.label,
+                                                    }))}
+                                                />
+                                                <SelectSetting
+                                                    label="Date Format"
+                                                    description="How dates are displayed"
+                                                    value={settings.dateFormat}
+                                                    onChange={(val) => updateSetting('dateFormat', val as any)}
+                                                    options={DATE_FORMAT_OPTIONS.map(df => ({
+                                                        value: df.value,
+                                                        label: `${df.label} (${df.example})`,
+                                                    }))}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Clock</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Clock widget preferences</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <div className="flex items-center justify-between p-4">
+                                                    <div>
+                                                        <div className="text-sm font-medium text-ui-text-primary">Clock Format</div>
+                                                        <div className="text-xs text-ui-text-secondary">12-hour or 24-hour time</div>
+                                                    </div>
+                                                    <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg">
+                                                        <button
+                                                            onClick={() => updateSetting('clockFormat', '12h')}
+                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${settings.clockFormat === '12h'
+                                                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                                : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                                }`}
+                                                        >
+                                                            12h
+                                                        </button>
+                                                        <button
+                                                            onClick={() => updateSetting('clockFormat', '24h')}
+                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${settings.clockFormat === '24h'
+                                                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                                : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                                }`}
+                                                        >
+                                                            24h
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <ToggleSetting
+                                                    label="Show Seconds"
+                                                    description="Display seconds in clock widgets"
+                                                    enabled={settings.showSeconds}
+                                                    onChange={(val) => updateSetting('showSeconds', val)}
                                                 />
                                             </div>
                                         </div>
@@ -230,10 +315,22 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
 
                                             <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
-                                                    label="Auto-save layout"
+                                                    label="Auto-save Layout"
                                                     description="Save widget positions automatically"
-                                                    enabled={autoSaveLayout}
-                                                    onChange={(val) => updatePreference('dashboard.autoSave', val, setAutoSaveLayout)}
+                                                    enabled={settings.autoSave}
+                                                    onChange={(val) => updateSetting('autoSave', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Confirm Widget Removal"
+                                                    description="Ask before removing widgets"
+                                                    enabled={settings.confirmDelete}
+                                                    onChange={(val) => updateSetting('confirmDelete', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Auto-compact Layout"
+                                                    description="Fill gaps when widgets are removed"
+                                                    enabled={settings.autoCompact}
+                                                    onChange={(val) => updateSetting('autoCompact', val)}
                                                 />
                                             </div>
                                         </div>
@@ -245,44 +342,165 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
 
                                             <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
-                                                    label="Refresh indicators"
+                                                    label="Refresh Indicators"
                                                     description="Show countdown rings on widgets"
-                                                    enabled={showRefreshIndicators}
-                                                    onChange={(val) => updatePreference('widgets.showRefreshIndicators', val, setShowRefreshIndicators)}
+                                                    enabled={settings.showRefreshIndicators}
+                                                    onChange={(val) => updateSetting('showRefreshIndicators', val)}
                                                 />
-
-                                                <div className="flex items-center justify-between p-4">
-                                                    <div>
-                                                        <div className="text-sm font-medium text-ui-text-primary">Refresh interval</div>
-                                                        <div className="text-xs text-ui-text-secondary">How often widgets update</div>
-                                                    </div>
-                                                    <select
-                                                        value={widgetRefreshInterval}
-                                                        onChange={(e) => updatePreference('widgets.defaultRefreshInterval', Number(e.target.value), setWidgetRefreshInterval)}
-                                                        className="px-3 py-1.5 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all cursor-pointer"
-                                                    >
-                                                        <option value={10}>10 sec</option>
-                                                        <option value={30}>30 sec</option>
-                                                        <option value={60}>1 min</option>
-                                                        <option value={300}>5 min</option>
-                                                        <option value={600}>10 min</option>
-                                                        <option value={0}>Manual</option>
-                                                    </select>
-                                                </div>
+                                                <ToggleSetting
+                                                    label="Widget Titles"
+                                                    description="Show titles in widget headers"
+                                                    enabled={settings.showWidgetTitles}
+                                                    onChange={(val) => updateSetting('showWidgetTitles', val)}
+                                                />
+                                                <SelectSetting
+                                                    label="Table Rows"
+                                                    description="Default rows in table widgets"
+                                                    value={settings.tableRowsPerPage.toString()}
+                                                    onChange={(val) => updateSetting('tableRowsPerPage', Number(val))}
+                                                    options={WIDGET_SETTINGS.tableRowsPerPage.options.map(n => ({
+                                                        value: n.toString(),
+                                                        label: `${n} rows`,
+                                                    }))}
+                                                />
                                             </div>
                                         </div>
 
-                                        {/* Notifications */}
+                                        {/* Keyboard */}
                                         <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Notifications</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Alert preferences</p>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Keyboard</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Keyboard shortcuts</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <ToggleSetting
+                                                    label="Enable Hotkeys"
+                                                    description="Allow keyboard shortcuts"
+                                                    enabled={settings.enableHotkeys}
+                                                    onChange={(val) => updateSetting('enableHotkeys', val)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Notifications Section */}
+                                {activeSection === 'notifications' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Sound</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Audio notification settings</p>
 
                                             <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
-                                                    label="Sound notifications"
-                                                    description="Audio alerts for important events"
-                                                    enabled={soundNotifications}
-                                                    onChange={(val) => updatePreference('notifications.sound', val, setSoundNotifications)}
+                                                    label="Sound Notifications"
+                                                    description="Play sound for important alerts"
+                                                    enabled={settings.soundEnabled}
+                                                    onChange={(val) => updateSetting('soundEnabled', val)}
+                                                />
+                                                <SliderSetting
+                                                    label="Volume"
+                                                    description="Notification volume level"
+                                                    value={settings.volume}
+                                                    onChange={(val) => updateSetting('volume', val)}
+                                                    min={0}
+                                                    max={100}
+                                                    disabled={!settings.soundEnabled}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Toasts</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Toast notification settings</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <SelectSetting
+                                                    label="Toast Position"
+                                                    description="Where notifications appear"
+                                                    value={settings.toastPosition}
+                                                    onChange={(val) => updateSetting('toastPosition', val as any)}
+                                                    options={NOTIFICATION_SETTINGS.toastPosition.options.map(pos => ({
+                                                        value: pos,
+                                                        label: pos.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                                                    }))}
+                                                />
+                                                <SelectSetting
+                                                    label="Toast Duration"
+                                                    description="How long toasts stay visible"
+                                                    value={settings.toastDuration.toString()}
+                                                    onChange={(val) => updateSetting('toastDuration', Number(val))}
+                                                    options={[
+                                                        { value: '2000', label: '2 seconds' },
+                                                        { value: '4000', label: '4 seconds' },
+                                                        { value: '6000', label: '6 seconds' },
+                                                        { value: '8000', label: '8 seconds' },
+                                                    ]}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Browser</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Desktop notification settings</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <ToggleSetting
+                                                    label="Desktop Notifications"
+                                                    description="Show browser notifications"
+                                                    enabled={settings.desktopNotifications}
+                                                    onChange={(val) => updateSetting('desktopNotifications', val)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Data Section */}
+                                {activeSection === 'data' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Formatting</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Number and currency display</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <SelectSetting
+                                                    label="Number Format"
+                                                    description="How numbers are formatted"
+                                                    value={settings.numberFormat}
+                                                    onChange={(val) => updateSetting('numberFormat', val as any)}
+                                                    options={[
+                                                        { value: 'en-US', label: 'US (1,234.56)' },
+                                                        { value: 'en-GB', label: 'UK (1,234.56)' },
+                                                        { value: 'de-DE', label: 'German (1.234,56)' },
+                                                        { value: 'fr-FR', label: 'French (1 234,56)' },
+                                                        { value: 'es-ES', label: 'Spanish (1.234,56)' },
+                                                    ]}
+                                                />
+                                                <SelectSetting
+                                                    label="Currency Symbol"
+                                                    description="Symbol for monetary values"
+                                                    value={settings.currencySymbol}
+                                                    onChange={(val) => updateSetting('currencySymbol', val)}
+                                                    options={[
+                                                        { value: '$', label: '$ (Dollar)' },
+                                                        { value: '€', label: '€ (Euro)' },
+                                                        { value: '£', label: '£ (Pound)' },
+                                                        { value: '¥', label: '¥ (Yen)' },
+                                                    ]}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Performance</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Data caching settings</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <ToggleSetting
+                                                    label="Enable Caching"
+                                                    description="Cache data locally for faster loading"
+                                                    enabled={settings.cacheEnabled}
+                                                    onChange={(val) => updateSetting('cacheEnabled', val)}
                                                 />
                                             </div>
                                         </div>
@@ -338,8 +556,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                         <div className="text-sm text-ui-text-secondary truncate">{user?.email}</div>
                                                         {user?.role && (
                                                             <span className={`inline-flex items-center mt-2 px-2 py-0.5 rounded text-xs font-semibold ${user.role === 'admin'
-                                                                    ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
-                                                                    : 'bg-ui-accent-primary/20 text-ui-accent-primary'
+                                                                ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
+                                                                : 'bg-ui-accent-primary/20 text-ui-accent-primary'
                                                                 }`}>
                                                                 {user.role.toUpperCase()}
                                                             </span>
@@ -389,24 +607,27 @@ function ToggleSetting({
     label,
     description,
     enabled,
-    onChange
+    onChange,
+    disabled = false,
 }: {
     label: string;
     description: string;
     enabled?: boolean;
     onChange: (val: boolean) => void;
+    disabled?: boolean;
 }) {
     const isEnabled = enabled ?? false;
     return (
-        <div className="flex items-center justify-between p-4">
+        <div className={`flex items-center justify-between p-4 ${disabled ? 'opacity-50' : ''}`}>
             <div>
                 <div className="text-sm font-medium text-ui-text-primary">{label}</div>
                 <div className="text-xs text-ui-text-secondary">{description}</div>
             </div>
             <button
-                onClick={() => onChange(!isEnabled)}
+                onClick={() => !disabled && onChange(!isEnabled)}
+                disabled={disabled}
                 className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
-                    }`}
+                    } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             >
                 <motion.div
                     className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm"
@@ -414,6 +635,82 @@ function ToggleSetting({
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 />
             </button>
+        </div>
+    );
+}
+
+function SelectSetting({
+    label,
+    description,
+    value,
+    onChange,
+    options,
+}: {
+    label: string;
+    description: string;
+    value: string;
+    onChange: (val: string) => void;
+    options: { value: string; label: string }[];
+}) {
+    return (
+        <div className="flex items-center justify-between p-4">
+            <div className="flex-1 min-w-0 mr-4">
+                <div className="text-sm font-medium text-ui-text-primary">{label}</div>
+                <div className="text-xs text-ui-text-secondary">{description}</div>
+            </div>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="px-3 py-1.5 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all cursor-pointer max-w-[180px]"
+            >
+                {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+function SliderSetting({
+    label,
+    description,
+    value,
+    onChange,
+    min,
+    max,
+    disabled = false,
+}: {
+    label: string;
+    description: string;
+    value: number;
+    onChange: (val: number) => void;
+    min: number;
+    max: number;
+    disabled?: boolean;
+}) {
+    return (
+        <div className={`p-4 ${disabled ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between mb-2">
+                <div>
+                    <div className="text-sm font-medium text-ui-text-primary">{label}</div>
+                    <div className="text-xs text-ui-text-secondary">{description}</div>
+                </div>
+                <span className="text-sm font-medium text-ui-text-primary min-w-[3rem] text-right">
+                    {value}%
+                </span>
+            </div>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                value={value}
+                onChange={(e) => !disabled && onChange(Number(e.target.value))}
+                disabled={disabled}
+                className={`w-full h-2 bg-ui-bg-tertiary rounded-lg appearance-none ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                    } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md`}
+            />
         </div>
     );
 }

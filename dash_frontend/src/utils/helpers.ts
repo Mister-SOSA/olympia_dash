@@ -9,6 +9,7 @@ import {
     eachMonthOfInterval,
 } from "date-fns";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { nFormatter as nFormatterNew } from "@/utils/numberUtils";
 
 /* -------------------------------------- */
 /* 📅 Date Helpers                        */
@@ -119,18 +120,13 @@ export const calculateTotal = (data: ProcessedSalesData[], key: "currentPeriodSa
 /* 📊 Chart Formatting Helpers            */
 /* -------------------------------------- */
 
+/**
+ * Format a number with SI suffixes (K, M, B, T)
+ * Now respects user settings for compact number display
+ * @deprecated Use formatCompact from numberUtils for new code
+ */
 export const nFormatter = (num: number, digits: number): string => {
-    const lookup = [
-        { value: 1, symbol: "" },
-        { value: 1e3, symbol: "k" },
-        { value: 1e6, symbol: "M" },
-        { value: 1e9, symbol: "B" },
-        { value: 1e12, symbol: "T" },
-    ];
-    const item = lookup.findLast((item) => num >= item.value);
-    return item
-        ? (num / item.value).toFixed(digits).replace(/\.0+$|(?<=\.[0-9]*[1-9])0+$/, "") + item.symbol
-        : "0";
+    return nFormatterNew(num, digits);
 };
 
 export const prepareChartData = (data: ProcessedSalesData[]) => {

@@ -3,6 +3,8 @@ import { MdError, MdRefresh } from "react-icons/md";
 import { Loader } from "@/components/ui/loader";
 import config from "@/config";
 import { authService } from "@/lib/auth";
+import { preferencesService } from "@/lib/preferences";
+import { WIDGET_SETTINGS } from "@/constants/settings";
 
 interface WidgetProps {
     title?: string;
@@ -19,6 +21,16 @@ export default function Widget({
     refreshInterval = 30000,
     children
 }: WidgetProps) {
+    // Read settings directly from preferences service (not via hook to avoid re-render loops)
+    const showRefreshIndicator = preferencesService.get(
+        WIDGET_SETTINGS.showRefreshIndicators.key,
+        WIDGET_SETTINGS.showRefreshIndicators.default
+    );
+    const showWidgetTitles = preferencesService.get(
+        WIDGET_SETTINGS.showWidgetTitles.key,
+        WIDGET_SETTINGS.showWidgetTitles.default
+    );
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(!!endpoint);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -137,10 +149,20 @@ export default function Widget({
         }
     };
 
-    useEffect(() => {
-        fetchData();
+    // Track if we've done initial fetch
+    const hasFetchedRef = useRef(false);
 
-        if (refreshInterval && endpoint) {
+    // Fetch data effect - only runs on mount and when endpoint changes
+    useEffect(() => {
+        // Skip if no endpoint
+        if (!endpoint) return;
+
+        // Fetch immediately on mount
+        fetchData();
+        hasFetchedRef.current = true;
+
+        // Set up interval for periodic refresh
+        if (refreshInterval && refreshInterval > 0) {
             intervalRef.current = setInterval(fetchData, refreshInterval);
 
             // Update progress smoothly
@@ -159,7 +181,9 @@ export default function Widget({
             if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
-    }, [endpoint, refreshInterval]); const handleRetry = () => {
+    }, [endpoint, refreshInterval]);
+
+    const handleRetry = () => {
         isInitialLoadRef.current = true; // Treat manual retry as initial load
         setLoading(true);
         setError(null);
@@ -171,8 +195,8 @@ export default function Widget({
             {/* Drag Handle - Apple-style: minimal, centered, appears on hover */}
             <div className="widget-drag-handle" title="Drag to move widget" />
 
-            {/* Persistent refresh indicator */}
-            {endpoint && refreshInterval && (
+            {/* Persistent refresh indicator - respects user settings */}
+            {endpoint && refreshInterval && showRefreshIndicator && (
                 <div className="widget-refresh-indicator">
                     <svg width="20" height="20" viewBox="0 0 20 20" className="refresh-ring">
                         <circle
@@ -200,7 +224,7 @@ export default function Widget({
                 </div>
             )}
 
-            {title && (
+            {title && showWidgetTitles && (
                 <div className="widget-header">
                     <h2>{title}</h2>
                     {error && (

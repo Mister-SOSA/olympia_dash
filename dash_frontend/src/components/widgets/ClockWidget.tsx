@@ -1,10 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
+import { preferencesService } from "@/lib/preferences";
+import { DATETIME_SETTINGS } from "@/constants/settings";
 
 const DateTimeContent: React.FC = () => {
     const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
     const [fontSize, setFontSize] = useState<string>("16px");
     const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // Subscribe to settings changes
+    const [clockFormat, setClockFormat] = useState<'12h' | '24h'>(
+        preferencesService.get(DATETIME_SETTINGS.clockFormat.key, DATETIME_SETTINGS.clockFormat.default) as '12h' | '24h'
+    );
+    const [showSeconds, setShowSeconds] = useState<boolean>(
+        preferencesService.get(DATETIME_SETTINGS.showSeconds.key, DATETIME_SETTINGS.showSeconds.default) as boolean
+    );
+    const [timezone, setTimezone] = useState<string>(
+        preferencesService.get(DATETIME_SETTINGS.timezone.key, DATETIME_SETTINGS.timezone.default) as string
+    );
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -12,6 +25,16 @@ const DateTimeContent: React.FC = () => {
         }, 1000);
 
         return () => clearInterval(interval); // Cleanup on unmount
+    }, []);
+
+    // Subscribe to preference changes
+    useEffect(() => {
+        const unsubscribe = preferencesService.subscribe(() => {
+            setClockFormat(preferencesService.get(DATETIME_SETTINGS.clockFormat.key, DATETIME_SETTINGS.clockFormat.default) as '12h' | '24h');
+            setShowSeconds(preferencesService.get(DATETIME_SETTINGS.showSeconds.key, DATETIME_SETTINGS.showSeconds.default) as boolean);
+            setTimezone(preferencesService.get(DATETIME_SETTINGS.timezone.key, DATETIME_SETTINGS.timezone.default) as string);
+        });
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
@@ -29,15 +52,18 @@ const DateTimeContent: React.FC = () => {
     }, []);
 
     const formatTime = (time: Date): string => {
-        let hours = time.getHours();
-        const minutes = time.getMinutes();
-        const seconds = time.getSeconds();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const options: Intl.DateTimeFormatOptions = {
+            timeZone: timezone,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: clockFormat === '12h',
+        };
 
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        if (showSeconds) {
+            options.second = '2-digit';
+        }
 
-        return `${hours < 10 ? "0" + hours : hours}:${minutes < 10 ? "0" + minutes : minutes}:${seconds < 10 ? "0" + seconds : seconds} ${ampm}`;
+        return new Intl.DateTimeFormat('en-US', options).format(time);
     };
 
     return (

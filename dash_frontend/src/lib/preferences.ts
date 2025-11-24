@@ -411,6 +411,9 @@ class PreferencesService {
         // Save to cache immediately
         this.saveToCache();
 
+        // Notify all local subscribers immediately (for same-session updates)
+        this.changeCallbacks.forEach(cb => cb());
+
         // Save to server with optional debouncing
         if (sync) {
             if (debounce) {
@@ -432,6 +435,9 @@ class PreferencesService {
 
         // Save to cache immediately
         this.saveToCache();
+
+        // Notify all local subscribers immediately (for same-session updates)
+        this.changeCallbacks.forEach(cb => cb());
 
         // Save to server
         if (sync) {

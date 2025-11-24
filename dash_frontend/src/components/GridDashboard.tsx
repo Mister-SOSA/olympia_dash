@@ -12,6 +12,8 @@ import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { preferencesService } from "@/lib/preferences";
+import { DASHBOARD_SETTINGS } from "@/constants/settings";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -31,7 +33,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Keep track of React roots for proper unmounting of widget components.
         const widgetRoots = useRef<Map<string, Root>>(new Map());
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
-        
+
         // Track if user is actively interacting with grid
         const isInteracting = useRef<boolean>(false);
         const hasPendingSave = useRef<boolean>(false);
@@ -70,8 +72,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     console.log(`Removing widget from GridStack`);
                     gridInstance.current.removeWidget(widgetElement);
 
-                    // ✅ NEW: Auto-compact after removal to fill gaps
-                    gridInstance.current.compact('list');  // Preserves order while filling gaps
+                    // Check if auto-compact is enabled
+                    const autoCompact = preferencesService.get(
+                        DASHBOARD_SETTINGS.autoCompact.key,
+                        DASHBOARD_SETTINGS.autoCompact.default
+                    );
+
+                    if (autoCompact) {
+                        // Auto-compact after removal to fill gaps
+                        gridInstance.current.compact('list');  // Preserves order while filling gaps
+                    }
 
                     // Update layout state by filtering out the removed widget
                     const currentLayout = layout.filter(widget => widget.id !== widgetId);
@@ -79,7 +89,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                     externalLayoutChangeRef.current?.(currentLayout);
 
-                    console.log(`Widget ${widgetId} successfully removed and layout compacted`);
+                    console.log(`Widget ${widgetId} successfully removed${autoCompact ? ' and layout compacted' : ''}`);
                 } else {
                     console.error(`Widget element not found for ID: ${widgetId}`);
                 }
@@ -201,8 +211,19 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const handleDeleteRequest = (widgetId: string) => {
             const widgetDef = getWidgetById(widgetId);
             if (widgetDef) {
-                setSelectedWidget({ id: widgetId, title: widgetDef.title });
-                setShowDeleteConfirm(true);
+                // Check if confirmation is required
+                const confirmDelete = preferencesService.get(
+                    DASHBOARD_SETTINGS.confirmDelete.key,
+                    DASHBOARD_SETTINGS.confirmDelete.default
+                );
+
+                if (confirmDelete) {
+                    setSelectedWidget({ id: widgetId, title: widgetDef.title });
+                    setShowDeleteConfirm(true);
+                } else {
+                    // Skip confirmation, delete directly
+                    handleDeleteWidget(widgetId);
+                }
             }
             hideContextMenu();
         };
@@ -376,15 +397,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             gridInstance.current.on("dragstart", () => {
                 isInteracting.current = true;
             });
-            
+
             gridInstance.current.on("dragstop", () => {
                 isInteracting.current = false;
             });
-            
+
             gridInstance.current.on("resizestart", () => {
                 isInteracting.current = true;
             });
-            
+
             gridInstance.current.on("resizestop", () => {
                 isInteracting.current = false;
             });
@@ -413,7 +434,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         enabled: true,
                     }));
                     externalLayoutChangeRef.current?.(updatedLayout);
-                    
+
                     // Keep flag set for additional time to cover server roundtrip
                     setTimeout(() => {
                         hasPendingSave.current = false;
@@ -448,12 +469,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             const widgetsAdded = layout.some(w => !prevIds.has(w.id));
             const widgetsRemoved = prevLayoutRef.current.some(w => !currentIds.has(w.id));
-            
+
             // Check if any widget positions/sizes changed
             const layoutChanged = layout.some(widget => {
                 const prev = prevLayoutRef.current.find(w => w.id === widget.id);
-                return !prev || prev.x !== widget.x || prev.y !== widget.y || 
-                       prev.w !== widget.w || prev.h !== widget.h;
+                return !prev || prev.x !== widget.x || prev.y !== widget.y ||
+                    prev.w !== widget.w || prev.h !== widget.h;
             });
 
             // Skip reload if user is actively interacting OR has unsaved changes
@@ -469,7 +490,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Reload if widgets were added/removed OR positions/sizes changed
             if (widgetsAdded || widgetsRemoved || layoutChanged) {
                 console.log('🔄 Reloading GridStack with updated layout');
-                
+
                 // Create a set of widget IDs from the new layout
                 const newWidgetIds = new Set(layout.map(widget => widget.id));
 
