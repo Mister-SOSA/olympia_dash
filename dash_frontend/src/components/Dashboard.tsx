@@ -34,6 +34,7 @@ import { preferencesService, migrateFromLocalStorage } from "@/lib/preferences";
 import { Loader } from "./ui/loader";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { ImpersonationBanner } from "./ImpersonationBanner";
+import { usePrivacy } from "@/contexts/PrivacyContext";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -197,6 +198,9 @@ export default function Dashboard() {
 
     // ✅ FIX: Get widget permissions
     const { hasAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
+
+    // Privacy mode
+    const { toggle: togglePrivacy, isPrivate } = usePrivacy();
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -456,6 +460,14 @@ export default function Dashboard() {
                 return;
             }
 
+            // Privacy mode toggle (backslash key)
+            if (key === "\\" || key === "\\\\") {
+                e.preventDefault();
+                togglePrivacy();
+                toast.info(isPrivate ? "Privacy Mode Off" : "Privacy Mode On");
+                return;
+            }
+
             if (
                 (!e.shiftKey && key >= "0" && key <= "9") ||
                 (e.shiftKey && e.code.startsWith("Digit"))
@@ -519,7 +531,7 @@ export default function Dashboard() {
                 if (newIndex !== presetIndex) loadPreset(newIndex);
             }
         },
-        [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, presets, presetIndex, loadPreset, updateTempLayout]
+        [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, presets, presetIndex, loadPreset, updateTempLayout, togglePrivacy, isPrivate]
     );
 
     useEffect(() => {
@@ -738,8 +750,7 @@ export default function Dashboard() {
     return (
         <>
             {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
-            <div className="dashboard-container" style={isImpersonating ? { paddingTop: '60px' } : {}}>
-                {/* Dock - Auto-hides at bottom */}
+            <div className="dashboard-container" style={isImpersonating ? { paddingTop: '60px' } : {}}>                {/* Dock - Auto-hides at bottom */}
                 <DashboardDock
                     presets={presets}
                     activePresetIndex={activePresetIndex}

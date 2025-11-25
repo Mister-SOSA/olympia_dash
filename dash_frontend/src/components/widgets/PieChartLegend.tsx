@@ -1,5 +1,7 @@
 import React from "react";
 import { nFormatter } from "@/utils/helpers";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { obfuscateName } from "@/utils/privacyUtils";
 
 interface LegendItem {
     name: string;
@@ -22,6 +24,15 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
     position,
 }) => {
     const isVertical = position === "right";
+    const { settings: privacySettings } = usePrivacy();
+
+    // Helper to obfuscate names when privacy is enabled
+    const getDisplayName = (name: string): string => {
+        if (privacySettings.enabled && privacySettings.obfuscateNames) {
+            return obfuscateName(name, true);
+        }
+        return name;
+    };
 
     return (
         <div
@@ -105,7 +116,7 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = ({
                                 color: "var(--text-primary)",
                             }}
                         >
-                            {entry.name}
+                            {getDisplayName(entry.name)}
                         </span>
                         <span
                             style={{

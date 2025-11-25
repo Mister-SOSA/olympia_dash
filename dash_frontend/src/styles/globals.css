@@ -1926,3 +1926,102 @@ html.reduce-motion *::after {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================
+   PRIVACY MODE STYLES
+   ============================================ */
+
+/* Blur style - CSS-based obfuscation */
+.privacy-blur {
+  filter: blur(6px);
+  transition: filter 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Allow revealing on hover (optional - can be toggled) */
+.privacy-blur:hover {
+  filter: blur(6px);
+  /* Keep blurred even on hover for true privacy */
+}
+
+/* Hidden style - for non-blur obfuscation methods */
+.privacy-hidden {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Global body class when privacy mode is active */
+body.privacy-mode-active .sensitive-data {
+  filter: blur(6px);
+}
+
+/* Privacy indicator animation */
+@keyframes privacyPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(139, 92, 246, 0);
+  }
+}
+
+.privacy-indicator-pulse {
+  animation: privacyPulse 2s ease-in-out infinite;
+}
+
+/* Table cells with sensitive data */
+.table-dollars .privacy-blur,
+.table-dollars .privacy-hidden {
+  display: inline-block;
+}
+
+/* Charts with privacy mode */
+.privacy-mode-chart text.privacy-blur {
+  filter: blur(4px);
+}
+
+/* Ensure blur doesn't affect layout */
+[data-privacy-active="true"] {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Print styles - always hide sensitive data when printing if privacy mode is on */
+@media print {
+  body.privacy-mode-active .privacy-blur,
+  body.privacy-mode-active [data-privacy-active="true"] {
+    visibility: hidden !important;
+  }
+  
+  body.privacy-mode-active [data-privacy-active="true"]::after {
+    content: "[HIDDEN]";
+    visibility: visible;
+    color: #999;
+    font-style: italic;
+  }
+}
+
+/* Privacy overlay for charts (SVG/Canvas) */
+.privacy-chart-overlay {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(128, 128, 128, 0.1) 10px,
+    rgba(128, 128, 128, 0.1) 20px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Dark/light theme adjustments for privacy mode */
+[data-theme="light"] .privacy-blur {
+  filter: blur(5px);
+}
+
+[data-theme="dark"] .privacy-blur {
+  filter: blur(6px);
+}

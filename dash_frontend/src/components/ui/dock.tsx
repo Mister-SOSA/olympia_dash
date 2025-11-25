@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 export interface DockProps {
     className?: string;
     children: React.ReactNode;
+    magnification?: boolean;
 }
 
 export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
-    ({ className, children }, ref) => {
+    ({ className, children, magnification = true }, ref) => {
         const mouseX = useMotionValue(Infinity);
 
         return (
@@ -29,6 +30,7 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                     if (React.isValidElement(child)) {
                         return React.cloneElement(child as React.ReactElement<any>, {
                             mouseX,
+                            magnification,
                         });
                     }
                     return child;
@@ -44,13 +46,14 @@ export interface DockIconProps {
     className?: string;
     children: React.ReactNode;
     mouseX?: any;
+    magnification?: boolean;
     onClick?: () => void;
     onContextMenu?: (e: React.MouseEvent) => void;
     title?: string;
 }
 
 export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
-    ({ className, children, mouseX, onClick, onContextMenu, title }, ref) => {
+    ({ className, children, mouseX, magnification = true, onClick, onContextMenu, title }, ref) => {
         const iconRef = useRef<HTMLButtonElement>(null);
 
         const distance = useTransform(mouseX, (val: number) => {
@@ -58,7 +61,12 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
             return val - bounds.x - bounds.width / 2;
         });
 
-        const widthSync = useTransform(distance, [-150, 0, 150], [48, 64, 48]);
+        // When magnification is enabled, scale from 48 to 64; otherwise, stay at 48
+        const widthSync = useTransform(
+            distance, 
+            [-150, 0, 150], 
+            magnification ? [48, 64, 48] : [48, 48, 48]
+        );
         const width = useSpring(widthSync, {
             mass: 0.1,
             stiffness: 150,

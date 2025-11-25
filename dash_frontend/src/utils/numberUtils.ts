@@ -5,6 +5,7 @@
 
 import { preferencesService } from '@/lib/preferences';
 import { DATA_SETTINGS } from '@/constants/settings';
+import { isPrivacyModeEnabled, getPrivacySettings } from '@/contexts/PrivacyContext';
 
 // ============================================
 // DEFAULTS - Use settings constants
@@ -141,6 +142,22 @@ export function formatCurrency(
     value: number,
     options: FormatCurrencyOptions = {}
 ): string {
+    // Check privacy mode
+    const privacySettings = getPrivacySettings();
+    if (privacySettings.enabled && privacySettings.obfuscateCurrency) {
+        switch (privacySettings.style) {
+            case 'blur':
+                // For blur style, continue with formatting (CSS handles blur)
+                break;
+            case 'redact':
+                return '$••••';
+            case 'asterisk':
+                return '$***';
+            case 'placeholder':
+                return '$•••••';
+        }
+    }
+
     const locale = getUserNumberFormat();
     const currency = options.currency ?? getUserCurrency();
     const {
@@ -247,6 +264,22 @@ export function formatCompact(value: number, decimals = 1): string {
  * @deprecated Use formatCompact instead
  */
 export function nFormatter(num: number, digits: number): string {
+    // Check privacy mode
+    const privacySettings = getPrivacySettings();
+    if (privacySettings.enabled && privacySettings.obfuscateCurrency) {
+        switch (privacySettings.style) {
+            case 'blur':
+                // For blur style, return original value (CSS handles blur)
+                break;
+            case 'redact':
+                return '••••';
+            case 'asterisk':
+                return '***';
+            case 'placeholder':
+                return '•••••';
+        }
+    }
+
     if (!getUserCompactNumbers()) {
         return formatNumber(num, { decimals: digits, compact: false });
     }

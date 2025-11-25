@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dock, DockIcon, DockDivider } from "@/components/ui/dock";
-import { MdWidgets, MdSettings, MdBookmarks } from "react-icons/md";
+import { MdWidgets, MdSettings, MdBookmarks, MdVisibilityOff, MdVisibility } from "react-icons/md";
 import { DashboardPreset } from "@/types";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { useSettings } from "@/hooks/useSettings";
 
 interface DashboardDockProps {
     presets: Array<DashboardPreset | null>;
@@ -27,13 +29,29 @@ export default function DashboardDock({
 }: DashboardDockProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [mouseY, setMouseY] = useState(0);
+    const { isPrivate, toggle: togglePrivacy } = usePrivacy();
+    const { settings } = useSettings();
+
+    // Destructure dock settings
+    const { 
+        dockAutoHide, 
+        dockMagnification, 
+        dockShowActiveIndicator,
+        dockTriggerDistance 
+    } = settings;
 
     useEffect(() => {
+        // If auto-hide is disabled, always show the dock
+        if (!dockAutoHide) {
+            setIsVisible(true);
+            return;
+        }
+
         const handleMouseMove = (e: MouseEvent) => {
             setMouseY(e.clientY);
             const windowHeight = window.innerHeight;
-            const showThreshold = 20; // Show dock when mouse is within 20px of bottom
-            const hideThreshold = 120; // Hide dock when mouse is more than 150px from bottom
+            const showThreshold = dockTriggerDistance; // Use configured trigger distance
+            const hideThreshold = dockTriggerDistance + 100; // Hide threshold is trigger + 100px
 
             // Use different thresholds based on current visibility state
             if (isVisible) {
@@ -47,7 +65,7 @@ export default function DashboardDock({
 
         window.addEventListener("mousemove", handleMouseMove);
         return () => window.removeEventListener("mousemove", handleMouseMove);
-    }, [isVisible]);
+    }, [isVisible, dockAutoHide, dockTriggerDistance]);
 
     const handlePresetRightClick = (e: React.MouseEvent, index: number) => {
         e.preventDefault();
@@ -64,7 +82,7 @@ export default function DashboardDock({
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
                     className="fixed bottom-4 left-1/2 z-50"
                 >
-                    <Dock>
+                    <Dock magnification={dockMagnification}>
                         {/* Widgets Icon */}
                         <DockIcon
                             onClick={onWidgetsClick}
@@ -115,10 +133,10 @@ export default function DashboardDock({
                                     }
                                 >
                                     <span className="font-semibold text-sm">{index + 1}</span>
-                                    {isActive && (
+                                    {dockShowActiveIndicator && isActive && (
                                         <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
                                     )}
-                                    {!isActive && isFilled && (
+                                    {dockShowActiveIndicator && !isActive && isFilled && (
                                         <span className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-secondary-text rounded-full shadow-[0_0_8px_rgba(147,51,234,0.6)]" />
                                     )}
                                 </DockIcon>
@@ -126,6 +144,22 @@ export default function DashboardDock({
                         })}
 
                         <DockDivider />
+
+                        {/* Privacy Toggle */}
+                        <DockIcon
+                            onClick={togglePrivacy}
+                            title={isPrivate ? "Privacy Mode ON (\\)" : "Privacy Mode OFF (\\)"}
+                            className={isPrivate 
+                                ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400"
+                                : "bg-ui-bg-tertiary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
+                            }
+                        >
+                            {isPrivate ? (
+                                <MdVisibilityOff className="w-6 h-6" />
+                            ) : (
+                                <MdVisibility className="w-6 h-6" />
+                            )}
+                        </DockIcon>
 
                         {/* Settings Icon */}
                         <DockIcon

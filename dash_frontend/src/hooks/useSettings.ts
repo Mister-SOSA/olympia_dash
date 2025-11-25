@@ -11,6 +11,8 @@ import {
     APPEARANCE_SETTINGS,
     DATETIME_SETTINGS,
     DASHBOARD_SETTINGS,
+    DOCK_SETTINGS,
+    DRAG_HANDLE_SETTINGS,
     WIDGET_SETTINGS,
     NOTIFICATION_SETTINGS,
     DATA_SETTINGS,
@@ -41,6 +43,18 @@ export interface UserSettings {
     autoSave: boolean;
     confirmDelete: boolean;
     autoCompact: boolean;
+
+    // Dock
+    dockAutoHide: boolean;
+    dockMagnification: boolean;
+    dockShowLabels: boolean;
+    dockShowActiveIndicator: boolean;
+    dockTriggerDistance: number;
+
+    // Drag Handle
+    dragHandleShowOnHover: boolean;
+    dragHandleAlwaysShow: boolean;
+    showResizeHandles: boolean;
 
     // Widgets
     defaultRefreshInterval: number;
@@ -83,6 +97,18 @@ const DEFAULT_SETTINGS: UserSettings = {
     confirmDelete: DASHBOARD_SETTINGS.confirmDelete.default,
     autoCompact: DASHBOARD_SETTINGS.autoCompact.default,
 
+    // Dock
+    dockAutoHide: DOCK_SETTINGS.autoHide.default,
+    dockMagnification: DOCK_SETTINGS.magnification.default,
+    dockShowLabels: DOCK_SETTINGS.showLabels.default,
+    dockShowActiveIndicator: DOCK_SETTINGS.showActiveIndicator.default,
+    dockTriggerDistance: DOCK_SETTINGS.triggerDistance.default,
+
+    // Drag Handle
+    dragHandleShowOnHover: DRAG_HANDLE_SETTINGS.showOnHover.default,
+    dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.default,
+    showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.default,
+
     // Widgets
     defaultRefreshInterval: WIDGET_SETTINGS.defaultRefreshInterval.default,
     showRefreshIndicators: WIDGET_SETTINGS.showRefreshIndicators.default,
@@ -120,6 +146,16 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     autoSave: DASHBOARD_SETTINGS.autoSave.key,
     confirmDelete: DASHBOARD_SETTINGS.confirmDelete.key,
     autoCompact: DASHBOARD_SETTINGS.autoCompact.key,
+
+    dockAutoHide: DOCK_SETTINGS.autoHide.key,
+    dockMagnification: DOCK_SETTINGS.magnification.key,
+    dockShowLabels: DOCK_SETTINGS.showLabels.key,
+    dockShowActiveIndicator: DOCK_SETTINGS.showActiveIndicator.key,
+    dockTriggerDistance: DOCK_SETTINGS.triggerDistance.key,
+
+    dragHandleShowOnHover: DRAG_HANDLE_SETTINGS.showOnHover.key,
+    dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.key,
+    showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.key,
 
     defaultRefreshInterval: WIDGET_SETTINGS.defaultRefreshInterval.key,
     showRefreshIndicators: WIDGET_SETTINGS.showRefreshIndicators.key,

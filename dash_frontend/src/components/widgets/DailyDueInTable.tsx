@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { SensitiveCurrency, SensitiveName } from "@/components/ui/SensitiveValue";
 
 const WIDGET_ID = 'DailyDueInTable';
 
@@ -241,7 +242,9 @@ const MemoizedTableRow = memo(({
         >
             <TableCell className="font-black" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
             <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
-            <TableCell style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+            <TableCell style={{ color: 'var(--table-text-primary)' }}>
+                <SensitiveName value={row.vendName} />
+            </TableCell>
             <TableCell style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
             <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
             <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyRecvd}</TableCell>
@@ -249,14 +252,12 @@ const MemoizedTableRow = memo(({
             <TableCell className="text-right" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
             <TableCell className="text-right row-secondary">
                 <div className="table-dollars">
-                    <span className="dollar-sign" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                    <span className="dollar-value" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
+                    <SensitiveCurrency value={`$${row.recentUnitPrice}`} style={{ color: 'var(--table-text-primary)' }} />
                 </div>
             </TableCell>
             <TableCell className="text-right row-secondary">
                 <div className="table-dollars">
-                    <span className="dollar-sign" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                    <span className="dollar-value" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
+                    <SensitiveCurrency value={`$${row.lastOrderUnitPrice}`} style={{ color: 'var(--table-text-primary)' }} />
                 </div>
             </TableCell>
         </TableRow>

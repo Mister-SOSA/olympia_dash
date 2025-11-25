@@ -17,6 +17,8 @@ import config from "@/config";
 import { CustomerData } from "@/types";
 import { PieChartLegend } from "./PieChartLegend";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { obfuscateName } from "@/utils/privacyUtils";
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
@@ -197,10 +199,11 @@ interface CustomerPieChartProps {
     showOtherCategory: boolean;
     showPercentages: boolean;
     sortOrder: 'value' | 'name';
+    privacyEnabled: boolean;
 }
 
 // Bar Chart Component for small sizes
-const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages: boolean }> = ({ data, showPercentages: showPercents }) => {
+const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages: boolean; privacyEnabled: boolean }> = ({ data, showPercentages: showPercents, privacyEnabled }) => {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [availableHeight, setAvailableHeight] = useState(0);
@@ -238,6 +241,14 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
         return cleaned.substring(0, maxLength) + '...';
     };
 
+    // Apply privacy obfuscation to names
+    const getDisplayName = (name: string, maxLength?: number): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return shortenName(name, maxLength);
+    };
+
     // Calculate optimal bar height based on available space
     const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
     const showPercentages = showPercents && barHeight >= 70; // Only show percentages if bar is tall enough and enabled
@@ -266,7 +277,7 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
                             gap: "0.25rem",
                             padding: "0.25rem",
                         }}
-                        title={`${item.name}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
+                        title={`${getDisplayName(item.name)}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
                     >
                         {showInlineLabels && item.percent > 12 && (
                             <>
@@ -281,7 +292,7 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                 }}>
-                                    {shortenName(item.name, 15)}
+                                    {getDisplayName(item.name, 15)}
                                 </span>
                                 <span style={{
                                     fontSize: "1rem",
@@ -340,7 +351,7 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
                             whiteSpace: "nowrap",
                             letterSpacing: "-0.01em",
                         }}>
-                            {shortenName(item.name)}
+                            {getDisplayName(item.name)}
                         </span>
                         <span style={{
                             fontSize: "0.75rem",
@@ -357,10 +368,18 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
 };
 
 // Main chart component with intelligent layout
-const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersShown, showOtherCategory, showPercentages, sortOrder }) => {
+const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersShown, showOtherCategory, showPercentages, sortOrder, privacyEnabled }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+    // Helper to obfuscate names when privacy is enabled
+    const getDisplayName = useCallback((name: string): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return name;
+    }, [privacyEnabled]);
 
     const processedData = useMemo(() => {
         const transformed = processCustomerData(data, maxCustomersShown, showOtherCategory, sortOrder).map((item) => ({
@@ -391,7 +410,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
     if (layout.type === "bar") {
         return (
             <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-                <PartitionedBar data={processedData} showPercentages={showPercentages} />
+                <PartitionedBar data={processedData} showPercentages={showPercentages} privacyEnabled={privacyEnabled} />
             </div>
         );
     }
@@ -462,7 +481,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
                                                 fontSize: "0.9375rem",
                                                 color: "var(--ui-text-primary)",
                                             }}>
-                                                {data.name}
+                                                {getDisplayName(data.name)}
                                             </div>
                                             <div style={{
                                                 color: "var(--ui-text-primary)",
@@ -543,12 +562,13 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
 // Main component to render the widget.
 export default function TopCustomersThisYearPie() {
     const currentYear = new Date().getFullYear();
-    const { settings } = useWidgetSettings('TopCustomersThisYearPie');
+    const { settings: widgetSettings } = useWidgetSettings('TopCustomersThisYearPie');
+    const { settings: privacySettings } = usePrivacy();
 
-    const showOtherCategory = settings.showOtherCategory ?? true;
-    const maxCustomersShown = settings.maxCustomersShown ?? 5;
-    const showPercentages = settings.showPercentages ?? true;
-    const sortOrder = settings.sortOrder as 'value' | 'name' ?? 'value';
+    const showOtherCategory = widgetSettings.showOtherCategory ?? true;
+    const maxCustomersShown = widgetSettings.maxCustomersShown ?? 5;
+    const showPercentages = widgetSettings.showPercentages ?? true;
+    const sortOrder = widgetSettings.sortOrder as 'value' | 'name' ?? 'value';
 
     const startOfYear = useMemo(
         () => new Date(currentYear, 0, 1).toISOString().split("T")[0],
@@ -575,8 +595,9 @@ export default function TopCustomersThisYearPie() {
             showOtherCategory={showOtherCategory}
             showPercentages={showPercentages}
             sortOrder={sortOrder}
+            privacyEnabled={privacySettings.enabled && privacySettings.obfuscateNames}
         />
-    ), [maxCustomersShown, showOtherCategory, showPercentages, sortOrder]);
+    ), [maxCustomersShown, showOtherCategory, showPercentages, sortOrder, privacySettings]);
 
     return (
         <Widget

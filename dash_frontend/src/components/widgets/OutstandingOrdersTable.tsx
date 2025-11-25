@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import { playNotificationSound } from "@/utils/soundUtils";
 import { Package, Calendar, DollarSign, Hash, FileText, TrendingUp, AlertCircle } from "lucide-react";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { SensitiveCurrency, SensitiveName } from "@/components/ui/SensitiveValue";
+import { usePrivacy } from "@/contexts/PrivacyContext";
 
 const WIDGET_ID = 'OutstandingOrdersTable';
 
@@ -53,6 +55,9 @@ export default function OutstandingOrdersTable() {
     const sortBy = settings.sortBy as 'vendor' | 'date' | 'overdue' | 'poNumber';
     const maxRows = settings.maxRows as number;
     const overdueAlertThreshold = settings.overdueAlertThreshold as number;
+
+    // Privacy mode
+    const { settings: privacySettings } = usePrivacy();
 
     // Prepare the widget payload to query the backed view securely.
     const widgetPayload = useMemo(
@@ -246,7 +251,9 @@ export default function OutstandingOrdersTable() {
                                 >
                                     <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
                                     <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
-                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>
+                                        <SensitiveName value={row.vendName} />
+                                    </TableCell>
                                     <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
                                     <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
                                     <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
@@ -265,14 +272,12 @@ export default function OutstandingOrdersTable() {
                                     <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
                                     <TableCell className="text-right row-secondary py-1.5">
                                         <div className="table-dollars">
-                                            <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                            <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
+                                            <SensitiveCurrency value={`$${row.recentUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right row-secondary py-1.5">
                                         <div className="table-dollars">
-                                            <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                            <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
+                                            <SensitiveCurrency value={`$${row.lastOrderUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
                                         </div>
                                     </TableCell>
                                 </TableRow>

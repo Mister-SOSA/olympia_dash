@@ -15,6 +15,8 @@ import { nFormatter } from "@/utils/helpers";
 import { PayablesData } from "@/types";
 import { PieChartLegend } from "./PieChartLegend";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { obfuscateName } from "@/utils/privacyUtils";
 
 // Chart colors matching TopCustomersThisYearPie
 const CHART_COLORS = [
@@ -116,10 +118,12 @@ interface PayablesPieChartProps {
     showOtherCategory: boolean;
     showPercentages: boolean;
     sortOrder: 'value' | 'name';
+    privacyEnabled: boolean;
+    obfuscationStyle: 'blur' | 'redact' | 'asterisk' | 'placeholder';
 }
 
 // Bar Chart Component for small sizes
-const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages: boolean }> = ({ data, showPercentages: showPercents }) => {
+const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages: boolean; privacyEnabled: boolean; obfuscationStyle: 'blur' | 'redact' | 'asterisk' | 'placeholder' }> = ({ data, showPercentages: showPercents, privacyEnabled, obfuscationStyle }) => {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [availableHeight, setAvailableHeight] = useState(0);
@@ -157,6 +161,14 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
         return cleaned.substring(0, maxLength) + '...';
     };
 
+    // Apply privacy obfuscation to names
+    const getDisplayName = (name: string, maxLength?: number): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return shortenName(name, maxLength);
+    };
+
     // Calculate optimal bar height based on available space
     const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
     const showPercentages = showPercents && barHeight >= 70; // Only show percentages if bar is tall enough and enabled
@@ -185,7 +197,7 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
                             gap: "0.25rem",
                             padding: "0.25rem",
                         }}
-                        title={`${item.name}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
+                        title={`${getDisplayName(item.name)}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
                     >
                         {showInlineLabels && item.percent > 12 && (
                             <>
@@ -200,7 +212,7 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                 }}>
-                                    {shortenName(item.name, 15)}
+                                    {getDisplayName(item.name, 15)}
                                 </span>
                                 <span style={{
                                     fontSize: "1rem",
@@ -259,7 +271,7 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
                             whiteSpace: "nowrap",
                             letterSpacing: "-0.01em",
                         }}>
-                            {shortenName(item.name)}
+                            {getDisplayName(item.name)}
                         </span>
                         <span style={{
                             fontSize: "0.75rem",
@@ -276,10 +288,18 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
 };
 
 // Main chart component with intelligent layout
-const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsShown, showOtherCategory, showPercentages, sortOrder }) => {
+const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsShown, showOtherCategory, showPercentages, sortOrder, privacyEnabled, obfuscationStyle }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+    // Helper to obfuscate names when privacy is enabled
+    const getDisplayName = useCallback((name: string): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return name;
+    }, [privacyEnabled]);
 
     const processedData = useMemo(() => {
         // Sort by total_pay_value descending first to determine top vendors
@@ -347,7 +367,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
     if (layout.type === "bar") {
         return (
             <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-                <PartitionedBar data={processedData} showPercentages={showPercentages} />
+                <PartitionedBar data={processedData} showPercentages={showPercentages} privacyEnabled={privacyEnabled} obfuscationStyle={obfuscationStyle} />
             </div>
         );
     }
@@ -418,7 +438,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
                                                 fontSize: "0.9375rem",
                                                 color: "var(--ui-text-primary)",
                                             }}>
-                                                {data.name}
+                                                {getDisplayName(data.name)}
                                             </div>
                                             <div style={{
                                                 color: "var(--ui-text-primary)",
@@ -500,12 +520,13 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
 /* Top5PayablesYTD Component              */
 /* -------------------------------------- */
 export default function Top5PayablesYTD() {
-    const { settings } = useWidgetSettings('Top5PayablesYTD');
+    const { settings: widgetSettings } = useWidgetSettings('Top5PayablesYTD');
+    const { settings: privacySettings } = usePrivacy();
 
-    const showOtherCategory = settings.showOtherCategory ?? true;
-    const maxVendorsShown = settings.maxVendorsShown ?? 5;
-    const showPercentages = settings.showPercentages ?? true;
-    const sortOrder = settings.sortOrder as 'value' | 'name' ?? 'value';
+    const showOtherCategory = widgetSettings.showOtherCategory ?? true;
+    const maxVendorsShown = widgetSettings.maxVendorsShown ?? 5;
+    const showPercentages = widgetSettings.showPercentages ?? true;
+    const sortOrder = widgetSettings.sortOrder as 'value' | 'name' ?? 'value';
 
     // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
@@ -523,8 +544,10 @@ export default function Top5PayablesYTD() {
             showOtherCategory={showOtherCategory}
             showPercentages={showPercentages}
             sortOrder={sortOrder}
+            privacyEnabled={privacySettings.enabled && privacySettings.obfuscateNames}
+            obfuscationStyle={privacySettings.style}
         />
-    ), [maxVendorsShown, showOtherCategory, showPercentages, sortOrder]);
+    ), [maxVendorsShown, showOtherCategory, showPercentages, sortOrder, privacySettings]);
 
     return (
         <Widget

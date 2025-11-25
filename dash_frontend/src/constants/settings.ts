@@ -116,6 +116,67 @@ export const DASHBOARD_SETTINGS = {
 } as const;
 
 // ============================================
+// DOCK SETTINGS
+// ============================================
+export const DOCK_SETTINGS = {
+    autoHide: {
+        key: 'dock.autoHide',
+        default: true,
+        label: 'Auto-hide Dock',
+        description: 'Hide dock until mouse approaches bottom of screen',
+    },
+    magnification: {
+        key: 'dock.magnification',
+        default: true,
+        label: 'Magnification',
+        description: 'Enlarge icons when hovering over the dock',
+    },
+    showLabels: {
+        key: 'dock.showLabels',
+        default: false,
+        label: 'Show Labels',
+        description: 'Display labels below dock icons',
+    },
+    showActiveIndicator: {
+        key: 'dock.showActiveIndicator',
+        default: true,
+        label: 'Active Preset Indicator',
+        description: 'Show glowing dot on active preset',
+    },
+    triggerDistance: {
+        key: 'dock.triggerDistance',
+        default: 20,
+        options: [10, 20, 40, 60] as const,
+        label: 'Trigger Distance',
+        description: 'How close to bottom edge to show dock (pixels)',
+    },
+} as const;
+
+// ============================================
+// DRAG HANDLE SETTINGS
+// ============================================
+export const DRAG_HANDLE_SETTINGS = {
+    showOnHover: {
+        key: 'dragHandle.showOnHover',
+        default: true,
+        label: 'Show on Hover',
+        description: 'Only show drag handle when hovering over widget',
+    },
+    alwaysShow: {
+        key: 'dragHandle.alwaysShow',
+        default: false,
+        label: 'Always Visible',
+        description: 'Keep drag handles visible at all times',
+    },
+    showResizeHandles: {
+        key: 'dragHandle.showResizeHandles',
+        default: true,
+        label: 'Resize Handles',
+        description: 'Show corner handles for resizing widgets',
+    },
+} as const;
+
+// ============================================
 // WIDGET SETTINGS
 // ============================================
 export const REFRESH_INTERVAL_OPTIONS = [
@@ -239,6 +300,8 @@ export const ALL_SETTINGS = {
     ...APPEARANCE_SETTINGS,
     ...DATETIME_SETTINGS,
     ...DASHBOARD_SETTINGS,
+    ...DOCK_SETTINGS,
+    ...DRAG_HANDLE_SETTINGS,
     ...WIDGET_SETTINGS,
     ...NOTIFICATION_SETTINGS,
     ...DATA_SETTINGS,
@@ -274,6 +337,12 @@ export const SETTINGS_CATEGORIES = [
         label: 'Dashboard',
         description: 'Layout and behavior settings',
         settings: DASHBOARD_SETTINGS,
+    },
+    {
+        id: 'dock',
+        label: 'Dock',
+        description: 'Dock visibility and behavior',
+        settings: DOCK_SETTINGS,
     },
     {
         id: 'widgets',

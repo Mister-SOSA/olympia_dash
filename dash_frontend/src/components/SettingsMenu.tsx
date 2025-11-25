@@ -5,11 +5,13 @@ import { useState, useRef, useEffect } from "react";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES } from "@/contexts/ThemeContext";
 import { useSettings } from "@/hooks/useSettings";
+import { usePrivacy, ObfuscationStyle } from "@/contexts/PrivacyContext";
 import {
     TIMEZONE_OPTIONS,
     DATE_FORMAT_OPTIONS,
     NOTIFICATION_SETTINGS,
     WIDGET_SETTINGS,
+    DOCK_SETTINGS,
 } from "@/constants/settings";
 import {
     MdCheck,
@@ -23,6 +25,9 @@ import {
     MdSchedule,
     MdNotifications,
     MdStorage,
+    MdVisibilityOff,
+    MdDock,
+    MdDragIndicator,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -32,14 +37,16 @@ interface SettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'notifications' | 'data' | 'shortcuts' | 'account';
+type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'dock' | 'notifications' | 'data' | 'privacy' | 'shortcuts' | 'account';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
     { id: 'appearance', label: 'Appearance', icon: MdPalette },
     { id: 'datetime', label: 'Date & Time', icon: MdSchedule },
     { id: 'behavior', label: 'Behavior', icon: MdTune },
+    { id: 'dock', label: 'Dock & Handles', icon: MdDock },
     { id: 'notifications', label: 'Notifications', icon: MdNotifications },
     { id: 'data', label: 'Data', icon: MdStorage },
+    { id: 'privacy', label: 'Privacy', icon: MdVisibilityOff },
     { id: 'shortcuts', label: 'Shortcuts', icon: MdKeyboard },
     { id: 'account', label: 'Account', icon: MdPerson },
 ];
@@ -47,6 +54,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
     const { settings, updateSetting, isLoaded } = useSettings();
+    const { settings: privacySettings, updateSetting: updatePrivacySetting, toggle: togglePrivacy } = usePrivacy();
     const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
     const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>(
         THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
@@ -383,6 +391,69 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                     </div>
                                 )}
 
+                                {/* Dock & Handles Section */}
+                                {activeSection === 'dock' && (
+                                    <div className="space-y-6">
+                                        {/* Dock Settings */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Control the dock at the bottom of the screen</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Auto-hide Dock"
+                                                    description="Hide dock until mouse approaches bottom"
+                                                    enabled={settings.dockAutoHide}
+                                                    onChange={(val) => updateSetting('dockAutoHide', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Magnification"
+                                                    description="Enlarge icons when hovering"
+                                                    enabled={settings.dockMagnification}
+                                                    onChange={(val) => updateSetting('dockMagnification', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Active Preset Indicator"
+                                                    description="Show glowing dot on active preset"
+                                                    enabled={settings.dockShowActiveIndicator}
+                                                    onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
+                                                />
+                                                <SelectSetting
+                                                    label="Trigger Distance"
+                                                    description="How close to edge to show dock"
+                                                    value={settings.dockTriggerDistance.toString()}
+                                                    onChange={(val) => updateSetting('dockTriggerDistance', Number(val))}
+                                                    options={DOCK_SETTINGS.triggerDistance.options.map(n => ({
+                                                        value: n.toString(),
+                                                        label: `${n} pixels`,
+                                                    }))}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Drag Handle Settings */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Widget Handles</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Control how widget drag and resize handles appear</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Always Show Drag Handles"
+                                                    description="Keep drag handles visible at all times"
+                                                    enabled={settings.dragHandleAlwaysShow}
+                                                    onChange={(val) => updateSetting('dragHandleAlwaysShow', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Show Resize Handles"
+                                                    description="Display corner handles for resizing"
+                                                    enabled={settings.showResizeHandles}
+                                                    onChange={(val) => updateSetting('showResizeHandles', val)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Notifications Section */}
                                 {activeSection === 'notifications' && (
                                     <div className="space-y-6">
@@ -507,6 +578,121 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                     </div>
                                 )}
 
+                                {/* Privacy Section */}
+                                {activeSection === 'privacy' && (
+                                    <div className="space-y-6">
+                                        {/* Quick Toggle */}
+                                        <div className="rounded-xl border-2 border-ui-accent-secondary/30 bg-ui-accent-secondary/5 p-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${privacySettings.enabled ? 'bg-ui-accent-secondary text-white' : 'bg-ui-bg-secondary text-ui-text-secondary'}`}>
+                                                        <MdVisibilityOff className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-ui-text-primary">Privacy Mode</div>
+                                                        <div className="text-xs text-ui-text-secondary">
+                                                            {privacySettings.enabled ? 'Sensitive data is hidden' : 'Showing all data'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={togglePrivacy}
+                                                    className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${
+                                                        privacySettings.enabled ? 'bg-ui-accent-secondary' : 'bg-ui-bg-tertiary'
+                                                    }`}
+                                                >
+                                                    <motion.div
+                                                        className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm"
+                                                        animate={{ x: privacySettings.enabled ? 24 : 0 }}
+                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                    />
+                                                </button>
+                                            </div>
+                                            <p className="mt-3 text-xs text-ui-text-tertiary">
+                                                Press <kbd className="px-1.5 py-0.5 bg-ui-bg-tertiary rounded text-ui-text-primary font-mono">\\</kbd> to quickly toggle privacy mode
+                                            </p>
+                                        </div>
+
+                                        {/* Obfuscation Style */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Obfuscation Style</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">How sensitive data is hidden</p>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {[
+                                                    { id: 'blur', label: 'Blur', preview: '████' },
+                                                    { id: 'redact', label: 'Redact', preview: '[REDACTED]' },
+                                                    { id: 'asterisk', label: 'Asterisk', preview: '***' },
+                                                    { id: 'placeholder', label: 'Placeholder', preview: '•••••' },
+                                                ].map((style) => (
+                                                    <button
+                                                        key={style.id}
+                                                        onClick={() => updatePrivacySetting('style', style.id as ObfuscationStyle)}
+                                                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                                                            privacySettings.style === style.id
+                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10'
+                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                        }`}
+                                                    >
+                                                        <div className="text-sm font-medium text-ui-text-primary">{style.label}</div>
+                                                        <div className={`text-xs mt-1 font-mono ${style.id === 'blur' ? 'blur-sm' : ''} text-ui-text-secondary`}>
+                                                            {style.preview}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Data Types */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Protected Data</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Choose what types of data to obfuscate</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Currency & Amounts"
+                                                    description="Dollar values, prices, totals"
+                                                    enabled={privacySettings.obfuscateCurrency}
+                                                    onChange={(val) => updatePrivacySetting('obfuscateCurrency', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Customer & Vendor Names"
+                                                    description="Business names and identifiers"
+                                                    enabled={privacySettings.obfuscateNames}
+                                                    onChange={(val) => updatePrivacySetting('obfuscateNames', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Quantities & Numbers"
+                                                    description="Order quantities, counts"
+                                                    enabled={privacySettings.obfuscateNumbers}
+                                                    onChange={(val) => updatePrivacySetting('obfuscateNumbers', val)}
+                                                />
+                                                <ToggleSetting
+                                                    label="Percentages"
+                                                    description="Growth rates, distributions"
+                                                    enabled={privacySettings.obfuscatePercentages}
+                                                    onChange={(val) => updatePrivacySetting('obfuscatePercentages', val)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Display Options */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Display</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Visual indicators</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <ToggleSetting
+                                                    label="Show Privacy Indicator"
+                                                    description="Display floating badge when active"
+                                                    enabled={privacySettings.showIndicator}
+                                                    onChange={(val) => updatePrivacySetting('showIndicator', val)}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Shortcuts Section */}
                                 {activeSection === 'shortcuts' && (
                                     <div className="space-y-6">
@@ -529,6 +715,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
 
                                                 <ShortcutGroup title="View">
                                                     <ShortcutItem shortcut="X" description="Toggle compact view" />
+                                                    <ShortcutItem shortcut="\\" description="Toggle privacy mode" />
                                                     <ShortcutItem shortcut="0" description="Reload page" />
                                                 </ShortcutGroup>
                                             </div>
