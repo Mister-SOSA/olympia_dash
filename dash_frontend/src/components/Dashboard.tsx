@@ -855,6 +855,11 @@ export default function Dashboard() {
                     ref={gridDashboardRef}
                     layout={layout.filter((widget) => widget.enabled)}
                     onExternalLayoutChange={handleExternalLayoutChange}
+                    onAddWidget={() => {
+                        setMenuOpen(true);
+                        updateTempLayout();
+                    }}
+                    onOpenSettings={() => setSettingsOpen(true)}
                 />
 
                 {/* Fullscreen Widget Overlay */}

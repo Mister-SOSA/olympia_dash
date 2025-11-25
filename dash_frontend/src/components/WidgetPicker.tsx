@@ -220,7 +220,7 @@ const WidgetCard = React.memo(({ widget, isEnabled, onToggle }: WidgetRowProps) 
             </div>
 
             {/* Category icon */}
-            <div 
+            <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
                 style={{ backgroundColor: isEnabled ? 'var(--ui-accent-primary-bg)' : 'var(--ui-bg-tertiary)' }}
             >

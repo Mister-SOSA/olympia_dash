@@ -9,6 +9,7 @@ import { COLUMN_COUNT, CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
+import DashboardContextMenu, { useDashboardContextMenu } from "./DashboardContextMenu";
 import WidgetSettingsDialog from "./WidgetSettingsDialog";
 import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
@@ -21,6 +22,9 @@ export interface GridDashboardProps {
     layout: Widget[];
     // Callback to notify parent of layout changes
     onExternalLayoutChange?: (layout: Widget[]) => void;
+    // Dashboard context menu callbacks
+    onAddWidget?: () => void;
+    onOpenSettings?: () => void;
 }
 
 export interface GridDashboardHandle {
@@ -28,12 +32,13 @@ export interface GridDashboardHandle {
 }
 
 const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
-    ({ layout, onExternalLayoutChange }, ref) => {
+    ({ layout, onExternalLayoutChange, onAddWidget, onOpenSettings }, ref) => {
         const gridRef = useRef<HTMLDivElement>(null);
         const gridInstance = useRef<GridStack | null>(null);
         // Keep track of React roots for proper unmounting of widget components.
         const widgetRoots = useRef<Map<string, Root>>(new Map());
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
+        const { contextMenu: dashboardContextMenu, showContextMenu: showDashboardContextMenu, hideContextMenu: hideDashboardContextMenu } = useDashboardContextMenu();
 
         // Track if user is actively interacting with grid
         const isInteracting = useRef<boolean>(false);
@@ -245,6 +250,20 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 setSelectedWidget(null);
             }
             setShowDeleteConfirm(false);
+        };
+
+        // Refresh all widgets on the dashboard
+        const handleRefreshAll = () => {
+            if (!gridInstance.current) return;
+
+            console.log('🔄 Refreshing all widgets...');
+
+            // Get all widget IDs from current layout
+            layout.forEach(widget => {
+                handleRefreshWidget(widget.id);
+            });
+
+            console.log('✅ All widgets refreshed');
         };
 
         // Expose the "compact" method to parent components.
@@ -547,7 +566,21 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 <div
                     ref={gridRef}
                     className="grid-stack"
-                    onClick={hideContextMenu} // Close context menu when clicking on dashboard
+                    onClick={() => {
+                        hideContextMenu();
+                        hideDashboardContextMenu();
+                    }}
+                    onContextMenu={(e) => {
+                        // Only show dashboard context menu if clicking on the background
+                        // (not on a widget)
+                        const target = e.target as HTMLElement;
+                        if (target.classList.contains('grid-stack') ||
+                            target.classList.contains('grid-stack-placeholder')) {
+                            e.preventDefault();
+                            hideContextMenu(); // Close widget menu if open
+                            showDashboardContextMenu(e.clientX, e.clientY);
+                        }
+                    }}
                 />
 
                 {/* Empty state overlay when no widgets are added */}
@@ -592,6 +625,31 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     onResize={handleResizeWidget}
                     onInfo={handleWidgetInfo}
                     onSettings={handleWidgetSettings}
+                />
+
+                <DashboardContextMenu
+                    x={dashboardContextMenu.x}
+                    y={dashboardContextMenu.y}
+                    isVisible={dashboardContextMenu.isVisible}
+                    onClose={hideDashboardContextMenu}
+                    onAddWidget={() => onAddWidget?.()}
+                    onCompact={() => {
+                        if (gridInstance.current) {
+                            gridInstance.current.compact('list');
+                            const updatedNodes = gridInstance.current.save() as GridStackNode[];
+                            const updatedLayout = updatedNodes.map((node) => ({
+                                id: node.id as string,
+                                x: node.x || 0,
+                                y: node.y || 0,
+                                w: node.w || 1,
+                                h: node.h || 1,
+                                enabled: true,
+                            }));
+                            externalLayoutChangeRef.current?.(updatedLayout);
+                        }
+                    }}
+                    onSettings={() => onOpenSettings?.()}
+                    onRefreshAll={handleRefreshAll}
                 />
 
                 {/* Modals at dashboard level to avoid z-index conflicts */}
