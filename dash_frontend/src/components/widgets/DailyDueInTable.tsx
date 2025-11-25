@@ -346,6 +346,7 @@ export default function DailyDueInTable() {
     const { settings } = useWidgetSettings(WIDGET_ID);
     const playSoundOnReceived = settings.playSoundOnReceived as boolean;
     const sortBy = settings.sortBy as 'vendor' | 'date' | 'poNumber';
+    const maxRows = settings.maxRows as number;
 
     // Memoize the widget payload via the secure query registry.
     const widgetPayload = useMemo(
@@ -429,6 +430,9 @@ export default function DailyDueInTable() {
         // Check for status changes
         checkForStatusChanges(tableData);
 
+        // Apply maxRows limit if set (0 means unlimited)
+        const displayData = maxRows > 0 ? tableData.slice(0, maxRows) : tableData;
+
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
                 <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
@@ -447,7 +451,7 @@ export default function DailyDueInTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tableData.map((row) => (
+                        {displayData.map((row) => (
                             <MemoizedTableRow
                                 key={row.itemNo}
                                 row={row}
@@ -458,7 +462,7 @@ export default function DailyDueInTable() {
                 </Table>
             </ScrollArea>
         );
-    }, [processData, checkForStatusChanges]);
+    }, [processData, checkForStatusChanges, maxRows]);
 
     // Cleanup timeout on unmount
     useEffect(() => {

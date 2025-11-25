@@ -115,6 +115,7 @@ interface PayablesPieChartProps {
     maxVendorsShown: number;
     showOtherCategory: boolean;
     showPercentages: boolean;
+    sortOrder: 'value' | 'name';
 }
 
 // Bar Chart Component for small sizes
@@ -275,13 +276,13 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages:
 };
 
 // Main chart component with intelligent layout
-const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsShown, showOtherCategory, showPercentages }) => {
+const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsShown, showOtherCategory, showPercentages, sortOrder }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     const processedData = useMemo(() => {
-        // Sort by total_pay_value descending
+        // Sort by total_pay_value descending first to determine top vendors
         const sortedData = [...data]
             .sort((a, b) => b.total_pay_value - a.total_pay_value);
 
@@ -310,11 +311,17 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
             percent: (item.total_pay_value / total) * 100,
         }));
 
-        // Sort so "Other" is always last, others by value descending
+        // Final sort based on user preference
         processed.sort((a, b) => {
+            // "Other" is always last
             if (a.name.toUpperCase() === "OTHER") return 1;
             if (b.name.toUpperCase() === "OTHER") return -1;
-            return b.value - a.value;
+
+            // Apply user sort preference
+            if (sortOrder === 'name') {
+                return a.name.localeCompare(b.name);
+            }
+            return b.value - a.value; // default: by value descending
         });
 
         // Assign colors after sorting - "Other" always gets grey
@@ -324,7 +331,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
                 ? CHART_COLORS[CHART_COLORS.length - 1] // Grey for Other
                 : CHART_COLORS[index] || CHART_COLORS[0],
         }));
-    }, [data, maxVendorsShown, showOtherCategory]);
+    }, [data, maxVendorsShown, showOtherCategory, sortOrder]);
 
     // Calculate optimal layout
     const layout = useMemo(
@@ -498,6 +505,7 @@ export default function Top5PayablesYTD() {
     const showOtherCategory = settings.showOtherCategory ?? true;
     const maxVendorsShown = settings.maxVendorsShown ?? 5;
     const showPercentages = settings.showPercentages ?? true;
+    const sortOrder = settings.sortOrder as 'value' | 'name' ?? 'value';
 
     // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
@@ -514,8 +522,9 @@ export default function Top5PayablesYTD() {
             maxVendorsShown={maxVendorsShown}
             showOtherCategory={showOtherCategory}
             showPercentages={showPercentages}
+            sortOrder={sortOrder}
         />
-    ), [maxVendorsShown, showOtherCategory, showPercentages]);
+    ), [maxVendorsShown, showOtherCategory, showPercentages, sortOrder]);
 
     return (
         <Widget

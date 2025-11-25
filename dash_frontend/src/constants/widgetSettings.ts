@@ -192,7 +192,7 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                 ],
             },
             {
-                title: 'Sorting',
+                title: 'Sorting & Filtering',
                 fields: [
                     {
                         key: 'sortBy',
@@ -207,6 +207,32 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                             { value: 'poNumber', label: 'PO Number' },
                         ],
                     } as SelectSettingField,
+                    {
+                        key: 'maxRows',
+                        type: 'slider',
+                        label: 'Maximum Rows',
+                        description: 'Limit the number of rows displayed (0 = unlimited)',
+                        default: 0,
+                        min: 0,
+                        max: 100,
+                        step: 10,
+                    } as SliderSettingField,
+                ],
+            },
+            {
+                title: 'Alerts',
+                fields: [
+                    {
+                        key: 'overdueAlertThreshold',
+                        type: 'slider',
+                        label: 'Overdue Alert Threshold',
+                        description: 'Highlight orders overdue by this many days or more',
+                        default: 7,
+                        min: 1,
+                        max: 30,
+                        step: 1,
+                        unit: ' days',
+                    } as SliderSettingField,
                 ],
             },
         ],
@@ -230,7 +256,7 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                 ],
             },
             {
-                title: 'Sorting',
+                title: 'Sorting & Filtering',
                 fields: [
                     {
                         key: 'sortBy',
@@ -244,6 +270,16 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                             { value: 'poNumber', label: 'PO Number' },
                         ],
                     } as SelectSettingField,
+                    {
+                        key: 'maxRows',
+                        type: 'slider',
+                        label: 'Maximum Rows',
+                        description: 'Limit the number of rows displayed (0 = unlimited)',
+                        default: 0,
+                        min: 0,
+                        max: 100,
+                        step: 10,
+                    } as SliderSettingField,
                 ],
             },
         ],
@@ -475,6 +511,22 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         title: 'Monthly Sales Chart Settings',
         sections: [
             {
+                title: 'Data Range',
+                fields: [
+                    {
+                        key: 'defaultMonthsBack',
+                        type: 'slider',
+                        label: 'Months to Display',
+                        description: 'How many months of history to show (when space allows)',
+                        default: 12,
+                        min: 3,
+                        max: 24,
+                        step: 1,
+                        unit: ' months',
+                    } as SliderSettingField,
+                ],
+            },
+            {
                 title: 'Display',
                 fields: [
                     {
@@ -501,6 +553,22 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         widgetId: 'SalesByDayBar',
         title: 'Daily Sales Chart Settings',
         sections: [
+            {
+                title: 'Data Range',
+                fields: [
+                    {
+                        key: 'defaultDaysBack',
+                        type: 'slider',
+                        label: 'Days to Display',
+                        description: 'How many days of history to show (when space allows)',
+                        default: 14,
+                        min: 7,
+                        max: 30,
+                        step: 1,
+                        unit: ' days',
+                    } as SliderSettingField,
+                ],
+            },
             {
                 title: 'Display',
                 fields: [
@@ -556,8 +624,18 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         title: 'Top Customers Settings',
         sections: [
             {
-                title: 'Display',
+                title: 'Data',
                 fields: [
+                    {
+                        key: 'maxCustomersShown',
+                        type: 'slider',
+                        label: 'Number of Customers',
+                        description: 'Number of top customers to display',
+                        default: 5,
+                        min: 3,
+                        max: 10,
+                        step: 1,
+                    } as SliderSettingField,
                     {
                         key: 'showOtherCategory',
                         type: 'toggle',
@@ -566,15 +644,21 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         default: true,
                     } as ToggleSettingField,
                     {
-                        key: 'maxCustomersShown',
-                        type: 'slider',
-                        label: 'Max Customers Shown',
-                        description: 'Number of top customers to display',
-                        default: 5,
-                        min: 3,
-                        max: 10,
-                        step: 1,
-                    } as SliderSettingField,
+                        key: 'sortOrder',
+                        type: 'select',
+                        label: 'Sort Order',
+                        description: 'How to order customers in the legend',
+                        default: 'value',
+                        options: [
+                            { value: 'value', label: 'By Sales Amount (Desc)' },
+                            { value: 'name', label: 'Alphabetically by Name' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+            {
+                title: 'Display',
+                fields: [
                     {
                         key: 'showPercentages',
                         type: 'toggle',
@@ -593,8 +677,18 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         title: 'Top Payables Settings',
         sections: [
             {
-                title: 'Display',
+                title: 'Data',
                 fields: [
+                    {
+                        key: 'maxVendorsShown',
+                        type: 'slider',
+                        label: 'Number of Vendors',
+                        description: 'Number of top vendors to display',
+                        default: 5,
+                        min: 3,
+                        max: 10,
+                        step: 1,
+                    } as SliderSettingField,
                     {
                         key: 'showOtherCategory',
                         type: 'toggle',
@@ -603,15 +697,21 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         default: true,
                     } as ToggleSettingField,
                     {
-                        key: 'maxVendorsShown',
-                        type: 'slider',
-                        label: 'Max Vendors Shown',
-                        description: 'Number of top vendors to display',
-                        default: 5,
-                        min: 3,
-                        max: 10,
-                        step: 1,
-                    } as SliderSettingField,
+                        key: 'sortOrder',
+                        type: 'select',
+                        label: 'Sort Order',
+                        description: 'How to order vendors in the legend',
+                        default: 'value',
+                        options: [
+                            { value: 'value', label: 'By Amount (Desc)' },
+                            { value: 'name', label: 'Alphabetically by Name' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+            {
+                title: 'Display',
+                fields: [
                     {
                         key: 'showPercentages',
                         type: 'toggle',
@@ -629,6 +729,32 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         widgetId: 'DailyMovesByUser',
         title: 'Daily Moves Settings',
         sections: [
+            {
+                title: 'Data',
+                fields: [
+                    {
+                        key: 'sortOrder',
+                        type: 'select',
+                        label: 'Sort Users By',
+                        description: 'How to order users in the chart',
+                        default: 'count',
+                        options: [
+                            { value: 'count', label: 'Move Count (Desc)' },
+                            { value: 'name', label: 'Alphabetically by Name' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'minMovesThreshold',
+                        type: 'slider',
+                        label: 'Minimum Moves to Display',
+                        description: 'Only show users with at least this many moves',
+                        default: 1,
+                        min: 1,
+                        max: 20,
+                        step: 1,
+                    } as SliderSettingField,
+                ],
+            },
             {
                 title: 'Display',
                 fields: [
@@ -663,6 +789,29 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         widgetId: 'DailyProductionPutawaysBar',
         title: 'Daily Putaways Settings',
         sections: [
+            {
+                title: 'Data',
+                fields: [
+                    {
+                        key: 'sortOrder',
+                        type: 'select',
+                        label: 'Sort Products By',
+                        description: 'How to order products in the chart',
+                        default: 'quantity',
+                        options: [
+                            { value: 'quantity', label: 'Quantity (Desc)' },
+                            { value: 'name', label: 'Alphabetically by Name' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'groupByUOM',
+                        type: 'toggle',
+                        label: 'Group by Unit of Measure',
+                        description: 'Separate products by their unit of measure',
+                        default: false,
+                    } as ToggleSettingField,
+                ],
+            },
             {
                 title: 'Display',
                 fields: [
@@ -740,6 +889,17 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         description: 'Display percentage change vs previous period',
                         default: true,
                     } as ToggleSettingField,
+                    {
+                        key: 'comparisonBaseline',
+                        type: 'select',
+                        label: 'Compare Against',
+                        description: 'What period to compare current metrics against',
+                        default: 'lastYear',
+                        options: [
+                            { value: 'lastYear', label: 'Same Period Last Year' },
+                            { value: 'lastPeriod', label: 'Previous Period (e.g., Last Month)' },
+                        ],
+                    } as SelectSettingField,
                 ],
             },
         ],

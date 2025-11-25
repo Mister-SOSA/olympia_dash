@@ -350,6 +350,10 @@ export default function DailyMovesByUser() {
     const responsiveConfig = useResponsiveConfig(containerRef);
     const { settings } = useWidgetSettings('DailyMovesByUser');
 
+    // Get functional settings
+    const sortOrder = settings.sortOrder as 'count' | 'name' ?? 'count';
+    const minMovesThreshold = settings.minMovesThreshold as number ?? 1;
+
     // Apply user settings as overrides to responsive config
     const config = useMemo(() => ({
         ...responsiveConfig,
@@ -375,10 +379,20 @@ export default function DailyMovesByUser() {
 
     const renderMovesByUser = useCallback(
         (data: MovesByUserData[]) => {
-            // Calculate summary statistics
-            const totalMoves = data.reduce((sum, item) => sum + item.moves, 0);
-            const activeUsers = data.length;
-            const averageMoves = totalMoves / activeUsers;
+            // Filter by minimum moves threshold
+            let filteredData = data.filter(item => item.moves >= minMovesThreshold);
+
+            // Sort based on user preference
+            if (sortOrder === 'name') {
+                filteredData.sort((a, b) => a.user_id - b.user_id); // Sort by user ID ascending
+            } else {
+                filteredData.sort((a, b) => b.moves - a.moves); // Sort by moves descending (default)
+            }
+
+            // Calculate summary statistics from filtered data
+            const totalMoves = filteredData.reduce((sum, item) => sum + item.moves, 0);
+            const activeUsers = filteredData.length;
+            const averageMoves = activeUsers > 0 ? totalMoves / activeUsers : 0;
 
             const summary: SummaryStats = {
                 totalMoves,
@@ -387,15 +401,15 @@ export default function DailyMovesByUser() {
             };
 
             // Process data for visualization
-            const processedData: ProcessedUserData[] = data.slice(0, config.visibleUsers).map((item) => ({
+            const processedData: ProcessedUserData[] = filteredData.slice(0, config.visibleUsers).map((item) => ({
                 user: item.user_id,
                 moves: item.moves,
-                percentage: (item.moves / totalMoves) * 100,
+                percentage: totalMoves > 0 ? (item.moves / totalMoves) * 100 : 0,
             }));
 
             return <ResponsiveBarChart data={processedData} summary={summary} config={config} />;
         },
-        [config]
+        [config, sortOrder, minMovesThreshold]
     );
 
     return (

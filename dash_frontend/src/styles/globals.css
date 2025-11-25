@@ -1230,6 +1230,24 @@ tbody>tr:nth-child(odd) {
   transform: translateZ(0);
 }
 
+/* Overdue alert row styling - highlight rows that exceed the overdue threshold */
+.overdue-alert-row {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+.overdue-alert-row:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Dark mode adjustment for overdue alert */
+[data-theme="dark"] .overdue-alert-row {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+}
+
+[data-theme="dark"] .overdue-alert-row:hover {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+}
+
 .badge {
   padding: 0.25rem 0.45rem;
   border-radius: 0.5rem;

@@ -51,6 +51,8 @@ export default function OutstandingOrdersTable() {
     const { settings } = useWidgetSettings(WIDGET_ID);
     const playSoundOnReceived = settings.playSoundOnReceived as boolean;
     const sortBy = settings.sortBy as 'vendor' | 'date' | 'overdue' | 'poNumber';
+    const maxRows = settings.maxRows as number;
+    const overdueAlertThreshold = settings.overdueAlertThreshold as number;
 
     // Prepare the widget payload to query the backed view securely.
     const widgetPayload = useMemo(
@@ -156,6 +158,9 @@ export default function OutstandingOrdersTable() {
             }
         });
 
+        // Apply maxRows limit if set (0 means unlimited)
+        const finalData = maxRows > 0 ? tableData.slice(0, maxRows) : tableData;
+
         // Render the table within a scrollable container.
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
@@ -225,55 +230,59 @@ export default function OutstandingOrdersTable() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {tableData.map((row, index) => (
-                            <TableRow
-                                key={row.itemNo}
-                                className={`
+                        {finalData.map((row, index) => {
+                            const isOverdueAlert = row.overdueDays >= overdueAlertThreshold;
+                            return (
+                                <TableRow
+                                    key={row.itemNo}
+                                    className={`
                   border-border/30 transition-all duration-300 hover:bg-muted/50
                   ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
                   ${row.isGrouped ? "grouped-po" : ""} 
                   ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
                   ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
+                  ${isOverdueAlert ? "overdue-alert-row" : ""}
                 `}
-                            >
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
-                                <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
-                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
-                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
-                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
-                                <TableCell className="text-right py-1.5">
-                                    <div className="flex items-center justify-end gap-1.5">
-                                        <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
-                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{
-                                            backgroundColor: 'var(--badge-warning-bg)',
-                                            color: 'var(--badge-warning-text)',
-                                            borderColor: 'var(--badge-warning-border)'
-                                        }}>
-                                            {row.overdueDays}d
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
-                                <TableCell className="text-right row-secondary py-1.5">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right row-secondary py-1.5">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
-                                        <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                                >
+                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
+                                    <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
+                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.vendName}</TableCell>
+                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+                                    <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+                                    <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
+                                    <TableCell className="text-right py-1.5">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                            <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{
+                                                backgroundColor: 'var(--badge-warning-bg)',
+                                                color: 'var(--badge-warning-text)',
+                                                borderColor: 'var(--badge-warning-border)'
+                                            }}>
+                                                {row.overdueDays}d
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
+                                    <TableCell className="text-right row-secondary py-1.5">
+                                        <div className="table-dollars">
+                                            <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                            <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.recentUnitPrice}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right row-secondary py-1.5">
+                                        <div className="table-dollars">
+                                            <span className="dollar-sign text-xs" style={{ color: 'var(--table-text-secondary)' }}>$</span>
+                                            <span className="dollar-value font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }}>{row.lastOrderUnitPrice}</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
                     </TableBody>
                 </Table>
             </ScrollArea>
         );
-    }, [newStatusVRows, playSoundOnReceived, sortBy]);
+    }, [newStatusVRows, playSoundOnReceived, sortBy, maxRows, overdueAlertThreshold]);
 
     return (
         <Widget

@@ -42,7 +42,7 @@ const mapToParentCompany = (businessName: string): string => {
 };
 
 // Combine data transformation steps into one function.
-const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOther: boolean = true): CustomerData[] => {
+const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOther: boolean = true, sortOrder: 'value' | 'name' = 'value'): CustomerData[] => {
     if (!data || data.length === 0) return [];
 
     // Aggregate data by parent company.
@@ -63,7 +63,7 @@ const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOth
 
     let aggregatedData = Object.values(aggregated);
 
-    // Sort by total sales descending first
+    // Sort by total sales descending first to determine top customers
     aggregatedData.sort((a, b) => b.totalSales - a.totalSales);
 
     // Merge entries beyond the limit into an "Other" category if enabled
@@ -86,11 +86,17 @@ const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOth
         aggregatedData = aggregatedData.slice(0, maxShown);
     }
 
-    // Sort so that "Other" is always last and the rest are in descending order.
+    // Final sort based on user preference
     aggregatedData.sort((a, b) => {
+        // "Other" is always last
         if (a.businessName === "Other") return 1;
         if (b.businessName === "Other") return -1;
-        return b.totalSales - a.totalSales;
+
+        // Apply user sort preference
+        if (sortOrder === 'name') {
+            return a.businessName.localeCompare(b.businessName);
+        }
+        return b.totalSales - a.totalSales; // default: by value descending
     });
 
     // Assign colors to each slice - "Other" always gets grey
@@ -190,6 +196,7 @@ interface CustomerPieChartProps {
     maxCustomersShown: number;
     showOtherCategory: boolean;
     showPercentages: boolean;
+    sortOrder: 'value' | 'name';
 }
 
 // Bar Chart Component for small sizes
@@ -350,13 +357,13 @@ const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages:
 };
 
 // Main chart component with intelligent layout
-const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersShown, showOtherCategory, showPercentages }) => {
+const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersShown, showOtherCategory, showPercentages, sortOrder }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     const processedData = useMemo(() => {
-        const transformed = processCustomerData(data, maxCustomersShown, showOtherCategory).map((item) => ({
+        const transformed = processCustomerData(data, maxCustomersShown, showOtherCategory, sortOrder).map((item) => ({
             name: item.businessName,
             value: item.totalSales,
             color: item.color,
@@ -368,7 +375,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
             ...item,
             percent: (item.value / total) * 100,
         }));
-    }, [data, maxCustomersShown, showOtherCategory]);
+    }, [data, maxCustomersShown, showOtherCategory, sortOrder]);
 
     // Calculate optimal layout
     const layout = useMemo(
@@ -541,6 +548,7 @@ export default function TopCustomersThisYearPie() {
     const showOtherCategory = settings.showOtherCategory ?? true;
     const maxCustomersShown = settings.maxCustomersShown ?? 5;
     const showPercentages = settings.showPercentages ?? true;
+    const sortOrder = settings.sortOrder as 'value' | 'name' ?? 'value';
 
     const startOfYear = useMemo(
         () => new Date(currentYear, 0, 1).toISOString().split("T")[0],
@@ -566,8 +574,9 @@ export default function TopCustomersThisYearPie() {
             maxCustomersShown={maxCustomersShown}
             showOtherCategory={showOtherCategory}
             showPercentages={showPercentages}
+            sortOrder={sortOrder}
         />
-    ), [maxCustomersShown, showOtherCategory, showPercentages]);
+    ), [maxCustomersShown, showOtherCategory, showPercentages, sortOrder]);
 
     return (
         <Widget

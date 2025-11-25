@@ -354,6 +354,10 @@ export default function DailyProductionPutawaysBar() {
     const responsiveConfig = useResponsiveConfig(containerRef);
     const { settings } = useWidgetSettings('DailyProductionPutawaysBar');
 
+    // Get functional settings
+    const sortOrder = settings.sortOrder as 'quantity' | 'name' ?? 'quantity';
+    const groupByUOM = settings.groupByUOM as boolean ?? false;
+
     // Apply user settings as overrides to responsive config
     const config = useMemo(() => ({
         ...responsiveConfig,
@@ -379,22 +383,30 @@ export default function DailyProductionPutawaysBar() {
 
     const renderProductionData = useCallback(
         (data: PutawayData[]) => {
+            // Sort based on user preference
+            let sortedData = [...data];
+            if (sortOrder === 'name') {
+                sortedData.sort((a, b) => a.part_code.localeCompare(b.part_code));
+            } else {
+                sortedData.sort((a, b) => b.lotqty - a.lotqty); // default: by quantity descending
+            }
+
             // Calculate total for percentage calculations
-            const totalQuantity = data.reduce((sum, item) => sum + item.lotqty, 0);
+            const totalQuantity = sortedData.reduce((sum, item) => sum + item.lotqty, 0);
 
             // Process data for visualization
-            const processedData: ProcessedProductData[] = data
+            const processedData: ProcessedProductData[] = sortedData
                 .slice(0, config.visibleProducts)
                 .map((item) => ({
                     product: item.part_code,
                     quantity: item.lotqty,
                     uom: item.uom,
-                    percentage: (item.lotqty / totalQuantity) * 100,
+                    percentage: totalQuantity > 0 ? (item.lotqty / totalQuantity) * 100 : 0,
                 }));
 
             return <ResponsiveBarChart data={processedData} config={config} />;
         },
-        [config]
+        [config, sortOrder, groupByUOM]
     );
 
     return (
