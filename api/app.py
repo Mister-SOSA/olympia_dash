@@ -73,40 +73,39 @@ CORS(app, resources={
 # Initialize SocketIO for real-time preference sync
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Track active sessions per room (use app context for persistence)
-if not hasattr(app, 'active_sessions'):
-    app.active_sessions = {}
+# Track active sessions per room (module-level for persistence)
+active_sessions: dict[str, set[str]] = {}
 
 # WebSocket handlers
 @socketio.on('connect')
 def handle_connect():
-    logger.info(f'Client connected: {request.sid}')
+    logger.info(f'Client connected: {request.sid}')  # type: ignore[attr-defined]
 
 @socketio.on('join')
 def handle_join(data):
     """Join user-specific room for receiving preference updates"""
-    from flask_socketio import emit, rooms
+    from flask_socketio import emit
     user_id = data.get('user_id')
     session_id = data.get('session_id', 'unknown')
-    logger.info(f'🔵 JOIN REQUEST - User: {user_id}, Session: {session_id[:8]}..., SID: {request.sid}')
+    logger.info(f'🔵 JOIN REQUEST - User: {user_id}, Session: {session_id[:8]}..., SID: {request.sid}')  # type: ignore[attr-defined]
     
     if user_id:
         room = f'user_{user_id}'
         join_room(room)
         
         # Track this session
-        if room not in app.active_sessions:
-            app.active_sessions[room] = set()
-        app.active_sessions[room].add(request.sid)
+        if room not in active_sessions:
+            active_sessions[room] = set()
+        active_sessions[room].add(request.sid)  # type: ignore[attr-defined]
         
-        session_count = len(app.active_sessions[room])
-        logger.info(f'✅ JOINED - Session {session_id[:8]}... (SID: {request.sid}) joined room {room}')
+        session_count = len(active_sessions[room])
+        logger.info(f'✅ JOINED - Session {session_id[:8]}... (SID: {request.sid}) joined room {room}')  # type: ignore[attr-defined]
         logger.info(f'   📊 Total sessions in {room}: {session_count}')
-        logger.info(f'   📊 Active SIDs in room: {[sid[:8] for sid in app.active_sessions[room]]}')
+        logger.info(f'   📊 Active SIDs in room: {[sid[:8] for sid in active_sessions[room]]}')
         
         # Send confirmation to joining client
         emit('joined', {'room': room, 'session_count': session_count})
-        logger.info(f'📤 SENT joined confirmation to {request.sid}')
+        logger.info(f'📤 SENT joined confirmation to {request.sid}')  # type: ignore[attr-defined]
         
         # If this is a second+ session, notify ALL clients in room (including the one that just joined)
         if session_count > 1:
@@ -129,7 +128,7 @@ def handle_broadcast_preferences(data):
         return
     
     room = f'user_{user_id}'
-    session_count = len(app.active_sessions.get(room, set()))
+    session_count = len(active_sessions.get(room, set()))
     
     logger.info(f'📡 Broadcast request - Room: {room}, Sessions: {session_count}')
     
@@ -167,11 +166,11 @@ def handle_disconnect():
     from flask_socketio import emit
     
     # Clean up session tracking
-    for room, sessions in list(app.active_sessions.items()):
-        if request.sid in sessions:
-            sessions.remove(request.sid)
+    for room, sessions in list(active_sessions.items()):
+        if request.sid in sessions:  # type: ignore[attr-defined]
+            sessions.remove(request.sid)  # type: ignore[attr-defined]
             remaining_count = len(sessions)
-            logger.info(f'❌ Client {request.sid} disconnected from {room}')
+            logger.info(f'❌ Client {request.sid} disconnected from {room}')  # type: ignore[attr-defined]
             logger.info(f'   📊 Remaining sessions in {room}: {remaining_count}')
             
             # Notify remaining sessions about count change
@@ -180,10 +179,10 @@ def handle_disconnect():
                 logger.info(f'📤 Notified remaining sessions - count: {remaining_count}')
             
             if remaining_count == 0:
-                del app.active_sessions[room]
+                del active_sessions[room]
     
-    if not any(request.sid in sessions for sessions in app.active_sessions.values()):
-        logger.info(f'❌ Client disconnected: {request.sid}')
+    if not any(request.sid in sessions for sessions in active_sessions.values()):  # type: ignore[attr-defined]
+        logger.info(f'❌ Client disconnected: {request.sid}')  # type: ignore[attr-defined]
 
 # Register authentication blueprints with /api/auth prefix
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -330,7 +329,8 @@ def get_humidity():
     try:
         response = openmeteo_client.weather_api(OPEN_METEO_URL, params=OPEN_METEO_PARAMS)
         # Extract the current relative humidity value from the response.
-        humidity = response[0].Current().Variables(0).Value()
+        current = response[0].Current()
+        humidity = current.Variables(0).Value()  # type: ignore[union-attr]
         return jsonify({"success": True, "data": humidity}), 200
 
     except Exception as e:
