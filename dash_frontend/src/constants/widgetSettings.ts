@@ -11,7 +11,7 @@ import { TIMEZONE_OPTIONS, DATE_FORMAT_OPTIONS } from './settings';
 // SETTING FIELD TYPES
 // ============================================
 
-export type SettingFieldType = 
+export type SettingFieldType =
     | 'toggle'      // Boolean on/off
     | 'select'      // Dropdown selection
     | 'number'      // Numeric input
@@ -66,11 +66,11 @@ export interface SliderSettingField extends BaseSettingField {
     unit?: string;
 }
 
-export type SettingField = 
-    | ToggleSettingField 
-    | SelectSettingField 
-    | NumberSettingField 
-    | TextSettingField 
+export type SettingField =
+    | ToggleSettingField
+    | SelectSettingField
+    | NumberSettingField
+    | TextSettingField
     | ColorSettingField
     | SliderSettingField;
 
@@ -123,9 +123,9 @@ const DATE_FORMAT_FIELD: SelectSettingField = {
     label: 'Date Format',
     description: 'How dates are displayed',
     default: 'MMM DD, YYYY',
-    options: DATE_FORMAT_OPTIONS.map(df => ({ 
-        value: df.value, 
-        label: `${df.label} (${df.example})` 
+    options: DATE_FORMAT_OPTIONS.map(df => ({
+        value: df.value,
+        label: `${df.label} (${df.example})`
     })),
 };
 
@@ -174,223 +174,74 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         ],
     },
 
-    // Sales by Day Bar Chart
-    SalesByDayBar: {
-        widgetId: 'SalesByDayBar',
-        title: 'Sales by Day Settings',
-        sections: [
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'daysToShow',
-                        type: 'select',
-                        label: 'Days to Display',
-                        description: 'Number of days to show in the chart',
-                        default: '7',
-                        options: [
-                            { value: '7', label: 'Last 7 days' },
-                            { value: '14', label: 'Last 14 days' },
-                            { value: '30', label: 'Last 30 days' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showLabels',
-                        type: 'toggle',
-                        label: 'Show Value Labels',
-                        description: 'Display values on bars',
-                        default: true,
-                    } as ToggleSettingField,
-                ],
-            },
-            {
-                title: 'Style',
-                fields: [
-                    {
-                        key: 'barColor',
-                        type: 'color',
-                        label: 'Bar Color',
-                        description: 'Color of the chart bars',
-                        default: '#3b82f6',
-                    } as ColorSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Sales by Month Bar Chart
-    SalesByMonthBar: {
-        widgetId: 'SalesByMonthBar',
-        title: 'Sales by Month Settings',
-        sections: [
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'monthsToShow',
-                        type: 'select',
-                        label: 'Months to Display',
-                        description: 'Number of months to show',
-                        default: '6',
-                        options: [
-                            { value: '3', label: 'Last 3 months' },
-                            { value: '6', label: 'Last 6 months' },
-                            { value: '12', label: 'Last 12 months' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showLabels',
-                        type: 'toggle',
-                        label: 'Show Value Labels',
-                        description: 'Display values on bars',
-                        default: true,
-                    } as ToggleSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Top Customers Pie Chart
-    TopCustomersThisYearPie: {
-        widgetId: 'TopCustomersThisYearPie',
-        title: 'Top Customers Settings',
-        sections: [
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'customersToShow',
-                        type: 'select',
-                        label: 'Customers to Display',
-                        description: 'Number of top customers to show',
-                        default: '5',
-                        options: [
-                            { value: '5', label: 'Top 5' },
-                            { value: '10', label: 'Top 10' },
-                            { value: '15', label: 'Top 15' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showLegend',
-                        type: 'toggle',
-                        label: 'Show Legend',
-                        description: 'Display the color legend',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'showPercentages',
-                        type: 'toggle',
-                        label: 'Show Percentages',
-                        description: 'Display percentage values',
-                        default: true,
-                    } as ToggleSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Table Widgets - Common settings
+    // Outstanding Orders Table
     OutstandingOrdersTable: {
         widgetId: 'OutstandingOrdersTable',
         title: 'Outstanding Orders Settings',
         sections: [
             {
-                title: 'Display',
+                title: 'Notifications',
                 fields: [
                     {
-                        key: 'rowsPerPage',
-                        type: 'select',
-                        label: 'Rows per Page',
-                        description: 'Number of rows to display',
-                        default: '25',
-                        options: [
-                            { value: '10', label: '10 rows' },
-                            { value: '25', label: '25 rows' },
-                            { value: '50', label: '50 rows' },
-                            { value: '100', label: '100 rows' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'compactRows',
+                        key: 'playSoundOnReceived',
                         type: 'toggle',
-                        label: 'Compact Rows',
-                        description: 'Reduce row height for more data',
-                        default: false,
-                    } as ToggleSettingField,
-                    {
-                        key: 'highlightOverdue',
-                        type: 'toggle',
-                        label: 'Highlight Overdue',
-                        description: 'Highlight overdue orders',
+                        label: 'Sound on Status Change',
+                        description: 'Play notification when order status changes to Received',
                         default: true,
                     } as ToggleSettingField,
                 ],
             },
             {
-                title: 'Notifications',
+                title: 'Sorting',
                 fields: [
                     {
-                        key: 'soundOnNewOrder',
-                        type: 'toggle',
-                        label: 'Sound on New Order',
-                        description: 'Play sound when new order arrives',
-                        default: false,
-                    } as ToggleSettingField,
+                        key: 'sortBy',
+                        type: 'select',
+                        label: 'Sort By',
+                        description: 'Primary sort order for orders',
+                        default: 'vendor',
+                        options: [
+                            { value: 'vendor', label: 'Vendor Name' },
+                            { value: 'date', label: 'Date Ordered' },
+                            { value: 'overdue', label: 'Days Overdue' },
+                            { value: 'poNumber', label: 'PO Number' },
+                        ],
+                    } as SelectSettingField,
                 ],
             },
         ],
     },
 
+    // Daily Due In Table
     DailyDueInTable: {
         widgetId: 'DailyDueInTable',
         title: 'Daily Due In Settings',
         sections: [
             {
-                title: 'Display',
+                title: 'Notifications',
                 fields: [
                     {
-                        key: 'rowsPerPage',
-                        type: 'select',
-                        label: 'Rows per Page',
-                        description: 'Number of rows to display',
-                        default: '25',
-                        options: [
-                            { value: '10', label: '10 rows' },
-                            { value: '25', label: '25 rows' },
-                            { value: '50', label: '50 rows' },
-                            { value: '100', label: '100 rows' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'compactRows',
+                        key: 'playSoundOnReceived',
                         type: 'toggle',
-                        label: 'Compact Rows',
-                        description: 'Reduce row height for more data',
-                        default: false,
+                        label: 'Sound on Status Change',
+                        description: 'Play notification when order status changes to Received',
+                        default: true,
                     } as ToggleSettingField,
                 ],
             },
-        ],
-    },
-
-    DailyDueInHiddenVendTable: {
-        widgetId: 'DailyDueInHiddenVendTable',
-        title: 'Daily Due In (Maintenance) Settings',
-        sections: [
             {
-                title: 'Display',
+                title: 'Sorting',
                 fields: [
                     {
-                        key: 'rowsPerPage',
+                        key: 'sortBy',
                         type: 'select',
-                        label: 'Rows per Page',
-                        description: 'Number of rows to display',
-                        default: '25',
+                        label: 'Sort By',
+                        description: 'Primary sort order for orders',
+                        default: 'vendor',
                         options: [
-                            { value: '10', label: '10 rows' },
-                            { value: '25', label: '25 rows' },
-                            { value: '50', label: '50 rows' },
-                            { value: '100', label: '100 rows' },
+                            { value: 'vendor', label: 'Vendor Name' },
+                            { value: 'date', label: 'Date Ordered' },
+                            { value: 'poNumber', label: 'PO Number' },
                         ],
                     } as SelectSettingField,
                 ],
@@ -401,29 +252,372 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
     // Inventory Moves Log
     InventoryMovesLog: {
         widgetId: 'InventoryMovesLog',
-        title: 'Inventory Moves Log Settings',
+        title: 'Inventory Moves Settings',
+        sections: [
+            {
+                title: 'Time Display',
+                fields: [
+                    {
+                        key: 'useRelativeTime',
+                        type: 'toggle',
+                        label: 'Use Relative Time',
+                        description: 'Show "5 min ago" instead of exact time for recent moves',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'relativeTimeThreshold',
+                        type: 'slider',
+                        label: 'Relative Time Window',
+                        description: 'Show relative time for moves within this many minutes',
+                        default: 60,
+                        min: 15,
+                        max: 120,
+                        step: 15,
+                        unit: ' min',
+                    } as SliderSettingField,
+                ],
+            },
+            {
+                title: 'Filtering',
+                fields: [
+                    {
+                        key: 'filterByType',
+                        type: 'select',
+                        label: 'Filter by Type',
+                        description: 'Show only specific transfer types',
+                        default: 'all',
+                        options: [
+                            { value: 'all', label: 'All Types' },
+                            { value: 'PUTAWY', label: 'Putaways Only' },
+                            { value: 'SHIPMNT', label: 'Shipments Only' },
+                            { value: 'LOCCHG', label: 'Location Changes Only' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+            {
+                title: 'Notifications',
+                fields: [
+                    {
+                        key: 'highlightNewMoves',
+                        type: 'toggle',
+                        label: 'Highlight New Moves',
+                        description: 'Flash animation on newly added rows',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Humidity Widget
+    Humidity: {
+        widgetId: 'Humidity',
+        title: 'Humidity Settings',
         sections: [
             {
                 title: 'Display',
                 fields: [
                     {
-                        key: 'rowsPerPage',
+                        key: 'showGaugeLabels',
+                        type: 'toggle',
+                        label: 'Show Level Labels',
+                        description: 'Display Low/Good/High labels on gauge',
+                        default: false,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Thresholds',
+                fields: [
+                    {
+                        key: 'lowThreshold',
+                        type: 'slider',
+                        label: 'Low Humidity Threshold',
+                        description: 'Below this value is considered low (orange)',
+                        default: 30,
+                        min: 10,
+                        max: 50,
+                        step: 5,
+                        unit: '%',
+                    } as SliderSettingField,
+                    {
+                        key: 'highThreshold',
+                        type: 'slider',
+                        label: 'High Humidity Threshold',
+                        description: 'Above this value is considered high (red)',
+                        default: 60,
+                        min: 50,
+                        max: 90,
+                        step: 5,
+                        unit: '%',
+                    } as SliderSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Beef Prices Chart
+    BeefPricesChart: {
+        widgetId: 'BeefPricesChart',
+        title: 'Beef Prices Settings',
+        sections: [
+            {
+                title: 'Data Series',
+                fields: [
+                    {
+                        key: 'show50Lean',
+                        type: 'toggle',
+                        label: 'Show 50% Lean',
+                        description: 'Display 50% lean beef price line',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'show85Lean',
+                        type: 'toggle',
+                        label: 'Show 85% Lean',
+                        description: 'Display 85% lean beef price line',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showBeefHeart',
+                        type: 'toggle',
+                        label: 'Show Beef Heart',
+                        description: 'Display beef heart price line',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Default View',
+                fields: [
+                    {
+                        key: 'defaultTimeRange',
                         type: 'select',
-                        label: 'Rows per Page',
-                        description: 'Number of rows to display',
-                        default: '50',
+                        label: 'Default Time Range',
+                        description: 'Initial time range when widget loads',
+                        default: '180d',
                         options: [
-                            { value: '25', label: '25 rows' },
-                            { value: '50', label: '50 rows' },
-                            { value: '100', label: '100 rows' },
+                            { value: '7d', label: '7 Days' },
+                            { value: '30d', label: '1 Month' },
+                            { value: '90d', label: '3 Months' },
+                            { value: '180d', label: '6 Months' },
+                            { value: 'all', label: 'All Data' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Top Product Unit Sales
+    TopProductUnitSales: {
+        widgetId: 'TopProductUnitSales',
+        title: 'Top Product Sales Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'highlightTopThree',
+                        type: 'toggle',
+                        label: 'Highlight Top 3',
+                        description: 'Visually emphasize the top 3 products',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showPercentageChange',
+                        type: 'toggle',
+                        label: 'Show % Change Badges',
+                        description: 'Display percentage change between periods',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Machine Stock Status
+    MachineStockStatus: {
+        widgetId: 'MachineStockStatus',
+        title: 'Machine Stock Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'defaultTab',
+                        type: 'select',
+                        label: 'Default Tab (Compact View)',
+                        description: 'Which cost center tab to show first',
+                        default: 'cc1',
+                        options: [
+                            { value: 'cc1', label: 'Cost Center 1 (Available)' },
+                            { value: 'cc2', label: 'Cost Center 2 (Queue)' },
+                            { value: 'cc5', label: 'Cost Center 5 (Repair)' },
                         ],
                     } as SelectSettingField,
                     {
-                        key: 'groupByUser',
+                        key: 'showMachineDescriptions',
                         type: 'toggle',
-                        label: 'Group by User',
-                        description: 'Group moves by user',
+                        label: 'Show Descriptions',
+                        description: 'Display part descriptions (when space allows)',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Sales by Month Bar Chart
+    SalesByMonthBar: {
+        widgetId: 'SalesByMonthBar',
+        title: 'Monthly Sales Chart Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'showProjection',
+                        type: 'toggle',
+                        label: 'Show Current Month Projection',
+                        description: 'Display projected total for incomplete current month',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showYearOverYear',
+                        type: 'toggle',
+                        label: 'Show Year-over-Year Change',
+                        description: 'Display percentage change vs same month last year',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Sales by Day Bar Chart
+    SalesByDayBar: {
+        widgetId: 'SalesByDayBar',
+        title: 'Daily Sales Chart Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'highlightToday',
+                        type: 'toggle',
+                        label: 'Highlight Today',
+                        description: 'Visually emphasize today\'s bar',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showWeekendShading',
+                        type: 'toggle',
+                        label: 'Show Weekend Shading',
+                        description: 'Dim weekend bars to distinguish from weekdays',
                         default: false,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Sales by Month Comparison Bar Chart
+    SalesByMonthComparisonBar: {
+        widgetId: 'SalesByMonthComparisonBar',
+        title: 'Monthly Comparison Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'showProjection',
+                        type: 'toggle',
+                        label: 'Show Current Month Projection',
+                        description: 'Display projected total for incomplete current month',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showPercentageDiff',
+                        type: 'toggle',
+                        label: 'Show % Difference',
+                        description: 'Display percentage difference between years',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Top Customers This Year Pie
+    TopCustomersThisYearPie: {
+        widgetId: 'TopCustomersThisYearPie',
+        title: 'Top Customers Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'showOtherCategory',
+                        type: 'toggle',
+                        label: 'Show "Other" Category',
+                        description: 'Group remaining customers into "Other" slice',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'maxCustomersShown',
+                        type: 'slider',
+                        label: 'Max Customers Shown',
+                        description: 'Number of top customers to display',
+                        default: 5,
+                        min: 3,
+                        max: 10,
+                        step: 1,
+                    } as SliderSettingField,
+                    {
+                        key: 'showPercentages',
+                        type: 'toggle',
+                        label: 'Show Percentages',
+                        description: 'Display percentage labels on chart',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Top 5 Payables YTD Pie
+    Top5PayablesYTD: {
+        widgetId: 'Top5PayablesYTD',
+        title: 'Top Payables Settings',
+        sections: [
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'showOtherCategory',
+                        type: 'toggle',
+                        label: 'Show "Other" Category',
+                        description: 'Group remaining vendors into "Other" slice',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'maxVendorsShown',
+                        type: 'slider',
+                        label: 'Max Vendors Shown',
+                        description: 'Number of top vendors to display',
+                        default: 5,
+                        min: 3,
+                        max: 10,
+                        step: 1,
+                    } as SliderSettingField,
+                    {
+                        key: 'showPercentages',
+                        type: 'toggle',
+                        label: 'Show Percentages',
+                        description: 'Display percentage labels on chart',
+                        default: true,
                     } as ToggleSettingField,
                 ],
             },
@@ -439,86 +633,24 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                 title: 'Display',
                 fields: [
                     {
+                        key: 'showSummary',
+                        type: 'toggle',
+                        label: 'Show Summary Header',
+                        description: 'Display total moves and users count at top',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showPercentages',
+                        type: 'toggle',
+                        label: 'Show Percentages',
+                        description: 'Display percentage of total on each bar',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
                         key: 'showLabels',
                         type: 'toggle',
-                        label: 'Show Labels',
-                        description: 'Display user labels on bars',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'sortOrder',
-                        type: 'select',
-                        label: 'Sort Order',
-                        description: 'How to sort the bars',
-                        default: 'desc',
-                        options: [
-                            { value: 'desc', label: 'Highest first' },
-                            { value: 'asc', label: 'Lowest first' },
-                            { value: 'alpha', label: 'Alphabetical' },
-                        ],
-                    } as SelectSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Humidity Widget
-    Humidity: {
-        widgetId: 'Humidity',
-        title: 'Humidity Settings',
-        sections: [
-            {
-                title: 'Alerts',
-                fields: [
-                    {
-                        key: 'alertEnabled',
-                        type: 'toggle',
-                        label: 'Enable Alerts',
-                        description: 'Alert when humidity exceeds threshold',
-                        default: false,
-                    } as ToggleSettingField,
-                    {
-                        key: 'alertThreshold',
-                        type: 'slider',
-                        label: 'Alert Threshold',
-                        description: 'Alert when humidity exceeds this value',
-                        default: 80,
-                        min: 50,
-                        max: 100,
-                        step: 5,
-                        unit: '%',
-                    } as SliderSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Beef Prices Chart
-    BeefPricesChart: {
-        widgetId: 'BeefPricesChart',
-        title: 'Beef Prices Settings',
-        sections: [
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'daysToShow',
-                        type: 'select',
-                        label: 'Days to Display',
-                        description: 'Number of days of price history',
-                        default: '30',
-                        options: [
-                            { value: '7', label: 'Last 7 days' },
-                            { value: '14', label: 'Last 14 days' },
-                            { value: '30', label: 'Last 30 days' },
-                            { value: '90', label: 'Last 90 days' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showBoth',
-                        type: 'toggle',
-                        label: 'Show Both Grades',
-                        description: 'Display both 50% and 85% lean',
+                        label: 'Show Bar Labels',
+                        description: 'Display count labels on bars',
                         default: true,
                     } as ToggleSettingField,
                 ],
@@ -526,76 +658,125 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         ],
     },
 
-    // Top Product Sales
-    TopProductUnitSales: {
-        widgetId: 'TopProductUnitSales',
-        title: 'Top Product Sales Settings',
+    // Daily Production Putaways Bar
+    DailyProductionPutawaysBar: {
+        widgetId: 'DailyProductionPutawaysBar',
+        title: 'Daily Putaways Settings',
         sections: [
             {
                 title: 'Display',
                 fields: [
                     {
-                        key: 'productsToShow',
-                        type: 'select',
-                        label: 'Products to Display',
-                        description: 'Number of top products to show',
-                        default: '10',
-                        options: [
-                            { value: '5', label: 'Top 5' },
-                            { value: '10', label: 'Top 10' },
-                            { value: '20', label: 'Top 20' },
-                            { value: '50', label: 'Top 50' },
-                        ],
-                    } as SelectSettingField,
+                        key: 'showPercentages',
+                        type: 'toggle',
+                        label: 'Show Percentages',
+                        description: 'Display percentage of total on each bar',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showUOM',
+                        type: 'toggle',
+                        label: 'Show Unit of Measure',
+                        description: 'Display units (lbs, cases, etc.) in labels',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showLabels',
+                        type: 'toggle',
+                        label: 'Show Bar Labels',
+                        description: 'Display quantity labels on bars',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Overview Widget
+    Overview: {
+        widgetId: 'Overview',
+        title: 'Overview Settings',
+        sections: [
+            {
+                title: 'Visible Metrics',
+                fields: [
+                    {
+                        key: 'showYTD',
+                        type: 'toggle',
+                        label: 'Show Sales YTD',
+                        description: 'Display year-to-date sales metric',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showThisMonth',
+                        type: 'toggle',
+                        label: 'Show Sales This Month',
+                        description: 'Display current month sales metric',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showLast7Days',
+                        type: 'toggle',
+                        label: 'Show Last 7 Days',
+                        description: 'Display rolling 7-day sales metric',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showToday',
+                        type: 'toggle',
+                        label: 'Show Sales Today',
+                        description: 'Display today\'s sales metric',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Comparison',
+                fields: [
+                    {
+                        key: 'showComparison',
+                        type: 'toggle',
+                        label: 'Show % Change',
+                        description: 'Display percentage change vs previous period',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Daily Due In Hidden Vendors Table
+    DailyDueInHiddenVendTable: {
+        widgetId: 'DailyDueInHiddenVendTable',
+        title: 'Daily Due In (Maintenance) Settings',
+        sections: [
+            {
+                title: 'Notifications',
+                fields: [
+                    {
+                        key: 'playSoundOnReceived',
+                        type: 'toggle',
+                        label: 'Sound on Status Change',
+                        description: 'Play notification when order status changes to Received',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Sorting',
+                fields: [
                     {
                         key: 'sortBy',
                         type: 'select',
                         label: 'Sort By',
-                        description: 'How to rank products',
-                        default: 'units',
+                        description: 'Primary sort order for orders',
+                        default: 'vendor',
                         options: [
-                            { value: 'units', label: 'Units Sold' },
-                            { value: 'revenue', label: 'Revenue' },
+                            { value: 'vendor', label: 'Vendor Name' },
+                            { value: 'date', label: 'Date Ordered' },
+                            { value: 'poNumber', label: 'PO Number' },
                         ],
                     } as SelectSettingField,
-                ],
-            },
-        ],
-    },
-
-    // Machine Stock Status
-    MachineStockStatus: {
-        widgetId: 'MachineStockStatus',
-        title: 'Machine Stock Settings',
-        sections: [
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'showEmptyBins',
-                        type: 'toggle',
-                        label: 'Show Empty Bins',
-                        description: 'Include bins with zero stock',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'highlightLowStock',
-                        type: 'toggle',
-                        label: 'Highlight Low Stock',
-                        description: 'Highlight items below threshold',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'lowStockThreshold',
-                        type: 'slider',
-                        label: 'Low Stock Threshold',
-                        description: 'Highlight when stock is below this',
-                        default: 10,
-                        min: 1,
-                        max: 50,
-                        step: 1,
-                        unit: ' units',
-                    } as SliderSettingField,
                 ],
             },
         ],

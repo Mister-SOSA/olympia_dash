@@ -5,6 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowRightLeft, Package, Calendar, Clock, User, Hash, FileText } from "lucide-react";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'InventoryMovesLog';
 
 /* TO DO:
 MIGRATE TO FOLLOWING MODULE:
@@ -63,18 +66,19 @@ const formatTime = (timeStr: string): string => {
     }
 };
 
-// Format time with "ago" notation for recent times (within 1 hour), otherwise show clock time
+// Format time with "ago" notation for recent times, otherwise show clock time
 // Returns { display: string, tooltip: string | null, isRelative: boolean }
-const formatTimeAgo = (dateStr: string, timeStr: string): { display: string; tooltip: string | null; isRelative: boolean } => {
+// thresholdMinutes: how many minutes back to show relative time (default 60)
+// useRelative: whether to use relative time at all
+const formatTimeAgo = (
+    dateStr: string,
+    timeStr: string,
+    useRelative: boolean = true,
+    thresholdMinutes: number = 60
+): { display: string; tooltip: string | null; isRelative: boolean } => {
     if (!timeStr) return { display: "—", tooltip: null, isRelative: false };
 
     try {
-        // Debug: Log first entry to see format
-        if (typeof window !== 'undefined' && !(window as any).__timeFormatLogged) {
-            console.log('📅 Date format from DB:', dateStr, 'Time format:', timeStr);
-            (window as any).__timeFormatLogged = true;
-        }
-
         // Parse time from 24-hour format like "13:26:01"
         const timeString = timeStr.toString().trim();
         const timeParts = timeString.split(':');
@@ -101,17 +105,6 @@ const formatTimeAgo = (dateStr: string, timeStr: string): { display: string; too
         const now = new Date();
         const diffMs = now.getTime() - itemDate.getTime();
         const diffSeconds = Math.floor(diffMs / 1000);
-        const diffMinutes = Math.floor(diffSeconds / 60);
-        const diffHours = Math.floor(diffMinutes / 60);
-
-        // Debug first entry
-        if (typeof window !== 'undefined' && !(window as any).__timeCalcLogged) {
-            console.log('⏰ Item date:', itemDate.toString());
-            console.log('⏰ Now:', now.toString());
-            console.log('⏰ Diff (sec):', diffSeconds, 'Diff (min):', diffMinutes, 'Diff (hours):', diffHours);
-            console.log('⏰ Is today?', now.toDateString() === itemDate.toDateString());
-            (window as any).__timeCalcLogged = true;
-        }
 
         // Format the exact time for tooltip
         const ampm = hours >= 12 ? 'PM' : 'AM';
@@ -122,8 +115,9 @@ const formatTimeAgo = (dateStr: string, timeStr: string): { display: string; too
         // Check if it's today
         const isToday = now.toDateString() === itemDate.toDateString();
 
-        // If within the last hour AND it's today AND in the past, show "ago" notation
-        if (isToday && diffSeconds >= 0 && diffSeconds < 3600) {
+        // If relative time is enabled AND within the threshold AND it's today AND in the past
+        const thresholdSeconds = thresholdMinutes * 60;
+        if (useRelative && isToday && diffSeconds >= 0 && diffSeconds < thresholdSeconds) {
             let relativeTime: string;
             if (diffSeconds < 60) {
                 if (diffSeconds <= 5) {
@@ -304,6 +298,13 @@ export default function InventoryMovesLog() {
     // Ref to keep track of previously seen rows by their unique docNumber.
     const previousDocsRef = useRef<Set<string>>(new Set());
 
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const useRelativeTime = settings.useRelativeTime as boolean;
+    const relativeTimeThreshold = settings.relativeTimeThreshold as number;
+    const filterByType = settings.filterByType as string;
+    const highlightNewMoves = settings.highlightNewMoves as boolean;
+
     // Memoize the widget payload.
     const widgetPayload = useMemo(
         () => ({
@@ -315,8 +316,14 @@ export default function InventoryMovesLog() {
 
     // Render function to map raw data to table rows.
     const renderFunction = useCallback((data: InventoryMoveRaw[]) => {
+        // Filter data by type if specified
+        let filteredData = data;
+        if (filterByType && filterByType !== 'all') {
+            filteredData = data.filter(item => item.xtype === filterByType);
+        }
+
         // Map raw data to table rows.
-        const tableData = data.map((item) => mapInventoryMove(item, previousDocsRef.current));
+        const tableData = filteredData.map((item) => mapInventoryMove(item, previousDocsRef.current));
 
         // Update the ref with current document numbers.
         previousDocsRef.current = new Set(tableData.map((row) => row.docNumber));
@@ -327,14 +334,14 @@ export default function InventoryMovesLog() {
                     {/* Compact Card View for Small Sizes */}
                     <div className="@xl:hidden p-2 space-y-2">
                         {tableData.map((row, index) => {
-                            const timeData = formatTimeAgo(row.moveDate, row.moveTime);
+                            const timeData = formatTimeAgo(row.moveDate, row.moveTime, useRelativeTime, relativeTimeThreshold);
                             return (
                                 <div
                                     key={`${row.docNumber}-${row.lotNumber}-${row.moveTime}-${index}`}
                                     className={`
                                         rounded-lg border border-border/50 p-3 space-y-2
                                         transition-all duration-300 hover:bg-muted/30
-                                        ${row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
+                                        ${highlightNewMoves && row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
                                     `}
                                 >
                                     {/* Top Row: Time & Type */}
@@ -471,7 +478,7 @@ export default function InventoryMovesLog() {
                                         className={`
                                         border-border/30 transition-all duration-300
                                         hover:bg-muted/50
-                                        ${row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
+                                        ${highlightNewMoves && row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
                                     `}
                                     >
                                         {/* Date - Hidden below 7xl container */}
@@ -481,7 +488,7 @@ export default function InventoryMovesLog() {
                                         {/* Time - Always visible in table */}
                                         <TableCell className="text-sm" style={{ color: 'var(--table-text-secondary)' }}>
                                             {(() => {
-                                                const timeData = formatTimeAgo(row.moveDate, row.moveTime);
+                                                const timeData = formatTimeAgo(row.moveDate, row.moveTime, useRelativeTime, relativeTimeThreshold);
                                                 if (timeData.isRelative && timeData.tooltip) {
                                                     return (
                                                         <Tooltip>
@@ -555,7 +562,7 @@ export default function InventoryMovesLog() {
                 </TooltipProvider>
             </ScrollArea>
         );
-    }, []);
+    }, [useRelativeTime, relativeTimeThreshold, filterByType, highlightNewMoves]);
 
     return (
         <Widget

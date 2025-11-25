@@ -13,6 +13,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'DailyDueInTable';
 
 
 /* -------------------------------------- */
@@ -151,16 +154,26 @@ function removeHiddenVendors(data: POItemData[]): POItemData[] {
 }
 
 /**
- * Sort the orders alphabetically by vendor name, then by PO number,
- * and finally by part code.
+ * Sort orders based on user preference.
  */
-function sortOrders(data: POItemData[]): POItemData[] {
+function sortOrders(data: POItemData[], sortBy: 'vendor' | 'date' | 'poNumber' = 'vendor'): POItemData[] {
     return data.sort((a, b) => {
-        const vendorComparison = a.vend_name.localeCompare(b.vend_name);
-        if (vendorComparison !== 0) return vendorComparison;
-        const poComparison = a.po_number.localeCompare(b.po_number);
-        if (poComparison !== 0) return poComparison;
-        return a.part_code.localeCompare(b.part_code);
+        switch (sortBy) {
+            case 'date':
+                // Sort by date ordered (most recent first)
+                return new Date(b.date_orderd).getTime() - new Date(a.date_orderd).getTime();
+            case 'poNumber':
+                // Sort by PO number
+                return a.po_number.localeCompare(b.po_number);
+            case 'vendor':
+            default:
+                // Sort by vendor name, then by PO number, then by part code
+                const vendorComparison = a.vend_name.localeCompare(b.vend_name);
+                if (vendorComparison !== 0) return vendorComparison;
+                const poComparison = a.po_number.localeCompare(b.po_number);
+                if (poComparison !== 0) return poComparison;
+                return a.part_code.localeCompare(b.part_code);
+        }
     });
 }
 
@@ -329,6 +342,11 @@ export default function DailyDueInTable() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [, forceUpdate] = useState({});
 
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const playSoundOnReceived = settings.playSoundOnReceived as boolean;
+    const sortBy = settings.sortBy as 'vendor' | 'date' | 'poNumber';
+
     // Memoize the widget payload via the secure query registry.
     const widgetPayload = useMemo(
         () => ({
@@ -359,9 +377,11 @@ export default function DailyDueInTable() {
             previousStatusesRef.current.set(itemKey, currentStatus);
         });
 
-        // Update the ref with new status V rows and play sound once
+        // Update the ref with new status V rows and play sound once (if enabled)
         if (newStatusVSet.size > 0) {
-            playNotificationSound();
+            if (playSoundOnReceived) {
+                playNotificationSound();
+            }
             newStatusVRowsRef.current = newStatusVSet;
             forceUpdate({}); // Trigger re-render only for affected rows
 
@@ -376,7 +396,7 @@ export default function DailyDueInTable() {
                 forceUpdate({}); // Remove animations
             }, 3000);
         }
-    }, []);
+    }, [playSoundOnReceived]);
 
     // Process data only when it actually changes
     const processData = useCallback((rawData: POItemData[]): TableRowData[] => {
@@ -389,14 +409,14 @@ export default function DailyDueInTable() {
         processedData = computePreviousOrderDetails(processedData);
         const recentOrders = filterRecentOrders(processedData);
         let mergedData = removeHiddenVendors(recentOrders);
-        mergedData = sortOrders(mergedData);
+        mergedData = sortOrders(mergedData, sortBy);
         const result = mapToTableData(mergedData);
 
         previousDataRef.current = rawData;
         processedDataRef.current = result;
 
         return result;
-    }, []);
+    }, [sortBy]);
 
     // Memoized render function
     const renderTable = useCallback((data: POItemData[] | null, loading: boolean) => {

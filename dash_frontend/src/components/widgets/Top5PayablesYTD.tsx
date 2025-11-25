@@ -14,6 +14,7 @@ import {
 import { nFormatter } from "@/utils/helpers";
 import { PayablesData } from "@/types";
 import { PieChartLegend } from "./PieChartLegend";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 // Chart colors matching TopCustomersThisYearPie
 const CHART_COLORS = [
@@ -111,10 +112,13 @@ interface ProcessedPayablesData {
 
 interface PayablesPieChartProps {
     data: PayablesData[];
+    maxVendorsShown: number;
+    showOtherCategory: boolean;
+    showPercentages: boolean;
 }
 
 // Bar Chart Component for small sizes
-const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) => {
+const PartitionedBar: React.FC<{ data: ProcessedPayablesData[]; showPercentages: boolean }> = ({ data, showPercentages: showPercents }) => {
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [availableHeight, setAvailableHeight] = useState(0);
@@ -154,8 +158,8 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
 
     // Calculate optimal bar height based on available space
     const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
-    const showPercentages = barHeight >= 70; // Only show percentages if bar is tall enough
-    const showInlineLabels = barHeight >= 90; // Show labels inside bar if tall enough
+    const showPercentages = showPercents && barHeight >= 70; // Only show percentages if bar is tall enough and enabled
+    const showInlineLabels = showPercents && barHeight >= 90; // Show labels inside bar if tall enough and enabled
 
     return (
         <div ref={containerRef} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.625rem", padding: "0.5rem" }}>
@@ -271,7 +275,7 @@ const PartitionedBar: React.FC<{ data: ProcessedPayablesData[] }> = ({ data }) =
 };
 
 // Main chart component with intelligent layout
-const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data }) => {
+const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsShown, showOtherCategory, showPercentages }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -283,8 +287,23 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data }) => {
 
         const total = sortedData.reduce((sum, item) => sum + item.total_pay_value, 0);
 
-        // Map to processed format - without colors yet
-        const processed = sortedData.slice(0, 6).map((item) => ({
+        // Get top vendors
+        let topVendors = sortedData.slice(0, maxVendorsShown);
+
+        // Create "Other" category from remaining if enabled
+        if (showOtherCategory && sortedData.length > maxVendorsShown) {
+            const otherTotal = sortedData.slice(maxVendorsShown).reduce((sum, item) => sum + item.total_pay_value, 0);
+            topVendors = [
+                ...topVendors,
+                {
+                    vend_name_group: "Other",
+                    total_pay_value: otherTotal,
+                } as PayablesData,
+            ];
+        }
+
+        // Map to processed format
+        const processed = topVendors.map((item) => ({
             name: item.vend_name_group,
             value: item.total_pay_value,
             color: "", // Will assign after sorting
@@ -305,7 +324,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data }) => {
                 ? CHART_COLORS[CHART_COLORS.length - 1] // Grey for Other
                 : CHART_COLORS[index] || CHART_COLORS[0],
         }));
-    }, [data]);
+    }, [data, maxVendorsShown, showOtherCategory]);
 
     // Calculate optimal layout
     const layout = useMemo(
@@ -321,7 +340,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data }) => {
     if (layout.type === "bar") {
         return (
             <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-                <PartitionedBar data={processedData} />
+                <PartitionedBar data={processedData} showPercentages={showPercentages} />
             </div>
         );
     }
@@ -474,6 +493,12 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data }) => {
 /* Top5PayablesYTD Component              */
 /* -------------------------------------- */
 export default function Top5PayablesYTD() {
+    const { settings } = useWidgetSettings('Top5PayablesYTD');
+
+    const showOtherCategory = settings.showOtherCategory ?? true;
+    const maxVendorsShown = settings.maxVendorsShown ?? 5;
+    const showPercentages = settings.showPercentages ?? true;
+
     // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
         () => ({
@@ -484,8 +509,13 @@ export default function Top5PayablesYTD() {
     );
 
     const renderChart = useCallback((data: PayablesData[]) => (
-        <PayablesPieChart data={data} />
-    ), []);
+        <PayablesPieChart
+            data={data}
+            maxVendorsShown={maxVendorsShown}
+            showOtherCategory={showOtherCategory}
+            showPercentages={showPercentages}
+        />
+    ), [maxVendorsShown, showOtherCategory, showPercentages]);
 
     return (
         <Widget

@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
 import { IoWaterSharp } from "react-icons/io5";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'Humidity';
 
 interface HumidityData {
     [x: string]: any;
@@ -10,6 +13,11 @@ interface HumidityData {
 const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+    // Get widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const lowThreshold = settings.lowThreshold as number;
+    const highThreshold = settings.highThreshold as number;
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -25,11 +33,11 @@ const HumidityContent: React.FC<{ data: HumidityData | null }> = ({ data }) => {
 
     const humidityValue = data ? Number(data.toFixed(0)) : null;
 
-    // Get color based on humidity level
+    // Get color based on humidity level using configurable thresholds
     const getHumidityColor = (value: number) => {
-        if (value < 30) return "#FF9500"; // Low
-        if (value >= 30 && value < 60) return "#007AFF"; // Good
-        return "#FF3B30"; // High
+        if (value < lowThreshold) return "#FF9500"; // Low - orange
+        if (value >= lowThreshold && value < highThreshold) return "#007AFF"; // Good - blue
+        return "#FF3B30"; // High - red
     };
 
     const color = humidityValue !== null ? getHumidityColor(humidityValue) : "#007AFF";

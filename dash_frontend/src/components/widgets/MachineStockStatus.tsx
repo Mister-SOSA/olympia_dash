@@ -1,5 +1,8 @@
 import React, { useMemo, useCallback, useState } from "react";
 import Widget from "./Widget";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'MachineStockStatus';
 // import { ScrollArea } from "@/components/ui/scroll-area";
 
 /* -------------------------------------- */
@@ -61,9 +64,10 @@ interface StatusCardProps {
     statusColor: 'success' | 'warning' | 'error';
     icon: string;
     compact?: boolean;
+    showDescriptions?: boolean;
 }
 
-const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon, compact = false }) => {
+const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, icon, compact = false, showDescriptions = true }) => {
     const getColors = () => {
         if (statusColor === 'success') return {
             bg: 'var(--badge-success-text)',
@@ -181,7 +185,9 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                                         {/* Machine Info */}
                                         <div className="flex-1 min-w-0">
                                             <div className="font-bold text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>{machine.part_code}</div>
-                                            <div className="text-xs truncate mt-0.5" style={{ color: 'var(--table-text-secondary)' }}>{machine.part_desc}</div>
+                                            {showDescriptions && (
+                                                <div className="text-xs truncate mt-0.5" style={{ color: 'var(--table-text-secondary)' }}>{machine.part_desc}</div>
+                                            )}
                                         </div>
 
                                         {/* Metrics with labels */}
@@ -211,7 +217,12 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
 /* -------------------------------------- */
 
 export default function MachineStockStatus() {
-    const [activeTab, setActiveTab] = useState<'cc1' | 'cc2' | 'cc5'>('cc1');
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const defaultTab = settings.defaultTab as 'cc1' | 'cc2' | 'cc5';
+    const showMachineDescriptions = settings.showMachineDescriptions as boolean;
+
+    const [activeTab, setActiveTab] = useState<'cc1' | 'cc2' | 'cc5'>(defaultTab);
 
     // Memoize the widget payload
     const widgetPayload = useMemo(
@@ -376,6 +387,7 @@ export default function MachineStockStatus() {
                                 statusColor="success"
                                 icon="✅"
                                 compact={true}
+                                showDescriptions={showMachineDescriptions}
                             />
                         )}
                         {activeTab === 'cc2' && (
@@ -385,6 +397,7 @@ export default function MachineStockStatus() {
                                 statusColor="warning"
                                 icon="⏳"
                                 compact={true}
+                                showDescriptions={showMachineDescriptions}
                             />
                         )}
                         {activeTab === 'cc5' && (
@@ -394,6 +407,7 @@ export default function MachineStockStatus() {
                                 statusColor="error"
                                 icon="🔧"
                                 compact={true}
+                                showDescriptions={showMachineDescriptions}
                             />
                         )}
                     </div>
@@ -410,6 +424,7 @@ export default function MachineStockStatus() {
                         statusColor="success"
                         icon="✅"
                         compact={false}
+                        showDescriptions={showMachineDescriptions}
                     />
                     <StatusCard
                         title="Cost Center 2"
@@ -417,6 +432,7 @@ export default function MachineStockStatus() {
                         statusColor="warning"
                         icon="⏳"
                         compact={false}
+                        showDescriptions={showMachineDescriptions}
                     />
                     <StatusCard
                         title="Cost Center 5"
@@ -424,11 +440,12 @@ export default function MachineStockStatus() {
                         statusColor="error"
                         icon="🔧"
                         compact={false}
+                        showDescriptions={showMachineDescriptions}
                     />
                 </div>
             </div>
         );
-    }, [activeTab, setActiveTab]);
+    }, [activeTab, setActiveTab, showMachineDescriptions]);
 
     return (
         <Widget

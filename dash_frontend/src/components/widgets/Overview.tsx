@@ -3,6 +3,7 @@ import Widget from "./Widget";
 import { nFormatter, calculatePercentageChange } from "@/utils/helpers";
 import { SalesData } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 📊 Types & Interfaces                  */
@@ -175,48 +176,76 @@ const MetricCard = ({ metric }: { metric: MetricData }) => {
 /* 📊 OverviewWidget Component            */
 /* -------------------------------------- */
 
-const OverviewWidget = ({ data }: { data: SalesData[] }) => {
+interface OverviewWidgetProps {
+    data: SalesData[];
+    showYTD: boolean;
+    showThisMonth: boolean;
+    showLast7Days: boolean;
+    showToday: boolean;
+    showComparison: boolean;
+}
+
+const OverviewWidget = ({ data, showYTD, showThisMonth, showLast7Days, showToday, showComparison }: OverviewWidgetProps) => {
     const now = new Date();
     const todayGMT = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const metrics = useMemo(() => calculateMetrics(data, todayGMT), [data, todayGMT]);
 
-    const metricsData: MetricData[] = useMemo(
-        () => [
+    const metricsData: MetricData[] = useMemo(() => {
+        const allMetrics = [
             {
-                title: "Sales YTD",
-                value: metrics.totalSalesYTD,
-                changePercent: calculatePercentageChange(metrics.totalSalesYTD, metrics.totalSalesPreviousYTD),
-                tooltip: "Compared to same period last year (YTD)",
+                key: 'ytd',
+                show: showYTD,
+                data: {
+                    title: "Sales YTD",
+                    value: metrics.totalSalesYTD,
+                    changePercent: showComparison ? calculatePercentageChange(metrics.totalSalesYTD, metrics.totalSalesPreviousYTD) : "",
+                    tooltip: "Compared to same period last year (YTD)",
+                },
             },
             {
-                title: "Sales This Month",
-                value: metrics.totalSalesCurrentMonth,
-                changePercent: calculatePercentageChange(
-                    metrics.totalSalesCurrentMonth,
-                    metrics.totalSalesPreviousMonth
-                ),
-                tooltip: "Compared to same month last year (month-to-date)",
+                key: 'month',
+                show: showThisMonth,
+                data: {
+                    title: "Sales This Month",
+                    value: metrics.totalSalesCurrentMonth,
+                    changePercent: showComparison ? calculatePercentageChange(
+                        metrics.totalSalesCurrentMonth,
+                        metrics.totalSalesPreviousMonth
+                    ) : "",
+                    tooltip: "Compared to same month last year (month-to-date)",
+                },
             },
             {
-                title: "Sales Last 7 Days",
-                value: metrics.totalSalesRolling7Days,
-                changePercent: calculatePercentageChange(
-                    metrics.totalSalesRolling7Days,
-                    metrics.totalSalesPreviousRolling7Days
-                ),
-                tooltip: "Compared to previous 7 days",
+                key: '7days',
+                show: showLast7Days,
+                data: {
+                    title: "Sales Last 7 Days",
+                    value: metrics.totalSalesRolling7Days,
+                    changePercent: showComparison ? calculatePercentageChange(
+                        metrics.totalSalesRolling7Days,
+                        metrics.totalSalesPreviousRolling7Days
+                    ) : "",
+                    tooltip: "Compared to previous 7 days",
+                },
             },
             {
-                title: "Sales Today",
-                value: metrics.totalSalesToday,
-                changePercent: "",
-                isToday: true,
-                tooltip: "",
+                key: 'today',
+                show: showToday,
+                data: {
+                    title: "Sales Today",
+                    value: metrics.totalSalesToday,
+                    changePercent: "",
+                    isToday: true,
+                    tooltip: "",
+                },
             },
-        ],
-        [metrics]
-    );
+        ];
+
+        return allMetrics
+            .filter(m => m.show)
+            .map(m => m.data);
+    }, [metrics, showYTD, showThisMonth, showLast7Days, showToday, showComparison]);
 
     return (
         <div className="overview-widget-container">
@@ -234,6 +263,14 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
 /* -------------------------------------- */
 
 export default function Overview() {
+    const { settings } = useWidgetSettings('Overview');
+
+    const showYTD = settings.showYTD ?? true;
+    const showThisMonth = settings.showThisMonth ?? true;
+    const showLast7Days = settings.showLast7Days ?? true;
+    const showToday = settings.showToday ?? true;
+    const showComparison = settings.showComparison ?? true;
+
     const widgetPayload = useMemo(
         () => ({
             module: "Overview",
@@ -254,7 +291,16 @@ export default function Overview() {
                     return <div className="widget-empty">No sales data available</div>;
                 }
 
-                return <OverviewWidget data={data} />;
+                return (
+                    <OverviewWidget
+                        data={data}
+                        showYTD={showYTD}
+                        showThisMonth={showThisMonth}
+                        showLast7Days={showLast7Days}
+                        showToday={showToday}
+                        showComparison={showComparison}
+                    />
+                );
             }}
         </Widget>
     );

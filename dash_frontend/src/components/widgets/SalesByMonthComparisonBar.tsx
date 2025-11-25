@@ -7,6 +7,7 @@ import {
     nFormatter,
 } from "@/utils/helpers";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
@@ -39,9 +40,11 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement>): numbe
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    showProjection: boolean;
+    showPercentageDiff: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, showPercentageDiff }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -493,6 +496,10 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByMonthComparisonBar() {
     const containerRef = useRef<HTMLDivElement>(document.createElement('div'));
     const visibleMonths = useResponsiveVisibleMonths(containerRef);
+    const { settings } = useWidgetSettings('SalesByMonthComparisonBar');
+
+    const showProjection = settings.showProjection ?? true;
+    const showPercentageDiff = settings.showPercentageDiff ?? true;
 
     // Calculate date ranges for the current and last year (12-month period).
     const { current, lastYear } = useMemo(
@@ -532,9 +539,9 @@ export default function SalesByMonthComparisonBar() {
         (data: SalesData[]) => {
             const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
             const chartData = prepareChartData(groupedData);
-            return <CustomBarChart data={chartData} />;
+            return <CustomBarChart data={chartData} showProjection={showProjection} showPercentageDiff={showPercentageDiff} />;
         },
-        [current.periods, visibleMonths]
+        [current.periods, visibleMonths, showProjection, showPercentageDiff]
     );
 
     return (

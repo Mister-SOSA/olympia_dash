@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 Responsive Hooks                    */
@@ -346,7 +347,16 @@ const ResponsiveBarChart: React.FC<ResponsiveBarChartProps> = ({ data, summary, 
 /* -------------------------------------- */
 export default function DailyMovesByUser() {
     const containerRef = useRef<HTMLDivElement>(null);
-    const config = useResponsiveConfig(containerRef);
+    const responsiveConfig = useResponsiveConfig(containerRef);
+    const { settings } = useWidgetSettings('DailyMovesByUser');
+
+    // Apply user settings as overrides to responsive config
+    const config = useMemo(() => ({
+        ...responsiveConfig,
+        showSummary: settings.showSummary ?? responsiveConfig.showSummary,
+        showPercentages: settings.showPercentages ?? responsiveConfig.showPercentages,
+        showLabels: settings.showLabels ?? responsiveConfig.showLabels,
+    }), [responsiveConfig, settings.showSummary, settings.showPercentages, settings.showLabels]);
 
     // Compute today's date as an ISO string (YYYY-MM-DD)
     const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);

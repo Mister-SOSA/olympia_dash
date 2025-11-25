@@ -15,7 +15,7 @@ import { getWidgetDefaultSettings, getWidgetSettingsSchema } from '@/constants/w
 export function useWidgetSettings<T extends Record<string, any> = Record<string, any>>(
     widgetId: string
 ) {
-    const [settings, setSettings] = useState<T>(() => 
+    const [settings, setSettings] = useState<T>(() =>
         widgetSettingsService.getSettings(widgetId) as T
     );
 
@@ -73,7 +73,7 @@ export function useWidgetSetting<T = any>(
     key: string,
     defaultValue?: T
 ): [T, (value: T) => void] {
-    const [value, setValue] = useState<T>(() => 
+    const [value, setValue] = useState<T>(() =>
         widgetSettingsService.getSetting(widgetId, key, defaultValue)
     );
 

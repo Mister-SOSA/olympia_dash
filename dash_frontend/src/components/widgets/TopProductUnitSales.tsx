@@ -4,6 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
 import { Package, FileText, TrendingUp, Calendar, Award } from "lucide-react";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'TopProductUnitSales';
 
 // Raw data type for each record from the API
 type ProductUnitData = {
@@ -26,6 +29,11 @@ interface ProductAggregates {
 /* TopProductUnitSalesTable Component     */
 /* -------------------------------------- */
 export default function TopProductUnitSalesTable() {
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const highlightTopThree = settings.highlightTopThree as boolean;
+    const showPercentageChange = settings.showPercentageChange as boolean;
+
     // Prepare the widget payload with SQL query.
     // This filter now only returns data for the last 12 complete months.
     const widgetPayload = useMemo(
@@ -178,6 +186,7 @@ export default function TopProductUnitSalesTable() {
                             const rank = i + 1;
                             const isTopThree = rank <= 3;
                             const getRankColor = () => {
+                                if (!highlightTopThree) return 'var(--text-muted)';
                                 if (rank === 1) return 'var(--badge-warning-text)';
                                 if (rank === 2) return 'var(--table-text-primary)';
                                 if (rank === 3) return 'var(--badge-warning-border)';
@@ -188,17 +197,17 @@ export default function TopProductUnitSalesTable() {
                                 <TableRow
                                     key={i}
                                     className={`border-border/30 transition-all duration-300 hover:bg-muted/50`}
-                                    style={rank === 1 ? {
+                                    style={highlightTopThree && rank === 1 ? {
                                         backgroundColor: 'var(--badge-warning-bg)',
                                         borderLeft: '2px solid var(--badge-warning-border)',
-                                    } : isTopThree ? {
+                                    } : highlightTopThree && isTopThree ? {
                                         backgroundColor: 'var(--ui-bg-secondary)',
                                     } : {}}
                                 >
                                     <TableCell className="py-1.5 text-center">
                                         <span className="font-bold text-[15px]" style={{
                                             color: getRankColor(),
-                                            fontWeight: rank <= 2 ? 900 : 700
+                                            fontWeight: highlightTopThree && rank <= 2 ? 900 : 700
                                         }}>
                                             {rank}
                                         </span>
@@ -211,7 +220,7 @@ export default function TopProductUnitSalesTable() {
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
-                                            {row.avg3.pct !== null && (
+                                            {showPercentageChange && row.avg3.pct !== null && (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg3.pct)}>
                                                     {row.avg3.pct > 0 ? "+" : ""}{row.avg3.pct.toFixed(1)}%
                                                 </span>
@@ -221,7 +230,7 @@ export default function TopProductUnitSalesTable() {
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
-                                            {row.avg6.pct !== null && (
+                                            {showPercentageChange && row.avg6.pct !== null && (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg6.pct)}>
                                                     {row.avg6.pct > 0 ? "+" : ""}{row.avg6.pct.toFixed(1)}%
                                                 </span>
@@ -231,7 +240,7 @@ export default function TopProductUnitSalesTable() {
                                     </TableCell>
                                     <TableCell className="py-1.5 border-l border-border">
                                         <div className="flex items-center justify-end gap-3 px-2">
-                                            {row.avg9.pct !== null && (
+                                            {showPercentageChange && row.avg9.pct !== null && (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold border" style={getPercentageColor(row.avg9.pct)}>
                                                     {row.avg9.pct > 0 ? "+" : ""}{row.avg9.pct.toFixed(1)}%
                                                 </span>
@@ -240,7 +249,7 @@ export default function TopProductUnitSalesTable() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center py-1.5 border-l border-border">
-                                        <span className="font-black text-[16px] leading-tight" style={{ color: rank === 1 ? 'var(--badge-warning-text)' : 'var(--table-text-primary)' }}>{row.avg12.value}</span>
+                                        <span className="font-black text-[16px] leading-tight" style={{ color: highlightTopThree && rank === 1 ? 'var(--badge-warning-text)' : 'var(--table-text-primary)' }}>{row.avg12.value}</span>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -249,7 +258,7 @@ export default function TopProductUnitSalesTable() {
                 </Table>
             </ScrollArea>
         );
-    }, []);
+    }, [highlightTopThree, showPercentageChange]);
 
     return (
         <Widget

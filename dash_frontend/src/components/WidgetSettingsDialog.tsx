@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdClose, MdRefresh, MdSettings } from "react-icons/md";
-import { 
-    getWidgetSettingsSchema, 
+import {
+    getWidgetSettingsSchema,
     SettingField,
-    WidgetSettingsSchema 
+    WidgetSettingsSchema
 } from "@/constants/widgetSettings";
 import { widgetSettingsService } from "@/lib/widgetSettings";
 
@@ -148,11 +148,10 @@ export default function WidgetSettingsDialog({
                                 <button
                                     onClick={handleSave}
                                     disabled={!hasChanges}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                        hasChanges
+                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${hasChanges
                                             ? 'bg-ui-accent-primary text-white hover:bg-ui-accent-primary-hover'
                                             : 'bg-ui-bg-tertiary text-ui-text-muted cursor-not-allowed'
-                                    }`}
+                                        }`}
                                 >
                                     Save Changes
                                 </button>
@@ -216,9 +215,8 @@ function ToggleField({
             </div>
             <button
                 onClick={() => onChange(!isEnabled)}
-                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-                    isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
-                }`}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${isEnabled ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'
+                    }`}
             >
                 <motion.div
                     className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm"

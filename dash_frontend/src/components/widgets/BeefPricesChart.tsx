@@ -3,6 +3,9 @@ import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
 import appConfig from "@/config";
 import { authService } from "@/lib/auth";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'BeefPricesChart';
 
 /* -------------------------------------- */
 /* 📊 Beef Price Data Types               */
@@ -182,9 +185,18 @@ const TimeRangeSelector: React.FC<TimeRangeSelectorProps> = ({ selected, onChang
 interface CustomLineChartProps {
     data: BeefPriceData[];
     config: ReturnType<typeof useResponsiveConfig>;
+    show50Lean?: boolean;
+    show85Lean?: boolean;
+    showBeefHeart?: boolean;
 }
 
-const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
+const CustomLineChart: React.FC<CustomLineChartProps> = ({
+    data,
+    config,
+    show50Lean = true,
+    show85Lean = true,
+    showBeefHeart = true,
+}) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -391,7 +403,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                 })}
 
                 {/* Smooth gradient fills */}
-                {lean50Points.length > 1 && (
+                {show50Lean && lean50Points.length > 1 && (
                     <>
                         <defs>
                             <linearGradient id="gradient50" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -405,7 +417,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </>
                 )}
-                {lean85Points.length > 1 && (
+                {show85Lean && lean85Points.length > 1 && (
                     <>
                         <defs>
                             <linearGradient id="gradient85" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -419,7 +431,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </>
                 )}
-                {beefHeartPoints.length > 1 && (
+                {showBeefHeart && beefHeartPoints.length > 1 && (
                     <>
                         <defs>
                             <linearGradient id="gradientHeart" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -435,7 +447,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                 )}
 
                 {/* Smooth lines */}
-                {lean50Points.length > 1 && (
+                {show50Lean && lean50Points.length > 1 && (
                     <polyline
                         points={lean50Points.join(' ')}
                         fill="none"
@@ -445,7 +457,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         strokeLinejoin="round"
                     />
                 )}
-                {lean85Points.length > 1 && (
+                {show85Lean && lean85Points.length > 1 && (
                     <polyline
                         points={lean85Points.join(' ')}
                         fill="none"
@@ -455,7 +467,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         strokeLinejoin="round"
                     />
                 )}
-                {beefHeartPoints.length > 1 && (
+                {showBeefHeart && beefHeartPoints.length > 1 && (
                     <polyline
                         points={beefHeartPoints.join(' ')}
                         fill="none"
@@ -467,7 +479,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                 )}
 
                 {/* Blinking endpoint indicators */}
-                {data[data.length - 1].lean_50 !== null && (
+                {show50Lean && data[data.length - 1].lean_50 !== null && (
                     <g className="endpoint-blink">
                         <circle
                             cx={xScale(data.length - 1)}
@@ -484,7 +496,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </g>
                 )}
-                {data[data.length - 1].lean_85 !== null && (
+                {show85Lean && data[data.length - 1].lean_85 !== null && (
                     <g className="endpoint-blink">
                         <circle
                             cx={xScale(data.length - 1)}
@@ -501,7 +513,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         />
                     </g>
                 )}
-                {data[data.length - 1].beef_heart !== null && (
+                {showBeefHeart && data[data.length - 1].beef_heart !== null && (
                     <g className="endpoint-blink">
                         <circle
                             cx={xScale(data.length - 1)}
@@ -535,7 +547,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                 strokeDasharray="3 3"
                                 opacity="0.4"
                             />
-                            {d.lean_50 !== null && (
+                            {show50Lean && d.lean_50 !== null && (
                                 <circle
                                     cx={x}
                                     cy={yScale(convertPrice(d.lean_50))}
@@ -545,7 +557,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                     strokeWidth="2"
                                 />
                             )}
-                            {d.lean_85 !== null && (
+                            {show85Lean && d.lean_85 !== null && (
                                 <circle
                                     cx={x}
                                     cy={yScale(convertPrice(d.lean_85))}
@@ -555,7 +567,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                     strokeWidth="2"
                                 />
                             )}
-                            {d.beef_heart !== null && (
+                            {showBeefHeart && d.beef_heart !== null && (
                                 <circle
                                     cx={x}
                                     cy={yScale(d.beef_heart)}
@@ -615,7 +627,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                         <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "4px", fontWeight: 600 }}>
                             {formatDate(data[hoveredIndex].date, 'monthYear')}
                         </div>
-                        {data[hoveredIndex].lean_85 !== null && (
+                        {show85Lean && data[hoveredIndex].lean_85 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-2)' }} />
                                 <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>85% Lean:</span>
@@ -624,7 +636,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                 </span>
                             </div>
                         )}
-                        {data[hoveredIndex].lean_50 !== null && (
+                        {show50Lean && data[hoveredIndex].lean_50 !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: "2px" }}>
                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-1)' }} />
                                 <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>50% Lean:</span>
@@ -633,7 +645,7 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
                                 </span>
                             </div>
                         )}
-                        {data[hoveredIndex].beef_heart !== null && (
+                        {showBeefHeart && data[hoveredIndex].beef_heart !== null && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--line-chart-3)' }} />
                                 <span style={{ fontSize: "10px", color: "var(--text-muted)", marginRight: "4px" }}>Beef Heart:</span>
@@ -664,10 +676,18 @@ const CustomLineChart: React.FC<CustomLineChartProps> = ({ data, config }) => {
 /* -------------------------------------- */
 export default function BeefPricesChart() {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [timeRange, setTimeRange] = useState<TimeRange>('180d');
     const [combinedData, setCombinedData] = useState<BeefPriceData[]>([]);
     const [loading, setLoading] = useState(true);
     const config = useResponsiveConfig(containerRef);
+
+    // Get widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const show50Lean = settings.show50Lean as boolean;
+    const show85Lean = settings.show85Lean as boolean;
+    const showBeefHeart = settings.showBeefHeart as boolean;
+    const defaultTimeRange = settings.defaultTimeRange as TimeRange;
+
+    const [timeRange, setTimeRange] = useState<TimeRange>(defaultTimeRange);
 
     // Fetch and merge beef prices with beef heart prices
     useEffect(() => {
@@ -936,18 +956,19 @@ export default function BeefPricesChart() {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                                         <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
                                             {[
-                                                { price: stats.current85, change: stats.change85, color: 'var(--line-chart-2)', label: '85% LEAN' },
-                                                { price: stats.current50, change: stats.change50, color: 'var(--line-chart-1)', label: '50% LEAN' },
-                                                { price: stats.currentHeart, change: stats.changeHeart, color: 'var(--line-chart-3)', label: 'BEEF HEART' }
+                                                show85Lean && { price: stats.current85, change: stats.change85, color: 'var(--line-chart-2)', label: '85% LEAN' },
+                                                show50Lean && { price: stats.current50, change: stats.change50, color: 'var(--line-chart-1)', label: '50% LEAN' },
+                                                showBeefHeart && { price: stats.currentHeart, change: stats.changeHeart, color: 'var(--line-chart-3)', label: 'BEEF HEART' }
                                             ]
-                                                .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+                                                .filter(Boolean)
+                                                .sort((a, b) => ((b as any).price ?? 0) - ((a as any).price ?? 0))
                                                 .map((item, index) => (
                                                     <PriceDisplay
                                                         key={index}
-                                                        price={item.price}
-                                                        change={item.change}
-                                                        color={item.color}
-                                                        label={item.label}
+                                                        price={(item as any).price}
+                                                        change={(item as any).change}
+                                                        color={(item as any).color}
+                                                        label={(item as any).label}
                                                     />
                                                 ))
                                             }
@@ -960,7 +981,13 @@ export default function BeefPricesChart() {
                                 </div>
                                 {/* Chart */}
                                 <div style={{ flex: 1, minHeight: 0 }}>
-                                    <CustomLineChart data={filteredData} config={config} />
+                                    <CustomLineChart
+                                        data={filteredData}
+                                        config={config}
+                                        show50Lean={show50Lean}
+                                        show85Lean={show85Lean}
+                                        showBeefHeart={showBeefHeart}
+                                    />
                                 </div>
                             </div>
                         );

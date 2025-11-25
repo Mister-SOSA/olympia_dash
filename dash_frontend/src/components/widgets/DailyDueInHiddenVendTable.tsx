@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
 import { Package, Calendar, DollarSign, Hash, FileText, TrendingUp } from "lucide-react";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
@@ -322,6 +323,11 @@ function mapToTableData(data: POItemData[]): TableRowData[] {
 /* DailyDueInHiddenVendTable Component    */
 /* -------------------------------------- */
 export default function DailyDueInHiddenVendTable() {
+    // Widget settings
+    const { settings } = useWidgetSettings('DailyDueInHiddenVendTable');
+    const playSoundOnReceived = settings.playSoundOnReceived ?? true;
+    const sortBy = settings.sortBy ?? 'vendor';
+
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const previousDataRef = useRef<POItemData[] | null>(null);
@@ -362,7 +368,9 @@ export default function DailyDueInHiddenVendTable() {
 
         // Update the ref with new status V rows and play sound once
         if (newStatusVSet.size > 0) {
-            playNotificationSound();
+            if (playSoundOnReceived) {
+                playNotificationSound();
+            }
             newStatusVRowsRef.current = newStatusVSet;
             forceUpdate({}); // Trigger re-render only for affected rows
 
@@ -377,7 +385,26 @@ export default function DailyDueInHiddenVendTable() {
                 forceUpdate({}); // Remove animations
             }, 3000);
         }
-    }, []);
+    }, [playSoundOnReceived]);
+
+    // Custom sort function based on settings
+    const sortOrdersBySetting = useCallback((data: POItemData[]): POItemData[] => {
+        return data.sort((a, b) => {
+            switch (sortBy) {
+                case 'date':
+                    return new Date(b.date_orderd).getTime() - new Date(a.date_orderd).getTime();
+                case 'poNumber':
+                    return a.po_number.localeCompare(b.po_number);
+                case 'vendor':
+                default:
+                    const vendorComparison = a.vend_name.localeCompare(b.vend_name);
+                    if (vendorComparison !== 0) return vendorComparison;
+                    const poComparison = a.po_number.localeCompare(b.po_number);
+                    if (poComparison !== 0) return poComparison;
+                    return a.part_code.localeCompare(b.part_code);
+            }
+        });
+    }, [sortBy]);
 
     // Process data only when it actually changes
     const processData = useCallback((rawData: POItemData[]): TableRowData[] => {
@@ -390,14 +417,14 @@ export default function DailyDueInHiddenVendTable() {
         processedData = computePreviousOrderDetails(processedData);
         const recentOrders = filterRecentOrders(processedData);
         let mergedData = removeHiddenVendors(recentOrders);
-        mergedData = sortOrders(mergedData);
+        mergedData = sortOrdersBySetting(mergedData);
         const result = mapToTableData(mergedData);
 
         previousDataRef.current = rawData;
         processedDataRef.current = result;
 
         return result;
-    }, []);
+    }, [sortOrdersBySetting]);
 
     // Memoized render function
     const renderTable = useCallback((data: POItemData[] | null, loading: boolean) => {

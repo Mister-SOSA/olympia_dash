@@ -97,15 +97,15 @@ export default function WidgetContextMenu({
 
     const position = getMenuPosition();
 
-    const MenuItem = ({ 
-        icon: Icon, 
-        label, 
-        onClick, 
-        variant = 'default' 
-    }: { 
-        icon: React.ElementType; 
-        label: string; 
-        onClick: () => void; 
+    const MenuItem = ({
+        icon: Icon,
+        label,
+        onClick,
+        variant = 'default'
+    }: {
+        icon: React.ElementType;
+        label: string;
+        onClick: () => void;
         variant?: 'default' | 'danger';
     }) => (
         <button
@@ -114,11 +114,10 @@ export default function WidgetContextMenu({
                 e.stopPropagation();
                 onClick();
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
-                variant === 'danger'
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${variant === 'danger'
                     ? 'text-red-400 hover:bg-red-500/10'
                     : 'text-ui-text-primary hover:bg-ui-bg-tertiary'
-            }`}
+                }`}
         >
             <Icon className="w-4 h-4" />
             <span>{label}</span>
@@ -176,9 +175,9 @@ export default function WidgetContextMenu({
                                 onClose();
                             }}
                         />
-                        
+
                         <div className="border-t border-ui-border-primary my-1" />
-                        
+
                         <div className="px-3 py-1">
                             <p className="text-xs text-ui-text-muted">Resize</p>
                         </div>
@@ -208,7 +207,7 @@ export default function WidgetContextMenu({
                         />
 
                         <div className="border-t border-ui-border-primary my-1" />
-                        
+
                         <MenuItem
                             icon={MdDelete}
                             label="Remove"

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useMemo, useCallback } from "react"
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
@@ -37,9 +38,11 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement | null>)
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    showProjection: boolean;
+    showYearOverYear: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, showYearOverYear }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -137,7 +140,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             />
 
                             {/* Projection section for last month */}
-                            {isLast && projectedRemaining > 0 && (
+                            {isLast && showProjection && projectedRemaining > 0 && (
                                 <>
                                     {/* Projected remaining (striped pattern) */}
                                     <path
@@ -182,7 +185,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             )}
 
                             {/* Value labels */}
-                            {isLast && projectedRemaining > 0 ? (
+                            {isLast && showProjection && projectedRemaining > 0 ? (
                                 <>
                                     {/* Current value label */}
                                     {barHeight < 40 ? (
@@ -302,6 +305,10 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByMonthBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleMonths = useResponsiveVisibleMonths(containerRef);
+    const { settings } = useWidgetSettings('SalesByMonthBar');
+
+    const showProjection = settings.showProjection ?? true;
+    const showYearOverYear = settings.showYearOverYear ?? true;
 
     const widgetPayload = useMemo(
         () => ({
@@ -326,9 +333,9 @@ export default function SalesByMonthBar() {
                     previousPeriodSales: 0,
                 };
             });
-            return <CustomBarChart data={chartData} />;
+            return <CustomBarChart data={chartData} showProjection={showProjection} showYearOverYear={showYearOverYear} />;
         },
-        [visibleMonths]
+        [visibleMonths, showProjection, showYearOverYear]
     );
 
     return (

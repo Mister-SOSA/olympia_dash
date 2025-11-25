@@ -7,6 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { playNotificationSound } from "@/utils/soundUtils";
 import { Package, Calendar, DollarSign, Hash, FileText, TrendingUp, AlertCircle } from "lucide-react";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'OutstandingOrdersTable';
 
 
 /* -------------------------------------- */
@@ -43,6 +46,11 @@ export default function OutstandingOrdersTable() {
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const playSoundOnReceived = settings.playSoundOnReceived as boolean;
+    const sortBy = settings.sortBy as 'vendor' | 'date' | 'overdue' | 'poNumber';
 
     // Prepare the widget payload to query the backed view securely.
     const widgetPayload = useMemo(
@@ -112,9 +120,11 @@ export default function OutstandingOrdersTable() {
             previousStatusesRef.current.set(itemKey, currentStatus);
         });
 
-        // Update the state with new status V rows and play sound once
+        // Update the state with new status V rows and play sound once (if enabled)
         if (newStatusVSet.size > 0) {
-            playNotificationSound(); // Play once for all status changes
+            if (playSoundOnReceived) {
+                playNotificationSound(); // Play once for all status changes
+            }
             setNewStatusVRows(newStatusVSet);
 
             // Clear the highlight after animation completes (9 pulses * 0.8s = 7.2 seconds)
@@ -123,13 +133,27 @@ export default function OutstandingOrdersTable() {
             }, 7200);
         }
 
-        // Sort tableData alphabetically by vendor name, then by PO number, then by part code.
+        // Sort tableData based on user setting
         tableData.sort((a, b) => {
-            const vendorComparison = a.vendName.localeCompare(b.vendName);
-            if (vendorComparison !== 0) return vendorComparison;
-            const poComparison = a.poNumber.localeCompare(b.poNumber);
-            if (poComparison !== 0) return poComparison;
-            return a.partCode.localeCompare(b.partCode);
+            switch (sortBy) {
+                case 'date':
+                    // Sort by date ordered (most recent first)
+                    return b.dateOrdered.localeCompare(a.dateOrdered);
+                case 'overdue':
+                    // Sort by overdue days (most overdue first)
+                    return b.overdueDays - a.overdueDays;
+                case 'poNumber':
+                    // Sort by PO number
+                    return a.poNumber.localeCompare(b.poNumber);
+                case 'vendor':
+                default:
+                    // Sort by vendor name (default), then by PO number, then by part code
+                    const vendorComparison = a.vendName.localeCompare(b.vendName);
+                    if (vendorComparison !== 0) return vendorComparison;
+                    const poComparison = a.poNumber.localeCompare(b.poNumber);
+                    if (poComparison !== 0) return poComparison;
+                    return a.partCode.localeCompare(b.partCode);
+            }
         });
 
         // Render the table within a scrollable container.
@@ -249,7 +273,7 @@ export default function OutstandingOrdersTable() {
                 </Table>
             </ScrollArea>
         );
-    }, [newStatusVRows]);
+    }, [newStatusVRows, playSoundOnReceived, sortBy]);
 
     return (
         <Widget

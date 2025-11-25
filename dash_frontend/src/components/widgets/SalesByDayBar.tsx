@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
-import { format } from "date-fns";
+import { format, isWeekend, isToday } from "date-fns";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleDays Hook        */
@@ -35,10 +36,12 @@ function useResponsiveVisibleDays(ref: React.RefObject<HTMLDivElement | null>): 
 /* 📊 Custom Bar Chart Component          */
 /* -------------------------------------- */
 interface CustomBarChartProps {
-    data: ProcessedSalesData[];
+    data: (ProcessedSalesData & { isWeekend?: boolean; isToday?: boolean })[];
+    highlightToday: boolean;
+    showWeekendShading: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, highlightToday, showWeekendShading }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -93,6 +96,8 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                     const y = padding.top + chartHeight - barHeight;
                     const isHovered = hoveredIndex === index;
                     const isLast = index === data.length - 1;
+                    const isTodayBar = item.isToday && highlightToday;
+                    const isWeekendBar = item.isWeekend && showWeekendShading;
 
                     return (
                         <g key={index}>
@@ -108,8 +113,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 style={{
                                     cursor: "pointer",
                                     transition: "fill 0.2s ease",
+                                    opacity: isWeekendBar ? 0.5 : 1,
                                 }}
-                                className={isLast ? "bar-blink" : ""}
+                                className={isTodayBar ? "bar-blink" : ""}
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                             />
@@ -201,6 +207,10 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByDayBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleDays = useResponsiveVisibleDays(containerRef);
+    const { settings } = useWidgetSettings('SalesByDayBar');
+
+    const highlightToday = settings.highlightToday ?? true;
+    const showWeekendShading = settings.showWeekendShading ?? false;
 
     // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
@@ -238,7 +248,7 @@ export default function SalesByDayBar() {
                     }
 
                     // Build the complete dataset with zero sales for missing dates.
-                    const chartData: ProcessedSalesData[] = allDates.map((date) => {
+                    const chartData = allDates.map((date) => {
                         const formattedDate = format(date, "yyyy-MM-dd");
                         const entry = data.find((item) => item.period === formattedDate);
                         const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`;
@@ -247,10 +257,16 @@ export default function SalesByDayBar() {
                             periodLabel: formattedLabel,
                             currentPeriodSales: entry?.total || 0,
                             previousPeriodSales: 0,
+                            isWeekend: isWeekend(date),
+                            isToday: isToday(date),
                         };
                     });
 
-                    return <CustomBarChart data={chartData.slice(-visibleDays)} />;
+                    return <CustomBarChart
+                        data={chartData.slice(-visibleDays)}
+                        highlightToday={highlightToday}
+                        showWeekendShading={showWeekendShading}
+                    />;
                 }}
             </Widget>
         </div>
