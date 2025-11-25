@@ -6,9 +6,11 @@ import {
     MdDelete,
     MdRefresh,
     MdInfo,
+    MdSettings,
     MdPhotoSizeSelectSmall,
     MdPhotoSizeSelectLarge,
 } from "react-icons/md";
+import { widgetHasSettings } from "@/constants/widgetSettings";
 
 interface ContextMenuProps {
     x: number;
@@ -21,6 +23,7 @@ interface ContextMenuProps {
     onRefresh: (widgetId: string) => void;
     onResize: (widgetId: string, size: 'small' | 'medium' | 'large') => void;
     onInfo: (widgetId: string) => void;
+    onSettings?: (widgetId: string) => void;
 }
 
 export default function WidgetContextMenu({
@@ -33,7 +36,8 @@ export default function WidgetContextMenu({
     onDelete,
     onRefresh,
     onResize,
-    onInfo
+    onInfo,
+    onSettings
 }: ContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -154,6 +158,16 @@ export default function WidgetContextMenu({
                                 onClose();
                             }}
                         />
+                        {widgetHasSettings(widgetId) && onSettings && (
+                            <MenuItem
+                                icon={MdSettings}
+                                label="Settings"
+                                onClick={() => {
+                                    onSettings(widgetId);
+                                    onClose();
+                                }}
+                            />
+                        )}
                         <MenuItem
                             icon={MdRefresh}
                             label="Refresh"

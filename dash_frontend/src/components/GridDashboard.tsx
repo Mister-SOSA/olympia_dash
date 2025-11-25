@@ -9,6 +9,7 @@ import { COLUMN_COUNT, CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
+import WidgetSettingsDialog from "./WidgetSettingsDialog";
 import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
@@ -43,6 +44,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
+        const [showSettingsDialog, setShowSettingsDialog] = useState(false);
         const [selectedWidget, setSelectedWidget] = useState<{ id: string; title: string } | null>(null);
         const externalLayoutChangeRef = useRef(onExternalLayoutChange);
 
@@ -204,6 +206,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             if (widgetDef) {
                 setSelectedWidget({ id: widgetId, title: widgetDef.title });
                 setShowInfoModal(true);
+            }
+            hideContextMenu();
+        };
+
+        const handleWidgetSettings = (widgetId: string) => {
+            const widgetDef = getWidgetById(widgetId);
+            if (widgetDef) {
+                setSelectedWidget({ id: widgetId, title: widgetDef.title });
+                setShowSettingsDialog(true);
             }
             hideContextMenu();
         };
@@ -580,6 +591,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     onRefresh={handleRefreshWidget}
                     onResize={handleResizeWidget}
                     onInfo={handleWidgetInfo}
+                    onSettings={handleWidgetSettings}
                 />
 
                 {/* Modals at dashboard level to avoid z-index conflicts */}
@@ -609,6 +621,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         description: getWidgetById(selectedWidget.id)?.description,
                         size: `${getWidgetById(selectedWidget.id)?.defaultSize.w || 4}×${getWidgetById(selectedWidget.id)?.defaultSize.h || 4}`
                     } : { title: "", category: "", description: "", size: "" }}
+                />
+
+                <WidgetSettingsDialog
+                    widgetId={selectedWidget?.id || ''}
+                    widgetTitle={selectedWidget?.title || ''}
+                    isOpen={showSettingsDialog}
+                    onClose={() => {
+                        setShowSettingsDialog(false);
+                        setSelectedWidget(null);
+                    }}
                 />
             </>
         );

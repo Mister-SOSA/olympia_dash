@@ -1,23 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
-import { preferencesService } from "@/lib/preferences";
-import { DATETIME_SETTINGS } from "@/constants/settings";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'ClockWidget';
 
 const DateTimeContent: React.FC = () => {
     const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
     const [fontSize, setFontSize] = useState<string>("16px");
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    // Subscribe to settings changes
-    const [clockFormat, setClockFormat] = useState<'12h' | '24h'>(
-        preferencesService.get(DATETIME_SETTINGS.clockFormat.key, DATETIME_SETTINGS.clockFormat.default) as '12h' | '24h'
-    );
-    const [showSeconds, setShowSeconds] = useState<boolean>(
-        preferencesService.get(DATETIME_SETTINGS.showSeconds.key, DATETIME_SETTINGS.showSeconds.default) as boolean
-    );
-    const [timezone, setTimezone] = useState<string>(
-        preferencesService.get(DATETIME_SETTINGS.timezone.key, DATETIME_SETTINGS.timezone.default) as string
-    );
+    // Use widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const clockFormat = settings.clockFormat as '12h' | '24h';
+    const showSeconds = settings.showSeconds as boolean;
+    const timezone = settings.timezone as string;
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -25,16 +21,6 @@ const DateTimeContent: React.FC = () => {
         }, 1000);
 
         return () => clearInterval(interval); // Cleanup on unmount
-    }, []);
-
-    // Subscribe to preference changes
-    useEffect(() => {
-        const unsubscribe = preferencesService.subscribe(() => {
-            setClockFormat(preferencesService.get(DATETIME_SETTINGS.clockFormat.key, DATETIME_SETTINGS.clockFormat.default) as '12h' | '24h');
-            setShowSeconds(preferencesService.get(DATETIME_SETTINGS.showSeconds.key, DATETIME_SETTINGS.showSeconds.default) as boolean);
-            setTimezone(preferencesService.get(DATETIME_SETTINGS.timezone.key, DATETIME_SETTINGS.timezone.default) as string);
-        });
-        return unsubscribe;
     }, []);
 
     useEffect(() => {

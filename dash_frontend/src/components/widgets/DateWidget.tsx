@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'DateWidget';
 
 const DateContent: React.FC = () => {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [fontSize, setFontSize] = useState<string>("16px");
-    const [dateFormat, setDateFormat] = useState<Intl.DateTimeFormatOptions>({
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-    });
     const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // Use widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const dateFormat = settings.dateFormat as string;
+    const showWeekday = settings.showDayOfWeek as boolean;
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -29,15 +31,6 @@ const DateContent: React.FC = () => {
             // Adjust font size based on width
             const newFontSize = `${Math.max(48, Math.floor(width / 12))}px`;
             setFontSize(newFontSize);
-
-            // Adjust date format based on width
-            if (width > 600) {
-                setDateFormat({ weekday: "long", month: "long", day: "numeric" });
-            } else if (width > 300) {
-                setDateFormat({ weekday: "short", month: "long", day: "numeric" });
-            } else {
-                setDateFormat({ month: "short", day: "numeric" });
-            }
         });
 
         observer.observe(containerRef.current);
@@ -45,14 +38,58 @@ const DateContent: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
-    const formatDate = (date: Date, options: Intl.DateTimeFormatOptions): string => {
-        return date.toLocaleDateString(undefined, options);
+    const getDateFormatOptions = (): Intl.DateTimeFormatOptions => {
+        const options: Intl.DateTimeFormatOptions = {};
+
+        if (showWeekday) {
+            options.weekday = 'long';
+        }
+
+        // Map date format strings to Intl options
+        switch (dateFormat) {
+            case 'MM/DD/YYYY':
+                options.month = '2-digit';
+                options.day = '2-digit';
+                options.year = 'numeric';
+                break;
+            case 'DD/MM/YYYY':
+                options.month = '2-digit';
+                options.day = '2-digit';
+                options.year = 'numeric';
+                break;
+            case 'YYYY-MM-DD':
+                options.year = 'numeric';
+                options.month = '2-digit';
+                options.day = '2-digit';
+                break;
+            case 'DD MMM YYYY':
+                options.day = 'numeric';
+                options.month = 'short';
+                options.year = 'numeric';
+                break;
+            case 'MMMM DD, YYYY':
+                options.month = 'long';
+                options.day = 'numeric';
+                options.year = 'numeric';
+                break;
+            default: // 'MMM DD, YYYY'
+                options.month = 'short';
+                options.day = 'numeric';
+                options.year = 'numeric';
+                break;
+        }
+
+        return options;
+    };
+
+    const formatDate = (date: Date): string => {
+        return date.toLocaleDateString(undefined, getDateFormatOptions());
     };
 
     return (
         <div ref={containerRef} className="widget-container" style={{ width: "100%", height: "100%" }}>
             <div className="date" style={{ fontSize, textAlign: "center", whiteSpace: "nowrap" }}>
-                {formatDate(currentDate, dateFormat)}
+                {formatDate(currentDate)}
             </div>
         </div>
     );
