@@ -1,3 +1,13 @@
+/**
+ * Widget Constants - Re-exports from the registry for backward compatibility
+ * 
+ * NOTE: The canonical widget definitions now live in:
+ * @/components/widgets/registry.ts
+ * 
+ * This file provides backward compatibility for existing code that imports from here.
+ * For new code, prefer importing directly from the registry.
+ */
+
 import React from "react";
 import { Widget } from "@/types";
 import {
@@ -6,9 +16,44 @@ import {
     Package,
     Wrench,
     Receipt,
+    BarChart3,
+    FileText,
+    Settings2,
 } from "lucide-react";
 
-// Single source of truth for all widgets
+// Re-export from registry for new code
+export {
+    WIDGET_CONFIGS,
+    WIDGET_COMPONENTS,
+    CATEGORY_ORDER,
+    CATEGORY_METADATA,
+    getWidgetConfig,
+    getWidgetComponent,
+    getAvailableCategories,
+    getSubcategories,
+    getAllTags,
+    searchWidgets,
+    groupWidgetsByCategory,
+    getWidgetCountByCategory,
+} from "@/components/widgets/registry";
+
+export type {
+    WidgetConfig,
+    WidgetCategory,
+} from "@/components/widgets/registry";
+
+import type { WidgetConfig } from "@/components/widgets/registry";
+
+import {
+    WIDGET_CONFIGS,
+    WIDGET_COMPONENTS,
+    getWidgetsByCategory as getWidgetsByCategoryFromRegistry,
+} from "@/components/widgets/registry";
+
+// ============================================
+// Legacy Types (for backward compatibility)
+// ============================================
+
 export interface WidgetDefinition {
     id: string;
     component: React.ComponentType;
@@ -21,175 +66,53 @@ export interface WidgetDefinition {
     };
 }
 
-// Category icon mapping
+// ============================================
+// Legacy Category Icons
+// ============================================
+
 export const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     "Sales": DollarSign,
     "Purchasing": ShoppingCart,
     "Inventory": Package,
     "Utilities": Wrench,
     "AP": Receipt,
+    "Analytics": BarChart3,
+    "Reports": FileText,
+    "Operations": Settings2,
 };
 
-// Auto-register widgets - just import and add to this array
-export const WIDGETS: WidgetDefinition[] = [
-    // Sales widgets
-    {
-        id: "Overview",
-        component: React.lazy(() => import("@/components/widgets/Overview")),
-        title: "Sales Overview",
-        category: "Sales",
-        description: "Displays an overview of sales metrics",
-        defaultSize: { w: 12, h: 2 }
-    },
-    {
-        id: "SalesByDayBar",
-        component: React.lazy(() => import("@/components/widgets/SalesByDayBar")),
-        title: "Sales by Day",
-        category: "Sales",
-        description: "Displays sales dollars by day",
-        defaultSize: { w: 4, h: 4 }
-    },
-    {
-        id: "SalesByMonthBar",
-        component: React.lazy(() => import("@/components/widgets/SalesByMonthBar")),
-        title: "Sales by Month",
-        category: "Sales",
-        description: "Displays sales dollars by month",
-        defaultSize: { w: 4, h: 4 }
-    },
-    {
-        id: "SalesByMonthComparisonBar",
-        component: React.lazy(() => import("@/components/widgets/SalesByMonthComparisonBar")),
-        title: "Sales Month Comparison",
-        category: "Sales",
-        description: "Compares sales across months",
-        defaultSize: { w: 4, h: 4 }
-    },
-    {
-        id: "TopCustomersThisYearPie",
-        component: React.lazy(() => import("@/components/widgets/TopCustomersThisYearPie")),
-        title: "Top Customers",
-        category: "Sales",
-        description: "Shows top customers by sales volume",
-        defaultSize: { w: 6, h: 5 }
-    },
+// ============================================
+// Legacy WIDGETS Array (for backward compatibility)
+// ============================================
 
-    // Purchasing widgets
-    {
-        id: "OutstandingOrdersTable",
-        component: React.lazy(() => import("@/components/widgets/OutstandingOrdersTable")),
-        title: "Outstanding Orders",
-        category: "Purchasing",
-        description: "Shows outstanding purchase orders",
-        defaultSize: { w: 12, h: 5 }
-    },
-    {
-        id: "DailyDueInTable",
-        component: React.lazy(() => import("@/components/widgets/DailyDueInTable")),
-        title: "Daily Due In",
-        category: "Purchasing",
-        description: "Shows items due in today",
-        defaultSize: { w: 12, h: 5 }
-    },
-    {
-        id: "DailyDueInHiddenVendTable",
-        component: React.lazy(() => import("@/components/widgets/DailyDueInHiddenVendTable")),
-        title: "Daily Due In (Maintenance Only)",
-        category: "Purchasing",
-        description: "Shows maintenance items due in today",
-        defaultSize: { w: 12, h: 5 }
-    },
+/**
+ * @deprecated Use WIDGET_CONFIGS from registry instead
+ * This is maintained for backward compatibility with existing code
+ */
+export const WIDGETS: WidgetDefinition[] = WIDGET_CONFIGS.map((config: WidgetConfig) => ({
+    id: config.id,
+    component: WIDGET_COMPONENTS[config.id] || React.lazy(() => Promise.resolve({ default: () => null })),
+    title: config.title,
+    category: config.category,
+    description: config.description,
+    defaultSize: config.defaultSize,
+}));
 
-    // AP widgets
-    {
-        id: "Top5PayablesYTD",
-        component: React.lazy(() => import("@/components/widgets/Top5PayablesYTD")),
-        title: "Top 5 Payables YTD",
-        category: "AP",
-        description: "Shows top 5 payable vendor accounts year-to-date",
-        defaultSize: { w: 6, h: 5 }
-    },
+// ============================================
+// Legacy Helper Functions
+// ============================================
 
-    // Inventory widgets
-    {
-        id: "DailyMovesByUser",
-        component: React.lazy(() => import("@/components/widgets/DailyMovesByUser")),
-        title: "Daily Moves by User",
-        category: "Inventory",
-        description: "Shows inventory moves by user",
-        defaultSize: { w: 6, h: 4 }
-    },
-    {
-        id: "InventoryMovesLog",
-        component: React.lazy(() => import("@/components/widgets/InventoryMovesLog")),
-        title: "Inventory Moves Log",
-        category: "Inventory",
-        description: "Log of recent inventory movements",
-        defaultSize: { w: 12, h: 6 }
-    },
-    {
-        id: "DailyProductionPutawaysBar",
-        component: React.lazy(() => import("@/components/widgets/DailyProductionPutawaysBar")),
-        title: "Daily Production Putaways",
-        category: "Inventory",
-        description: "Shows daily production putaway activity",
-        defaultSize: { w: 4, h: 4 }
-    },
-    {
-        id: "TopProductUnitSales",
-        component: React.lazy(() => import("@/components/widgets/TopProductUnitSales")),
-        title: "Top Product Sales",
-        category: "Inventory",
-        description: "Shows top selling products by units",
-        defaultSize: { w: 12, h: 6 }
-    },
-    {
-        id: "MachineStockStatus",
-        component: React.lazy(() => import("@/components/widgets/MachineStockStatus")),
-        title: "Machine Stock Status",
-        category: "Inventory",
-        description: "Shows stock status for machines",
-        defaultSize: { w: 4, h: 6 }
-    },
+/**
+ * @deprecated Use getWidgetConfig from registry instead
+ */
+export const getWidgetById = (id: string): WidgetDefinition | undefined => {
+    return WIDGETS.find(w => w.id === id);
+};
 
-    // Utility widgets
-    {
-        id: "ClockWidget",
-        component: React.lazy(() => import("@/components/widgets/ClockWidget")),
-        title: "Clock",
-        category: "Utilities",
-        description: "Displays current time",
-        defaultSize: { w: 3, h: 2 }
-    },
-    {
-        id: "DateWidget",
-        component: React.lazy(() => import("@/components/widgets/DateWidget")),
-        title: "Date",
-        category: "Utilities",
-        description: "Displays current date",
-        defaultSize: { w: 3, h: 2 }
-    },
-    {
-        id: "Humidity",
-        component: React.lazy(() => import("@/components/widgets/Humidity")),
-        title: "Humidity",
-        category: "Utilities",
-        description: "Shows current humidity level",
-        defaultSize: { w: 3, h: 2 }
-    },
-    {
-        id: "BeefPricesChart",
-        component: React.lazy(() => import("@/components/widgets/BeefPricesChart")),
-        title: "USDA Beef Prices",
-        category: "Utilities",
-        description: "Shows USDA National beef prices for Chemical Lean Fresh 50% and 85%",
-        defaultSize: { w: 6, h: 4 }
-    }
-];
-
-// Helper functions
-export const getWidgetById = (id: string) => WIDGETS.find(w => w.id === id);
-export const getWidgetsByCategory = () => {
+/**
+ * @deprecated Use groupWidgetsByCategory from registry instead
+ */
+export const getWidgetsByCategory = (): Record<string, WidgetDefinition[]> => {
     return WIDGETS.reduce((acc, widget) => {
         if (!acc[widget.category]) acc[widget.category] = [];
         acc[widget.category].push(widget);
@@ -197,15 +120,21 @@ export const getWidgetsByCategory = () => {
     }, {} as Record<string, WidgetDefinition[]>);
 };
 
-// Legacy compatibility - convert new format to old Widget format
-export const masterWidgetList: Widget[] = WIDGETS.map(widget => ({
-    id: widget.id,
+// ============================================
+// Legacy masterWidgetList (for backward compatibility)
+// ============================================
+
+/**
+ * @deprecated Create Widget objects from WIDGET_CONFIGS instead
+ */
+export const masterWidgetList: Widget[] = WIDGET_CONFIGS.map((config: WidgetConfig) => ({
+    id: config.id,
     x: 0,
     y: 0,
-    w: widget.defaultSize.w,
-    h: widget.defaultSize.h,
+    w: config.defaultSize.w,
+    h: config.defaultSize.h,
     enabled: false,
-    displayName: widget.title,
-    category: widget.category,
-    description: widget.description
+    displayName: config.title,
+    category: config.category,
+    description: config.description
 }));

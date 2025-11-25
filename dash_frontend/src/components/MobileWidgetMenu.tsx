@@ -1,11 +1,29 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Widget } from "@/types";
-import { WIDGETS, getWidgetsByCategory, CATEGORY_ICONS } from "@/constants/widgets";
-import { X, Search, Grid3x3, Check } from "lucide-react";
+import {
+    WIDGET_CONFIGS,
+    WidgetConfig,
+    WidgetCategory,
+    getAvailableCategories,
+    searchWidgets,
+} from "@/components/widgets/registry";
+import { X, Search, Grid3x3, Check, Package, DollarSign, ShoppingCart, Wrench, Receipt, BarChart3, FileText, Settings2 } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+
+// Category icons mapping
+const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: string }>> = {
+    Sales: DollarSign,
+    Purchasing: ShoppingCart,
+    Inventory: Package,
+    AP: Receipt,
+    Analytics: BarChart3,
+    Reports: FileText,
+    Operations: Settings2,
+    Utilities: Wrench,
+};
 
 interface MobileWidgetMenuProps {
     tempLayout: Widget[];
@@ -23,38 +41,37 @@ export default function MobileWidgetMenu({
     activePresetName,
 }: MobileWidgetMenuProps) {
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const [selectedCategory, setSelectedCategory] = useState<WidgetCategory | "all">("all");
 
     const { filterAccessibleWidgets, loading: permissionsLoading } = useWidgetPermissions();
 
-    const widgetsByCategory = getWidgetsByCategory();
-    const categories = Object.keys(widgetsByCategory);
+    const categories = getAvailableCategories();
+
+    // Get accessible widgets filtered by permissions
+    const accessibleWidgets = useMemo(() => {
+        return filterAccessibleWidgets(WIDGET_CONFIGS, 'view') as WidgetConfig[];
+    }, [filterAccessibleWidgets]);
 
     const filteredWidgets = useMemo(() => {
-        let widgets = filterAccessibleWidgets(WIDGETS, 'view');
+        let widgets = accessibleWidgets;
 
         if (selectedCategory !== "all") {
             widgets = widgets.filter((w) => w.category === selectedCategory);
         }
 
         if (searchTerm) {
-            const term = searchTerm.toLowerCase();
-            widgets = widgets.filter(
-                (w) =>
-                    w.title.toLowerCase().includes(term) ||
-                    w.description?.toLowerCase().includes(term)
-            );
+            widgets = searchWidgets(searchTerm, widgets);
         }
 
         return widgets;
-    }, [searchTerm, selectedCategory, filterAccessibleWidgets]);
+    }, [searchTerm, selectedCategory, accessibleWidgets]);
 
     const isWidgetEnabled = (widgetId: string) => {
         return tempLayout.find((w) => w.id === widgetId)?.enabled || false;
     };
 
     const toggleWidget = (widgetId: string) => {
-        const widgetDef = WIDGETS.find((w) => w.id === widgetId);
+        const widgetDef = WIDGET_CONFIGS.find((w) => w.id === widgetId);
         if (!widgetDef) return;
 
         const existingWidget = tempLayout.find((w) => w.id === widgetId);
@@ -107,7 +124,7 @@ export default function MobileWidgetMenu({
                 </div>
 
                 <div className="text-sm text-ui-text-secondary mb-4">
-                    {enabledCount} of {WIDGETS.length} enabled
+                    {enabledCount} of {accessibleWidgets.length} enabled
                 </div>
 
                 {activePresetName && (

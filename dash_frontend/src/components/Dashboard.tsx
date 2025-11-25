@@ -7,7 +7,7 @@ import MobileDashboard from "./MobileDashboard";
 import MobileWidgetMenu from "./MobileWidgetMenu";
 import MobileSettingsMenu from "./MobileSettingsMenu";
 import DashboardDock from "./DashboardDock";
-import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
+import WidgetPicker from "./WidgetPicker";
 import PresetDialog from "./PresetDialog";
 import PresetManagerMenu from "./PresetManagerMenu";
 import SettingsMenu from "./SettingsMenu";
@@ -825,7 +825,7 @@ export default function Dashboard() {
                 {/* Widget Menu Modal */}
                 <AnimatePresence>
                     {menuOpen && (
-                        <ImprovedWidgetMenu
+                        <WidgetPicker
                             tempLayout={tempLayout}
                             setTempLayout={setTempLayout}
                             handleSave={handleSave}
