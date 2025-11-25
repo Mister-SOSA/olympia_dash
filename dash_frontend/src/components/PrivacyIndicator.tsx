@@ -19,9 +19,9 @@ interface PrivacyIndicatorProps {
     compact?: boolean;
 }
 
-export function PrivacyIndicator({ 
+export function PrivacyIndicator({
     position = 'top-right',
-    compact = false 
+    compact = false
 }: PrivacyIndicatorProps) {
     const { isPrivate, toggle, settings } = usePrivacy();
 
@@ -52,8 +52,8 @@ export function PrivacyIndicator({
                         flex items-center gap-2 px-3 py-2
                         rounded-full shadow-lg
                         transition-colors cursor-pointer
-                        ${isPrivate 
-                            ? 'bg-ui-accent-secondary text-white' 
+                        ${isPrivate
+                            ? 'bg-ui-accent-secondary text-white'
                             : 'bg-ui-bg-secondary text-ui-text-secondary hover:text-ui-text-primary'
                         }
                         border ${isPrivate ? 'border-ui-accent-secondary' : 'border-ui-border-primary'}

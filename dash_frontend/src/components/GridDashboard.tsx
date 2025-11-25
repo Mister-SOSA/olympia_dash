@@ -15,7 +15,8 @@ import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { preferencesService } from "@/lib/preferences";
-import { DASHBOARD_SETTINGS } from "@/constants/settings";
+import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS } from "@/constants/settings";
+import { useSettings } from "@/hooks/useSettings";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -46,6 +47,17 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // ✅ FIX: Get widget permissions
         const { hasAccess } = useWidgetPermissions();
+
+        // Get settings for drag handle behavior
+        const { settings } = useSettings();
+        const {
+            dragHandleAlwaysShow,
+            showResizeHandles,
+            dragHandleOpacity,
+            dragHandleSize,
+            dragHandleStyle,
+            dragHandleHoverDelay
+        } = settings;
 
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
@@ -561,11 +573,27 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             prevLayoutRef.current = layout;
         }, [layout, hasAccess]);
 
+        // Build CSS classes based on settings
+        const gridClasses = [
+            "grid-stack",
+            dragHandleAlwaysShow ? "drag-handles-always-visible" : "",
+            !showResizeHandles ? "hide-resize-handles" : "",
+            `drag-handle-style-${dragHandleStyle}`,
+            `drag-handle-size-${dragHandleSize}`,
+        ].filter(Boolean).join(" ");
+
+        // CSS custom properties for drag handle settings
+        const gridStyles = {
+            ['--drag-handle-opacity' as string]: dragHandleOpacity / 100,
+            ['--drag-handle-hover-delay' as string]: `${dragHandleHoverDelay}ms`,
+        };
+
         return (
             <>
                 <div
                     ref={gridRef}
-                    className="grid-stack"
+                    className={gridClasses}
+                    style={gridStyles}
                     onClick={() => {
                         hideContextMenu();
                         hideDashboardContextMenu();

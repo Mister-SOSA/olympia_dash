@@ -81,7 +81,7 @@ const PrivacyContext = createContext<PrivacyContextValue | undefined>(undefined)
 export function PrivacyProvider({ children }: { children: React.ReactNode }) {
     const [settings, setSettings] = useState<PrivacySettings>(DEFAULT_PRIVACY_SETTINGS);
     const [isInitialized, setIsInitialized] = useState(false);
-    
+
     // Track if we're currently saving to prevent loops
     const isSavingRef = React.useRef(false);
 
@@ -92,7 +92,7 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
             if (isSavingRef.current) {
                 return;
             }
-            
+
             const saved = preferencesService.get<PrivacySettings>(PREFERENCE_KEY);
             if (saved) {
                 setSettings(prev => {
@@ -117,16 +117,16 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
     // Save settings to preferences when they change
     useEffect(() => {
         if (!isInitialized) return;
-        
+
         // Set flag to prevent subscription from reloading
         isSavingRef.current = true;
         preferencesService.set(PREFERENCE_KEY, settings);
-        
+
         // Reset flag after a short delay to allow the save to complete
         const timeout = setTimeout(() => {
             isSavingRef.current = false;
         }, 100);
-        
+
         return () => clearTimeout(timeout);
     }, [settings, isInitialized]);
 
@@ -207,21 +207,21 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
 const DEFAULT_CONTEXT_VALUE: PrivacyContextValue = {
     settings: DEFAULT_PRIVACY_SETTINGS,
     isPrivate: false,
-    toggle: () => {},
-    enable: () => {},
-    disable: () => {},
-    updateSetting: () => {},
+    toggle: () => { },
+    enable: () => { },
+    disable: () => { },
+    updateSetting: () => { },
     shouldObfuscate: () => false,
 };
 
 export function usePrivacy(): PrivacyContextValue {
     const context = useContext(PrivacyContext);
-    
+
     // Return safe default if used outside provider (e.g., during SSR)
     if (context === undefined) {
         return DEFAULT_CONTEXT_VALUE;
     }
-    
+
     return context;
 }
 

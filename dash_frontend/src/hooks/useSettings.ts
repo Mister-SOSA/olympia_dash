@@ -47,14 +47,20 @@ export interface UserSettings {
     // Dock
     dockAutoHide: boolean;
     dockMagnification: boolean;
-    dockShowLabels: boolean;
+    dockMagnificationScale: number;
+    dockIconSize: number;
     dockShowActiveIndicator: boolean;
     dockTriggerDistance: number;
+    dockHideDelay: number;
+    dockOpacity: number;
 
     // Drag Handle
-    dragHandleShowOnHover: boolean;
     dragHandleAlwaysShow: boolean;
     showResizeHandles: boolean;
+    dragHandleOpacity: number;
+    dragHandleSize: 'small' | 'medium' | 'large';
+    dragHandleStyle: 'pill' | 'bar' | 'dots' | 'minimal';
+    dragHandleHoverDelay: number;
 
     // Widgets
     defaultRefreshInterval: number;
@@ -100,14 +106,20 @@ const DEFAULT_SETTINGS: UserSettings = {
     // Dock
     dockAutoHide: DOCK_SETTINGS.autoHide.default,
     dockMagnification: DOCK_SETTINGS.magnification.default,
-    dockShowLabels: DOCK_SETTINGS.showLabels.default,
+    dockMagnificationScale: DOCK_SETTINGS.magnificationScale.default,
+    dockIconSize: DOCK_SETTINGS.iconSize.default,
     dockShowActiveIndicator: DOCK_SETTINGS.showActiveIndicator.default,
     dockTriggerDistance: DOCK_SETTINGS.triggerDistance.default,
+    dockHideDelay: DOCK_SETTINGS.hideDelay.default,
+    dockOpacity: DOCK_SETTINGS.opacity.default,
 
     // Drag Handle
-    dragHandleShowOnHover: DRAG_HANDLE_SETTINGS.showOnHover.default,
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.default,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.default,
+    dragHandleOpacity: DRAG_HANDLE_SETTINGS.handleOpacity.default,
+    dragHandleSize: DRAG_HANDLE_SETTINGS.handleSize.default,
+    dragHandleStyle: DRAG_HANDLE_SETTINGS.handleStyle.default,
+    dragHandleHoverDelay: DRAG_HANDLE_SETTINGS.hoverDelay.default,
 
     // Widgets
     defaultRefreshInterval: WIDGET_SETTINGS.defaultRefreshInterval.default,
@@ -149,13 +161,19 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
 
     dockAutoHide: DOCK_SETTINGS.autoHide.key,
     dockMagnification: DOCK_SETTINGS.magnification.key,
-    dockShowLabels: DOCK_SETTINGS.showLabels.key,
+    dockMagnificationScale: DOCK_SETTINGS.magnificationScale.key,
+    dockIconSize: DOCK_SETTINGS.iconSize.key,
     dockShowActiveIndicator: DOCK_SETTINGS.showActiveIndicator.key,
     dockTriggerDistance: DOCK_SETTINGS.triggerDistance.key,
+    dockHideDelay: DOCK_SETTINGS.hideDelay.key,
+    dockOpacity: DOCK_SETTINGS.opacity.key,
 
-    dragHandleShowOnHover: DRAG_HANDLE_SETTINGS.showOnHover.key,
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.key,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.key,
+    dragHandleOpacity: DRAG_HANDLE_SETTINGS.handleOpacity.key,
+    dragHandleSize: DRAG_HANDLE_SETTINGS.handleSize.key,
+    dragHandleStyle: DRAG_HANDLE_SETTINGS.handleStyle.key,
+    dragHandleHoverDelay: DRAG_HANDLE_SETTINGS.hoverDelay.key,
 
     defaultRefreshInterval: WIDGET_SETTINGS.defaultRefreshInterval.key,
     showRefreshIndicators: WIDGET_SETTINGS.showRefreshIndicators.key,

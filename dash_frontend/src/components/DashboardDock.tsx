@@ -33,12 +33,19 @@ export default function DashboardDock({
     const { settings } = useSettings();
 
     // Destructure dock settings
-    const { 
-        dockAutoHide, 
-        dockMagnification, 
+    const {
+        dockAutoHide,
+        dockMagnification,
         dockShowActiveIndicator,
-        dockTriggerDistance 
+        dockTriggerDistance,
+        dockHideDelay,
+        dockIconSize,
+        dockMagnificationScale,
+        dockOpacity
     } = settings;
+
+    // Reference for hide timeout
+    const hideTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         // If auto-hide is disabled, always show the dock
@@ -50,22 +57,36 @@ export default function DashboardDock({
         const handleMouseMove = (e: MouseEvent) => {
             setMouseY(e.clientY);
             const windowHeight = window.innerHeight;
-            const showThreshold = dockTriggerDistance; // Use configured trigger distance
-            const hideThreshold = dockTriggerDistance + 100; // Hide threshold is trigger + 100px
+            const showThreshold = dockTriggerDistance;
+            const hideThreshold = dockTriggerDistance + 100;
 
-            // Use different thresholds based on current visibility state
-            if (isVisible) {
-                // When visible, use larger threshold to hide (prevents flickering)
-                setIsVisible(e.clientY > windowHeight - hideThreshold);
-            } else {
-                // When hidden, use smaller threshold to show
-                setIsVisible(e.clientY > windowHeight - showThreshold);
+            const shouldShow = e.clientY > windowHeight - showThreshold;
+            const shouldHide = e.clientY <= windowHeight - hideThreshold;
+
+            // Clear any existing hide timeout
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
+
+            if (shouldShow && !isVisible) {
+                setIsVisible(true);
+            } else if (shouldHide && isVisible) {
+                // Use configurable hide delay
+                hideTimeoutRef.current = setTimeout(() => {
+                    setIsVisible(false);
+                }, dockHideDelay);
             }
         };
 
         window.addEventListener("mousemove", handleMouseMove);
-        return () => window.removeEventListener("mousemove", handleMouseMove);
-    }, [isVisible, dockAutoHide, dockTriggerDistance]);
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+            }
+        };
+    }, [isVisible, dockAutoHide, dockTriggerDistance, dockHideDelay]);
 
     const handlePresetRightClick = (e: React.MouseEvent, index: number) => {
         e.preventDefault();
@@ -77,12 +98,21 @@ export default function DashboardDock({
             {isVisible && (
                 <motion.div
                     initial={{ y: 100, opacity: 0, x: "-50%" }}
-                    animate={{ y: 0, opacity: 1, x: "-50%" }}
+                    animate={{ y: 0, opacity: dockOpacity / 100, x: "-50%" }}
                     exit={{ y: 100, opacity: 0, x: "-50%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
                     className="fixed bottom-4 left-1/2 z-50"
+                    style={{
+                        // CSS custom properties for dock customization
+                        ['--dock-icon-size' as string]: `${dockIconSize}px`,
+                        ['--dock-magnification-scale' as string]: dockMagnificationScale,
+                    }}
                 >
-                    <Dock magnification={dockMagnification}>
+                    <Dock
+                        magnification={dockMagnification}
+                        iconSize={dockIconSize}
+                        magnificationScale={dockMagnificationScale}
+                    >
                         {/* Widgets Icon */}
                         <DockIcon
                             onClick={onWidgetsClick}
@@ -149,7 +179,7 @@ export default function DashboardDock({
                         <DockIcon
                             onClick={togglePrivacy}
                             title={isPrivate ? "Privacy Mode ON (\\)" : "Privacy Mode OFF (\\)"}
-                            className={isPrivate 
+                            className={isPrivate
                                 ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400"
                                 : "bg-ui-bg-tertiary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
                             }

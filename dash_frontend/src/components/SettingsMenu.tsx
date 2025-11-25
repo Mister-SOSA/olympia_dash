@@ -12,6 +12,7 @@ import {
     NOTIFICATION_SETTINGS,
     WIDGET_SETTINGS,
     DOCK_SETTINGS,
+    DRAG_HANDLE_SETTINGS,
 } from "@/constants/settings";
 import {
     MdCheck,
@@ -27,7 +28,7 @@ import {
     MdStorage,
     MdVisibilityOff,
     MdDock,
-    MdDragIndicator,
+    MdRefresh,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -394,10 +395,48 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                 {/* Dock & Handles Section */}
                                 {activeSection === 'dock' && (
                                     <div className="space-y-6">
-                                        {/* Dock Settings */}
+                                        {/* Live Dock Preview */}
+                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Live Preview</div>
+                                            <div className="relative h-20 bg-gradient-to-b from-ui-bg-tertiary/20 to-ui-bg-tertiary/50 rounded-lg overflow-hidden">
+                                                {/* Mock screen area */}
+                                                <div className="absolute inset-x-4 top-2 h-8 bg-ui-bg-tertiary/30 rounded" />
+                                                <div className="absolute inset-x-4 top-12 h-4 bg-ui-bg-tertiary/20 rounded" />
+
+                                                {/* Preview Dock */}
+                                                <div
+                                                    className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1 px-2 py-1 rounded-lg bg-ui-bg-primary/90 border border-ui-border-primary shadow-lg"
+                                                    style={{ opacity: settings.dockOpacity / 100 }}
+                                                >
+                                                    {[1, 2, 3, 4, 5].map((i) => (
+                                                        <div
+                                                            key={i}
+                                                            className={`rounded transition-all ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
+                                                            style={{
+                                                                width: `${settings.dockIconSize / 4}px`,
+                                                                height: `${settings.dockIconSize / 4}px`,
+                                                                transform: i === 3 && settings.dockMagnification
+                                                                    ? `scale(${settings.dockMagnificationScale})`
+                                                                    : 'scale(1)',
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
+
+                                                {/* Trigger zone indicator */}
+                                                <div
+                                                    className="absolute bottom-0 left-0 right-0 bg-ui-accent-primary/10 border-t border-dashed border-ui-accent-primary/30"
+                                                    style={{ height: `${Math.min(settings.dockTriggerDistance, 60)}%` }}
+                                                >
+                                                    <span className="absolute right-2 top-1 text-[8px] text-ui-accent-primary/60">trigger zone</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dock Behavior */}
                                         <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Control the dock at the bottom of the screen</p>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock Behavior</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">How the dock shows and hides</p>
 
                                             <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
@@ -406,11 +445,56 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                     enabled={settings.dockAutoHide}
                                                     onChange={(val) => updateSetting('dockAutoHide', val)}
                                                 />
-                                                <ToggleSetting
-                                                    label="Magnification"
-                                                    description="Enlarge icons when hovering"
-                                                    enabled={settings.dockMagnification}
-                                                    onChange={(val) => updateSetting('dockMagnification', val)}
+                                                <SliderSetting
+                                                    label="Trigger Distance"
+                                                    description="How close to the bottom edge (in pixels)"
+                                                    value={settings.dockTriggerDistance}
+                                                    onChange={(val) => updateSetting('dockTriggerDistance', val)}
+                                                    min={DOCK_SETTINGS.triggerDistance.min}
+                                                    max={DOCK_SETTINGS.triggerDistance.max}
+                                                    step={DOCK_SETTINGS.triggerDistance.step}
+                                                    disabled={!settings.dockAutoHide}
+                                                    unit="px"
+                                                />
+                                                <SliderSetting
+                                                    label="Hide Delay"
+                                                    description="Wait time before hiding dock"
+                                                    value={settings.dockHideDelay}
+                                                    onChange={(val) => updateSetting('dockHideDelay', val)}
+                                                    min={DOCK_SETTINGS.hideDelay.min}
+                                                    max={DOCK_SETTINGS.hideDelay.max}
+                                                    step={DOCK_SETTINGS.hideDelay.step}
+                                                    disabled={!settings.dockAutoHide}
+                                                    unit="ms"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Dock Appearance */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock Appearance</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Visual customization</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <SliderSetting
+                                                    label="Icon Size"
+                                                    description="Base size of dock icons"
+                                                    value={settings.dockIconSize}
+                                                    onChange={(val) => updateSetting('dockIconSize', val)}
+                                                    min={DOCK_SETTINGS.iconSize.min}
+                                                    max={DOCK_SETTINGS.iconSize.max}
+                                                    step={DOCK_SETTINGS.iconSize.step}
+                                                    unit="px"
+                                                />
+                                                <SliderSetting
+                                                    label="Dock Opacity"
+                                                    description="Background transparency"
+                                                    value={settings.dockOpacity}
+                                                    onChange={(val) => updateSetting('dockOpacity', val)}
+                                                    min={DOCK_SETTINGS.opacity.min}
+                                                    max={DOCK_SETTINGS.opacity.max}
+                                                    step={DOCK_SETTINGS.opacity.step}
+                                                    unit="%"
                                                 />
                                                 <ToggleSetting
                                                     label="Active Preset Indicator"
@@ -418,30 +502,77 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                     enabled={settings.dockShowActiveIndicator}
                                                     onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
                                                 />
-                                                <SelectSetting
-                                                    label="Trigger Distance"
-                                                    description="How close to edge to show dock"
-                                                    value={settings.dockTriggerDistance.toString()}
-                                                    onChange={(val) => updateSetting('dockTriggerDistance', Number(val))}
-                                                    options={DOCK_SETTINGS.triggerDistance.options.map(n => ({
-                                                        value: n.toString(),
-                                                        label: `${n} pixels`,
-                                                    }))}
+                                            </div>
+                                        </div>
+
+                                        {/* Magnification */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Magnification Effect</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">macOS-style hover zoom</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <ToggleSetting
+                                                    label="Enable Magnification"
+                                                    description="Enlarge icons when hovering"
+                                                    enabled={settings.dockMagnification}
+                                                    onChange={(val) => updateSetting('dockMagnification', val)}
+                                                />
+                                                <SliderSetting
+                                                    label="Magnification Scale"
+                                                    description="How much icons enlarge"
+                                                    value={settings.dockMagnificationScale}
+                                                    onChange={(val) => updateSetting('dockMagnificationScale', val)}
+                                                    min={DOCK_SETTINGS.magnificationScale.min}
+                                                    max={DOCK_SETTINGS.magnificationScale.max}
+                                                    step={DOCK_SETTINGS.magnificationScale.step}
+                                                    disabled={!settings.dockMagnification}
+                                                    unit="×"
+                                                    decimals={1}
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Drag Handle Settings */}
+                                        {/* Divider */}
+                                        <div className="border-t border-ui-border-primary" />
+
+                                        {/* Widget Drag Handle Preview */}
+                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Handle Preview</div>
+                                            <div className="relative h-24 bg-ui-bg-tertiary/30 rounded-lg border-2 border-ui-border-primary overflow-hidden">
+                                                {/* Mock widget content */}
+                                                <div className="absolute inset-3 top-8 bg-ui-bg-tertiary/40 rounded" />
+
+                                                {/* Preview Drag Handle */}
+                                                <DragHandlePreview
+                                                    style={settings.dragHandleStyle}
+                                                    size={settings.dragHandleSize}
+                                                    opacity={settings.dragHandleOpacity}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Handle Behavior */}
                                         <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Widget Handles</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Control how widget drag and resize handles appear</p>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Handle Behavior</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">When handles appear</p>
 
                                             <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                 <ToggleSetting
                                                     label="Always Show Drag Handles"
-                                                    description="Keep drag handles visible at all times"
+                                                    description="Keep handles visible at all times"
                                                     enabled={settings.dragHandleAlwaysShow}
                                                     onChange={(val) => updateSetting('dragHandleAlwaysShow', val)}
+                                                />
+                                                <SliderSetting
+                                                    label="Hover Delay"
+                                                    description="Wait time before showing handle"
+                                                    value={settings.dragHandleHoverDelay}
+                                                    onChange={(val) => updateSetting('dragHandleHoverDelay', val)}
+                                                    min={DRAG_HANDLE_SETTINGS.hoverDelay.min}
+                                                    max={DRAG_HANDLE_SETTINGS.hoverDelay.max}
+                                                    step={DRAG_HANDLE_SETTINGS.hoverDelay.step}
+                                                    disabled={settings.dragHandleAlwaysShow}
+                                                    unit="ms"
                                                 />
                                                 <ToggleSetting
                                                     label="Show Resize Handles"
@@ -451,6 +582,96 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Handle Style */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Handle Style</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Visual appearance of drag handles</p>
+
+                                            {/* Style Selector */}
+                                            <div className="grid grid-cols-4 gap-2 mb-4">
+                                                {(['pill', 'bar', 'dots', 'minimal'] as const).map((style) => (
+                                                    <button
+                                                        key={style}
+                                                        onClick={() => updateSetting('dragHandleStyle', style)}
+                                                        className={`relative p-3 rounded-lg border-2 transition-all ${settings.dragHandleStyle === style
+                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10'
+                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                            }`}
+                                                    >
+                                                        <div className="h-8 flex items-center justify-center">
+                                                            <HandleStyleIcon style={style} />
+                                                        </div>
+                                                        <span className="text-xs font-medium text-ui-text-primary capitalize mt-1 block">
+                                                            {style}
+                                                        </span>
+                                                        {settings.dragHandleStyle === style && (
+                                                            <div className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-primary rounded-full" />
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Size Selector */}
+                                            <div className="flex items-center gap-2 p-4 rounded-xl border border-ui-border-primary mb-4">
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-medium text-ui-text-primary">Handle Size</div>
+                                                    <div className="text-xs text-ui-text-secondary">Size of the drag handle</div>
+                                                </div>
+                                                <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg">
+                                                    {(['small', 'medium', 'large'] as const).map((size) => (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => updateSetting('dragHandleSize', size)}
+                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize ${settings.dragHandleSize === size
+                                                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                                }`}
+                                                        >
+                                                            {size}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Opacity Slider */}
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
+                                                <SliderSetting
+                                                    label="Handle Opacity"
+                                                    description="Visibility when shown"
+                                                    value={settings.dragHandleOpacity}
+                                                    onChange={(val) => updateSetting('dragHandleOpacity', val)}
+                                                    min={DRAG_HANDLE_SETTINGS.handleOpacity.min}
+                                                    max={DRAG_HANDLE_SETTINGS.handleOpacity.max}
+                                                    step={DRAG_HANDLE_SETTINGS.handleOpacity.step}
+                                                    unit="%"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Reset Button */}
+                                        <button
+                                            onClick={() => {
+                                                updateSetting('dockAutoHide', DOCK_SETTINGS.autoHide.default);
+                                                updateSetting('dockMagnification', DOCK_SETTINGS.magnification.default);
+                                                updateSetting('dockMagnificationScale', DOCK_SETTINGS.magnificationScale.default);
+                                                updateSetting('dockIconSize', DOCK_SETTINGS.iconSize.default);
+                                                updateSetting('dockShowActiveIndicator', DOCK_SETTINGS.showActiveIndicator.default);
+                                                updateSetting('dockTriggerDistance', DOCK_SETTINGS.triggerDistance.default);
+                                                updateSetting('dockHideDelay', DOCK_SETTINGS.hideDelay.default);
+                                                updateSetting('dockOpacity', DOCK_SETTINGS.opacity.default);
+                                                updateSetting('dragHandleAlwaysShow', DRAG_HANDLE_SETTINGS.alwaysShow.default);
+                                                updateSetting('showResizeHandles', DRAG_HANDLE_SETTINGS.showResizeHandles.default);
+                                                updateSetting('dragHandleOpacity', DRAG_HANDLE_SETTINGS.handleOpacity.default);
+                                                updateSetting('dragHandleSize', DRAG_HANDLE_SETTINGS.handleSize.default);
+                                                updateSetting('dragHandleStyle', DRAG_HANDLE_SETTINGS.handleStyle.default);
+                                                updateSetting('dragHandleHoverDelay', DRAG_HANDLE_SETTINGS.hoverDelay.default);
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
+                                        >
+                                            <MdRefresh className="w-4 h-4" />
+                                            <span className="text-sm font-medium">Reset Dock & Handles to Defaults</span>
+                                        </button>
                                     </div>
                                 )}
 
@@ -597,9 +818,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 </div>
                                                 <button
                                                     onClick={togglePrivacy}
-                                                    className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${
-                                                        privacySettings.enabled ? 'bg-ui-accent-secondary' : 'bg-ui-bg-tertiary'
-                                                    }`}
+                                                    className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${privacySettings.enabled ? 'bg-ui-accent-secondary' : 'bg-ui-bg-tertiary'
+                                                        }`}
                                                 >
                                                     <motion.div
                                                         className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm"
@@ -628,11 +848,10 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                     <button
                                                         key={style.id}
                                                         onClick={() => updatePrivacySetting('style', style.id as ObfuscationStyle)}
-                                                        className={`p-3 rounded-lg border-2 transition-all text-left ${
-                                                            privacySettings.style === style.id
-                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10'
-                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
-                                                        }`}
+                                                        className={`p-3 rounded-lg border-2 transition-all text-left ${privacySettings.style === style.id
+                                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10'
+                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                            }`}
                                                     >
                                                         <div className="text-sm font-medium text-ui-text-primary">{style.label}</div>
                                                         <div className={`text-xs mt-1 font-mono ${style.id === 'blur' ? 'blur-sm' : ''} text-ui-text-secondary`}>
@@ -867,7 +1086,10 @@ function SliderSetting({
     onChange,
     min,
     max,
+    step = 1,
     disabled = false,
+    unit = '',
+    decimals = 0,
 }: {
     label: string;
     description: string;
@@ -875,29 +1097,133 @@ function SliderSetting({
     onChange: (val: number) => void;
     min: number;
     max: number;
+    step?: number;
     disabled?: boolean;
+    unit?: string;
+    decimals?: number;
 }) {
+    const displayValue = decimals > 0 ? value.toFixed(decimals) : value;
+    const percentage = ((value - min) / (max - min)) * 100;
+
     return (
         <div className={`p-4 ${disabled ? 'opacity-50' : ''}`}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
                 <div>
                     <div className="text-sm font-medium text-ui-text-primary">{label}</div>
                     <div className="text-xs text-ui-text-secondary">{description}</div>
                 </div>
-                <span className="text-sm font-medium text-ui-text-primary min-w-[3rem] text-right">
-                    {value}%
+                <span className="text-sm font-semibold text-ui-accent-primary min-w-[4rem] text-right tabular-nums">
+                    {displayValue}{unit}
                 </span>
             </div>
-            <input
-                type="range"
-                min={min}
-                max={max}
-                value={value}
-                onChange={(e) => !disabled && onChange(Number(e.target.value))}
-                disabled={disabled}
-                className={`w-full h-2 bg-ui-bg-tertiary rounded-lg appearance-none ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'
-                    } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md`}
-            />
+            <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center">
+                    <div
+                        className="h-2 bg-ui-accent-primary/30 rounded-l-lg"
+                        style={{ width: `${percentage}%` }}
+                    />
+                </div>
+                <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={value}
+                    onChange={(e) => !disabled && onChange(Number(e.target.value))}
+                    disabled={disabled}
+                    className={`relative w-full h-2 bg-ui-bg-tertiary rounded-lg appearance-none ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+                        } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-ui-accent-primary [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white`}
+                />
+            </div>
+            <div className="flex justify-between mt-1 text-[10px] text-ui-text-tertiary">
+                <span>{min}{unit}</span>
+                <span>{max}{unit}</span>
+            </div>
+        </div>
+    );
+}
+
+// Drag Handle Preview Component
+function DragHandlePreview({
+    style,
+    size,
+    opacity
+}: {
+    style: 'pill' | 'bar' | 'dots' | 'minimal';
+    size: 'small' | 'medium' | 'large';
+    opacity: number;
+}) {
+    const sizeClasses = {
+        small: 'px-2 py-1 gap-1',
+        medium: 'px-4 py-1.5 gap-1.5',
+        large: 'px-6 py-2 gap-2',
+    };
+
+    const dotSizes = {
+        small: 'w-1 h-1',
+        medium: 'w-1.5 h-1.5',
+        large: 'w-2 h-2',
+    };
+
+    return (
+        <div
+            className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30"
+            style={{ opacity: opacity / 100 }}
+        >
+            {style === 'pill' && (
+                <div className={`flex items-center ${sizeClasses[size]}`}>
+                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
+                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
+                </div>
+            )}
+            {style === 'bar' && (
+                <div className={`${sizeClasses[size]}`}>
+                    <div className={`${size === 'small' ? 'w-8' : size === 'medium' ? 'w-12' : 'w-16'} h-1 rounded-full bg-white/80`} />
+                </div>
+            )}
+            {style === 'dots' && (
+                <div className={`flex items-center ${sizeClasses[size]}`}>
+                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
+                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
+                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
+                </div>
+            )}
+            {style === 'minimal' && (
+                <div className={`${sizeClasses[size]}`}>
+                    <div className={`${size === 'small' ? 'w-4' : size === 'medium' ? 'w-6' : 'w-8'} h-0.5 rounded-full bg-white/60`} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Handle Style Icon Component
+function HandleStyleIcon({ style }: { style: 'pill' | 'bar' | 'dots' | 'minimal' }) {
+    return (
+        <div className="flex items-center justify-center">
+            {style === 'pill' && (
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-ui-accent-primary/30">
+                    <div className="w-1.5 h-1.5 rounded-full bg-ui-accent-primary" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-ui-accent-primary" />
+                </div>
+            )}
+            {style === 'bar' && (
+                <div className="px-3 py-1 rounded-full bg-ui-accent-primary/30">
+                    <div className="w-8 h-1 rounded-full bg-ui-accent-primary" />
+                </div>
+            )}
+            {style === 'dots' && (
+                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-ui-accent-primary/30">
+                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
+                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
+                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
+                </div>
+            )}
+            {style === 'minimal' && (
+                <div className="px-3 py-1 rounded-full bg-ui-accent-primary/30">
+                    <div className="w-6 h-0.5 rounded-full bg-ui-accent-primary" />
+                </div>
+            )}
         </div>
     );
 }

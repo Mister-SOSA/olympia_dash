@@ -2,11 +2,11 @@
 
 import React, { ElementType } from 'react';
 import { usePrivacy } from '@/contexts/PrivacyContext';
-import { 
-    obfuscateCurrency, 
-    obfuscateNumber, 
-    obfuscateName, 
-    obfuscatePercentage 
+import {
+    obfuscateCurrency,
+    obfuscateNumber,
+    obfuscateName,
+    obfuscatePercentage
 } from '@/utils/privacyUtils';
 
 /**
@@ -45,12 +45,12 @@ export interface SensitiveValueProps {
  * Format value based on type for obfuscation
  */
 function obfuscateByType(
-    value: string | number, 
+    value: string | number,
     type: SensitiveValueType,
     forceObfuscate?: boolean
 ): string {
     const stringValue = String(value);
-    
+
     switch (type) {
         case 'currency':
             return obfuscateCurrency(stringValue, forceObfuscate);
@@ -80,20 +80,20 @@ export function SensitiveValue({
     forceObfuscate,
 }: SensitiveValueProps) {
     const { settings, shouldObfuscate } = usePrivacy();
-    
+
     const shouldHide = forceObfuscate || shouldObfuscate(type);
-    const displayValue = shouldHide 
-        ? obfuscateByType(value, type, forceObfuscate) 
+    const displayValue = shouldHide
+        ? obfuscateByType(value, type, forceObfuscate)
         : String(value);
-    
+
     // For blur style, add CSS class
     const blurClass = shouldHide && settings.style === 'blur' ? 'privacy-blur' : '';
     const combinedClassName = `${className} ${blurClass}`.trim();
-    
+
     const Tag = Component as ElementType;
-    
+
     return (
-        <Tag 
+        <Tag
             className={combinedClassName || undefined}
             style={style}
             data-privacy-type={type}
@@ -108,30 +108,30 @@ export function SensitiveValue({
  * Convenience components for specific types
  */
 
-export function SensitiveCurrency({ 
-    value, 
-    ...props 
+export function SensitiveCurrency({
+    value,
+    ...props
 }: Omit<SensitiveValueProps, 'type'>) {
     return <SensitiveValue type="currency" value={value} {...props} />;
 }
 
-export function SensitiveNumber({ 
-    value, 
-    ...props 
+export function SensitiveNumber({
+    value,
+    ...props
 }: Omit<SensitiveValueProps, 'type'>) {
     return <SensitiveValue type="number" value={value} {...props} />;
 }
 
-export function SensitiveName({ 
-    value, 
-    ...props 
+export function SensitiveName({
+    value,
+    ...props
 }: Omit<SensitiveValueProps, 'type'>) {
     return <SensitiveValue type="name" value={value} {...props} />;
 }
 
-export function SensitivePercentage({ 
-    value, 
-    ...props 
+export function SensitivePercentage({
+    value,
+    ...props
 }: Omit<SensitiveValueProps, 'type'>) {
     return <SensitiveValue type="percentage" value={value} {...props} />;
 }
@@ -145,9 +145,9 @@ export function withPrivacy<P extends object>(
 ): React.FC<P> {
     return function PrivacyAwareComponent(props: P) {
         const { shouldObfuscate, settings } = usePrivacy();
-        
+
         const processedProps = { ...props };
-        
+
         (Object.entries(sensitiveProps) as [keyof P, SensitiveValueType | undefined][]).forEach(([propName, type]) => {
             if (type && shouldObfuscate(type)) {
                 const originalValue = props[propName];
@@ -156,7 +156,7 @@ export function withPrivacy<P extends object>(
                 }
             }
         });
-        
+
         return <WrappedComponent {...processedProps} />;
     };
 }
@@ -169,12 +169,12 @@ export function useSensitiveValue(
     type: SensitiveValueType
 ): { displayValue: string; isObfuscated: boolean; blurClass: string } {
     const { shouldObfuscate, settings } = usePrivacy();
-    
+
     const isObfuscated = shouldObfuscate(type);
-    const displayValue = isObfuscated 
-        ? obfuscateByType(value, type) 
+    const displayValue = isObfuscated
+        ? obfuscateByType(value, type)
         : String(value);
     const blurClass = isObfuscated && settings.style === 'blur' ? 'privacy-blur' : '';
-    
+
     return { displayValue, isObfuscated, blurClass };
 }

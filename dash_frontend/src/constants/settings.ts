@@ -131,11 +131,23 @@ export const DOCK_SETTINGS = {
         label: 'Magnification',
         description: 'Enlarge icons when hovering over the dock',
     },
-    showLabels: {
-        key: 'dock.showLabels',
-        default: false,
-        label: 'Show Labels',
-        description: 'Display labels below dock icons',
+    magnificationScale: {
+        key: 'dock.magnificationScale',
+        default: 1.4,
+        min: 1.0,
+        max: 2.0,
+        step: 0.1,
+        label: 'Magnification Scale',
+        description: 'How much icons enlarge on hover',
+    },
+    iconSize: {
+        key: 'dock.iconSize',
+        default: 48,
+        min: 32,
+        max: 72,
+        step: 4,
+        label: 'Icon Size',
+        description: 'Base size of dock icons in pixels',
     },
     showActiveIndicator: {
         key: 'dock.showActiveIndicator',
@@ -145,10 +157,30 @@ export const DOCK_SETTINGS = {
     },
     triggerDistance: {
         key: 'dock.triggerDistance',
-        default: 20,
-        options: [10, 20, 40, 60] as const,
+        default: 30,
+        min: 10,
+        max: 100,
+        step: 5,
         label: 'Trigger Distance',
         description: 'How close to bottom edge to show dock (pixels)',
+    },
+    hideDelay: {
+        key: 'dock.hideDelay',
+        default: 500,
+        min: 0,
+        max: 2000,
+        step: 100,
+        label: 'Hide Delay',
+        description: 'Delay before hiding dock after mouse leaves (ms)',
+    },
+    opacity: {
+        key: 'dock.opacity',
+        default: 100,
+        min: 50,
+        max: 100,
+        step: 5,
+        label: 'Dock Opacity',
+        description: 'Background transparency of the dock',
     },
 } as const;
 
@@ -156,12 +188,6 @@ export const DOCK_SETTINGS = {
 // DRAG HANDLE SETTINGS
 // ============================================
 export const DRAG_HANDLE_SETTINGS = {
-    showOnHover: {
-        key: 'dragHandle.showOnHover',
-        default: true,
-        label: 'Show on Hover',
-        description: 'Only show drag handle when hovering over widget',
-    },
     alwaysShow: {
         key: 'dragHandle.alwaysShow',
         default: false,
@@ -173,6 +199,38 @@ export const DRAG_HANDLE_SETTINGS = {
         default: true,
         label: 'Resize Handles',
         description: 'Show corner handles for resizing widgets',
+    },
+    handleOpacity: {
+        key: 'dragHandle.handleOpacity',
+        default: 60,
+        min: 20,
+        max: 100,
+        step: 10,
+        label: 'Handle Opacity',
+        description: 'Visibility of drag handles when shown',
+    },
+    handleSize: {
+        key: 'dragHandle.handleSize',
+        default: 'medium' as const,
+        options: ['small', 'medium', 'large'] as const,
+        label: 'Handle Size',
+        description: 'Size of the drag handle pill',
+    },
+    handleStyle: {
+        key: 'dragHandle.handleStyle',
+        default: 'pill' as const,
+        options: ['pill', 'bar', 'dots', 'minimal'] as const,
+        label: 'Handle Style',
+        description: 'Visual style of the drag handle',
+    },
+    hoverDelay: {
+        key: 'dragHandle.hoverDelay',
+        default: 0,
+        min: 0,
+        max: 500,
+        step: 50,
+        label: 'Hover Delay',
+        description: 'Delay before showing handle on hover (ms)',
     },
 } as const;
 

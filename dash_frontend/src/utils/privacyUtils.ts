@@ -60,7 +60,7 @@ export function getBlurClass(shouldBlur: boolean): string {
  */
 export function obfuscateCurrency(value: string, forceObfuscate?: boolean): string {
     const settings = getPrivacySettings();
-    
+
     if (!forceObfuscate && (!settings.enabled || !settings.obfuscateCurrency)) {
         return value;
     }
@@ -89,7 +89,7 @@ export function obfuscateCurrency(value: string, forceObfuscate?: boolean): stri
  */
 export function obfuscateCurrencyNumber(value: number): number {
     const settings = getPrivacySettings();
-    
+
     if (!settings.enabled || !settings.obfuscateCurrency) {
         return value;
     }
@@ -111,7 +111,7 @@ export function obfuscateCurrencyNumber(value: number): number {
  */
 export function obfuscateNumber(value: string, forceObfuscate?: boolean): string {
     const settings = getPrivacySettings();
-    
+
     if (!forceObfuscate && (!settings.enabled || !settings.obfuscateNumbers)) {
         return value;
     }
@@ -141,7 +141,7 @@ export function obfuscateNumber(value: string, forceObfuscate?: boolean): string
  */
 export function obfuscatePercentage(value: string, forceObfuscate?: boolean): string {
     const settings = getPrivacySettings();
-    
+
     if (!forceObfuscate && (!settings.enabled || !settings.obfuscatePercentages)) {
         return value;
     }
@@ -171,7 +171,7 @@ export function obfuscatePercentage(value: string, forceObfuscate?: boolean): st
  */
 export function obfuscateName(value: string, forceObfuscate?: boolean): string {
     const settings = getPrivacySettings();
-    
+
     if (!forceObfuscate && (!settings.enabled || !settings.obfuscateNames)) {
         return value;
     }
@@ -206,7 +206,7 @@ export function obfuscateAuto(
     hint?: 'currency' | 'number' | 'percentage' | 'name'
 ): string {
     const stringValue = String(value);
-    
+
     // Use hint if provided
     if (hint) {
         switch (hint) {
@@ -225,11 +225,11 @@ export function obfuscateAuto(
     if (/^[€$£¥]/.test(stringValue) || /^\d+(\.\d+)?[KMB]?$/.test(stringValue)) {
         return obfuscateCurrency(stringValue);
     }
-    
+
     if (/%$/.test(stringValue)) {
         return obfuscatePercentage(stringValue);
     }
-    
+
     if (/^\d+([,.\s]\d+)*$/.test(stringValue)) {
         return obfuscateNumber(stringValue);
     }
@@ -265,17 +265,17 @@ export function maybeObfuscate(
  */
 export function getSensitiveClass(type?: 'currency' | 'number' | 'percentage' | 'name'): string {
     const settings = getPrivacySettings();
-    
+
     if (!settings.enabled) return '';
-    
+
     // Check if this type should be obfuscated
     if (type) {
-        const shouldObfuscate = 
+        const shouldObfuscate =
             (type === 'currency' && settings.obfuscateCurrency) ||
             (type === 'number' && settings.obfuscateNumbers) ||
             (type === 'percentage' && settings.obfuscatePercentages) ||
             (type === 'name' && settings.obfuscateNames);
-        
+
         if (!shouldObfuscate) return '';
     }
 
@@ -296,7 +296,7 @@ export function obfuscateChartData<T extends { [key: string]: any }>(
     normalize: boolean = true
 ): T[] {
     const settings = getPrivacySettings();
-    
+
     if (!settings.enabled || !settings.obfuscateCurrency) {
         return data;
     }
@@ -315,7 +315,7 @@ export function obfuscateChartData<T extends { [key: string]: any }>(
     // Normalize values to percentages to hide actual amounts
     // while maintaining visual proportions
     const maxValues: { [K in keyof T]?: number } = {};
-    
+
     valueKeys.forEach(key => {
         const max = Math.max(...data.map(item => Math.abs(Number(item[key]) || 0)));
         maxValues[key] = max || 1;

@@ -266,6 +266,172 @@ main {
   cursor: grabbing;
 }
 
+/* ============================================
+   DRAG HANDLE SETTINGS OVERRIDES
+   ============================================ */
+
+/* CSS Custom Properties for drag handle settings */
+.grid-stack {
+  --drag-handle-opacity: 0.6;
+  --drag-handle-hover-delay: 0ms;
+}
+
+/* Always show drag handles mode */
+.drag-handles-always-visible .grid-stack-item .widget-drag-handle {
+  opacity: var(--drag-handle-opacity);
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.drag-handles-always-visible .grid-stack-item:hover .widget-drag-handle {
+  opacity: 1;
+}
+
+/* Hide resize handles mode */
+.hide-resize-handles .grid-stack-item>.ui-resizable-handle {
+  display: none !important;
+}
+
+.hide-resize-handles .grid-stack-item:hover>.ui-resizable-handle {
+  display: none !important;
+}
+
+/* Hover delay support */
+.grid-stack-item:hover .widget-drag-handle {
+  transition-delay: var(--drag-handle-hover-delay);
+}
+
+/* ============================================
+   DRAG HANDLE SIZE VARIANTS
+   ============================================ */
+
+/* Small size */
+.drag-handle-size-small .widget-drag-handle {
+  padding: 4px 10px;
+  gap: 2px;
+  border-radius: 10px;
+}
+
+.drag-handle-size-small .widget-drag-handle::before,
+.drag-handle-size-small .widget-drag-handle::after {
+  width: 3px;
+  height: 3px;
+}
+
+/* Medium size (default) */
+.drag-handle-size-medium .widget-drag-handle {
+  padding: 6px 16px;
+  gap: 3px;
+  border-radius: 14px;
+}
+
+.drag-handle-size-medium .widget-drag-handle::before,
+.drag-handle-size-medium .widget-drag-handle::after {
+  width: 4px;
+  height: 4px;
+}
+
+/* Large size */
+.drag-handle-size-large .widget-drag-handle {
+  padding: 8px 24px;
+  gap: 4px;
+  border-radius: 18px;
+}
+
+.drag-handle-size-large .widget-drag-handle::before,
+.drag-handle-size-large .widget-drag-handle::after {
+  width: 5px;
+  height: 5px;
+}
+
+/* ============================================
+   DRAG HANDLE STYLE VARIANTS
+   ============================================ */
+
+/* Pill style (default) - two dots */
+.drag-handle-style-pill .widget-drag-handle::before,
+.drag-handle-style-pill .widget-drag-handle::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* Bar style - single horizontal line */
+.drag-handle-style-bar .widget-drag-handle::before {
+  content: '';
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.drag-handle-style-bar .widget-drag-handle::after {
+  display: none;
+}
+
+/* Dots style - three dots using a single ::before with box-shadows */
+.drag-handle-style-dots .widget-drag-handle {
+  gap: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.drag-handle-style-dots .widget-drag-handle::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    8px 0 0 0 rgba(255, 255, 255, 0.7),
+    16px 0 0 0 rgba(255, 255, 255, 0.7);
+  margin-right: 16px;
+  /* account for the box-shadow dots */
+}
+
+.drag-handle-style-dots .widget-drag-handle::after {
+  display: none;
+}
+
+.drag-handle-style-dots .widget-drag-handle:hover::before {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    8px 0 0 0 rgba(255, 255, 255, 0.95),
+    16px 0 0 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Minimal style - thin subtle line */
+.drag-handle-style-minimal .widget-drag-handle {
+  padding: 6px 12px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.drag-handle-style-minimal .widget-drag-handle::before {
+  content: '';
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.drag-handle-style-minimal .widget-drag-handle::after {
+  display: none;
+}
+
+.drag-handle-style-minimal .widget-drag-handle:hover {
+  background-color: transparent;
+}
+
+.drag-handle-style-minimal .widget-drag-handle:hover::before {
+  background: rgba(255, 255, 255, 0.7);
+}
+
 .widget-header {
   font-size: 1.2rem;
   font-weight: 800;
@@ -1958,9 +2124,12 @@ body.privacy-mode-active .sensitive-data {
 
 /* Privacy indicator animation */
 @keyframes privacyPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
   }
+
   50% {
     box-shadow: 0 0 0 8px rgba(139, 92, 246, 0);
   }
@@ -1989,11 +2158,12 @@ body.privacy-mode-active .sensitive-data {
 
 /* Print styles - always hide sensitive data when printing if privacy mode is on */
 @media print {
+
   body.privacy-mode-active .privacy-blur,
   body.privacy-mode-active [data-privacy-active="true"] {
     visibility: hidden !important;
   }
-  
+
   body.privacy-mode-active [data-privacy-active="true"]::after {
     content: "[HIDDEN]";
     visibility: visible;
@@ -2006,13 +2176,11 @@ body.privacy-mode-active .sensitive-data {
 .privacy-chart-overlay {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(128, 128, 128, 0.1) 10px,
-    rgba(128, 128, 128, 0.1) 20px
-  );
+  background: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 10px,
+      rgba(128, 128, 128, 0.1) 10px,
+      rgba(128, 128, 128, 0.1) 20px);
   pointer-events: none;
   border-radius: inherit;
 }
