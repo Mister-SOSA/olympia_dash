@@ -89,49 +89,84 @@ const WidgetRow = React.memo(({ widget, isEnabled, onToggle, showCategory }: Wid
             <Tooltip>
                 <TooltipTrigger asChild>
                     <button
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left group ${isEnabled
-                                ? "bg-ui-accent-primary/15"
-                                : "hover:bg-white/5"
-                            }`}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left mb-1"
+                        style={isEnabled ? {
+                            backgroundColor: 'var(--ui-accent-primary-bg)',
+                            borderColor: 'var(--ui-accent-primary-border)'
+                        } : undefined}
                         onClick={onToggle}
+                        onMouseEnter={(e) => {
+                            if (!isEnabled) {
+                                e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isEnabled) {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                        }}
                     >
                         {/* Checkbox */}
                         <div
-                            className={`flex-shrink-0 w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-colors ${isEnabled
-                                    ? "bg-ui-accent-primary border-ui-accent-primary"
-                                    : "border-white/25 group-hover:border-white/40"
-                                }`}
+                            className="flex-shrink-0 w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-colors"
+                            style={isEnabled ? {
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                borderColor: 'var(--ui-accent-primary)'
+                            } : {
+                                borderColor: 'var(--ui-border-secondary)'
+                            }}
                         >
-                            {isEnabled && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                            {isEnabled && (
+                                <Check className="w-2.5 h-2.5" style={{ color: '#ffffff' }} strokeWidth={3} />
+                            )}
                         </div>
 
                         {/* Title */}
                         <div className="flex-1 min-w-0 flex items-center gap-2">
-                            <span className={`text-sm truncate ${isEnabled ? "text-white font-medium" : "text-white/70 group-hover:text-white/90"
-                                }`}>
+                            <span
+                                className="text-sm font-medium truncate"
+                                style={{ color: isEnabled ? 'var(--ui-accent-primary)' : 'var(--ui-text-primary)' }}
+                            >
                                 {widget.title}
                             </span>
                             {widget.beta && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-amber-500/20 text-amber-400 rounded uppercase">
+                                <span
+                                    className="px-1.5 py-0.5 text-[9px] font-semibold rounded uppercase border"
+                                    style={{
+                                        backgroundColor: 'var(--ui-warning-bg)',
+                                        color: 'var(--ui-warning-text)',
+                                        borderColor: 'var(--ui-warning-border)'
+                                    }}
+                                >
                                     Beta
                                 </span>
                             )}
                             {showCategory && (
-                                <span className="px-1.5 py-0.5 text-[10px] text-white/40 bg-white/5 rounded">
+                                <span
+                                    className="px-1.5 py-0.5 text-[10px] rounded border"
+                                    style={{
+                                        backgroundColor: 'var(--ui-bg-tertiary)',
+                                        color: 'var(--ui-text-muted)',
+                                        borderColor: 'var(--ui-border-primary)'
+                                    }}
+                                >
                                     {widget.category}
                                 </span>
                             )}
                         </div>
 
                         {/* Size */}
-                        <span className="flex-shrink-0 text-[11px] text-white/30 font-mono tabular-nums">
+                        <span
+                            className="flex-shrink-0 text-[11px] font-mono tabular-nums"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                        >
                             {widget.defaultSize.w}×{widget.defaultSize.h}
                         </span>
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="max-w-xs">
                     <p className="font-medium">{widget.title}</p>
-                    <p className="text-xs text-white/60 mt-1">{widget.description}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--ui-text-muted)' }}>{widget.description}</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
@@ -149,45 +184,76 @@ const WidgetCard = React.memo(({ widget, isEnabled, onToggle }: WidgetRowProps) 
 
     return (
         <button
-            className={`relative flex flex-col p-4 rounded-xl border transition-all text-left group ${isEnabled
-                    ? "bg-ui-accent-primary/15 border-ui-accent-primary/30"
-                    : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05] hover:border-white/20"
-                }`}
+            className="relative flex flex-col p-4 rounded-xl border transition-all text-left group"
+            style={isEnabled ? {
+                backgroundColor: 'var(--ui-accent-primary-bg)',
+                borderColor: 'var(--ui-accent-primary-border)'
+            } : {
+                backgroundColor: 'var(--ui-bg-secondary)',
+                borderColor: 'var(--ui-border-primary)'
+            }}
             onClick={onToggle}
+            onMouseEnter={(e) => {
+                if (!isEnabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                    e.currentTarget.style.borderColor = 'var(--ui-border-secondary)';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (!isEnabled) {
+                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-secondary)';
+                    e.currentTarget.style.borderColor = 'var(--ui-border-primary)';
+                }
+            }}
         >
             {/* Checkbox top right */}
             <div
-                className={`absolute top-3 right-3 w-5 h-5 rounded-md border-[1.5px] flex items-center justify-center transition-all ${isEnabled
-                        ? "bg-ui-accent-primary border-ui-accent-primary"
-                        : "border-white/20 group-hover:border-white/40"
-                    }`}
+                className="absolute top-3 right-3 w-5 h-5 rounded-md border-[1.5px] flex items-center justify-center transition-all"
+                style={isEnabled ? {
+                    backgroundColor: 'var(--ui-accent-primary)',
+                    borderColor: 'var(--ui-accent-primary)'
+                } : {
+                    borderColor: 'var(--ui-border-secondary)'
+                }}
             >
-                {isEnabled && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                {isEnabled && <Check className="w-3 h-3" style={{ color: '#ffffff' }} strokeWidth={3} />}
             </div>
 
             {/* Category icon */}
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${isEnabled ? "bg-ui-accent-primary/20" : "bg-white/5"
-                }`}>
-                {IconComponent && <IconComponent className={`w-5 h-5 ${isEnabled ? "text-ui-accent-primary" : "text-white/40"}`} />}
+            <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{ backgroundColor: isEnabled ? 'var(--ui-accent-primary-bg)' : 'var(--ui-bg-tertiary)' }}
+            >
+                {IconComponent && (
+                    <div style={{ color: isEnabled ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)' }}>
+                        <IconComponent className="w-5 h-5" />
+                    </div>
+                )}
             </div>
 
             {/* Title */}
-            <h3 className={`text-sm font-medium mb-1 pr-6 ${isEnabled ? "text-white" : "text-white/80"}`}>
+            <h3 className="text-sm font-semibold mb-1 pr-6" style={{ color: 'var(--ui-text-primary)' }}>
                 {widget.title}
             </h3>
 
             {/* Description */}
-            <p className="text-xs text-white/40 line-clamp-2 mb-3 flex-1">
+            <p className="text-xs line-clamp-2 mb-3 flex-1" style={{ color: 'var(--ui-text-muted)' }}>
                 {widget.description}
             </p>
 
             {/* Footer: size + badges */}
             <div className="flex items-center gap-2 mt-auto">
-                <span className="text-[10px] text-white/30 font-mono tabular-nums bg-white/5 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded" style={{
+                    color: 'var(--ui-text-muted)',
+                    backgroundColor: 'var(--ui-bg-tertiary)'
+                }}>
                     {widget.defaultSize.w}×{widget.defaultSize.h}
                 </span>
                 {widget.beta && (
-                    <span className="text-[9px] font-semibold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded uppercase">
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase" style={{
+                        backgroundColor: 'var(--ui-warning-bg)',
+                        color: 'var(--ui-warning-text)'
+                    }}>
                         Beta
                     </span>
                 )}
@@ -208,27 +274,48 @@ const WidgetCompact = React.memo(({ widget, isEnabled, onToggle }: WidgetRowProp
             <Tooltip>
                 <TooltipTrigger asChild>
                     <button
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-all ${isEnabled
-                                ? "bg-ui-accent-primary/20 border-ui-accent-primary/30 text-white"
-                                : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05] hover:text-white/80"
-                            }`}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-all"
+                        style={isEnabled ? {
+                            backgroundColor: 'var(--ui-accent-primary-bg)',
+                            borderColor: 'var(--ui-accent-primary-border)',
+                            color: 'var(--ui-text-primary)'
+                        } : {
+                            backgroundColor: 'var(--ui-bg-secondary)',
+                            borderColor: 'var(--ui-border-primary)',
+                            color: 'var(--ui-text-secondary)'
+                        }}
                         onClick={onToggle}
+                        onMouseEnter={(e) => {
+                            if (!isEnabled) {
+                                e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                e.currentTarget.style.color = 'var(--ui-text-primary)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isEnabled) {
+                                e.currentTarget.style.backgroundColor = 'var(--ui-bg-secondary)';
+                                e.currentTarget.style.color = 'var(--ui-text-secondary)';
+                            }
+                        }}
                     >
                         <div
-                            className={`w-3 h-3 rounded-sm border flex items-center justify-center flex-shrink-0 ${isEnabled
-                                    ? "bg-ui-accent-primary border-ui-accent-primary"
-                                    : "border-white/30"
-                                }`}
+                            className="w-3 h-3 rounded-sm border flex items-center justify-center flex-shrink-0"
+                            style={isEnabled ? {
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                borderColor: 'var(--ui-accent-primary)'
+                            } : {
+                                borderColor: 'var(--ui-border-secondary)'
+                            }}
                         >
-                            {isEnabled && <Check className="w-2 h-2 text-white" strokeWidth={3} />}
+                            {isEnabled && <Check className="w-2 h-2" style={{ color: '#ffffff' }} strokeWidth={3} />}
                         </div>
                         <span className="text-xs font-medium truncate">{widget.title}</span>
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                     <p className="font-medium text-sm">{widget.title}</p>
-                    <p className="text-xs text-white/60 mt-1 max-w-[200px]">{widget.description}</p>
-                    <p className="text-[10px] text-white/40 mt-1">Size: {widget.defaultSize.w}×{widget.defaultSize.h}</p>
+                    <p className="text-xs mt-1 max-w-[200px]" style={{ color: 'var(--ui-text-muted)' }}>{widget.description}</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--ui-text-muted)' }}>Size: {widget.defaultSize.w}×{widget.defaultSize.h}</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
@@ -261,17 +348,34 @@ const CategorySidebarItem = React.memo(({
 
     return (
         <button
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${isSelected
-                    ? "bg-ui-accent-primary text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white/90"
-                }`}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left"
+            style={isSelected ? {
+                backgroundColor: 'var(--ui-accent-primary)',
+                color: '#ffffff'
+            } : {
+                color: 'var(--ui-text-secondary)'
+            }}
             onClick={onClick}
+            onMouseEnter={(e) => {
+                if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--ui-text-secondary)';
+                }
+            }}
         >
             {IconComponent && <IconComponent className="w-4 h-4 flex-shrink-0" />}
-            <span className="flex-1 text-sm font-medium">{metadata.label}</span>
-            <span className={`text-xs tabular-nums ${isSelected ? "text-white/70" : "text-white/40"}`}>
+            <span className="flex-1 text-sm font-semibold">{metadata.label}</span>
+            <span className="text-xs tabular-nums" style={{
+                color: isSelected ? 'rgba(255, 255, 255, 0.8)' : 'var(--ui-text-muted)'
+            }}>
                 {enabledCount > 0 ? (
-                    <><span className={isSelected ? "text-white" : "text-ui-accent-primary"}>{enabledCount}</span>/{count}</>
+                    <><span style={{ color: isSelected ? '#ffffff' : 'var(--ui-accent-primary)', fontWeight: isSelected ? 600 : 500 }}>{enabledCount}</span>/{count}</>
                 ) : (
                     count
                 )}
@@ -316,7 +420,20 @@ const QuickActions = React.memo(({
                         <button
                             onClick={onSelectAll}
                             disabled={allSelected}
-                            className="p-2 rounded-lg text-white/40 hover:text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                            onMouseEnter={(e) => {
+                                if (!allSelected) {
+                                    e.currentTarget.style.color = 'var(--ui-success)';
+                                    e.currentTarget.style.backgroundColor = 'var(--ui-success-bg)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!allSelected) {
+                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }
+                            }}
                         >
                             <CheckCheck className="w-4 h-4" />
                         </button>
@@ -329,7 +446,20 @@ const QuickActions = React.memo(({
                         <button
                             onClick={onDeselectAll}
                             disabled={noneSelected}
-                            className="p-2 rounded-lg text-white/40 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                            onMouseEnter={(e) => {
+                                if (!noneSelected) {
+                                    e.currentTarget.style.color = 'var(--ui-danger)';
+                                    e.currentTarget.style.backgroundColor = 'var(--ui-danger-bg)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!noneSelected) {
+                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }
+                            }}
                         >
                             <XCircle className="w-4 h-4" />
                         </button>
@@ -341,7 +471,16 @@ const QuickActions = React.memo(({
                     <TooltipTrigger asChild>
                         <button
                             onClick={onInvert}
-                            className="p-2 rounded-lg text-white/40 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'var(--ui-accent-secondary)';
+                                e.currentTarget.style.backgroundColor = 'var(--ui-accent-secondary-bg)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                         >
                             <Shuffle className="w-4 h-4" />
                         </button>
@@ -349,14 +488,27 @@ const QuickActions = React.memo(({
                     <TooltipContent>Invert selection</TooltipContent>
                 </Tooltip>
 
-                <div className="w-px h-5 bg-white/10 mx-1" />
+                <div className="w-px h-5 mx-1" style={{ backgroundColor: 'var(--ui-border-primary)' }} />
 
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <button
                             onClick={onReset}
                             disabled={!hasChanges}
-                            className="p-2 rounded-lg text-white/40 hover:text-amber-400 hover:bg-amber-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                            onMouseEnter={(e) => {
+                                if (hasChanges) {
+                                    e.currentTarget.style.color = 'var(--ui-warning)';
+                                    e.currentTarget.style.backgroundColor = 'var(--ui-warning-bg)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (hasChanges) {
+                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }
+                            }}
                         >
                             <RotateCcw className="w-4 h-4" />
                         </button>
@@ -592,33 +744,58 @@ export default function WidgetPicker({
     }, [selectedCategory]);
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(8px)'
+        }}>
             <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.15 }}
-                className="bg-[#161616] rounded-xl border border-white/10 w-full max-w-6xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden shadow-2xl"
+                className="rounded-xl border w-full max-w-6xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden shadow-2xl"
+                style={{
+                    backgroundColor: 'var(--ui-bg-primary)',
+                    borderColor: 'var(--ui-border-primary)'
+                }}
             >
                 {/* Header - Clean with view modes */}
-                <div className="flex-shrink-0 border-b border-white/10">
+                <div className="flex-shrink-0 border-b" style={{ borderColor: 'var(--ui-border-primary)' }}>
                     <div className="px-5 py-3 flex items-center gap-3">
                         {/* Search - Primary, takes most space */}
                         <div className="flex-1">
                             <div className="relative">
-                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--ui-text-muted)' }}>
+                                    <Search className="w-4 h-4" />
+                                </div>
                                 <input
                                     ref={searchInputRef}
                                     type="text"
                                     placeholder="Search widgets..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:border-ui-accent-primary/50 focus:outline-none transition-colors"
+                                    className="w-full pl-10 pr-10 py-2.5 rounded-lg border focus:outline-none transition-colors placeholder:opacity-50"
+                                    style={{
+                                        backgroundColor: 'var(--ui-bg-secondary)',
+                                        borderColor: 'var(--ui-border-primary)',
+                                        color: 'var(--ui-text-primary)'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--ui-accent-primary)';
+                                        e.currentTarget.style.boxShadow = '0 0 0 3px var(--ui-accent-primary-bg)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--ui-border-primary)';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
                                 />
                                 {searchTerm && (
                                     <button
                                         onClick={() => setSearchTerm("")}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                                        style={{ color: 'var(--ui-text-muted)' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--ui-text-secondary)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--ui-text-muted)'}
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -627,16 +804,34 @@ export default function WidgetPicker({
                         </div>
 
                         {/* View Mode Switcher - Compact */}
-                        <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/10">
+                        <div className="flex items-center rounded-lg p-0.5 border" style={{
+                            backgroundColor: 'var(--ui-bg-secondary)',
+                            borderColor: 'var(--ui-border-primary)'
+                        }}>
                             <TooltipProvider delayDuration={200}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <button
                                             onClick={() => setViewMode("list")}
-                                            className={`p-2 rounded-md transition-all ${viewMode === "list"
-                                                    ? "bg-ui-accent-primary text-white"
-                                                    : "text-white/40 hover:text-white hover:bg-white/5"
-                                                }`}
+                                            className="p-2 rounded-md transition-all"
+                                            style={viewMode === "list" ? {
+                                                backgroundColor: 'var(--ui-accent-primary)',
+                                                color: '#ffffff'
+                                            } : {
+                                                color: 'var(--ui-text-muted)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (viewMode !== "list") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                                                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (viewMode !== "list") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                }
+                                            }}
                                         >
                                             <List className="w-4 h-4" />
                                         </button>
@@ -648,10 +843,25 @@ export default function WidgetPicker({
                                     <TooltipTrigger asChild>
                                         <button
                                             onClick={() => setViewMode("cards")}
-                                            className={`p-2 rounded-md transition-all ${viewMode === "cards"
-                                                    ? "bg-ui-accent-primary text-white"
-                                                    : "text-white/40 hover:text-white hover:bg-white/5"
-                                                }`}
+                                            className="p-2 rounded-md transition-all"
+                                            style={viewMode === "cards" ? {
+                                                backgroundColor: 'var(--ui-accent-primary)',
+                                                color: '#ffffff'
+                                            } : {
+                                                color: 'var(--ui-text-muted)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (viewMode !== "cards") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                                                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (viewMode !== "cards") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                }
+                                            }}
                                         >
                                             <LayoutDashboard className="w-4 h-4" />
                                         </button>
@@ -663,10 +873,25 @@ export default function WidgetPicker({
                                     <TooltipTrigger asChild>
                                         <button
                                             onClick={() => setViewMode("compact")}
-                                            className={`p-2 rounded-md transition-all ${viewMode === "compact"
-                                                    ? "bg-ui-accent-primary text-white"
-                                                    : "text-white/40 hover:text-white hover:bg-white/5"
-                                                }`}
+                                            className="p-2 rounded-md transition-all"
+                                            style={viewMode === "compact" ? {
+                                                backgroundColor: 'var(--ui-accent-primary)',
+                                                color: '#ffffff'
+                                            } : {
+                                                color: 'var(--ui-text-muted)'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (viewMode !== "compact") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                                                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (viewMode !== "compact") {
+                                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                }
+                                            }}
                                         >
                                             <Grid3X3 className="w-4 h-4" />
                                         </button>
@@ -676,25 +901,35 @@ export default function WidgetPicker({
                             </TooltipProvider>
                         </div>
 
-                        <div className="w-px h-6 bg-white/10" />
+                        <div className="w-px h-6" style={{ backgroundColor: 'var(--ui-border-primary)' }} />
 
                         {/* Status */}
                         <div className="flex items-center gap-3">
                             {activePresetName && (
-                                <div className="flex items-center gap-2 px-2.5 py-1 bg-ui-accent-primary/10 rounded-lg">
-                                    <Sparkles className="w-3 h-3 text-ui-accent-primary" />
-                                    <span className="text-xs text-ui-accent-primary font-medium">{activePresetName}</span>
+                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg" style={{
+                                    backgroundColor: 'var(--ui-accent-primary-bg)'
+                                }}>
+                                    <div style={{ color: 'var(--ui-accent-primary)' }}>
+                                        <Sparkles className="w-3 h-3" />
+                                    </div>
+                                    <span className="text-xs font-medium" style={{ color: 'var(--ui-accent-primary)' }}>{activePresetName}</span>
                                 </div>
                             )}
-                            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium tabular-nums ${enabledCount > 0
-                                    ? "bg-emerald-500/10 text-emerald-400"
-                                    : "bg-white/5 text-white/40"
-                                }`}>
+                            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium tabular-nums" style={enabledCount > 0 ? {
+                                backgroundColor: 'var(--ui-success-bg)',
+                                color: 'var(--ui-success-text)'
+                            } : {
+                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                color: 'var(--ui-text-muted)'
+                            }}>
                                 {enabledCount} active
                             </div>
                             {hasChanges && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{
+                                    backgroundColor: 'var(--ui-warning-bg)',
+                                    color: 'var(--ui-warning-text)'
+                                }}>
+                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--ui-warning)' }} />
                                     Unsaved
                                 </div>
                             )}
@@ -712,21 +947,47 @@ export default function WidgetPicker({
                                 hasChanges={hasChanges}
                             />
 
-                            <div className="w-px h-6 bg-white/10 mx-1" />
+                            <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--ui-border-primary)' }} />
 
                             <button
                                 onClick={handleCancel}
-                                className="px-3 py-1.5 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+                                className="px-3 py-1.5 rounded-lg text-sm transition-colors"
+                                style={{ color: 'var(--ui-text-muted)' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={!hasChanges}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${hasChanges
-                                        ? "bg-ui-accent-primary text-white hover:bg-ui-accent-primary/90"
-                                        : "bg-white/5 text-white/30 cursor-not-allowed"
-                                    }`}
+                                className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                                style={hasChanges ? {
+                                    backgroundColor: 'var(--ui-accent-primary)',
+                                    color: '#ffffff'
+                                } : {
+                                    backgroundColor: 'var(--ui-bg-secondary)',
+                                    color: 'var(--ui-text-muted)',
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid',
+                                    borderColor: 'var(--ui-border-primary)'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (hasChanges) {
+                                        e.currentTarget.style.backgroundColor = 'var(--ui-accent-primary-hover)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (hasChanges) {
+                                        e.currentTarget.style.backgroundColor = 'var(--ui-accent-primary)';
+                                    }
+                                }}
                             >
                                 Save
                             </button>
@@ -737,27 +998,46 @@ export default function WidgetPicker({
                 {/* Main Content */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Sidebar */}
-                    <div className="w-56 flex-shrink-0 border-r border-white/10 p-3 overflow-y-auto">
+                    <div className="w-56 flex-shrink-0 border-r p-3 overflow-y-auto" style={{
+                        borderColor: 'var(--ui-border-primary)'
+                    }}>
                         {/* All Widgets */}
                         <button
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left mb-2 ${selectedCategory === "all"
-                                    ? "bg-ui-accent-primary text-white"
-                                    : "text-white/60 hover:bg-white/5 hover:text-white/90"
-                                }`}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left mb-2"
+                            style={selectedCategory === "all" ? {
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                color: '#ffffff'
+                            } : {
+                                color: 'var(--ui-text-secondary)'
+                            }}
                             onClick={() => setSelectedCategory("all")}
+                            onMouseEnter={(e) => {
+                                if (selectedCategory !== "all") {
+                                    e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)';
+                                    e.currentTarget.style.color = 'var(--ui-text-primary)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (selectedCategory !== "all") {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = 'var(--ui-text-secondary)';
+                                }
+                            }}
                         >
                             <LayoutGrid className="w-4 h-4" />
-                            <span className="flex-1 text-sm font-medium">All Widgets</span>
-                            <span className={`text-xs tabular-nums ${selectedCategory === "all" ? "text-white/70" : "text-white/40"}`}>
+                            <span className="flex-1 text-sm font-semibold">All Widgets</span>
+                            <span className="text-xs tabular-nums" style={{
+                                color: selectedCategory === "all" ? 'rgba(255, 255, 255, 0.8)' : 'var(--ui-text-muted)'
+                            }}>
                                 {enabledCount > 0 ? (
-                                    <><span className={selectedCategory === "all" ? "text-white" : "text-ui-accent-primary"}>{enabledCount}</span>/{totalCount}</>
+                                    <><span style={{ color: selectedCategory === "all" ? '#ffffff' : 'var(--ui-accent-primary)', fontWeight: selectedCategory === "all" ? 600 : 500 }}>{enabledCount}</span>/{totalCount}</>
                                 ) : (
                                     totalCount
                                 )}
                             </span>
                         </button>
 
-                        <div className="h-px bg-white/10 my-2" />
+                        <div className="h-px my-2" style={{ backgroundColor: 'var(--ui-border-primary)' }} />
 
                         {/* Categories */}
                         <div className="space-y-0.5">
@@ -774,17 +1054,19 @@ export default function WidgetPicker({
                         </div>
 
                         {/* Shortcuts */}
-                        <div className="mt-6 pt-4 border-t border-white/10">
-                            <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium mb-2 px-1">Shortcuts</p>
+                        <div className="mt-6 pt-4 border-t" style={{ borderColor: 'var(--ui-border-primary)' }}>
+                            <p className="text-[10px] uppercase tracking-wider font-medium mb-2 px-1" style={{ color: 'var(--ui-text-muted)' }}>Shortcuts</p>
                             <div className="space-y-1.5 text-xs">
                                 {[
                                     { label: "Search", keys: "⌘F" },
                                     { label: "Save", keys: "⌘↵" },
                                     { label: "Close", keys: "Esc" },
                                 ].map(({ label, keys }) => (
-                                    <div key={label} className="flex items-center justify-between px-1 text-white/40">
+                                    <div key={label} className="flex items-center justify-between px-1" style={{ color: 'var(--ui-text-muted)' }}>
                                         <span>{label}</span>
-                                        <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-[10px]">{keys}</kbd>
+                                        <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{
+                                            backgroundColor: 'var(--ui-bg-tertiary)'
+                                        }}>{keys}</kbd>
                                     </div>
                                 ))}
                             </div>
@@ -794,21 +1076,30 @@ export default function WidgetPicker({
                     {/* Widget Content - View Mode Dependent */}
                     <div ref={listRef} className="flex-1 overflow-y-auto">
                         {permissionsLoading ? (
-                            <div className="flex flex-col items-center justify-center h-full text-white/40">
-                                <div className="w-6 h-6 border-2 border-ui-accent-primary border-t-transparent rounded-full animate-spin mb-3" />
+                            <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--ui-text-muted)' }}>
+                                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mb-3" style={{
+                                    borderColor: 'var(--ui-accent-primary)'
+                                }} />
                                 <p className="text-sm">Loading widgets...</p>
                             </div>
                         ) : filteredWidgets.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-white/40 px-8">
-                                <Search className="w-10 h-10 mb-4 opacity-30" />
-                                <p className="font-medium text-white/60">No widgets found</p>
-                                <p className="text-sm mt-1 text-white/40 text-center">
+                            <div className="flex flex-col items-center justify-center h-full px-8" style={{ color: 'var(--ui-text-muted)' }}>
+                                <div style={{ opacity: 0.3 }}>
+                                    <Search className="w-10 h-10 mb-4" />
+                                </div>
+                                <p className="font-medium" style={{ color: 'var(--ui-text-secondary)' }}>No widgets found</p>
+                                <p className="text-sm mt-1 text-center" style={{ color: 'var(--ui-text-muted)' }}>
                                     {searchTerm ? `No results for "${searchTerm}"` : "No widgets in this category."}
                                 </p>
                                 {searchTerm && (
                                     <button
                                         onClick={() => setSearchTerm("")}
-                                        className="mt-4 px-4 py-2 text-sm bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                                        className="mt-4 px-4 py-2 text-sm rounded-lg transition-colors"
+                                        style={{
+                                            backgroundColor: 'var(--ui-bg-tertiary)'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--ui-bg-quaternary)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--ui-bg-tertiary)'}
                                     >
                                         Clear search
                                     </button>
@@ -828,11 +1119,11 @@ export default function WidgetPicker({
                                         return (
                                             <div key={category} className="mb-8 last:mb-0">
                                                 <div className="flex items-center gap-2 mb-4">
-                                                    {IconComponent && <IconComponent className="w-5 h-5 text-white/40" />}
-                                                    <h3 className="text-sm font-semibold text-white">
+                                                    {IconComponent && <div style={{ color: 'var(--ui-text-muted)' }}><IconComponent className="w-5 h-5" /></div>}
+                                                    <h3 className="text-sm font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
                                                         {CATEGORY_METADATA[category].label}
                                                     </h3>
-                                                    <span className="text-xs text-white/30 ml-1">
+                                                    <span className="text-xs ml-1" style={{ color: 'var(--ui-text-muted)' }}>
                                                         {stats?.enabled || 0}/{stats?.total || 0}
                                                     </span>
                                                 </div>
@@ -877,11 +1168,11 @@ export default function WidgetPicker({
                                         return (
                                             <div key={category} className="mb-5 last:mb-0">
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    {IconComponent && <IconComponent className="w-4 h-4 text-white/40" />}
-                                                    <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                                                    {IconComponent && <div style={{ color: 'var(--ui-text-muted)' }}><IconComponent className="w-4 h-4" /></div>}
+                                                    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--ui-text-secondary)' }}>
                                                         {CATEGORY_METADATA[category].label}
                                                     </span>
-                                                    <span className="text-[10px] text-white/30">
+                                                    <span className="text-[10px]" style={{ color: 'var(--ui-text-muted)' }}>
                                                         {stats?.enabled || 0}/{stats?.total || 0}
                                                     </span>
                                                 </div>
@@ -926,13 +1217,16 @@ export default function WidgetPicker({
                                     return (
                                         <div key={category} className="mb-6 last:mb-0">
                                             {/* Category Header */}
-                                            <div className="flex items-center gap-2 px-3 py-2 sticky top-0 bg-[#161616] z-10 border-b border-white/5">
+                                            <div className="flex items-center gap-2 px-3 py-2 sticky top-0 z-10 border-b" style={{
+                                                backgroundColor: 'var(--ui-bg-primary)',
+                                                borderColor: 'var(--ui-border-primary)'
+                                            }}>
                                                 <div className="flex items-center gap-2 flex-1">
-                                                    {IconComponent && <IconComponent className="w-4 h-4 text-white/40" />}
-                                                    <span className="text-sm font-semibold text-white">
+                                                    {IconComponent && <div style={{ color: 'var(--ui-text-muted)' }}><IconComponent className="w-4 h-4" /></div>}
+                                                    <span className="text-sm font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
                                                         {CATEGORY_METADATA[category].label}
                                                     </span>
-                                                    <span className="text-xs text-white/30">
+                                                    <span className="text-xs" style={{ color: 'var(--ui-text-muted)' }}>
                                                         {stats?.enabled || 0}/{stats?.total || 0}
                                                     </span>
                                                 </div>
@@ -943,7 +1237,20 @@ export default function WidgetPicker({
                                                             <button
                                                                 onClick={() => toggleAllInCategory(category, true)}
                                                                 disabled={allEnabled}
-                                                                className="p-1.5 rounded text-white/30 hover:text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                                className="p-1.5 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                style={{ color: 'var(--ui-text-muted)' }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (!allEnabled) {
+                                                                        e.currentTarget.style.color = 'var(--ui-success)';
+                                                                        e.currentTarget.style.backgroundColor = 'var(--ui-success-bg)';
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!allEnabled) {
+                                                                        e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    }
+                                                                }}
                                                             >
                                                                 <Plus className="w-3.5 h-3.5" />
                                                             </button>
@@ -955,7 +1262,20 @@ export default function WidgetPicker({
                                                             <button
                                                                 onClick={() => toggleAllInCategory(category, false)}
                                                                 disabled={noneEnabled}
-                                                                className="p-1.5 rounded text-white/30 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                                className="p-1.5 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                style={{ color: 'var(--ui-text-muted)' }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (!noneEnabled) {
+                                                                        e.currentTarget.style.color = 'var(--ui-danger)';
+                                                                        e.currentTarget.style.backgroundColor = 'var(--ui-danger-bg)';
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!noneEnabled) {
+                                                                        e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    }
+                                                                }}
                                                             >
                                                                 <Minus className="w-3.5 h-3.5" />
                                                             </button>
@@ -983,7 +1303,7 @@ export default function WidgetPicker({
                         ) : (
                             // List View - Flat
                             <div className="p-4">
-                                <div className="flex items-center justify-between px-3 py-2 mb-2 text-xs text-white/40">
+                                <div className="flex items-center justify-between px-3 py-2 mb-2 text-xs" style={{ color: 'var(--ui-text-muted)' }}>
                                     <span>{filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""}</span>
                                     <span>{visibleEnabledCount} selected</span>
                                 </div>
@@ -1002,26 +1322,29 @@ export default function WidgetPicker({
                 </div>
 
                 {/* Footer - Minimal, keyboard hints only */}
-                <div className="px-6 py-2.5 border-t border-white/10 flex items-center justify-between bg-white/[0.02]">
-                    <div className="flex items-center gap-6 text-xs text-white/30">
+                <div className="px-6 py-2.5 border-t flex items-center justify-between" style={{
+                    borderColor: 'var(--ui-border-primary)',
+                    backgroundColor: 'var(--ui-bg-secondary)'
+                }}>
+                    <div className="flex items-center gap-6 text-xs" style={{ color: 'var(--ui-text-muted)' }}>
                         <span className="flex items-center gap-2">
-                            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">Space</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}>Space</kbd>
                             Toggle widget
                         </span>
                         <span className="flex items-center gap-2">
-                            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">⌘F</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}>⌘F</kbd>
                             Search
                         </span>
                         <span className="flex items-center gap-2">
-                            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">⌘↵</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}>⌘↵</kbd>
                             Save
                         </span>
                         <span className="flex items-center gap-2">
-                            <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">Esc</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}>Esc</kbd>
                             {searchTerm ? "Clear search" : "Close"}
                         </span>
                     </div>
-                    <span className="text-xs text-white/30 tabular-nums">
+                    <span className="text-xs tabular-nums" style={{ color: 'var(--ui-text-muted)' }}>
                         {filteredWidgets.length} widgets
                     </span>
                 </div>
