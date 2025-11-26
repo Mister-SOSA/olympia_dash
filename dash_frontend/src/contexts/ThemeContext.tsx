@@ -43,14 +43,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>("slate");
     const [mounted, setMounted] = useState(false);
 
-    // Load theme from preferences on mount
-    useEffect(() => {
-        setMounted(true);
+    // Load theme from preferences
+    const loadTheme = () => {
         const savedTheme = preferencesService.get<Theme>("theme", "slate");
+        console.log('🎨 Loading theme from preferences:', savedTheme);
         if (savedTheme && THEMES.some(t => t.id === savedTheme)) {
             applyTheme(savedTheme);
             setThemeState(savedTheme);
         }
+    };
+
+    // Load theme on mount and subscribe to changes
+    useEffect(() => {
+        setMounted(true);
+        loadTheme();
+
+        // Subscribe to preference changes for cross-session sync
+        const unsubscribe = preferencesService.subscribe((isRemote: boolean) => {
+            console.log('🎨 Theme subscription triggered, isRemote:', isRemote);
+            loadTheme();
+        });
+
+        return unsubscribe;
     }, []);
 
     const setTheme = async (newTheme: Theme) => {
