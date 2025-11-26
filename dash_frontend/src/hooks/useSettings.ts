@@ -254,6 +254,8 @@ export function useSettings() {
         value: UserSettings[K]
     ) => {
         const prefKey = SETTINGS_KEY_MAP[key];
+        // Set in preferences but don't notify this instance (we update our own state below)
+        // Other useSettings instances will be notified and re-read from preferences
         preferencesService.set(prefKey, value);
 
         setSettings(prev => ({
@@ -271,6 +273,7 @@ export function useSettings() {
             prefUpdates[prefKey] = updates[key];
         });
 
+        // Set in preferences (will notify other instances)
         preferencesService.setMany(prefUpdates);
 
         setSettings(prev => ({

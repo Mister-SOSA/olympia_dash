@@ -10,7 +10,6 @@ import {
     TIMEZONE_OPTIONS,
     DATE_FORMAT_OPTIONS,
     NOTIFICATION_SETTINGS,
-    WIDGET_SETTINGS,
     DOCK_SETTINGS,
     DRAG_HANDLE_SETTINGS,
     GRID_SETTINGS,
@@ -31,6 +30,8 @@ import {
     MdDock,
     MdRefresh,
     MdGridOn,
+    MdChevronRight,
+    MdDragIndicator,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -40,45 +41,209 @@ interface SettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'grid' | 'dock' | 'notifications' | 'data' | 'privacy' | 'shortcuts' | 'account';
+// Real Drag Handle Component - matches the actual widget-drag-handle CSS
+function RealDragHandle({ style, size, opacity }: { style: 'pill' | 'bar' | 'dots' | 'minimal'; size: 'small' | 'medium' | 'large'; opacity: number }) {
+    // Size configurations matching globals.css
+    const sizeConfig = {
+        small: { padding: '4px 10px', gap: '2px', borderRadius: '10px', dotSize: 3 },
+        medium: { padding: '6px 16px', gap: '3px', borderRadius: '14px', dotSize: 4 },
+        large: { padding: '8px 24px', gap: '4px', borderRadius: '18px', dotSize: 5 },
+    };
+    
+    const config = sizeConfig[size];
+    const dotColor = `rgba(255, 255, 255, ${opacity / 100})`;
+    
+    // Base styles for all handles
+    const baseStyle: React.CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+        cursor: 'grab',
+    };
 
-const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
-    { id: 'appearance', label: 'Appearance', icon: MdPalette },
-    { id: 'datetime', label: 'Date & Time', icon: MdSchedule },
-    { id: 'behavior', label: 'Behavior', icon: MdTune },
-    { id: 'grid', label: 'Grid', icon: MdGridOn },
-    { id: 'dock', label: 'Dock & Handles', icon: MdDock },
-    { id: 'notifications', label: 'Notifications', icon: MdNotifications },
-    { id: 'data', label: 'Data', icon: MdStorage },
-    { id: 'privacy', label: 'Privacy', icon: MdVisibilityOff },
-    { id: 'shortcuts', label: 'Shortcuts', icon: MdKeyboard },
-    { id: 'account', label: 'Account', icon: MdPerson },
+    switch (style) {
+        case 'pill':
+            return (
+                <div
+                    style={{
+                        ...baseStyle,
+                        padding: config.padding,
+                        borderRadius: config.borderRadius,
+                        gap: config.gap,
+                    }}
+                >
+                    <div style={{ width: config.dotSize, height: config.dotSize, borderRadius: '50%', background: dotColor }} />
+                    <div style={{ width: config.dotSize, height: config.dotSize, borderRadius: '50%', background: dotColor }} />
+                </div>
+            );
+        case 'bar':
+            return (
+                <div
+                    style={{
+                        ...baseStyle,
+                        padding: config.padding,
+                        borderRadius: config.borderRadius,
+                    }}
+                >
+                    <div style={{ width: 28, height: 3, borderRadius: 2, background: dotColor }} />
+                </div>
+            );
+        case 'dots':
+            return (
+                <div
+                    style={{
+                        ...baseStyle,
+                        padding: `${parseInt(config.padding) || 6}px 12px`,
+                        borderRadius: config.borderRadius,
+                    }}
+                >
+                    <div style={{ display: 'flex', gap: 4 }}>
+                        <div style={{ width: config.dotSize, height: config.dotSize, borderRadius: '50%', background: dotColor }} />
+                        <div style={{ width: config.dotSize, height: config.dotSize, borderRadius: '50%', background: dotColor }} />
+                        <div style={{ width: config.dotSize, height: config.dotSize, borderRadius: '50%', background: dotColor }} />
+                    </div>
+                </div>
+            );
+        case 'minimal':
+            return (
+                <div
+                    style={{
+                        padding: '6px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    <div style={{ width: 20, height: 2, borderRadius: 1, background: `rgba(255, 255, 255, ${(opacity / 100) * 0.6})` }} />
+                </div>
+            );
+    }
+}
+
+// Obfuscation Style Preview - shows exactly what each style looks like
+function ObfuscationPreview({ style, sampleText = "$1,234.56" }: { style: 'blur' | 'redact' | 'asterisk' | 'placeholder'; sampleText?: string }) {
+    switch (style) {
+        case 'blur':
+            return (
+                <span 
+                    className="text-sm font-medium text-ui-text-primary"
+                    style={{ filter: 'blur(6px)', userSelect: 'none', WebkitFilter: 'blur(6px)' }}
+                >
+                    {sampleText}
+                </span>
+            );
+        case 'redact':
+            // Black/dark bar over the text - like a marker redaction
+            return (
+                <span 
+                    className="text-sm font-medium px-1 rounded select-none"
+                    style={{ 
+                        backgroundColor: 'var(--ui-text-primary, #1f2937)',
+                        color: 'transparent',
+                    }}
+                >
+                    {sampleText}
+                </span>
+            );
+        case 'asterisk':
+            return <span className="text-sm font-mono text-ui-text-secondary">$***</span>;
+        case 'placeholder':
+            return <span className="text-sm text-ui-text-secondary">$••••</span>;
+    }
+}
+
+// Live Preview: Dock at bottom
+function DockPreview({ settings }: { settings: any }) {
+    return (
+        <div className="relative h-28 bg-gradient-to-b from-ui-bg-tertiary/20 to-ui-bg-tertiary/50 rounded-xl overflow-hidden border border-ui-border-primary">
+            {/* Mock screen content */}
+            <div className="absolute inset-x-4 top-3 h-6 bg-ui-bg-tertiary/30 rounded" />
+            <div className="absolute inset-x-4 top-11 h-3 bg-ui-bg-tertiary/20 rounded" />
+            <div className="absolute left-4 right-20 top-16 h-3 bg-ui-bg-tertiary/15 rounded" />
+
+            {/* Preview Dock */}
+            <div
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1.5 px-3 py-2 rounded-xl bg-ui-bg-primary/95 border border-ui-border-primary shadow-lg backdrop-blur-sm"
+                style={{ opacity: settings.dockOpacity / 100 }}
+            >
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <motion.div
+                        key={i}
+                        className={`rounded-lg transition-all ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
+                        style={{
+                            width: `${settings.dockIconSize / 3.5}px`,
+                            height: `${settings.dockIconSize / 3.5}px`,
+                        }}
+                        whileHover={settings.dockMagnification ? { 
+                            scale: settings.dockMagnificationScale,
+                            y: -4
+                        } : {}}
+                    />
+                ))}
+            </div>
+
+            {/* Trigger zone indicator */}
+            {settings.dockAutoHide && (
+                <div
+                    className="absolute bottom-0 left-0 right-0 bg-ui-accent-primary/10 border-t border-dashed border-ui-accent-primary/30"
+                    style={{ height: `${Math.min(settings.dockTriggerDistance / 2, 40)}%` }}
+                >
+                    <span className="absolute right-2 top-1 text-[9px] text-ui-accent-primary/60 font-medium">trigger zone</span>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Subsection Component for nested organization
+function Subsection({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+        <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider">{title}</h4>
+            {children}
+        </div>
+    );
+}
+
+type SettingsView = 'account' | 'appearance' | 'interface' | 'data' | 'notifications' | 'privacy' | 'shortcuts';
+
+const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: string; badge?: string }[] = [
+    { id: 'account', icon: MdPerson, label: 'Account' },
+    { id: 'appearance', icon: MdPalette, label: 'Appearance' },
+    { id: 'interface', icon: MdTune, label: 'Interface', badge: 'Sync' },
+    { id: 'data', icon: MdStorage, label: 'Data & Formats' },
+    { id: 'notifications', icon: MdNotifications, label: 'Notifications' },
+    { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy' },
+    { id: 'shortcuts', icon: MdKeyboard, label: 'Shortcuts' },
 ];
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
     const { settings, updateSetting, isLoaded } = useSettings();
     const { settings: privacySettings, updateSetting: updatePrivacySetting, toggle: togglePrivacy } = usePrivacy();
-    const [activeSection, setActiveSection] = useState<SettingsSection>('appearance');
+    const [activeView, setActiveView] = useState<SettingsView>('account');
     const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>(
         THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
     );
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Local state for grid settings - only saved when Apply is clicked
+    // Local state for grid settings
     const [localGridColumns, setLocalGridColumns] = useState(settings.gridColumns);
     const [localGridCellHeight, setLocalGridCellHeight] = useState(settings.gridCellHeight);
 
-    // Sync local state when settings load
     useEffect(() => {
         setLocalGridColumns(settings.gridColumns);
         setLocalGridCellHeight(settings.gridCellHeight);
     }, [settings.gridColumns, settings.gridCellHeight]);
 
-    // Scroll to top when section changes
+    // Scroll to top when view changes
     useEffect(() => {
         contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    }, [activeSection]);
+    }, [activeView]);
 
     if (!isLoaded) {
         return null;
@@ -89,702 +254,543 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
             onClick={onClose}
         >
             <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                initial={{ scale: 0.97, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.97, opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-3xl h-[85vh] max-h-[750px] flex flex-col"
+                className="w-full max-w-4xl h-[85vh] max-h-[700px] flex"
             >
-                <div className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden flex flex-col h-full">
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-primary flex-shrink-0">
-                        <h2 className="text-lg font-semibold text-ui-text-primary">Settings</h2>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
-                        >
-                            <MdClose className="w-5 h-5" />
-                        </button>
-                    </div>
-
-                    {/* Navigation Tabs */}
-                    <div className="px-6 py-3 border-b border-ui-border-primary flex-shrink-0 bg-ui-bg-secondary/30">
-                        <nav className="flex gap-1 overflow-x-auto scrollbar-hide">
-                            {SECTIONS.map((section) => {
-                                const Icon = section.icon;
-                                const isActive = activeSection === section.id;
-                                return (
-                                    <button
-                                        key={section.id}
-                                        onClick={() => setActiveSection(section.id)}
-                                        className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${isActive
-                                            ? 'text-ui-accent-primary'
-                                            : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
+                <div className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden flex w-full">
+                    {/* Sidebar Navigation */}
+                    <div className="w-56 bg-ui-bg-secondary/30 border-r border-ui-border-primary flex flex-col flex-shrink-0">
+                        {/* Header */}
+                        <div className="px-5 py-5 border-b border-ui-border-primary">
+                            <h2 className="text-lg font-bold text-ui-text-primary">Settings</h2>
+                            <p className="text-xs text-ui-text-tertiary mt-0.5">Customize dashboard</p>
+                        </div>
+                        
+                        {/* Navigation */}
+                        <nav className="flex-1 overflow-y-auto py-3 px-3">
+                            <div className="space-y-1">
+                                {NAVIGATION_ITEMS.map((item) => {
+                                    const Icon = item.icon;
+                                    const isActive = activeView === item.id;
+                                    const showBadge = item.id === 'privacy' && privacySettings.enabled;
+                                    
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setActiveView(item.id)}
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                                isActive
+                                                    ? 'bg-ui-accent-primary text-white shadow-sm'
+                                                    : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                                             }`}
-                                    >
-                                        <Icon className="w-4 h-4" />
-                                        <span>{section.label}</span>
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeTab"
-                                                className="absolute inset-0 bg-ui-accent-primary/10 rounded-lg border border-ui-accent-primary/20"
-                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })}
+                                        >
+                                            <Icon className="w-4 h-4 flex-shrink-0" />
+                                            <span className="flex-1 text-left truncate">{item.label}</span>
+                                            {item.badge && !showBadge && (
+                                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
+                                                    isActive ? 'bg-white/20 text-white' : 'bg-ui-accent-primary/20 text-ui-accent-primary'
+                                                }`}>
+                                                    {item.badge}
+                                                </span>
+                                            )}
+                                            {showBadge && (
+                                                <div className="w-2 h-2 rounded-full bg-ui-accent-secondary flex-shrink-0" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </nav>
+
+                        {/* Close Button */}
+                        <div className="p-3 border-t border-ui-border-primary">
+                            <button
+                                onClick={onClose}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
+                            >
+                                <MdClose className="w-4 h-4" />
+                                Close
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Scrollable Content */}
-                    <div ref={contentRef} className="flex-1 overflow-y-auto">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeSection}
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                transition={{ duration: 0.15 }}
-                                className="p-6"
-                            >
-                                {/* Appearance Section */}
-                                {activeSection === 'appearance' && (
-                                    <div className="space-y-6">
-                                        {/* Theme Selection */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Theme</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-4">Choose your preferred color scheme</p>
-
-                                            {/* Category Toggle */}
-                                            <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg mb-4 w-fit">
-                                                <button
-                                                    onClick={() => setThemeCategory('dark')}
-                                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'dark'
-                                                        ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                        : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                        }`}
-                                                >
-                                                    Dark
-                                                </button>
-                                                <button
-                                                    onClick={() => setThemeCategory('light')}
-                                                    className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'light'
-                                                        ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                        : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                        }`}
-                                                >
-                                                    Light
-                                                </button>
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div ref={contentRef} className="flex-1 overflow-y-auto">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeView}
+                                    initial={{ opacity: 0, x: 10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -10 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="p-6"
+                                >
+                                    {/* Account View */}
+                                    {activeView === 'account' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Account</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Profile and authentication</p>
                                             </div>
+                                            <div className="space-y-4">
+                                    {/* Profile Card */}
+                                    <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-full bg-ui-accent-primary/10 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-2xl font-semibold text-ui-accent-primary">
+                                                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                                </span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-base font-semibold text-ui-text-primary truncate">{user?.name}</div>
+                                                <div className="text-sm text-ui-text-secondary truncate">{user?.email}</div>
+                                                {user?.role && (
+                                                    <span className={`inline-flex items-center mt-2 px-2 py-0.5 rounded text-xs font-semibold ${user.role === 'admin'
+                                                        ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
+                                                        : 'bg-ui-accent-primary/20 text-ui-accent-primary'
+                                                        }`}>
+                                                        {user.role.toUpperCase()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                            {/* Theme Grid */}
-                                            <div className="grid grid-cols-5 gap-3">
-                                                {THEMES.filter(t => t.category === themeCategory).map((t) => (
-                                                    <button
-                                                        key={t.id}
-                                                        onClick={() => setTheme(t.id)}
-                                                        className={`group relative rounded-xl border-2 transition-all hover:scale-[1.02] overflow-hidden ${theme === t.id
-                                                            ? 'border-ui-accent-primary ring-2 ring-ui-accent-primary/20'
-                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
-                                                            }`}
+                                    {/* Actions */}
+                                    <div className="space-y-2">
+                                        {user?.role === 'admin' && onAdminClick && (
+                                            <button
+                                                onClick={onAdminClick}
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white rounded-lg text-sm font-medium transition-colors"
+                                            >
+                                                <MdShield className="w-4 h-4" />
+                                                Admin Panel
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={onLogout}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-sm font-medium transition-all"
+                                        >
+                                            <MdLogout className="w-4 h-4" />
+                                            Logout
+                                        </button>
+                                    </div>
+                                </div>
+                                        </div>
+                                    )}
+
+                                    {/* Appearance View */}
+                                    {activeView === 'appearance' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Appearance</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Themes, colors, and visual preferences</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                    <Subsection title="Theme">
+                                        {/* Category Toggle */}
+                                        <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg w-fit">
+                                            <button
+                                                onClick={() => setThemeCategory('dark')}
+                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'dark'
+                                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                Dark
+                                            </button>
+                                            <button
+                                                onClick={() => setThemeCategory('light')}
+                                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${themeCategory === 'light'
+                                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                Light
+                                            </button>
+                                        </div>
+
+                                        {/* Theme Grid */}
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {THEMES.filter(t => t.category === themeCategory).map((t) => (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => setTheme(t.id)}
+                                                    className={`group relative rounded-lg border-2 transition-all hover:scale-[1.02] overflow-hidden ${theme === t.id
+                                                        ? 'border-ui-accent-primary ring-2 ring-ui-accent-primary/20'
+                                                        : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                        }`}
+                                                >
+                                                    <div
+                                                        className="aspect-[4/3] p-1.5 flex flex-col gap-1"
+                                                        style={{ backgroundColor: t.colors[2] }}
                                                     >
-                                                        <div
-                                                            className="aspect-[4/3] p-2 flex flex-col gap-1.5"
-                                                            style={{ backgroundColor: t.colors[2] }}
-                                                        >
-                                                            <div className="flex gap-1">
-                                                                <div className="h-1.5 w-6 rounded-full" style={{ backgroundColor: t.colors[0] }} />
-                                                                <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: t.colors[1] }} />
-                                                            </div>
-                                                            <div className="flex-1 flex items-end gap-0.5 pt-1">
-                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '40%' }} />
-                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '70%' }} />
-                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '55%' }} />
-                                                                <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '85%' }} />
-                                                            </div>
+                                                        <div className="flex gap-0.5">
+                                                            <div className="h-1 w-4 rounded-full" style={{ backgroundColor: t.colors[0] }} />
+                                                            <div className="h-1 w-1 rounded-full" style={{ backgroundColor: t.colors[1] }} />
                                                         </div>
-                                                        <div className="px-2 py-1.5 bg-ui-bg-secondary/50 flex items-center justify-between gap-1">
-                                                            <span className="text-xs font-medium text-ui-text-primary truncate">{t.name}</span>
-                                                            {theme === t.id && (
-                                                                <MdCheck className="w-3.5 h-3.5 text-ui-accent-primary flex-shrink-0" />
-                                                            )}
+                                                        <div className="flex-1 flex items-end gap-0.5">
+                                                            <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '40%' }} />
+                                                            <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '70%' }} />
+                                                            <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[0], height: '55%' }} />
+                                                            <div className="flex-1 rounded-t" style={{ backgroundColor: t.colors[1], height: '85%' }} />
                                                         </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Visual Settings */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Visual</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Animation and display settings</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Animations"
-                                                    description="Smooth transitions and effects"
-                                                    enabled={settings.animations}
-                                                    onChange={(val) => updateSetting('animations', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Compact Mode"
-                                                    description="Reduce padding for denser layouts"
-                                                    enabled={settings.compactMode}
-                                                    onChange={(val) => updateSetting('compactMode', val)}
-                                                />
-                                                <SelectSetting
-                                                    label="Font Size"
-                                                    description="Base font size for the dashboard"
-                                                    value={settings.fontSize}
-                                                    onChange={(val) => updateSetting('fontSize', val as 'small' | 'medium' | 'large')}
-                                                    options={[
-                                                        { value: 'small', label: 'Small' },
-                                                        { value: 'medium', label: 'Medium' },
-                                                        { value: 'large', label: 'Large' },
-                                                    ]}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Date & Time Section */}
-                                {activeSection === 'datetime' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Regional Settings</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Configure how dates and times are displayed</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <SelectSetting
-                                                    label="Timezone"
-                                                    description="Display times in this timezone"
-                                                    value={settings.timezone}
-                                                    onChange={(val) => updateSetting('timezone', val as any)}
-                                                    options={TIMEZONE_OPTIONS.map(tz => ({
-                                                        value: tz.value,
-                                                        label: tz.label,
-                                                    }))}
-                                                />
-                                                <SelectSetting
-                                                    label="Date Format"
-                                                    description="How dates are displayed"
-                                                    value={settings.dateFormat}
-                                                    onChange={(val) => updateSetting('dateFormat', val as any)}
-                                                    options={DATE_FORMAT_OPTIONS.map(df => ({
-                                                        value: df.value,
-                                                        label: `${df.label} (${df.example})`,
-                                                    }))}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Clock</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Clock widget preferences</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <div className="flex items-center justify-between p-4">
-                                                    <div>
-                                                        <div className="text-sm font-medium text-ui-text-primary">Clock Format</div>
-                                                        <div className="text-xs text-ui-text-secondary">12-hour or 24-hour time</div>
                                                     </div>
-                                                    <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg">
-                                                        <button
-                                                            onClick={() => updateSetting('clockFormat', '12h')}
-                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${settings.clockFormat === '12h'
-                                                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                                : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                                }`}
-                                                        >
-                                                            12h
-                                                        </button>
-                                                        <button
-                                                            onClick={() => updateSetting('clockFormat', '24h')}
-                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${settings.clockFormat === '24h'
-                                                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                                : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                                }`}
-                                                        >
-                                                            24h
-                                                        </button>
+                                                    <div className="px-2 py-1 bg-ui-bg-secondary/50 flex items-center justify-between gap-1">
+                                                        <span className="text-[10px] font-medium text-ui-text-primary truncate">{t.name}</span>
+                                                        {theme === t.id && (
+                                                            <MdCheck className="w-3 h-3 text-ui-accent-primary flex-shrink-0" />
+                                                        )}
                                                     </div>
-                                                </div>
-                                                <ToggleSetting
-                                                    label="Show Seconds"
-                                                    description="Display seconds in clock widgets"
-                                                    enabled={settings.showSeconds}
-                                                    onChange={(val) => updateSetting('showSeconds', val)}
-                                                />
-                                            </div>
+                                                </button>
+                                            ))}
                                         </div>
-                                    </div>
-                                )}
+                                    </Subsection>
 
-                                {/* Behavior Section */}
-                                {activeSection === 'behavior' && (
-                                    <div className="space-y-6">
-                                        {/* Dashboard */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dashboard</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Layout and save behavior</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Auto-save Layout"
-                                                    description="Save widget positions automatically"
-                                                    enabled={settings.autoSave}
-                                                    onChange={(val) => updateSetting('autoSave', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Confirm Widget Removal"
-                                                    description="Ask before removing widgets"
-                                                    enabled={settings.confirmDelete}
-                                                    onChange={(val) => updateSetting('confirmDelete', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Auto-compact Layout"
-                                                    description="Fill gaps when widgets are removed"
-                                                    enabled={settings.autoCompact}
-                                                    onChange={(val) => updateSetting('autoCompact', val)}
-                                                />
-                                            </div>
+                                    <Subsection title="Display">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Animations"
+                                                description="Smooth transitions and effects"
+                                                enabled={settings.animations}
+                                                onChange={(val) => updateSetting('animations', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Compact Mode"
+                                                description="Reduce padding for denser layouts"
+                                                enabled={settings.compactMode}
+                                                onChange={(val) => updateSetting('compactMode', val)}
+                                            />
+                                            <SelectSetting
+                                                label="Font Size"
+                                                description="Base font size for the dashboard"
+                                                value={settings.fontSize}
+                                                onChange={(val) => updateSetting('fontSize', val as 'small' | 'medium' | 'large')}
+                                                options={[
+                                                    { value: 'small', label: 'Small' },
+                                                    { value: 'medium', label: 'Medium' },
+                                                    { value: 'large', label: 'Large' },
+                                                ]}
+                                            />
                                         </div>
-
-                                        {/* Widgets */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Widgets</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Widget refresh and display</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Refresh Indicators"
-                                                    description="Show countdown rings on widgets"
-                                                    enabled={settings.showRefreshIndicators}
-                                                    onChange={(val) => updateSetting('showRefreshIndicators', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Widget Titles"
-                                                    description="Show titles in widget headers"
-                                                    enabled={settings.showWidgetTitles}
-                                                    onChange={(val) => updateSetting('showWidgetTitles', val)}
-                                                />
-                                                <SelectSetting
-                                                    label="Table Rows"
-                                                    description="Default rows in table widgets"
-                                                    value={settings.tableRowsPerPage.toString()}
-                                                    onChange={(val) => updateSetting('tableRowsPerPage', Number(val))}
-                                                    options={WIDGET_SETTINGS.tableRowsPerPage.options.map(n => ({
-                                                        value: n.toString(),
-                                                        label: `${n} rows`,
-                                                    }))}
-                                                />
-                                            </div>
+                                    </Subsection>
+                                </div>
                                         </div>
+                                    )}
 
-                                        {/* Keyboard */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Keyboard</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Keyboard shortcuts</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <ToggleSetting
-                                                    label="Enable Hotkeys"
-                                                    description="Allow keyboard shortcuts"
-                                                    enabled={settings.enableHotkeys}
-                                                    onChange={(val) => updateSetting('enableHotkeys', val)}
-                                                />
+                                    {/* Interface View */}
+                                    {activeView === 'interface' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Interface</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Dashboard layout, grid, and dock settings</p>
                                             </div>
+                                            <div className="space-y-5">
+                                    <Subsection title="Dashboard">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Auto-save Layout"
+                                                description="Save widget positions automatically"
+                                                enabled={settings.autoSave}
+                                                onChange={(val) => updateSetting('autoSave', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Confirm Widget Removal"
+                                                description="Ask before removing widgets"
+                                                enabled={settings.confirmDelete}
+                                                onChange={(val) => updateSetting('confirmDelete', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Auto-compact Layout"
+                                                description="Fill gaps when widgets are removed"
+                                                enabled={settings.autoCompact}
+                                                onChange={(val) => updateSetting('autoCompact', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Refresh Indicators"
+                                                description="Show countdown rings on widgets"
+                                                enabled={settings.showRefreshIndicators}
+                                                onChange={(val) => updateSetting('showRefreshIndicators', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Widget Titles"
+                                                description="Show titles in widget headers"
+                                                enabled={settings.showWidgetTitles}
+                                                onChange={(val) => updateSetting('showWidgetTitles', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Enable Hotkeys"
+                                                description="Allow keyboard shortcuts"
+                                                enabled={settings.enableHotkeys}
+                                                onChange={(val) => updateSetting('enableHotkeys', val)}
+                                            />
                                         </div>
-                                    </div>
-                                )}
+                                    </Subsection>
 
-                                {/* Grid Section */}
-                                {activeSection === 'grid' && (
-                                    <div className="space-y-6">
-                                        {/* Important Notice */}
-                                        <div className="rounded-xl border-2 border-ui-accent-primary/30 bg-ui-accent-primary/5 p-4">
-                                            <div className="flex items-start gap-3">
-                                                <MdGridOn className="w-5 h-5 text-ui-accent-primary mt-0.5 flex-shrink-0" />
-                                                <div>
-                                                    <div className="text-sm font-semibold text-ui-text-primary">Grid Dimensions</div>
-                                                    <div className="text-xs text-ui-text-secondary mt-1">
-                                                        These settings are <strong>synced across all your sessions</strong>.
-                                                        All devices will use the same grid layout to prevent sync issues
-                                                        between different screen sizes.
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    <Subsection title="Grid">
+                                        {/* Info */}
+                                        <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-3">
+                                            <p className="text-xs text-ui-text-secondary leading-relaxed">
+                                                <strong className="text-ui-text-primary">Synced across sessions.</strong> All devices use the same grid to prevent layout issues.
+                                            </p>
                                         </div>
 
-                                        {/* Grid Preview */}
-                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
-                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Grid Preview</div>
-                                            <div className="relative h-32 bg-ui-bg-tertiary/30 rounded-lg overflow-hidden p-2">
-                                                {/* Grid lines */}
-                                                <div
-                                                    className="absolute inset-2 grid gap-[2px]"
-                                                    style={{
-                                                        gridTemplateColumns: `repeat(${localGridColumns}, 1fr)`,
-                                                        gridTemplateRows: `repeat(4, 1fr)`,
-                                                    }}
-                                                >
-                                                    {Array.from({ length: localGridColumns * 4 }).map((_, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="bg-ui-bg-tertiary/50 rounded-sm border border-ui-border-primary/30"
-                                                        />
-                                                    ))}
-                                                </div>
-                                                {/* Sample widget */}
-                                                <div
-                                                    className="absolute bg-ui-accent-primary/20 border-2 border-ui-accent-primary rounded-lg flex items-center justify-center"
-                                                    style={{
-                                                        left: '8px',
-                                                        top: '8px',
-                                                        width: `calc(${(3 / localGridColumns) * 100}% - 4px)`,
-                                                        height: 'calc(50% - 4px)',
-                                                    }}
-                                                >
-                                                    <span className="text-[10px] text-ui-accent-primary font-medium">3×2</span>
-                                                </div>
-                                            </div>
-                                            <div className="mt-2 text-center text-xs text-ui-text-tertiary">
-                                                {localGridColumns} columns × {localGridCellHeight}px cells
-                                            </div>
-                                        </div>
-
-                                        {/* Grid Settings */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Grid Configuration</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Adjust grid dimensions for your displays</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <SliderSetting
-                                                    label="Grid Columns"
-                                                    description="Number of horizontal grid divisions"
-                                                    value={localGridColumns}
-                                                    onChange={(val) => setLocalGridColumns(val)}
-                                                    min={GRID_SETTINGS.columns.min}
-                                                    max={GRID_SETTINGS.columns.max}
-                                                    step={GRID_SETTINGS.columns.step}
-                                                />
-                                                <SliderSetting
-                                                    label="Cell Height"
-                                                    description="Height of each grid cell"
-                                                    value={localGridCellHeight}
-                                                    onChange={(val) => setLocalGridCellHeight(val)}
-                                                    min={GRID_SETTINGS.cellHeight.min}
-                                                    max={GRID_SETTINGS.cellHeight.max}
-                                                    step={GRID_SETTINGS.cellHeight.step}
-                                                    unit="px"
-                                                />
-                                            </div>
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SliderSetting
+                                                label="Columns"
+                                                description="Number of grid columns"
+                                                value={localGridColumns}
+                                                onChange={setLocalGridColumns}
+                                                min={GRID_SETTINGS.columns.min}
+                                                max={GRID_SETTINGS.columns.max}
+                                                step={GRID_SETTINGS.columns.step}
+                                            />
+                                            <SliderSetting
+                                                label="Cell Height"
+                                                description="Height of each grid cell"
+                                                value={localGridCellHeight}
+                                                onChange={setLocalGridCellHeight}
+                                                min={GRID_SETTINGS.cellHeight.min}
+                                                max={GRID_SETTINGS.cellHeight.max}
+                                                step={GRID_SETTINGS.cellHeight.step}
+                                                unit="px"
+                                            />
                                         </div>
 
                                         {/* Apply Button */}
-                                        <div className="space-y-3">
+                                        <div className="space-y-2">
                                             <button
                                                 onClick={async () => {
-                                                    // Save the local grid settings to preferences
                                                     const { preferencesService } = await import('@/lib/preferences');
                                                     preferencesService.set('grid.columns', localGridColumns);
                                                     preferencesService.set('grid.cellHeight', localGridCellHeight);
                                                     await preferencesService.forceSync();
-
-                                                    // Reload to apply new grid settings
                                                     window.location.reload();
                                                 }}
-                                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-xl text-sm font-medium transition-colors"
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg text-sm font-semibold transition-all"
                                             >
-                                                <MdRefresh className="w-5 h-5" />
+                                                <MdRefresh className="w-4 h-4" />
                                                 Apply & Reload
                                             </button>
-                                            <p className="text-xs text-ui-text-tertiary text-center">
-                                                Grid changes require a page reload to take effect.
-                                                <br />
-                                                All your open sessions will sync to these settings.
+                                            <p className="text-[10px] text-ui-text-tertiary text-center">
+                                                Grid changes require reload
                                             </p>
                                         </div>
+                                    </Subsection>
 
-                                        {/* Reset Button */}
-                                        <button
-                                            onClick={() => {
-                                                setLocalGridColumns(GRID_SETTINGS.columns.default);
-                                                setLocalGridCellHeight(GRID_SETTINGS.cellHeight.default);
-                                            }}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
-                                        >
-                                            <MdRefresh className="w-4 h-4" />
-                                            <span className="text-sm font-medium">Reset Grid to Defaults</span>
-                                        </button>
-                                    </div>
-                                )}
+                                    {/* Dock Section with Live Preview */}
+                                    <Subsection title="Dock">
+                                        {/* Live Preview */}
+                                        <DockPreview settings={settings} />
+                                        
+                                        {/* Behavior */}
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Auto-hide Dock"
+                                                description="Hide dock until mouse approaches bottom"
+                                                enabled={settings.dockAutoHide}
+                                                onChange={(val) => updateSetting('dockAutoHide', val)}
+                                            />
+                                            <SliderSetting
+                                                label="Trigger Distance"
+                                                description="How close to bottom edge activates dock"
+                                                value={settings.dockTriggerDistance}
+                                                onChange={(val) => updateSetting('dockTriggerDistance', val)}
+                                                min={DOCK_SETTINGS.triggerDistance.min}
+                                                max={DOCK_SETTINGS.triggerDistance.max}
+                                                step={DOCK_SETTINGS.triggerDistance.step}
+                                                disabled={!settings.dockAutoHide}
+                                                unit="px"
+                                            />
+                                            <SliderSetting
+                                                label="Hide Delay"
+                                                description="Wait before hiding dock"
+                                                value={settings.dockHideDelay}
+                                                onChange={(val) => updateSetting('dockHideDelay', val)}
+                                                min={DOCK_SETTINGS.hideDelay.min}
+                                                max={DOCK_SETTINGS.hideDelay.max}
+                                                step={DOCK_SETTINGS.hideDelay.step}
+                                                disabled={!settings.dockAutoHide}
+                                                unit="ms"
+                                            />
+                                        </div>
 
-                                {/* Dock & Handles Section */}
-                                {activeSection === 'dock' && (
-                                    <div className="space-y-6">
-                                        {/* Live Dock Preview */}
-                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
-                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Live Preview</div>
-                                            <div className="relative h-20 bg-gradient-to-b from-ui-bg-tertiary/20 to-ui-bg-tertiary/50 rounded-lg overflow-hidden">
-                                                {/* Mock screen area */}
-                                                <div className="absolute inset-x-4 top-2 h-8 bg-ui-bg-tertiary/30 rounded" />
-                                                <div className="absolute inset-x-4 top-12 h-4 bg-ui-bg-tertiary/20 rounded" />
+                                        {/* Appearance */}
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SliderSetting
+                                                label="Icon Size"
+                                                description="Base size of dock icons"
+                                                value={settings.dockIconSize}
+                                                onChange={(val) => updateSetting('dockIconSize', val)}
+                                                min={DOCK_SETTINGS.iconSize.min}
+                                                max={DOCK_SETTINGS.iconSize.max}
+                                                step={DOCK_SETTINGS.iconSize.step}
+                                                unit="px"
+                                            />
+                                            <SliderSetting
+                                                label="Opacity"
+                                                description="Dock background transparency"
+                                                value={settings.dockOpacity}
+                                                onChange={(val) => updateSetting('dockOpacity', val)}
+                                                min={DOCK_SETTINGS.opacity.min}
+                                                max={DOCK_SETTINGS.opacity.max}
+                                                step={DOCK_SETTINGS.opacity.step}
+                                                unit="%"
+                                            />
+                                            <ToggleSetting
+                                                label="Active Preset Indicator"
+                                                description="Show glowing dot on active preset"
+                                                enabled={settings.dockShowActiveIndicator}
+                                                onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
+                                            />
+                                        </div>
 
-                                                {/* Preview Dock */}
-                                                <div
-                                                    className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1 px-2 py-1 rounded-lg bg-ui-bg-primary/90 border border-ui-border-primary shadow-lg"
-                                                    style={{ opacity: settings.dockOpacity / 100 }}
-                                                >
-                                                    {[1, 2, 3, 4, 5].map((i) => (
-                                                        <div
-                                                            key={i}
-                                                            className={`rounded transition-all ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
-                                                            style={{
-                                                                width: `${settings.dockIconSize / 4}px`,
-                                                                height: `${settings.dockIconSize / 4}px`,
-                                                                transform: i === 3 && settings.dockMagnification
-                                                                    ? `scale(${settings.dockMagnificationScale})`
-                                                                    : 'scale(1)',
-                                                            }}
+                                        {/* Magnification (macOS-style) */}
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Magnification"
+                                                description="macOS-style hover zoom effect"
+                                                enabled={settings.dockMagnification}
+                                                onChange={(val) => updateSetting('dockMagnification', val)}
+                                            />
+                                            <SliderSetting
+                                                label="Magnification Scale"
+                                                description="How much icons enlarge on hover"
+                                                value={settings.dockMagnificationScale}
+                                                onChange={(val) => updateSetting('dockMagnificationScale', val)}
+                                                min={DOCK_SETTINGS.magnificationScale.min}
+                                                max={DOCK_SETTINGS.magnificationScale.max}
+                                                step={DOCK_SETTINGS.magnificationScale.step}
+                                                disabled={!settings.dockMagnification}
+                                                unit="×"
+                                                decimals={1}
+                                            />
+                                        </div>
+                                    </Subsection>
+
+                                    {/* Drag Handles Section with Visual Picker */}
+                                    <Subsection title="Drag Handles">
+                                        {/* Live Preview */}
+                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 overflow-hidden">
+                                            <div className="px-3 py-2 border-b border-ui-border-primary bg-ui-bg-tertiary/30">
+                                                <span className="text-[10px] font-semibold text-ui-text-tertiary uppercase tracking-wider">Live Preview</span>
+                                            </div>
+                                            <div className="p-4">
+                                                <div className="relative h-24 bg-ui-bg-tertiary/30 rounded-lg border-2 border-ui-border-primary overflow-hidden">
+                                                    {/* Mock widget content */}
+                                                    <div className="absolute inset-4 top-10 bg-ui-bg-tertiary/40 rounded" />
+                                                    <div className="absolute left-4 right-12 bottom-4 h-3 bg-ui-bg-tertiary/30 rounded" />
+                                                    
+                                                    {/* Preview Drag Handle - Uses real handle component */}
+                                                    <div className="absolute top-0 left-0 right-0 flex justify-center py-2">
+                                                        <RealDragHandle
+                                                            style={settings.dragHandleStyle}
+                                                            size={settings.dragHandleSize}
+                                                            opacity={settings.dragHandleOpacity}
                                                         />
-                                                    ))}
-                                                </div>
-
-                                                {/* Trigger zone indicator */}
-                                                <div
-                                                    className="absolute bottom-0 left-0 right-0 bg-ui-accent-primary/10 border-t border-dashed border-ui-accent-primary/30"
-                                                    style={{ height: `${Math.min(settings.dockTriggerDistance, 60)}%` }}
-                                                >
-                                                    <span className="absolute right-2 top-1 text-[8px] text-ui-accent-primary/60">trigger zone</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Dock Behavior */}
+                                        {/* Handle Style Visual Picker */}
                                         <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock Behavior</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">How the dock shows and hides</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Auto-hide Dock"
-                                                    description="Hide dock until mouse approaches bottom"
-                                                    enabled={settings.dockAutoHide}
-                                                    onChange={(val) => updateSetting('dockAutoHide', val)}
-                                                />
-                                                <SliderSetting
-                                                    label="Trigger Distance"
-                                                    description="How close to the bottom edge (in pixels)"
-                                                    value={settings.dockTriggerDistance}
-                                                    onChange={(val) => updateSetting('dockTriggerDistance', val)}
-                                                    min={DOCK_SETTINGS.triggerDistance.min}
-                                                    max={DOCK_SETTINGS.triggerDistance.max}
-                                                    step={DOCK_SETTINGS.triggerDistance.step}
-                                                    disabled={!settings.dockAutoHide}
-                                                    unit="px"
-                                                />
-                                                <SliderSetting
-                                                    label="Hide Delay"
-                                                    description="Wait time before hiding dock"
-                                                    value={settings.dockHideDelay}
-                                                    onChange={(val) => updateSetting('dockHideDelay', val)}
-                                                    min={DOCK_SETTINGS.hideDelay.min}
-                                                    max={DOCK_SETTINGS.hideDelay.max}
-                                                    step={DOCK_SETTINGS.hideDelay.step}
-                                                    disabled={!settings.dockAutoHide}
-                                                    unit="ms"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Dock Appearance */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Dock Appearance</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Visual customization</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <SliderSetting
-                                                    label="Icon Size"
-                                                    description="Base size of dock icons"
-                                                    value={settings.dockIconSize}
-                                                    onChange={(val) => updateSetting('dockIconSize', val)}
-                                                    min={DOCK_SETTINGS.iconSize.min}
-                                                    max={DOCK_SETTINGS.iconSize.max}
-                                                    step={DOCK_SETTINGS.iconSize.step}
-                                                    unit="px"
-                                                />
-                                                <SliderSetting
-                                                    label="Dock Opacity"
-                                                    description="Background transparency"
-                                                    value={settings.dockOpacity}
-                                                    onChange={(val) => updateSetting('dockOpacity', val)}
-                                                    min={DOCK_SETTINGS.opacity.min}
-                                                    max={DOCK_SETTINGS.opacity.max}
-                                                    step={DOCK_SETTINGS.opacity.step}
-                                                    unit="%"
-                                                />
-                                                <ToggleSetting
-                                                    label="Active Preset Indicator"
-                                                    description="Show glowing dot on active preset"
-                                                    enabled={settings.dockShowActiveIndicator}
-                                                    onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Magnification */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Magnification Effect</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">macOS-style hover zoom</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Enable Magnification"
-                                                    description="Enlarge icons when hovering"
-                                                    enabled={settings.dockMagnification}
-                                                    onChange={(val) => updateSetting('dockMagnification', val)}
-                                                />
-                                                <SliderSetting
-                                                    label="Magnification Scale"
-                                                    description="How much icons enlarge"
-                                                    value={settings.dockMagnificationScale}
-                                                    onChange={(val) => updateSetting('dockMagnificationScale', val)}
-                                                    min={DOCK_SETTINGS.magnificationScale.min}
-                                                    max={DOCK_SETTINGS.magnificationScale.max}
-                                                    step={DOCK_SETTINGS.magnificationScale.step}
-                                                    disabled={!settings.dockMagnification}
-                                                    unit="×"
-                                                    decimals={1}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Divider */}
-                                        <div className="border-t border-ui-border-primary" />
-
-                                        {/* Widget Drag Handle Preview */}
-                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
-                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Handle Preview</div>
-                                            <div className="relative h-24 bg-ui-bg-tertiary/30 rounded-lg border-2 border-ui-border-primary overflow-hidden">
-                                                {/* Mock widget content */}
-                                                <div className="absolute inset-3 top-8 bg-ui-bg-tertiary/40 rounded" />
-
-                                                {/* Preview Drag Handle */}
-                                                <DragHandlePreview
-                                                    style={settings.dragHandleStyle}
-                                                    size={settings.dragHandleSize}
-                                                    opacity={settings.dragHandleOpacity}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Handle Behavior */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Handle Behavior</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">When handles appear</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Always Show Drag Handles"
-                                                    description="Keep handles visible at all times"
-                                                    enabled={settings.dragHandleAlwaysShow}
-                                                    onChange={(val) => updateSetting('dragHandleAlwaysShow', val)}
-                                                />
-                                                <SliderSetting
-                                                    label="Hover Delay"
-                                                    description="Wait time before showing handle"
-                                                    value={settings.dragHandleHoverDelay}
-                                                    onChange={(val) => updateSetting('dragHandleHoverDelay', val)}
-                                                    min={DRAG_HANDLE_SETTINGS.hoverDelay.min}
-                                                    max={DRAG_HANDLE_SETTINGS.hoverDelay.max}
-                                                    step={DRAG_HANDLE_SETTINGS.hoverDelay.step}
-                                                    disabled={settings.dragHandleAlwaysShow}
-                                                    unit="ms"
-                                                />
-                                                <ToggleSetting
-                                                    label="Show Resize Handles"
-                                                    description="Display corner handles for resizing"
-                                                    enabled={settings.showResizeHandles}
-                                                    onChange={(val) => updateSetting('showResizeHandles', val)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Handle Style */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Handle Style</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Visual appearance of drag handles</p>
-
-                                            {/* Style Selector */}
-                                            <div className="grid grid-cols-4 gap-2 mb-4">
+                                            <div className="text-xs font-medium text-ui-text-secondary mb-2">Handle Style</div>
+                                            <div className="grid grid-cols-4 gap-2">
                                                 {(['pill', 'bar', 'dots', 'minimal'] as const).map((style) => (
                                                     <button
                                                         key={style}
                                                         onClick={() => updateSetting('dragHandleStyle', style)}
-                                                        className={`relative p-3 rounded-lg border-2 transition-all ${settings.dragHandleStyle === style
-                                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10'
-                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
-                                                            }`}
+                                                        className={`relative p-3 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+                                                            settings.dragHandleStyle === style
+                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                                                : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                                        }`}
                                                     >
-                                                        <div className="h-8 flex items-center justify-center">
-                                                            <HandleStyleIcon style={style} />
+                                                        <div className="h-10 flex items-center justify-center bg-ui-bg-tertiary/50 rounded-lg">
+                                                            <RealDragHandle style={style} size="small" opacity={70} />
                                                         </div>
-                                                        <span className="text-xs font-medium text-ui-text-primary capitalize mt-1 block">
+                                                        <span className="text-[11px] font-medium text-ui-text-primary capitalize mt-1.5 block text-center">
                                                             {style}
                                                         </span>
                                                         {settings.dragHandleStyle === style && (
-                                                            <div className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-primary rounded-full" />
+                                                            <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-ui-accent-primary rounded-full" />
                                                         )}
                                                     </button>
                                                 ))}
                                             </div>
+                                        </div>
 
-                                            {/* Size Selector */}
-                                            <div className="flex items-center gap-2 p-4 rounded-xl border border-ui-border-primary mb-4">
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-medium text-ui-text-primary">Handle Size</div>
-                                                    <div className="text-xs text-ui-text-secondary">Size of the drag handle</div>
-                                                </div>
-                                                <div className="flex gap-1 p-1 bg-ui-bg-secondary rounded-lg">
-                                                    {(['small', 'medium', 'large'] as const).map((size) => (
-                                                        <button
-                                                            key={size}
-                                                            onClick={() => updateSetting('dragHandleSize', size)}
-                                                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize ${settings.dragHandleSize === size
+                                        {/* Handle Size Segmented Control */}
+                                        <div className="flex items-center justify-between p-3 rounded-lg border border-ui-border-primary bg-ui-bg-secondary/20">
+                                            <div>
+                                                <div className="text-sm font-medium text-ui-text-primary">Handle Size</div>
+                                                <div className="text-xs text-ui-text-secondary">Size of the drag handle</div>
+                                            </div>
+                                            <div className="flex gap-0.5 p-0.5 bg-ui-bg-tertiary rounded-lg">
+                                                {(['small', 'medium', 'large'] as const).map((size) => (
+                                                    <button
+                                                        key={size}
+                                                        onClick={() => updateSetting('dragHandleSize', size)}
+                                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${
+                                                            settings.dragHandleSize === size
                                                                 ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
                                                                 : 'text-ui-text-secondary hover:text-ui-text-primary'
-                                                                }`}
-                                                        >
-                                                            {size}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Opacity Slider */}
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <SliderSetting
-                                                    label="Handle Opacity"
-                                                    description="Visibility when shown"
-                                                    value={settings.dragHandleOpacity}
-                                                    onChange={(val) => updateSetting('dragHandleOpacity', val)}
-                                                    min={DRAG_HANDLE_SETTINGS.handleOpacity.min}
-                                                    max={DRAG_HANDLE_SETTINGS.handleOpacity.max}
-                                                    step={DRAG_HANDLE_SETTINGS.handleOpacity.step}
-                                                    unit="%"
-                                                />
+                                                        }`}
+                                                    >
+                                                        {size}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
 
-                                        {/* Reset Button */}
+                                        {/* Handle Settings */}
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SliderSetting
+                                                label="Handle Opacity"
+                                                description="Visibility when shown"
+                                                value={settings.dragHandleOpacity}
+                                                onChange={(val) => updateSetting('dragHandleOpacity', val)}
+                                                min={DRAG_HANDLE_SETTINGS.handleOpacity.min}
+                                                max={DRAG_HANDLE_SETTINGS.handleOpacity.max}
+                                                step={DRAG_HANDLE_SETTINGS.handleOpacity.step}
+                                                unit="%"
+                                            />
+                                            <ToggleSetting
+                                                label="Always Visible"
+                                                description="Keep handles visible at all times"
+                                                enabled={settings.dragHandleAlwaysShow}
+                                                onChange={(val) => updateSetting('dragHandleAlwaysShow', val)}
+                                            />
+                                            <SliderSetting
+                                                label="Hover Delay"
+                                                description="Wait before showing handle"
+                                                value={settings.dragHandleHoverDelay}
+                                                onChange={(val) => updateSetting('dragHandleHoverDelay', val)}
+                                                min={DRAG_HANDLE_SETTINGS.hoverDelay.min}
+                                                max={DRAG_HANDLE_SETTINGS.hoverDelay.max}
+                                                step={DRAG_HANDLE_SETTINGS.hoverDelay.step}
+                                                disabled={settings.dragHandleAlwaysShow}
+                                                unit="ms"
+                                            />
+                                            <ToggleSetting
+                                                label="Resize Handles"
+                                                description="Show corner handles for resizing"
+                                                enabled={settings.showResizeHandles}
+                                                onChange={(val) => updateSetting('showResizeHandles', val)}
+                                            />
+                                        </div>
+
+                                        {/* Reset to Defaults */}
                                         <button
                                             onClick={() => {
                                                 updateSetting('dockAutoHide', DOCK_SETTINGS.autoHide.default);
@@ -802,340 +808,281 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                 updateSetting('dragHandleStyle', DRAG_HANDLE_SETTINGS.handleStyle.default);
                                                 updateSetting('dragHandleHoverDelay', DRAG_HANDLE_SETTINGS.hoverDelay.default);
                                             }}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
                                         >
                                             <MdRefresh className="w-4 h-4" />
                                             <span className="text-sm font-medium">Reset Dock & Handles to Defaults</span>
                                         </button>
+                                    </Subsection>
+                                </div>
+                                        </div>
+                                    )}
+
+                                    {/* Data & Formatting View */}
+                                    {activeView === 'data' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Data & Formatting</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Numbers, dates, and regional settings</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                    <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-3">
+                                        <p className="text-xs text-ui-text-secondary">
+                                            <strong className="text-ui-text-primary">Global defaults.</strong> Widgets can override these in their own settings.
+                                        </p>
                                     </div>
-                                )}
 
-                                {/* Notifications Section */}
-                                {activeSection === 'notifications' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Sound</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Audio notification settings</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Sound Notifications"
-                                                    description="Play sound for important alerts"
-                                                    enabled={settings.soundEnabled}
-                                                    onChange={(val) => updateSetting('soundEnabled', val)}
-                                                />
-                                                <SliderSetting
-                                                    label="Volume"
-                                                    description="Notification volume level"
-                                                    value={settings.volume}
-                                                    onChange={(val) => updateSetting('volume', val)}
-                                                    min={0}
-                                                    max={100}
-                                                    disabled={!settings.soundEnabled}
-                                                />
-                                            </div>
+                                    <Subsection title="Regional">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SelectSetting
+                                                label="Timezone"
+                                                description="Default timezone for widgets"
+                                                value={settings.timezone}
+                                                onChange={(val) => updateSetting('timezone', val as any)}
+                                                options={TIMEZONE_OPTIONS.map(tz => ({
+                                                    value: tz.value,
+                                                    label: tz.label,
+                                                }))}
+                                            />
+                                            <SelectSetting
+                                                label="Date Format"
+                                                description="Default date format"
+                                                value={settings.dateFormat}
+                                                onChange={(val) => updateSetting('dateFormat', val as any)}
+                                                options={DATE_FORMAT_OPTIONS.map(df => ({
+                                                    value: df.value,
+                                                    label: `${df.label} (${df.example})`,
+                                                }))}
+                                            />
                                         </div>
+                                    </Subsection>
 
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Toasts</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Toast notification settings</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <SelectSetting
-                                                    label="Toast Position"
-                                                    description="Where notifications appear"
-                                                    value={settings.toastPosition}
-                                                    onChange={(val) => updateSetting('toastPosition', val as any)}
-                                                    options={NOTIFICATION_SETTINGS.toastPosition.options.map(pos => ({
-                                                        value: pos,
-                                                        label: pos.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-                                                    }))}
-                                                />
-                                                <SelectSetting
-                                                    label="Toast Duration"
-                                                    description="How long toasts stay visible"
-                                                    value={settings.toastDuration.toString()}
-                                                    onChange={(val) => updateSetting('toastDuration', Number(val))}
-                                                    options={[
-                                                        { value: '2000', label: '2 seconds' },
-                                                        { value: '4000', label: '4 seconds' },
-                                                        { value: '6000', label: '6 seconds' },
-                                                        { value: '8000', label: '8 seconds' },
-                                                    ]}
-                                                />
-                                            </div>
+                                    <Subsection title="Numbers">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SelectSetting
+                                                label="Number Format"
+                                                description="Separators and decimals"
+                                                value={settings.numberFormat}
+                                                onChange={(val) => updateSetting('numberFormat', val as any)}
+                                                options={[
+                                                    { value: 'en-US', label: 'US (1,234.56)' },
+                                                    { value: 'en-GB', label: 'UK (1,234.56)' },
+                                                    { value: 'de-DE', label: 'German (1.234,56)' },
+                                                    { value: 'fr-FR', label: 'French (1 234,56)' },
+                                                ]}
+                                            />
+                                            <SelectSetting
+                                                label="Currency Symbol"
+                                                description="Symbol for monetary values"
+                                                value={settings.currencySymbol}
+                                                onChange={(val) => updateSetting('currencySymbol', val)}
+                                                options={[
+                                                    { value: '$', label: '$ (Dollar)' },
+                                                    { value: '€', label: '€ (Euro)' },
+                                                    { value: '£', label: '£ (Pound)' },
+                                                    { value: '¥', label: '¥ (Yen)' },
+                                                ]}
+                                            />
                                         </div>
-
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Browser</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Desktop notification settings</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <ToggleSetting
-                                                    label="Desktop Notifications"
-                                                    description="Show browser notifications"
-                                                    enabled={settings.desktopNotifications}
-                                                    onChange={(val) => updateSetting('desktopNotifications', val)}
-                                                />
-                                            </div>
+                                    </Subsection>
+                                </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Data Section */}
-                                {activeSection === 'data' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Formatting</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Number and currency display</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <SelectSetting
-                                                    label="Number Format"
-                                                    description="How numbers are formatted"
-                                                    value={settings.numberFormat}
-                                                    onChange={(val) => updateSetting('numberFormat', val as any)}
-                                                    options={[
-                                                        { value: 'en-US', label: 'US (1,234.56)' },
-                                                        { value: 'en-GB', label: 'UK (1,234.56)' },
-                                                        { value: 'de-DE', label: 'German (1.234,56)' },
-                                                        { value: 'fr-FR', label: 'French (1 234,56)' },
-                                                        { value: 'es-ES', label: 'Spanish (1.234,56)' },
-                                                    ]}
-                                                />
-                                                <SelectSetting
-                                                    label="Currency Symbol"
-                                                    description="Symbol for monetary values"
-                                                    value={settings.currencySymbol}
-                                                    onChange={(val) => updateSetting('currencySymbol', val)}
-                                                    options={[
-                                                        { value: '$', label: '$ (Dollar)' },
-                                                        { value: '€', label: '€ (Euro)' },
-                                                        { value: '£', label: '£ (Pound)' },
-                                                        { value: '¥', label: '¥ (Yen)' },
-                                                    ]}
-                                                />
+                                    {/* Notifications View */}
+                                    {activeView === 'notifications' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Notifications</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Alerts, sounds, and toast settings</p>
                                             </div>
+                                            <div className="space-y-5">
+                                    <Subsection title="Sound">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Sound Notifications"
+                                                description="Play sound for alerts"
+                                                enabled={settings.soundEnabled}
+                                                onChange={(val) => updateSetting('soundEnabled', val)}
+                                            />
+                                            <SliderSetting
+                                                label="Volume"
+                                                description="Notification volume level"
+                                                value={settings.volume}
+                                                onChange={(val) => updateSetting('volume', val)}
+                                                min={0}
+                                                max={100}
+                                                disabled={!settings.soundEnabled}
+                                            />
                                         </div>
+                                    </Subsection>
 
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Performance</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Data caching settings</p>
+                                    <Subsection title="Toasts">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <SelectSetting
+                                                label="Position"
+                                                description="Where notifications appear"
+                                                value={settings.toastPosition}
+                                                onChange={(val) => updateSetting('toastPosition', val as any)}
+                                                options={NOTIFICATION_SETTINGS.toastPosition.options.map(pos => ({
+                                                    value: pos,
+                                                    label: pos.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                                                }))}
+                                            />
+                                            <SelectSetting
+                                                label="Duration"
+                                                description="How long toasts stay visible"
+                                                value={settings.toastDuration.toString()}
+                                                onChange={(val) => updateSetting('toastDuration', Number(val))}
+                                                options={[
+                                                    { value: '2000', label: '2 seconds' },
+                                                    { value: '4000', label: '4 seconds' },
+                                                    { value: '6000', label: '6 seconds' },
+                                                ]}
+                                            />
+                                        </div>
+                                    </Subsection>
+                                </div>
+                                        </div>
+                                    )}
 
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <ToggleSetting
-                                                    label="Enable Caching"
-                                                    description="Cache data locally for faster loading"
-                                                    enabled={settings.cacheEnabled}
-                                                    onChange={(val) => updateSetting('cacheEnabled', val)}
-                                                />
+                                    {/* Privacy View */}
+                                    {activeView === 'privacy' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Privacy Mode</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Hide sensitive data with one click</p>
                                             </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Privacy Section */}
-                                {activeSection === 'privacy' && (
-                                    <div className="space-y-6">
-                                        {/* Quick Toggle */}
-                                        <div className="rounded-xl border-2 border-ui-accent-secondary/30 bg-ui-accent-secondary/5 p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${privacySettings.enabled ? 'bg-ui-accent-secondary text-white' : 'bg-ui-bg-secondary text-ui-text-secondary'}`}>
-                                                        <MdVisibilityOff className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-ui-text-primary">Privacy Mode</div>
-                                                        <div className="text-xs text-ui-text-secondary">
-                                                            {privacySettings.enabled ? 'Sensitive data is hidden' : 'Showing all data'}
-                                                        </div>
+                                            <div className="space-y-5">
+                                    {/* Quick Toggle */}
+                                    <div className="rounded-lg border-2 border-ui-accent-secondary/30 bg-ui-accent-secondary/5 p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${privacySettings.enabled ? 'bg-ui-accent-secondary text-white' : 'bg-ui-bg-secondary text-ui-text-secondary'}`}>
+                                                    <MdVisibilityOff className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-semibold text-ui-text-primary">Privacy Mode</div>
+                                                    <div className="text-xs text-ui-text-secondary mt-0.5">
+                                                        {privacySettings.enabled ? 'Data is hidden' : 'Data is visible'}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={togglePrivacy}
-                                                    className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${privacySettings.enabled ? 'bg-ui-accent-secondary' : 'bg-ui-bg-tertiary'
-                                                        }`}
-                                                >
-                                                    <motion.div
-                                                        className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm"
-                                                        animate={{ x: privacySettings.enabled ? 24 : 0 }}
-                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                                    />
-                                                </button>
                                             </div>
-                                            <p className="mt-3 text-xs text-ui-text-tertiary">
-                                                Press <kbd className="px-1.5 py-0.5 bg-ui-bg-tertiary rounded text-ui-text-primary font-mono">\\</kbd> to quickly toggle privacy mode
+                                            <button
+                                                onClick={togglePrivacy}
+                                                className={`relative w-14 h-8 rounded-full transition-colors flex-shrink-0 ${privacySettings.enabled ? 'bg-ui-accent-secondary' : 'bg-ui-bg-tertiary'
+                                                    }`}
+                                            >
+                                                <motion.div
+                                                    className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-sm"
+                                                    animate={{ x: privacySettings.enabled ? 24 : 0 }}
+                                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                />
+                                            </button>
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-ui-accent-secondary/20">
+                                            <p className="text-xs text-ui-text-secondary">
+                                                Press <kbd className="px-2 py-1 bg-ui-bg-tertiary rounded border border-ui-border-primary text-ui-text-primary font-mono text-xs">\\</kbd> to toggle
                                             </p>
                                         </div>
-
-                                        {/* Obfuscation Style */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Obfuscation Style</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">How sensitive data is hidden</p>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {[
-                                                    { id: 'blur', label: 'Blur', preview: '████' },
-                                                    { id: 'redact', label: 'Redact', preview: '[REDACTED]' },
-                                                    { id: 'asterisk', label: 'Asterisk', preview: '***' },
-                                                    { id: 'placeholder', label: 'Placeholder', preview: '•••••' },
-                                                ].map((style) => (
-                                                    <button
-                                                        key={style.id}
-                                                        onClick={() => updatePrivacySetting('style', style.id as ObfuscationStyle)}
-                                                        className={`p-3 rounded-lg border-2 transition-all text-left ${privacySettings.style === style.id
-                                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10'
-                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
-                                                            }`}
-                                                    >
-                                                        <div className="text-sm font-medium text-ui-text-primary">{style.label}</div>
-                                                        <div className={`text-xs mt-1 font-mono ${style.id === 'blur' ? 'blur-sm' : ''} text-ui-text-secondary`}>
-                                                            {style.preview}
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Data Types */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Protected Data</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Choose what types of data to obfuscate</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ToggleSetting
-                                                    label="Currency & Amounts"
-                                                    description="Dollar values, prices, totals"
-                                                    enabled={privacySettings.obfuscateCurrency}
-                                                    onChange={(val) => updatePrivacySetting('obfuscateCurrency', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Customer & Vendor Names"
-                                                    description="Business names and identifiers"
-                                                    enabled={privacySettings.obfuscateNames}
-                                                    onChange={(val) => updatePrivacySetting('obfuscateNames', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Quantities & Numbers"
-                                                    description="Order quantities, counts"
-                                                    enabled={privacySettings.obfuscateNumbers}
-                                                    onChange={(val) => updatePrivacySetting('obfuscateNumbers', val)}
-                                                />
-                                                <ToggleSetting
-                                                    label="Percentages"
-                                                    description="Growth rates, distributions"
-                                                    enabled={privacySettings.obfuscatePercentages}
-                                                    onChange={(val) => updatePrivacySetting('obfuscatePercentages', val)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Display Options */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Display</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-3">Visual indicators</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <ToggleSetting
-                                                    label="Show Privacy Indicator"
-                                                    description="Display floating badge when active"
-                                                    enabled={privacySettings.showIndicator}
-                                                    onChange={(val) => updatePrivacySetting('showIndicator', val)}
-                                                />
-                                            </div>
-                                        </div>
                                     </div>
-                                )}
 
-                                {/* Shortcuts Section */}
-                                {activeSection === 'shortcuts' && (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Keyboard Shortcuts</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-4">Quick actions at your fingertips</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                <ShortcutGroup title="Navigation">
-                                                    <ShortcutItem shortcut="F" description="Open widget menu" />
-                                                    <ShortcutItem shortcut="P" description="Open preset manager" />
-                                                    <ShortcutItem shortcut="S" description="Open settings" />
-                                                </ShortcutGroup>
-
-                                                <ShortcutGroup title="Presets">
-                                                    <ShortcutItem shortcut="1-9" description="Load preset" />
-                                                    <ShortcutItem shortcut="⇧ 1-9" description="Save to preset" />
-                                                    <ShortcutItem shortcut="← →" description="Previous / next preset" />
-                                                </ShortcutGroup>
-
-                                                <ShortcutGroup title="View">
-                                                    <ShortcutItem shortcut="X" description="Toggle compact view" />
-                                                    <ShortcutItem shortcut="\\" description="Toggle privacy mode" />
-                                                    <ShortcutItem shortcut="0" description="Reload page" />
-                                                </ShortcutGroup>
-                                            </div>
+                                    <Subsection title="Protection">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                            <ToggleSetting
+                                                label="Currency & Amounts"
+                                                description="Hide dollar values and prices"
+                                                enabled={privacySettings.obfuscateCurrency}
+                                                onChange={(val) => updatePrivacySetting('obfuscateCurrency', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Names"
+                                                description="Hide customer and vendor names"
+                                                enabled={privacySettings.obfuscateNames}
+                                                onChange={(val) => updatePrivacySetting('obfuscateNames', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Numbers"
+                                                description="Hide quantities and counts"
+                                                enabled={privacySettings.obfuscateNumbers}
+                                                onChange={(val) => updatePrivacySetting('obfuscateNumbers', val)}
+                                            />
+                                            <ToggleSetting
+                                                label="Percentages"
+                                                description="Hide growth rates and distributions"
+                                                enabled={privacySettings.obfuscatePercentages}
+                                                onChange={(val) => updatePrivacySetting('obfuscatePercentages', val)}
+                                            />
                                         </div>
-                                    </div>
-                                )}
+                                    </Subsection>
 
-                                {/* Account Section */}
-                                {activeSection === 'account' && (
-                                    <div className="space-y-6">
-                                        {/* Profile Info */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Profile</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-4">Your account information</p>
-
-                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden">
-                                                <div className="p-4 flex items-center gap-4">
-                                                    <div className="w-14 h-14 rounded-full bg-ui-accent-primary/10 flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-2xl font-semibold text-ui-accent-primary">
-                                                            {user?.name?.charAt(0).toUpperCase() || 'U'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-base font-semibold text-ui-text-primary truncate">{user?.name}</div>
-                                                        <div className="text-sm text-ui-text-secondary truncate">{user?.email}</div>
-                                                        {user?.role && (
-                                                            <span className={`inline-flex items-center mt-2 px-2 py-0.5 rounded text-xs font-semibold ${user.role === 'admin'
-                                                                ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
-                                                                : 'bg-ui-accent-primary/20 text-ui-accent-primary'
-                                                                }`}>
-                                                                {user.role.toUpperCase()}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Actions</h3>
-                                            <p className="text-xs text-ui-text-secondary mb-4">Account actions</p>
-
-                                            <div className="space-y-3">
-                                                {user?.role === 'admin' && onAdminClick && (
-                                                    <button
-                                                        onClick={onAdminClick}
-                                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white rounded-xl text-sm font-medium transition-colors"
-                                                    >
-                                                        <MdShield className="w-5 h-5" />
-                                                        Open Admin Panel
-                                                    </button>
-                                                )}
+                                    {/* Obfuscation Style Visual Picker */}
+                                    <Subsection title="Obfuscation Style">
+                                        <p className="text-xs text-ui-text-tertiary mb-3">How sensitive data appears when hidden</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {(['blur', 'redact', 'asterisk', 'placeholder'] as const).map((styleId) => (
                                                 <button
-                                                    onClick={onLogout}
-                                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-xl text-sm font-medium transition-all"
+                                                    key={styleId}
+                                                    onClick={() => updatePrivacySetting('style', styleId)}
+                                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+                                                        privacySettings.style === styleId
+                                                            ? 'border-ui-accent-secondary bg-ui-accent-secondary/10 shadow-sm'
+                                                            : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                                    }`}
                                                 >
-                                                    <MdLogout className="w-5 h-5" />
-                                                    Logout
+                                                    <div className="h-8 flex items-center justify-center mb-2">
+                                                        <ObfuscationPreview style={styleId} />
+                                                    </div>
+                                                    <span className="text-xs font-medium text-ui-text-primary block text-center capitalize">
+                                                        {styleId === 'asterisk' ? 'Asterisks' : styleId}
+                                                    </span>
+                                                    {privacySettings.style === styleId && (
+                                                        <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-ui-accent-secondary rounded-full" />
+                                                    )}
                                                 </button>
-                                            </div>
+                                            ))}
                                         </div>
+                                    </Subsection>
+
+                                    <Subsection title="Display">
+                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden">
+                                            <ToggleSetting
+                                                label="Show Privacy Indicator"
+                                                description="Display floating badge when privacy mode is active"
+                                                enabled={privacySettings.showIndicator}
+                                                onChange={(val) => updatePrivacySetting('showIndicator', val)}
+                                            />
+                                        </div>
+                                    </Subsection>
+                                </div>
+                                        </div>
+                                    )}
+
+                                    {/* Keyboard Shortcuts View */}
+                                    {activeView === 'shortcuts' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Keyboard Shortcuts</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Quick actions reference</p>
+                                            </div>
+                                            <div className="space-y-4">
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <ShortcutItem shortcut="F" description="Widget menu" />
+                                        <ShortcutItem shortcut="P" description="Preset manager" />
+                                        <ShortcutItem shortcut="S" description="Settings" />
+                                        <ShortcutItem shortcut="X" description="Compact layout" />
+                                        <ShortcutItem shortcut="\\" description="Privacy mode" />
+                                        <ShortcutItem shortcut="1-9" description="Load preset" />
+                                        <ShortcutItem shortcut="⇧ 1-9" description="Save preset" />
+                                        <ShortcutItem shortcut="← →" description="Switch presets" />
+                                        <ShortcutItem shortcut="0" description="Reload page" />
                                     </div>
-                                )}
-                            </motion.div>
-                        </AnimatePresence>
+                                </div>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -1159,8 +1106,8 @@ function ToggleSetting({
 }) {
     const isEnabled = enabled ?? false;
     return (
-        <div className={`flex items-center justify-between p-4 ${disabled ? 'opacity-50' : ''}`}>
-            <div>
+        <div className={`flex items-center justify-between p-3 ${disabled ? 'opacity-50' : ''}`}>
+            <div className="flex-1 min-w-0 mr-3">
                 <div className="text-sm font-medium text-ui-text-primary">{label}</div>
                 <div className="text-xs text-ui-text-secondary">{description}</div>
             </div>
@@ -1194,8 +1141,8 @@ function SelectSetting({
     options: { value: string; label: string }[];
 }) {
     return (
-        <div className="flex items-center justify-between p-4">
-            <div className="flex-1 min-w-0 mr-4">
+        <div className="flex items-center justify-between p-3">
+            <div className="flex-1 min-w-0 mr-3">
                 <div className="text-sm font-medium text-ui-text-primary">{label}</div>
                 <div className="text-xs text-ui-text-secondary">{description}</div>
             </div>
@@ -1237,17 +1184,17 @@ function SliderSetting({
     unit?: string;
     decimals?: number;
 }) {
-    const displayValue = decimals > 0 ? value.toFixed(decimals) : value;
     const percentage = ((value - min) / (max - min)) * 100;
+    const displayValue = decimals > 0 ? value.toFixed(decimals) : value;
 
     return (
-        <div className={`p-4 ${disabled ? 'opacity-50' : ''}`}>
-            <div className="flex items-center justify-between mb-3">
-                <div>
+        <div className={`p-3 ${disabled ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-ui-text-primary">{label}</div>
                     <div className="text-xs text-ui-text-secondary">{description}</div>
                 </div>
-                <span className="text-sm font-semibold text-ui-accent-primary min-w-[4rem] text-right tabular-nums">
+                <span className="text-sm font-semibold text-ui-accent-primary ml-3 tabular-nums">
                     {displayValue}{unit}
                 </span>
             </div>
@@ -1267,108 +1214,8 @@ function SliderSetting({
                     onChange={(e) => !disabled && onChange(Number(e.target.value))}
                     disabled={disabled}
                     className={`relative w-full h-2 bg-ui-bg-tertiary rounded-lg appearance-none ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'
-                        } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-ui-accent-primary [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white`}
+                        } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-ui-accent-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white`}
                 />
-            </div>
-            <div className="flex justify-between mt-1 text-[10px] text-ui-text-tertiary">
-                <span>{min}{unit}</span>
-                <span>{max}{unit}</span>
-            </div>
-        </div>
-    );
-}
-
-// Drag Handle Preview Component
-function DragHandlePreview({
-    style,
-    size,
-    opacity
-}: {
-    style: 'pill' | 'bar' | 'dots' | 'minimal';
-    size: 'small' | 'medium' | 'large';
-    opacity: number;
-}) {
-    const sizeClasses = {
-        small: 'px-2 py-1 gap-1',
-        medium: 'px-4 py-1.5 gap-1.5',
-        large: 'px-6 py-2 gap-2',
-    };
-
-    const dotSizes = {
-        small: 'w-1 h-1',
-        medium: 'w-1.5 h-1.5',
-        large: 'w-2 h-2',
-    };
-
-    return (
-        <div
-            className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30"
-            style={{ opacity: opacity / 100 }}
-        >
-            {style === 'pill' && (
-                <div className={`flex items-center ${sizeClasses[size]}`}>
-                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
-                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
-                </div>
-            )}
-            {style === 'bar' && (
-                <div className={`${sizeClasses[size]}`}>
-                    <div className={`${size === 'small' ? 'w-8' : size === 'medium' ? 'w-12' : 'w-16'} h-1 rounded-full bg-white/80`} />
-                </div>
-            )}
-            {style === 'dots' && (
-                <div className={`flex items-center ${sizeClasses[size]}`}>
-                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
-                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
-                    <div className={`${dotSizes[size]} rounded-full bg-white/80`} />
-                </div>
-            )}
-            {style === 'minimal' && (
-                <div className={`${sizeClasses[size]}`}>
-                    <div className={`${size === 'small' ? 'w-4' : size === 'medium' ? 'w-6' : 'w-8'} h-0.5 rounded-full bg-white/60`} />
-                </div>
-            )}
-        </div>
-    );
-}
-
-// Handle Style Icon Component
-function HandleStyleIcon({ style }: { style: 'pill' | 'bar' | 'dots' | 'minimal' }) {
-    return (
-        <div className="flex items-center justify-center">
-            {style === 'pill' && (
-                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-ui-accent-primary/30">
-                    <div className="w-1.5 h-1.5 rounded-full bg-ui-accent-primary" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-ui-accent-primary" />
-                </div>
-            )}
-            {style === 'bar' && (
-                <div className="px-3 py-1 rounded-full bg-ui-accent-primary/30">
-                    <div className="w-8 h-1 rounded-full bg-ui-accent-primary" />
-                </div>
-            )}
-            {style === 'dots' && (
-                <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-ui-accent-primary/30">
-                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
-                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
-                    <div className="w-1 h-1 rounded-full bg-ui-accent-primary" />
-                </div>
-            )}
-            {style === 'minimal' && (
-                <div className="px-3 py-1 rounded-full bg-ui-accent-primary/30">
-                    <div className="w-6 h-0.5 rounded-full bg-ui-accent-primary" />
-                </div>
-            )}
-        </div>
-    );
-}
-
-function ShortcutGroup({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-        <div className="p-4">
-            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">{title}</div>
-            <div className="space-y-2">
-                {children}
             </div>
         </div>
     );
@@ -1376,7 +1223,7 @@ function ShortcutGroup({ title, children }: { title: string; children: React.Rea
 
 function ShortcutItem({ shortcut, description }: { shortcut: string; description: string }) {
     return (
-        <div className="flex items-center justify-between py-1">
+        <div className="flex items-center justify-between p-3">
             <span className="text-sm text-ui-text-primary">{description}</span>
             <kbd className="px-2.5 py-1 bg-ui-bg-tertiary text-ui-text-primary rounded-md text-xs font-mono border border-ui-border-primary min-w-[2.5rem] text-center">
                 {shortcut}

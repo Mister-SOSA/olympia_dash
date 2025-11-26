@@ -392,8 +392,8 @@ class PreferencesService {
      * Supports dot notation for nested values (e.g., 'dashboard.layout')
      * Automatically saves to server with debouncing
      */
-    set(key: string, value: any, options: { debounce?: boolean; sync?: boolean } = {}): void {
-        const { debounce = true, sync = true } = options;
+    set(key: string, value: any, options: { debounce?: boolean; sync?: boolean; notifyLocal?: boolean } = {}): void {
+        const { debounce = true, sync = true, notifyLocal = true } = options;
 
         // Update the preference value
         const keys = key.split('.');
@@ -412,8 +412,10 @@ class PreferencesService {
         // Save to cache immediately
         this.saveToCache();
 
-        // DON'T notify local subscribers - the caller already knows what changed
-        // Only remote changes (via WebSocket) should trigger subscriber notifications
+        // Notify local subscribers so other components using useSettings get updated
+        if (notifyLocal) {
+            this.changeCallbacks.forEach(cb => cb(false));
+        }
 
         // Save to server with optional debouncing
         if (sync) {
@@ -428,8 +430,8 @@ class PreferencesService {
     /**
      * Set multiple preferences at once
      */
-    setMany(preferences: Record<string, any>, options: { sync?: boolean } = {}): void {
-        const { sync = true } = options;
+    setMany(preferences: Record<string, any>, options: { sync?: boolean; notifyLocal?: boolean } = {}): void {
+        const { sync = true, notifyLocal = true } = options;
 
         // Deep merge preferences
         this.preferences = this.deepMerge(this.preferences, preferences);
@@ -437,8 +439,10 @@ class PreferencesService {
         // Save to cache immediately
         this.saveToCache();
 
-        // DON'T notify local subscribers - the caller already knows what changed
-        // Only remote changes (via WebSocket) should trigger subscriber notifications
+        // Notify local subscribers so other components using useSettings get updated
+        if (notifyLocal) {
+            this.changeCallbacks.forEach(cb => cb(false));
+        }
 
         // Save to server
         if (sync) {
