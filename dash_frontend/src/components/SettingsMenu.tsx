@@ -13,6 +13,7 @@ import {
     WIDGET_SETTINGS,
     DOCK_SETTINGS,
     DRAG_HANDLE_SETTINGS,
+    GRID_SETTINGS,
 } from "@/constants/settings";
 import {
     MdCheck,
@@ -29,6 +30,7 @@ import {
     MdVisibilityOff,
     MdDock,
     MdRefresh,
+    MdGridOn,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -38,12 +40,13 @@ interface SettingsMenuProps {
     onAdminClick?: () => void;
 }
 
-type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'dock' | 'notifications' | 'data' | 'privacy' | 'shortcuts' | 'account';
+type SettingsSection = 'appearance' | 'datetime' | 'behavior' | 'grid' | 'dock' | 'notifications' | 'data' | 'privacy' | 'shortcuts' | 'account';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
     { id: 'appearance', label: 'Appearance', icon: MdPalette },
     { id: 'datetime', label: 'Date & Time', icon: MdSchedule },
     { id: 'behavior', label: 'Behavior', icon: MdTune },
+    { id: 'grid', label: 'Grid', icon: MdGridOn },
     { id: 'dock', label: 'Dock & Handles', icon: MdDock },
     { id: 'notifications', label: 'Notifications', icon: MdNotifications },
     { id: 'data', label: 'Data', icon: MdStorage },
@@ -61,6 +64,16 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
         THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
     );
     const contentRef = useRef<HTMLDivElement>(null);
+
+    // Local state for grid settings - only saved when Apply is clicked
+    const [localGridColumns, setLocalGridColumns] = useState(settings.gridColumns);
+    const [localGridCellHeight, setLocalGridCellHeight] = useState(settings.gridCellHeight);
+
+    // Sync local state when settings load
+    useEffect(() => {
+        setLocalGridColumns(settings.gridColumns);
+        setLocalGridCellHeight(settings.gridCellHeight);
+    }, [settings.gridColumns, settings.gridCellHeight]);
 
     // Scroll to top when section changes
     useEffect(() => {
@@ -392,6 +405,128 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                     </div>
                                 )}
 
+                                {/* Grid Section */}
+                                {activeSection === 'grid' && (
+                                    <div className="space-y-6">
+                                        {/* Important Notice */}
+                                        <div className="rounded-xl border-2 border-ui-accent-primary/30 bg-ui-accent-primary/5 p-4">
+                                            <div className="flex items-start gap-3">
+                                                <MdGridOn className="w-5 h-5 text-ui-accent-primary mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <div className="text-sm font-semibold text-ui-text-primary">Grid Dimensions</div>
+                                                    <div className="text-xs text-ui-text-secondary mt-1">
+                                                        These settings are <strong>synced across all your sessions</strong>.
+                                                        All devices will use the same grid layout to prevent sync issues
+                                                        between different screen sizes.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Grid Preview */}
+                                        <div className="rounded-xl border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                            <div className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">Grid Preview</div>
+                                            <div className="relative h-32 bg-ui-bg-tertiary/30 rounded-lg overflow-hidden p-2">
+                                                {/* Grid lines */}
+                                                <div
+                                                    className="absolute inset-2 grid gap-[2px]"
+                                                    style={{
+                                                        gridTemplateColumns: `repeat(${localGridColumns}, 1fr)`,
+                                                        gridTemplateRows: `repeat(4, 1fr)`,
+                                                    }}
+                                                >
+                                                    {Array.from({ length: localGridColumns * 4 }).map((_, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="bg-ui-bg-tertiary/50 rounded-sm border border-ui-border-primary/30"
+                                                        />
+                                                    ))}
+                                                </div>
+                                                {/* Sample widget */}
+                                                <div
+                                                    className="absolute bg-ui-accent-primary/20 border-2 border-ui-accent-primary rounded-lg flex items-center justify-center"
+                                                    style={{
+                                                        left: '8px',
+                                                        top: '8px',
+                                                        width: `calc(${(3 / localGridColumns) * 100}% - 4px)`,
+                                                        height: 'calc(50% - 4px)',
+                                                    }}
+                                                >
+                                                    <span className="text-[10px] text-ui-accent-primary font-medium">3×2</span>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 text-center text-xs text-ui-text-tertiary">
+                                                {localGridColumns} columns × {localGridCellHeight}px cells
+                                            </div>
+                                        </div>
+
+                                        {/* Grid Settings */}
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-ui-text-primary mb-1">Grid Configuration</h3>
+                                            <p className="text-xs text-ui-text-secondary mb-3">Adjust grid dimensions for your displays</p>
+
+                                            <div className="rounded-xl border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                <SliderSetting
+                                                    label="Grid Columns"
+                                                    description="Number of horizontal grid divisions"
+                                                    value={localGridColumns}
+                                                    onChange={(val) => setLocalGridColumns(val)}
+                                                    min={GRID_SETTINGS.columns.min}
+                                                    max={GRID_SETTINGS.columns.max}
+                                                    step={GRID_SETTINGS.columns.step}
+                                                />
+                                                <SliderSetting
+                                                    label="Cell Height"
+                                                    description="Height of each grid cell"
+                                                    value={localGridCellHeight}
+                                                    onChange={(val) => setLocalGridCellHeight(val)}
+                                                    min={GRID_SETTINGS.cellHeight.min}
+                                                    max={GRID_SETTINGS.cellHeight.max}
+                                                    step={GRID_SETTINGS.cellHeight.step}
+                                                    unit="px"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Apply Button */}
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={async () => {
+                                                    // Save the local grid settings to preferences
+                                                    const { preferencesService } = await import('@/lib/preferences');
+                                                    preferencesService.set('grid.columns', localGridColumns);
+                                                    preferencesService.set('grid.cellHeight', localGridCellHeight);
+                                                    await preferencesService.forceSync();
+
+                                                    // Reload to apply new grid settings
+                                                    window.location.reload();
+                                                }}
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-xl text-sm font-medium transition-colors"
+                                            >
+                                                <MdRefresh className="w-5 h-5" />
+                                                Apply & Reload
+                                            </button>
+                                            <p className="text-xs text-ui-text-tertiary text-center">
+                                                Grid changes require a page reload to take effect.
+                                                <br />
+                                                All your open sessions will sync to these settings.
+                                            </p>
+                                        </div>
+
+                                        {/* Reset Button */}
+                                        <button
+                                            onClick={() => {
+                                                setLocalGridColumns(GRID_SETTINGS.columns.default);
+                                                setLocalGridCellHeight(GRID_SETTINGS.cellHeight.default);
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
+                                        >
+                                            <MdRefresh className="w-4 h-4" />
+                                            <span className="text-sm font-medium">Reset Grid to Defaults</span>
+                                        </button>
+                                    </div>
+                                )}
+
                                 {/* Dock & Handles Section */}
                                 {activeSection === 'dock' && (
                                     <div className="space-y-6">
@@ -595,8 +730,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                         key={style}
                                                         onClick={() => updateSetting('dragHandleStyle', style)}
                                                         className={`relative p-3 rounded-lg border-2 transition-all ${settings.dragHandleStyle === style
-                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10'
-                                                                : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10'
+                                                            : 'border-ui-border-primary hover:border-ui-border-secondary'
                                                             }`}
                                                     >
                                                         <div className="h-8 flex items-center justify-center">
@@ -624,8 +759,8 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                             key={size}
                                                             onClick={() => updateSetting('dragHandleSize', size)}
                                                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize ${settings.dragHandleSize === size
-                                                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                                : 'text-ui-text-secondary hover:text-ui-text-primary'
                                                                 }`}
                                                         >
                                                             {size}

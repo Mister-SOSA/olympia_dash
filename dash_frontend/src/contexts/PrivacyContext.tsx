@@ -110,7 +110,7 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
         loadSettings();
 
         // Subscribe to preference changes (for cross-session sync)
-        const unsubscribe = preferencesService.subscribe(loadSettings);
+        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => loadSettings());
         return unsubscribe;
     }, []);
 

@@ -116,6 +116,30 @@ export const DASHBOARD_SETTINGS = {
 } as const;
 
 // ============================================
+// GRID SETTINGS
+// ============================================
+export const GRID_SETTINGS = {
+    columns: {
+        key: 'grid.columns',
+        default: 11,
+        min: 4,
+        max: 16,
+        step: 1,
+        label: 'Grid Columns',
+        description: 'Number of columns in the dashboard grid',
+    },
+    cellHeight: {
+        key: 'grid.cellHeight',
+        default: 80,
+        min: 40,
+        max: 150,
+        step: 10,
+        label: 'Cell Height',
+        description: 'Height of each grid cell in pixels',
+    },
+} as const;
+
+// ============================================
 // DOCK SETTINGS
 // ============================================
 export const DOCK_SETTINGS = {
@@ -358,6 +382,7 @@ export const ALL_SETTINGS = {
     ...APPEARANCE_SETTINGS,
     ...DATETIME_SETTINGS,
     ...DASHBOARD_SETTINGS,
+    ...GRID_SETTINGS,
     ...DOCK_SETTINGS,
     ...DRAG_HANDLE_SETTINGS,
     ...WIDGET_SETTINGS,
@@ -395,6 +420,12 @@ export const SETTINGS_CATEGORIES = [
         label: 'Dashboard',
         description: 'Layout and behavior settings',
         settings: DASHBOARD_SETTINGS,
+    },
+    {
+        id: 'grid',
+        label: 'Grid',
+        description: 'Grid dimensions synced across all sessions',
+        settings: GRID_SETTINGS,
     },
     {
         id: 'dock',

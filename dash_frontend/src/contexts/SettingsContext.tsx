@@ -68,7 +68,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         loadSettings();
 
-        const unsubscribe = preferencesService.subscribe(() => {
+        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => {
             loadSettings();
         });
 

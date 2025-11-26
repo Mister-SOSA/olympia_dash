@@ -305,9 +305,34 @@ export default function Dashboard() {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        const unsubscribe = preferencesService.subscribe(() => {
-            console.log('🔄 Preferences changed, reloading dashboard...');
+        // Track initial grid settings to detect changes
+        const initialGridColumns = preferencesService.get('grid.columns', 11) as number;
+        const initialGridCellHeight = preferencesService.get('grid.cellHeight', 80) as number;
 
+        const unsubscribe = preferencesService.subscribe((isRemote: boolean) => {
+            // IGNORE local changes - state is already updated directly by the caller
+            // Only react to REMOTE changes from other sessions
+            if (!isRemote) {
+                return;
+            }
+
+            console.log('🔄 Remote preferences change detected...');
+
+            // Check for grid setting changes that require reload
+            const newGridColumns = preferencesService.get('grid.columns', 11) as number;
+            const newGridCellHeight = preferencesService.get('grid.cellHeight', 80) as number;
+
+            if (newGridColumns !== initialGridColumns || newGridCellHeight !== initialGridCellHeight) {
+                console.log('🔲 Grid settings changed from another session, reloading...');
+                console.log(`   Columns: ${initialGridColumns} → ${newGridColumns}`);
+                console.log(`   Cell Height: ${initialGridCellHeight} → ${newGridCellHeight}`);
+
+                // Auto-reload to apply new grid settings from remote session
+                window.location.reload();
+                return;
+            }
+
+            // Sync other preference changes from remote sessions
             const storedLayout = readLayoutFromStorage();
             const normalizedLayout = normalizeLayout(storedLayout);
             setLayout(normalizedLayout);
@@ -320,7 +345,7 @@ export default function Dashboard() {
             setUser(authService.getUser());
             setIsImpersonating(authService.isImpersonating());
 
-            console.log('✅ Dashboard state updated');
+            console.log('✅ Dashboard state updated from remote');
         });
 
         return unsubscribe;

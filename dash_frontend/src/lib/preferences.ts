@@ -35,7 +35,7 @@ class PreferencesService {
     private saveTimers: Map<string, NodeJS.Timeout> = new Map();
     private syncInProgress: boolean = false;
     private socket: Socket | null = null;
-    private changeCallbacks: Set<() => void> = new Set();
+    private changeCallbacks: Set<(isRemote: boolean) => void> = new Set();
     private currentUserId: number | null = null;
     private sessionCount: number = 1; // Track session count to skip broadcasts when alone
     private readonly DEBOUNCE_MS = 500;
@@ -293,8 +293,8 @@ class PreferencesService {
             this.version = data.version;
             this.saveToCache();
 
-            // Notify all subscribers
-            this.changeCallbacks.forEach(cb => cb());
+            // Notify all subscribers (isRemote=true since this came from another session)
+            this.changeCallbacks.forEach(cb => cb(true));
         });
     }
 
@@ -310,8 +310,9 @@ class PreferencesService {
 
     /**
      * Subscribe to preference changes
+     * Callback receives isRemote=true if change came from another session
      */
-    subscribe(callback: () => void): () => void {
+    subscribe(callback: (isRemote: boolean) => void): () => void {
         this.changeCallbacks.add(callback);
         return () => this.changeCallbacks.delete(callback);
     }
@@ -354,8 +355,8 @@ class PreferencesService {
         // Rejoin rooms with new impersonation state
         this.rejoinRooms();
 
-        // Notify subscribers
-        this.changeCallbacks.forEach(cb => cb());
+        // Notify subscribers (isRemote=false since this is a local user switch)
+        this.changeCallbacks.forEach(cb => cb(false));
 
         console.log(`✅ User context switched to user ${newUserId}`);
     }
@@ -411,8 +412,8 @@ class PreferencesService {
         // Save to cache immediately
         this.saveToCache();
 
-        // Notify all local subscribers immediately (for same-session updates)
-        this.changeCallbacks.forEach(cb => cb());
+        // DON'T notify local subscribers - the caller already knows what changed
+        // Only remote changes (via WebSocket) should trigger subscriber notifications
 
         // Save to server with optional debouncing
         if (sync) {
@@ -436,8 +437,8 @@ class PreferencesService {
         // Save to cache immediately
         this.saveToCache();
 
-        // Notify all local subscribers immediately (for same-session updates)
-        this.changeCallbacks.forEach(cb => cb());
+        // DON'T notify local subscribers - the caller already knows what changed
+        // Only remote changes (via WebSocket) should trigger subscriber notifications
 
         // Save to server
         if (sync) {

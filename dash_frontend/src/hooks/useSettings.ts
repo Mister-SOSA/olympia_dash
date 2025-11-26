@@ -11,6 +11,7 @@ import {
     APPEARANCE_SETTINGS,
     DATETIME_SETTINGS,
     DASHBOARD_SETTINGS,
+    GRID_SETTINGS,
     DOCK_SETTINGS,
     DRAG_HANDLE_SETTINGS,
     WIDGET_SETTINGS,
@@ -43,6 +44,10 @@ export interface UserSettings {
     autoSave: boolean;
     confirmDelete: boolean;
     autoCompact: boolean;
+
+    // Grid
+    gridColumns: number;
+    gridCellHeight: number;
 
     // Dock
     dockAutoHide: boolean;
@@ -103,6 +108,10 @@ const DEFAULT_SETTINGS: UserSettings = {
     confirmDelete: DASHBOARD_SETTINGS.confirmDelete.default,
     autoCompact: DASHBOARD_SETTINGS.autoCompact.default,
 
+    // Grid
+    gridColumns: GRID_SETTINGS.columns.default,
+    gridCellHeight: GRID_SETTINGS.cellHeight.default,
+
     // Dock
     dockAutoHide: DOCK_SETTINGS.autoHide.default,
     dockMagnification: DOCK_SETTINGS.magnification.default,
@@ -158,6 +167,9 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     autoSave: DASHBOARD_SETTINGS.autoSave.key,
     confirmDelete: DASHBOARD_SETTINGS.confirmDelete.key,
     autoCompact: DASHBOARD_SETTINGS.autoCompact.key,
+
+    gridColumns: GRID_SETTINGS.columns.key,
+    gridCellHeight: GRID_SETTINGS.cellHeight.key,
 
     dockAutoHide: DOCK_SETTINGS.autoHide.key,
     dockMagnification: DOCK_SETTINGS.magnification.key,
@@ -229,7 +241,7 @@ export function useSettings() {
     useEffect(() => {
         loadSettings();
 
-        const unsubscribe = preferencesService.subscribe(() => {
+        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => {
             loadSettings();
         });
 

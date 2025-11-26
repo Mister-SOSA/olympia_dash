@@ -39,7 +39,7 @@ export function ToasterProvider() {
         loadSettings();
 
         // Subscribe to preference changes
-        const unsubscribe = preferencesService.subscribe(() => {
+        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => {
             loadSettings();
         });
 

@@ -5,7 +5,7 @@ import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
 import { Widget } from "@/types";
-import { COLUMN_COUNT, CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "@/constants/dashboard";
+import { DEFAULT_COLUMN_COUNT, DEFAULT_CELL_HEIGHT, MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "@/constants/dashboard";
 import { getWidgetById } from "@/constants/widgets";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
@@ -15,7 +15,7 @@ import { ConfirmModal, InfoModal } from "./ui/modal";
 import { LayoutDashboard, ArrowDown } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { preferencesService } from "@/lib/preferences";
-import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS } from "@/constants/settings";
+import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
 
 export interface GridDashboardProps {
@@ -56,8 +56,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             dragHandleOpacity,
             dragHandleSize,
             dragHandleStyle,
-            dragHandleHoverDelay
+            dragHandleHoverDelay,
         } = settings;
+
+        // ✅ CRITICAL: Grid settings are read directly from preferencesService at mount time
+        // This avoids React re-render issues and ensures we get the latest saved values
+        // Changes to grid settings require a page reload to take effect
 
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
@@ -326,29 +330,19 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             if (!gridRef.current) return;
             if (gridInstance.current) return; // Prevent reinitialization
 
-            // Calculate initial cell height to make square cells while fitting viewport
-            const calculateCellHeight = () => {
-                if (!gridRef.current) return CELL_HEIGHT;
+            // ✅ CRITICAL: Read grid settings directly from preferencesService (not React state)
+            // This ensures we get the latest saved values and avoids React re-render issues
+            const columnCount = preferencesService.get(GRID_SETTINGS.columns.key, GRID_SETTINGS.columns.default) as number;
+            const cellHeight = preferencesService.get(GRID_SETTINGS.cellHeight.key, GRID_SETTINGS.cellHeight.default) as number;
 
-                const containerWidth = gridRef.current.clientWidth;
-                const viewportHeight = window.innerHeight;
+            console.log(`🔲 Initializing GridStack with ${columnCount} columns, ${cellHeight}px cell height`);
 
-                // Calculate cell height based on width (for square cells)
-                const cellHeightFromWidth = containerWidth / COLUMN_COUNT;
-
-                // Calculate max cell height that would fit approximately 8-9 rows in viewport
-                // Accounting for padding, margins, and other UI elements (~120px overhead)
-                const maxCellHeightFromHeight = (viewportHeight - 120) / 8;
-
-                // Use the smaller value to ensure grid fits reasonably in viewport
-                return Math.min(cellHeightFromWidth, maxCellHeightFromHeight);
-            };
-
-            // Initialize GridStack with square cells and responsive features
+            // Initialize GridStack with fixed column count from user settings
+            // NO responsive breakpoints - all sessions must use the same column count
             gridInstance.current = GridStack.init(
                 {
-                    cellHeight: calculateCellHeight(),
-                    column: COLUMN_COUNT,
+                    cellHeight: cellHeight,
+                    column: columnCount,
                     float: false,
                     minRow: 1,  // Minimum number of rows
 
@@ -357,19 +351,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     handle: '.widget-drag-handle',
                     handleClass: 'widget-drag-handle',
 
-                    // ✅ HIGH PRIORITY: Responsive breakpoints for mobile/tablet support
-                    columnOpts: {
-                        breakpoints: [
-                            { w: 1400, c: 11 },      // Desktop: Full 11 columns
-                            { w: 1200, c: 8 },       // Laptop: 8 columns
-                            { w: 900, c: 6 },        // Tablet landscape: 6 columns
-                            { w: 700, c: 4 },        // Tablet portrait: 4 columns
-                            { w: 500, c: 2 },        // Mobile landscape: 2 columns
-                            { w: 0, c: 1 }           // Mobile portrait: 1 column (stacked)
-                        ],
-                        breakpointForWindow: true,   // Use window size, not container
-                        layout: 'moveScale'          // Scale widgets proportionally on column change
-                    },
+                    // ✅ REMOVED: Responsive breakpoints that caused sync issues
+                    // All sessions now use the same column count from user preferences
+                    // This prevents layout corruption when clients have different aspect ratios
 
                     // Note: sizeToContent removed to allow manual vertical resizing
                     // Widgets can still set it individually via their config if needed
@@ -493,11 +477,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 gridInstance.current = null;
             };
         }, [hasAccess]);
-
-        // ✅ REMOVED: Manual cell height adjustment on resize
-        // GridStack's built-in responsive columnOpts already handle layout adjustments
-        // on window resize. Manual cellHeight updates were causing feedback loops and
-        // conflicts with GridStack's internal resize handling.
+        // ✅ NOTE: gridColumns and gridCellHeight are intentionally NOT in the dependency array
+        // They are captured at mount time via refs. Changes require a page reload to take effect.
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
         // ✅ OPTIMIZED: Only reload if widgets actually changed, not just positions
