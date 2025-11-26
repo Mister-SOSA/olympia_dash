@@ -159,64 +159,87 @@ main {
   margin: 0;
 }
 
-/* Widget Drag Handle - Apple-inspired Design */
+/* Widget Drag Handle - Edge-Activated Sliding Design */
+/* Instead of covering the title, the handle peeks from the top edge and slides down on hover */
 .widget-drag-handle {
   position: absolute;
-  top: 0.375rem;
+  top: calc(-0.7rem - 2px);
+  /* Offset by grid-stack-item-content padding-top + border */
   left: 50%;
-  transform: translateX(-50%) translateY(-6px);
+  transform: translateX(-50%) translateY(-100%);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
   padding: 6px 16px;
+  min-width: 60px;
+  /* Ensure enough width for dots */
   cursor: grab;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     background-color 0.2s ease;
-  border-radius: 14px;
-  background-color: rgba(128, 128, 128, 0.2);
-  backdrop-filter: blur(8px) saturate(180%);
-  -webkit-backdrop-filter: blur(8px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 14px 14px;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  border-top: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
   z-index: 10;
-  /* Prevent any layout shift */
   will-change: opacity, transform;
 }
 
-.widget-drag-handle::before,
+/* Top edge "peek" indicator - subtle line that hints at the handle */
+.widget-drag-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  width: 40px;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+/* Inner dots - 3 dots with generous spacing */
 .widget-drag-handle::after {
   content: '';
   width: 4px;
   height: 4px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7);
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .widget-drag-handle:hover {
-  background-color: rgba(128, 128, 128, 0.3);
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.15);
+  background-color: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
-.widget-drag-handle:hover::before,
+.widget-drag-handle:hover::before {
+  background: rgba(255, 255, 255, 0.4);
+  width: 40px;
+}
+
 .widget-drag-handle:hover::after {
   background: rgba(255, 255, 255, 0.95);
-  transform: scale(1.1);
 }
 
 .widget-drag-handle:active {
   cursor: grabbing;
-  transform: translateX(-50%) translateY(-6px) scale(0.96);
-  background-color: rgba(128, 128, 128, 0.35);
+  transform: translateX(-50%) translateY(0) scale(0.97);
+  background-color: rgba(0, 0, 0, 0.75);
 }
 
-.widget-drag-handle:active::before,
 .widget-drag-handle:active::after {
   transform: scale(0.9);
 }
@@ -307,104 +330,149 @@ main {
 
 /* Small size */
 .drag-handle-size-small .widget-drag-handle {
-  padding: 4px 10px;
-  gap: 2px;
-  border-radius: 10px;
+  padding: 4px 12px;
+  min-width: 50px;
+  border-radius: 0 0 10px 10px;
 }
 
-.drag-handle-size-small .widget-drag-handle::before,
+.drag-handle-size-small .widget-drag-handle::before {
+  width: 24px;
+  height: 2px;
+}
+
 .drag-handle-size-small .widget-drag-handle::after {
   width: 3px;
   height: 3px;
+  box-shadow:
+    -9px 0 0 rgba(255, 255, 255, 0.7),
+    9px 0 0 rgba(255, 255, 255, 0.7);
 }
 
 /* Medium size (default) */
 .drag-handle-size-medium .widget-drag-handle {
   padding: 6px 16px;
-  gap: 3px;
-  border-radius: 14px;
+  min-width: 70px;
+  border-radius: 0 0 14px 14px;
 }
 
-.drag-handle-size-medium .widget-drag-handle::before,
+.drag-handle-size-medium .widget-drag-handle::before {
+  width: 32px;
+  height: 3px;
+}
+
 .drag-handle-size-medium .widget-drag-handle::after {
   width: 4px;
   height: 4px;
+  box-shadow:
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7);
 }
 
 /* Large size */
 .drag-handle-size-large .widget-drag-handle {
   padding: 8px 24px;
-  gap: 4px;
-  border-radius: 18px;
+  min-width: 90px;
+  border-radius: 0 0 18px 18px;
 }
 
-.drag-handle-size-large .widget-drag-handle::before,
+.drag-handle-size-large .widget-drag-handle::before {
+  width: 40px;
+  height: 4px;
+}
+
 .drag-handle-size-large .widget-drag-handle::after {
   width: 5px;
   height: 5px;
+  box-shadow:
+    -14px 0 0 rgba(255, 255, 255, 0.7),
+    14px 0 0 rgba(255, 255, 255, 0.7);
 }
 
 /* ============================================
    DRAG HANDLE STYLE VARIANTS
    ============================================ */
 
-/* Pill style (default) - two dots */
-.drag-handle-style-pill .widget-drag-handle::before,
-.drag-handle-style-pill .widget-drag-handle::after {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-}
+/* Pill style (default) - three dots in a row */
+/* Uses default ::after which already has 3 dots - no override needed */
 
 /* Bar style - single horizontal line */
-.drag-handle-style-bar .widget-drag-handle::before {
-  content: '';
-  width: 28px;
+.drag-handle-style-bar .widget-drag-handle::after {
+  width: 32px;
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.7);
+  box-shadow: none;
 }
 
-.drag-handle-style-bar .widget-drag-handle::after {
-  display: none;
-}
-
-/* Dots style - three dots using a single ::before with box-shadows */
+/* Dots style - five dots need wider container */
 .drag-handle-style-dots .widget-drag-handle {
-  gap: 0;
-  padding-left: 12px;
-  padding-right: 12px;
+  min-width: 100px;
 }
 
-.drag-handle-style-dots .widget-drag-handle::before {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle {
+  min-width: 70px;
+}
+
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle {
+  min-width: 100px;
+}
+
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle {
+  min-width: 120px;
+}
+
+/* Dots style - five dots - need size-specific overrides */
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle::after {
   box-shadow:
-    8px 0 0 0 rgba(255, 255, 255, 0.7),
-    16px 0 0 0 rgba(255, 255, 255, 0.7);
-  margin-right: 16px;
-  /* account for the box-shadow dots */
+    -18px 0 0 rgba(255, 255, 255, 0.7),
+    -9px 0 0 rgba(255, 255, 255, 0.7),
+    9px 0 0 rgba(255, 255, 255, 0.7),
+    18px 0 0 rgba(255, 255, 255, 0.7);
 }
 
-.drag-handle-style-dots .widget-drag-handle::after {
-  display: none;
-}
-
-.drag-handle-style-dots .widget-drag-handle:hover::before {
-  background: rgba(255, 255, 255, 0.95);
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle::after {
   box-shadow:
-    8px 0 0 0 rgba(255, 255, 255, 0.95),
-    16px 0 0 0 rgba(255, 255, 255, 0.95);
+    -24px 0 0 rgba(255, 255, 255, 0.7),
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7),
+    24px 0 0 rgba(255, 255, 255, 0.7);
 }
 
-/* Minimal style - thin subtle line */
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle::after {
+  box-shadow:
+    -28px 0 0 rgba(255, 255, 255, 0.7),
+    -14px 0 0 rgba(255, 255, 255, 0.7),
+    14px 0 0 rgba(255, 255, 255, 0.7),
+    28px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Dots hover states */
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle:hover::after {
+  box-shadow:
+    -18px 0 0 rgba(255, 255, 255, 0.95),
+    -9px 0 0 rgba(255, 255, 255, 0.95),
+    9px 0 0 rgba(255, 255, 255, 0.95),
+    18px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle:hover::after {
+  box-shadow:
+    -24px 0 0 rgba(255, 255, 255, 0.95),
+    -12px 0 0 rgba(255, 255, 255, 0.95),
+    12px 0 0 rgba(255, 255, 255, 0.95),
+    24px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle:hover::after {
+  box-shadow:
+    -28px 0 0 rgba(255, 255, 255, 0.95),
+    -14px 0 0 rgba(255, 255, 255, 0.95),
+    14px 0 0 rgba(255, 255, 255, 0.95),
+    28px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Minimal style - just the peek indicator, no body */
 .drag-handle-style-minimal .widget-drag-handle {
-  padding: 6px 12px;
+  padding: 4px 16px;
   background-color: transparent;
   border: none;
   box-shadow: none;
@@ -413,11 +481,7 @@ main {
 }
 
 .drag-handle-style-minimal .widget-drag-handle::before {
-  content: '';
-  width: 20px;
-  height: 2px;
-  border-radius: 1px;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .drag-handle-style-minimal .widget-drag-handle::after {
@@ -429,7 +493,8 @@ main {
 }
 
 .drag-handle-style-minimal .widget-drag-handle:hover::before {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.6);
+  width: 48px;
 }
 
 .widget-header {
