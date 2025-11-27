@@ -14,7 +14,10 @@ from auth.database import (
     revoke_permission,
     get_user_permissions,
     get_audit_logs,
-    log_action
+    log_action,
+    get_analytics_summary,
+    get_user_analytics,
+    cleanup_old_analytics
 )
 from auth.middleware import (
     require_role,
@@ -807,6 +810,188 @@ def export_audit_logs():
             'success': True,
             'logs': logs,
             'exported_at': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ============ Analytics Endpoints ============
+
+@admin_bp.route('/analytics', methods=['GET'])
+@require_role('admin')
+def get_analytics():
+    """Get comprehensive analytics data."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        # Clamp days to reasonable range
+        days = max(1, min(days, 365))
+        
+        analytics = get_analytics_summary(days)
+        
+        return jsonify({
+            'success': True,
+            'analytics': analytics,
+            'period_days': days,
+            'generated_at': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route('/analytics/user/<int:user_id>', methods=['GET'])
+@require_role('admin')
+def get_user_analytics_route(user_id):
+    """Get analytics for a specific user."""
+    try:
+        days = request.args.get('days', 30, type=int)
+        days = max(1, min(days, 365))
+        
+        user = get_user_by_id(user_id)
+        if not user:
+            return jsonify({
+                'success': False,
+                'error': 'User not found'
+            }), 404
+        
+        analytics = get_user_analytics(user_id, days)
+        
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user['id'],
+                'email': user['email'],
+                'name': user['name']
+            },
+            'analytics': analytics,
+            'period_days': days,
+            'generated_at': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route('/analytics/cleanup', methods=['POST'])
+@require_role('admin')
+def cleanup_analytics():
+    """Clean up old analytics data."""
+    try:
+        admin_user = request.current_user  # type: ignore
+        days_to_keep = request.args.get('days', 90, type=int)
+        days_to_keep = max(30, min(days_to_keep, 365))
+        
+        result = cleanup_old_analytics(days_to_keep)
+        
+        log_action(admin_user['id'], 'analytics_cleanup', 
+                   f'Cleaned up analytics: {result["page_views_deleted"]} page views, '
+                   f'{result["widget_interactions_deleted"]} interactions, '
+                   f'{result["sessions_deleted"]} sessions', 
+                   get_client_ip())
+        
+        return jsonify({
+            'success': True,
+            'message': 'Analytics cleanup completed',
+            'deleted': result
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route('/analytics/realtime', methods=['GET'])
+@require_role('admin')
+def get_realtime_analytics():
+    """Get real-time analytics (last 24 hours focus)."""
+    try:
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Active users in last 15 minutes (based on heartbeat)
+        cursor.execute('''
+            SELECT COUNT(DISTINCT user_id) FROM user_activity_sessions
+            WHERE last_heartbeat > datetime('now', '-15 minutes')
+            AND (session_end IS NULL OR session_end > datetime('now', '-15 minutes'))
+        ''')
+        currently_active = cursor.fetchone()[0]
+        
+        # Page views in last hour by 5 min intervals
+        cursor.execute('''
+            SELECT 
+                strftime('%H:%M', created_at, 'localtime') as time_slot,
+                COUNT(*) as count
+            FROM page_views
+            WHERE created_at > datetime('now', '-1 hour')
+            GROUP BY strftime('%Y-%m-%d %H:', created_at) || (CAST(strftime('%M', created_at) AS INTEGER) / 5 * 5)
+            ORDER BY created_at
+        ''')
+        hourly_views = [dict(row) for row in cursor.fetchall()]
+        
+        # Widget interactions in last hour
+        cursor.execute('''
+            SELECT 
+                widget_type,
+                COUNT(*) as count
+            FROM widget_interactions
+            WHERE created_at > datetime('now', '-1 hour')
+            GROUP BY widget_type
+            ORDER BY count DESC
+            LIMIT 10
+        ''')
+        recent_widget_activity = [dict(row) for row in cursor.fetchall()]
+        
+        # Recent sessions started
+        cursor.execute('''
+            SELECT 
+                uas.user_id,
+                u.email,
+                u.name,
+                uas.session_start,
+                uas.device_type
+            FROM user_activity_sessions uas
+            JOIN users u ON uas.user_id = u.id
+            WHERE uas.session_start > datetime('now', '-1 hour')
+            ORDER BY uas.session_start DESC
+            LIMIT 10
+        ''')
+        recent_sessions = [dict(row) for row in cursor.fetchall()]
+        
+        # Peak concurrent users today
+        cursor.execute('''
+            SELECT MAX(concurrent) as peak FROM (
+                SELECT 
+                    strftime('%Y-%m-%d %H', session_start) as hour,
+                    COUNT(DISTINCT user_id) as concurrent
+                FROM user_activity_sessions
+                WHERE session_start > datetime('now', '-24 hours')
+                GROUP BY hour
+            )
+        ''')
+        peak_concurrent = cursor.fetchone()[0] or 0
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'realtime': {
+                'currently_active': currently_active,
+                'hourly_views': hourly_views,
+                'recent_widget_activity': recent_widget_activity,
+                'recent_sessions': recent_sessions,
+                'peak_concurrent_today': peak_concurrent
+            },
+            'generated_at': datetime.now().isoformat()
         }), 200
     except Exception as e:
         return jsonify({

@@ -211,6 +211,77 @@ def init_db():
         )
     ''')
     
+    # ============ Analytics Tables ============
+    
+    # Page views / dashboard loads tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS page_views (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            page TEXT NOT NULL,
+            referrer TEXT,
+            user_agent TEXT,
+            device_type TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Widget interactions tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS widget_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            widget_id TEXT NOT NULL,
+            widget_type TEXT NOT NULL,
+            interaction_type TEXT NOT NULL,
+            metadata TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # User sessions tracking (active time, not auth sessions)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_activity_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            session_end TIMESTAMP,
+            last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            page_count INTEGER DEFAULT 1,
+            widget_count INTEGER DEFAULT 0,
+            device_type TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Daily aggregated statistics for faster querying
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS daily_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stat_date DATE NOT NULL,
+            metric_name TEXT NOT NULL,
+            metric_value INTEGER DEFAULT 0,
+            metadata TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(stat_date, metric_name)
+        )
+    ''')
+    
+    # Feature usage tracking
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS feature_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            feature_name TEXT NOT NULL,
+            usage_count INTEGER DEFAULT 1,
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(user_id, feature_name)
+        )
+    ''')
+    
     # Create indexes for better performance
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_refresh_token ON sessions(refresh_token)')
@@ -225,6 +296,18 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_widget_permissions_user_id ON widget_permissions(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_widget_permissions_group_id ON group_widget_permissions(group_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role)')
+    
+    # Analytics indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_page_views_user_id ON page_views(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_page_views_page ON page_views(page)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_widget_interactions_user_id ON widget_interactions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_widget_interactions_created_at ON widget_interactions(created_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_widget_interactions_widget_type ON widget_interactions(widget_type)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_activity_sessions_user_id ON user_activity_sessions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_activity_sessions_start ON user_activity_sessions(session_start)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(stat_date)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_feature_usage_user_id ON feature_usage(user_id)')
     
     conn.commit()
     conn.close()
@@ -1125,4 +1208,405 @@ def has_role_permission(user_id, permission):
     
     role_perms = get_role_permissions(user['role'])
     return permission in role_perms
+
+
+# ============ Analytics Functions ============
+
+def track_page_view(user_id, page, referrer=None, user_agent=None, device_type=None):
+    """Track a page view for analytics."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO page_views (user_id, page, referrer, user_agent, device_type)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, page, referrer, user_agent, device_type))
+    conn.commit()
+    conn.close()
+
+def track_widget_interaction(user_id, widget_id, widget_type, interaction_type, metadata=None):
+    """Track a widget interaction for analytics."""
+    conn = get_db()
+    cursor = conn.cursor()
+    metadata_json = json.dumps(metadata) if metadata else None
+    cursor.execute('''
+        INSERT INTO widget_interactions (user_id, widget_id, widget_type, interaction_type, metadata)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, widget_id, widget_type, interaction_type, metadata_json))
+    conn.commit()
+    conn.close()
+
+def start_activity_session(user_id, device_type=None):
+    """Start a new activity session for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO user_activity_sessions (user_id, device_type)
+        VALUES (?, ?)
+    ''', (user_id, device_type))
+    conn.commit()
+    session_id = cursor.lastrowid
+    conn.close()
+    return session_id
+
+def update_activity_session(session_id, page_count_increment=0, widget_count_increment=0):
+    """Update an activity session with a heartbeat."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE user_activity_sessions 
+        SET last_heartbeat = CURRENT_TIMESTAMP,
+            page_count = page_count + ?,
+            widget_count = widget_count + ?
+        WHERE id = ?
+    ''', (page_count_increment, widget_count_increment, session_id))
+    conn.commit()
+    conn.close()
+
+def end_activity_session(session_id):
+    """End an activity session."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE user_activity_sessions 
+        SET session_end = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ''', (session_id,))
+    conn.commit()
+    conn.close()
+
+def track_feature_usage(user_id, feature_name):
+    """Track feature usage for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO feature_usage (user_id, feature_name, usage_count, last_used)
+        VALUES (?, ?, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, feature_name) DO UPDATE SET
+            usage_count = usage_count + 1,
+            last_used = CURRENT_TIMESTAMP
+    ''', (user_id, feature_name))
+    conn.commit()
+    conn.close()
+
+def get_analytics_summary(days=30):
+    """Get comprehensive analytics summary."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Active users (users with page views or activity sessions)
+    cursor.execute('''
+        SELECT COUNT(DISTINCT user_id) FROM page_views
+        WHERE created_at > datetime('now', ?)
+    ''', (f'-{days} days',))
+    active_users = cursor.fetchone()[0]
+    
+    # Daily active users trend
+    cursor.execute('''
+        SELECT 
+            date(created_at) as day,
+            COUNT(DISTINCT user_id) as users
+        FROM page_views
+        WHERE created_at > datetime('now', ?)
+        GROUP BY date(created_at)
+        ORDER BY day
+    ''', (f'-{days} days',))
+    daily_active_users = [dict(row) for row in cursor.fetchall()]
+    
+    # Total page views
+    cursor.execute('''
+        SELECT COUNT(*) FROM page_views
+        WHERE created_at > datetime('now', ?)
+    ''', (f'-{days} days',))
+    total_page_views = cursor.fetchone()[0]
+    
+    # Page views by page
+    cursor.execute('''
+        SELECT page, COUNT(*) as count
+        FROM page_views
+        WHERE created_at > datetime('now', ?)
+        GROUP BY page
+        ORDER BY count DESC
+        LIMIT 10
+    ''', (f'-{days} days',))
+    page_views_by_page = [dict(row) for row in cursor.fetchall()]
+    
+    # Widget interactions
+    cursor.execute('''
+        SELECT COUNT(*) FROM widget_interactions
+        WHERE created_at > datetime('now', ?)
+    ''', (f'-{days} days',))
+    total_widget_interactions = cursor.fetchone()[0]
+    
+    # Widget interactions by type
+    cursor.execute('''
+        SELECT widget_type, COUNT(*) as count
+        FROM widget_interactions
+        WHERE created_at > datetime('now', ?)
+        GROUP BY widget_type
+        ORDER BY count DESC
+        LIMIT 15
+    ''', (f'-{days} days',))
+    widget_interactions_by_type = [dict(row) for row in cursor.fetchall()]
+    
+    # Interaction types breakdown
+    cursor.execute('''
+        SELECT interaction_type, COUNT(*) as count
+        FROM widget_interactions
+        WHERE created_at > datetime('now', ?)
+        GROUP BY interaction_type
+        ORDER BY count DESC
+    ''', (f'-{days} days',))
+    interaction_types = [dict(row) for row in cursor.fetchall()]
+    
+    # Average session duration (in minutes)
+    cursor.execute('''
+        SELECT AVG(
+            (julianday(COALESCE(session_end, last_heartbeat)) - julianday(session_start)) * 24 * 60
+        ) as avg_duration
+        FROM user_activity_sessions
+        WHERE session_start > datetime('now', ?)
+    ''', (f'-{days} days',))
+    avg_session_duration = cursor.fetchone()[0] or 0
+    
+    # Sessions by device type
+    cursor.execute('''
+        SELECT 
+            COALESCE(device_type, 'unknown') as device_type,
+            COUNT(*) as count
+        FROM user_activity_sessions
+        WHERE session_start > datetime('now', ?)
+        GROUP BY device_type
+        ORDER BY count DESC
+    ''', (f'-{days} days',))
+    sessions_by_device = [dict(row) for row in cursor.fetchall()]
+    
+    # Peak usage hours
+    cursor.execute('''
+        SELECT 
+            strftime('%H', created_at) as hour,
+            COUNT(*) as count
+        FROM page_views
+        WHERE created_at > datetime('now', ?)
+        GROUP BY hour
+        ORDER BY hour
+    ''', (f'-{days} days',))
+    hourly_activity = [dict(row) for row in cursor.fetchall()]
+    
+    # Top users by engagement
+    cursor.execute('''
+        SELECT 
+            u.id,
+            u.email,
+            u.name,
+            COUNT(DISTINCT pv.id) as page_views,
+            COUNT(DISTINCT wi.id) as widget_interactions
+        FROM users u
+        LEFT JOIN page_views pv ON u.id = pv.user_id AND pv.created_at > datetime('now', ?)
+        LEFT JOIN widget_interactions wi ON u.id = wi.user_id AND wi.created_at > datetime('now', ?)
+        GROUP BY u.id
+        HAVING page_views > 0 OR widget_interactions > 0
+        ORDER BY page_views + widget_interactions DESC
+        LIMIT 10
+    ''', (f'-{days} days', f'-{days} days'))
+    top_users = [dict(row) for row in cursor.fetchall()]
+    
+    # Feature usage summary
+    cursor.execute('''
+        SELECT 
+            feature_name,
+            SUM(usage_count) as total_uses,
+            COUNT(DISTINCT user_id) as unique_users
+        FROM feature_usage
+        WHERE last_used > datetime('now', ?)
+        GROUP BY feature_name
+        ORDER BY total_uses DESC
+        LIMIT 15
+    ''', (f'-{days} days',))
+    feature_usage = [dict(row) for row in cursor.fetchall()]
+    
+    # User retention - returning users (users active in multiple days)
+    cursor.execute('''
+        SELECT COUNT(*) FROM (
+            SELECT user_id
+            FROM page_views
+            WHERE created_at > datetime('now', ?)
+            GROUP BY user_id
+            HAVING COUNT(DISTINCT date(created_at)) > 1
+        )
+    ''', (f'-{days} days',))
+    returning_users = cursor.fetchone()[0]
+    
+    # New vs returning users
+    cursor.execute('''
+        SELECT 
+            CASE 
+                WHEN u.created_at > datetime('now', ?) THEN 'new'
+                ELSE 'returning'
+            END as user_type,
+            COUNT(DISTINCT pv.user_id) as count
+        FROM page_views pv
+        JOIN users u ON pv.user_id = u.id
+        WHERE pv.created_at > datetime('now', ?)
+        GROUP BY user_type
+    ''', (f'-{days} days', f'-{days} days'))
+    user_types = [dict(row) for row in cursor.fetchall()]
+    
+    # Weekly trends
+    cursor.execute('''
+        SELECT 
+            strftime('%Y-%W', created_at) as week,
+            COUNT(DISTINCT user_id) as users,
+            COUNT(*) as views
+        FROM page_views
+        WHERE created_at > datetime('now', ?)
+        GROUP BY week
+        ORDER BY week
+    ''', (f'-{days} days',))
+    weekly_trends = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    
+    return {
+        'active_users': active_users,
+        'daily_active_users': daily_active_users,
+        'total_page_views': total_page_views,
+        'page_views_by_page': page_views_by_page,
+        'total_widget_interactions': total_widget_interactions,
+        'widget_interactions_by_type': widget_interactions_by_type,
+        'interaction_types': interaction_types,
+        'avg_session_duration_minutes': round(avg_session_duration, 1),
+        'sessions_by_device': sessions_by_device,
+        'hourly_activity': hourly_activity,
+        'top_users': top_users,
+        'feature_usage': feature_usage,
+        'returning_users': returning_users,
+        'user_types': user_types,
+        'weekly_trends': weekly_trends
+    }
+
+def get_user_analytics(user_id, days=30):
+    """Get analytics for a specific user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # User's page views
+    cursor.execute('''
+        SELECT 
+            page,
+            COUNT(*) as count,
+            MAX(created_at) as last_visited
+        FROM page_views
+        WHERE user_id = ? AND created_at > datetime('now', ?)
+        GROUP BY page
+        ORDER BY count DESC
+    ''', (user_id, f'-{days} days'))
+    page_views = [dict(row) for row in cursor.fetchall()]
+    
+    # User's widget interactions
+    cursor.execute('''
+        SELECT 
+            widget_type,
+            interaction_type,
+            COUNT(*) as count
+        FROM widget_interactions
+        WHERE user_id = ? AND created_at > datetime('now', ?)
+        GROUP BY widget_type, interaction_type
+        ORDER BY count DESC
+    ''', (user_id, f'-{days} days'))
+    widget_interactions = [dict(row) for row in cursor.fetchall()]
+    
+    # User's sessions
+    cursor.execute('''
+        SELECT 
+            session_start,
+            session_end,
+            last_heartbeat,
+            page_count,
+            widget_count,
+            device_type,
+            (julianday(COALESCE(session_end, last_heartbeat)) - julianday(session_start)) * 24 * 60 as duration_minutes
+        FROM user_activity_sessions
+        WHERE user_id = ? AND session_start > datetime('now', ?)
+        ORDER BY session_start DESC
+        LIMIT 20
+    ''', (user_id, f'-{days} days'))
+    sessions = [dict(row) for row in cursor.fetchall()]
+    
+    # User's daily activity
+    cursor.execute('''
+        SELECT 
+            date(created_at) as day,
+            COUNT(*) as page_views
+        FROM page_views
+        WHERE user_id = ? AND created_at > datetime('now', ?)
+        GROUP BY day
+        ORDER BY day
+    ''', (user_id, f'-{days} days'))
+    daily_activity = [dict(row) for row in cursor.fetchall()]
+    
+    # User's feature usage
+    cursor.execute('''
+        SELECT feature_name, usage_count, last_used
+        FROM feature_usage
+        WHERE user_id = ?
+        ORDER BY usage_count DESC
+    ''', (user_id,))
+    feature_usage = [dict(row) for row in cursor.fetchall()]
+    
+    # Total stats for this user
+    cursor.execute('''
+        SELECT COUNT(*) FROM page_views
+        WHERE user_id = ? AND created_at > datetime('now', ?)
+    ''', (user_id, f'-{days} days'))
+    total_page_views = cursor.fetchone()[0]
+    
+    cursor.execute('''
+        SELECT COUNT(*) FROM widget_interactions
+        WHERE user_id = ? AND created_at > datetime('now', ?)
+    ''', (user_id, f'-{days} days'))
+    total_widget_interactions = cursor.fetchone()[0]
+    
+    cursor.execute('''
+        SELECT COUNT(*) FROM user_activity_sessions
+        WHERE user_id = ? AND session_start > datetime('now', ?)
+    ''', (user_id, f'-{days} days'))
+    total_sessions = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        'page_views': page_views,
+        'widget_interactions': widget_interactions,
+        'sessions': sessions,
+        'daily_activity': daily_activity,
+        'feature_usage': feature_usage,
+        'total_page_views': total_page_views,
+        'total_widget_interactions': total_widget_interactions,
+        'total_sessions': total_sessions
+    }
+
+def cleanup_old_analytics(days_to_keep=90):
+    """Clean up old analytics data to manage database size."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cutoff = f'-{days_to_keep} days'
+    
+    cursor.execute('DELETE FROM page_views WHERE created_at < datetime("now", ?)', (cutoff,))
+    page_views_deleted = cursor.rowcount
+    
+    cursor.execute('DELETE FROM widget_interactions WHERE created_at < datetime("now", ?)', (cutoff,))
+    widget_interactions_deleted = cursor.rowcount
+    
+    cursor.execute('DELETE FROM user_activity_sessions WHERE session_start < datetime("now", ?)', (cutoff,))
+    sessions_deleted = cursor.rowcount
+    
+    conn.commit()
+    conn.close()
+    
+    return {
+        'page_views_deleted': page_views_deleted,
+        'widget_interactions_deleted': widget_interactions_deleted,
+        'sessions_deleted': sessions_deleted
+    }
 

@@ -23,6 +23,7 @@ from auth.admin_routes import admin_bp
 from auth.preferences_routes import preferences_bp
 from auth.groups_routes import groups_bp
 from auth.widget_routes import widget_bp
+from auth.analytics_routes import analytics_bp
 from auth.middleware import require_auth
 from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 
@@ -191,6 +192,7 @@ app.register_blueprint(admin_bp, url_prefix='/api/auth/admin')
 app.register_blueprint(preferences_bp, url_prefix='/api')
 app.register_blueprint(groups_bp, url_prefix='/api/auth/admin/groups')
 app.register_blueprint(widget_bp, url_prefix='/api/auth/widgets')
+app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
 
 @app.route('/api/widgets', methods=['POST'])
 @require_auth

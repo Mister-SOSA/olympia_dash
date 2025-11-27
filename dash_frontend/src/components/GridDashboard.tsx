@@ -17,6 +17,7 @@ import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { preferencesService } from "@/lib/preferences";
 import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
+import { useAnalytics } from "@/contexts/AnalyticsContext";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -48,6 +49,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // ✅ FIX: Get widget permissions
         const { hasAccess } = useWidgetPermissions();
 
+        // Analytics tracking
+        const { trackWidgetInteraction } = useAnalytics();
+
         // Get settings for drag handle behavior
         const { settings } = useSettings();
         const {
@@ -76,6 +80,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Context menu actions
         const handleDeleteWidget = (widgetId: string) => {
             console.log(`Attempting to delete widget: ${widgetId}`);
+
+            // Track widget removal
+            const widgetDef = getWidgetById(widgetId);
+            trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'remove');
 
             if (gridInstance.current) {
                 // Find the widget element using data attribute
@@ -177,6 +185,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             const newSize = sizeMap[size];
             console.log(`[Resize] Requested widget ${widgetId} => ${size} (${newSize.w}x${newSize.h})`);
+
+            // Track widget resize
+            const widgetDef = getWidgetById(widgetId);
+            trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'resize', { size, w: newSize.w, h: newSize.h });
 
             // Target the outer grid-stack-item for correct resize behavior
             const widgetItem = document.querySelector(`.grid-stack-item[data-widget-id="${widgetId}"]`) as HTMLElement | null
@@ -429,16 +441,28 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 isInteracting.current = true;
             });
 
-            gridInstance.current.on("dragstop", () => {
+            gridInstance.current.on("dragstop", (_event: Event, el: HTMLElement) => {
                 isInteracting.current = false;
+                // Track widget move
+                const widgetId = el.getAttribute('data-widget-id');
+                if (widgetId) {
+                    const widgetDef = getWidgetById(widgetId);
+                    trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'move');
+                }
             });
 
             gridInstance.current.on("resizestart", () => {
                 isInteracting.current = true;
             });
 
-            gridInstance.current.on("resizestop", () => {
+            gridInstance.current.on("resizestop", (_event: Event, el: HTMLElement) => {
                 isInteracting.current = false;
+                // Track widget resize (manual drag resize)
+                const widgetId = el.getAttribute('data-widget-id');
+                if (widgetId) {
+                    const widgetDef = getWidgetById(widgetId);
+                    trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'resize');
+                }
             });
 
             // Listen to layout changes – on any change, grab the new state
