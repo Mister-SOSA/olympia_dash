@@ -351,6 +351,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     handle: '.widget-drag-handle',
                     handleClass: 'widget-drag-handle',
 
+                    // ✅ Enable resizing from all corners and edges
+                    resizable: {
+                        handles: 'e, se, s, sw, w, nw, n, ne'
+                    },
+
                     // ✅ REMOVED: Responsive breakpoints that caused sync issues
                     // All sessions now use the same column count from user preferences
                     // This prevents layout corruption when clients have different aspect ratios

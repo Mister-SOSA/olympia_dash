@@ -38,13 +38,98 @@ nextjs-portal {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* Disable context menu on grid-stack handles to prevent conflicts */
-.grid-stack-item .ui-resizable-handle {
-  pointer-events: none;
+/* ============================================
+   SIMPLE RESIZE INDICATORS - Just glow the border
+   ============================================ */
+
+/* Hide GridStack's default resize visuals */
+.grid-stack-item>.ui-resizable-handle {
+  background: none !important;
+  border: none !important;
 }
 
-.grid-stack-item:hover .ui-resizable-handle {
-  pointer-events: auto;
+.grid-stack-item>.ui-resizable-handle::before,
+.grid-stack-item>.ui-resizable-handle::after {
+  display: none !important;
+}
+
+/* Disable top edge resizing */
+.grid-stack-item>.ui-resizable-n,
+.grid-stack-item>.ui-resizable-nw,
+.grid-stack-item>.ui-resizable-ne {
+  display: none !important;
+}
+
+/* Resize handle hit areas */
+.grid-stack-item>.ui-resizable-s {
+  height: 8px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  cursor: s-resize;
+}
+
+.grid-stack-item>.ui-resizable-e {
+  width: 8px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  cursor: e-resize;
+}
+
+.grid-stack-item>.ui-resizable-w {
+  width: 8px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  cursor: w-resize;
+}
+
+.grid-stack-item>.ui-resizable-se {
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.grid-stack-item>.ui-resizable-sw {
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+/* Border glow on hover - uses theme accent colors */
+.grid-stack-item-content {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.grid-stack-item:hover .grid-stack-item-content {
+  box-shadow: 0 0 0 1px var(--ui-accent-primary-bg);
+}
+
+.grid-stack-item:has(> .ui-resizable-s:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-e:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-w:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-se:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-sw:hover) .grid-stack-item-content {
+  box-shadow:
+    0 0 0 1px var(--ui-accent-primary-border),
+    0 0 12px var(--ui-accent-primary-bg);
+}
+
+/* Active resize glow */
+.grid-stack-item.ui-resizable-resizing .grid-stack-item-content {
+  box-shadow:
+    0 0 0 2px var(--ui-accent-primary),
+    0 0 20px var(--ui-accent-primary-bg) !important;
+}
+
+/* Hide handles during drag */
+.grid-stack-item.ui-draggable-dragging>.ui-resizable-handle {
+  display: none !important;
 }
 
 /* Drag-to-Add Widget Styles */
@@ -247,6 +332,7 @@ main {
 /* Ensure grid items don't show move cursor except on handle */
 .grid-stack-item {
   cursor: default !important;
+  overflow: visible;
 }
 
 .grid-stack-item.ui-draggable-dragging {
@@ -315,8 +401,8 @@ main {
   display: none !important;
 }
 
-.hide-resize-handles .grid-stack-item:hover>.ui-resizable-handle {
-  display: none !important;
+.hide-resize-handles .grid-stack-item:hover .grid-stack-item-content {
+  box-shadow: none;
 }
 
 /* Hover delay support */
