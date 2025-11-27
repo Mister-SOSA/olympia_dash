@@ -445,6 +445,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // and propagate it to the parent and local storage.
             // ✅ DEBOUNCED: Prevent feedback loops during resize/responsive changes
             let changeTimer: NodeJS.Timeout;
+            let pendingSaveTimer: NodeJS.Timeout;
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
 
@@ -453,6 +454,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                 // Debounce change events to prevent rapid-fire updates during resize
                 clearTimeout(changeTimer);
+                clearTimeout(pendingSaveTimer);
                 changeTimer = setTimeout(() => {
                     if (!gridInstance.current) return;
                     const nodes = gridInstance.current.save() as GridStackNode[];
@@ -467,15 +469,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     externalLayoutChangeRef.current?.(updatedLayout);
 
                     // Keep flag set for additional time to cover server roundtrip
-                    setTimeout(() => {
+                    pendingSaveTimer = setTimeout(() => {
                         hasPendingSave.current = false;
-                    }, 1000); // 1 second to cover debounce + server roundtrip
-                }, 200); // Wait 200ms after last change before saving
+                    }, 2000); // 2 seconds to cover debounce + server roundtrip + state propagation
+                }, 300); // Wait 300ms after last change before saving
             });
 
             return () => {
                 // Clean up timers, React roots and destroy the grid instance.
                 clearTimeout(changeTimer);
+                clearTimeout(pendingSaveTimer);
                 widgetRoots.current.forEach((root) => root.unmount());
                 widgetRoots.current.clear();
                 gridInstance.current!.destroy(false);
@@ -512,6 +515,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 } else {
                     console.log('⏸️ Skipping layout update - pending save in progress');
                 }
+                // Update prevLayoutRef even when skipping to avoid repeated attempts
+                prevLayoutRef.current = layout;
                 return;
             }
 

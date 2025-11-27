@@ -417,7 +417,24 @@ export default function Dashboard() {
             }, 300);
         },
         [presets]
-    );    // Global keybindings: F = menu, P = presets, S = settings, X = compact, 1–9 = load/save presets
+    );    // ✅ FIX: Use refs for values that change frequently to avoid event listener re-registration
+    const presetsRef = useRef(presets);
+    const presetIndexRef = useRef(presetIndex);
+    const menuOpenRef = useRef(menuOpen);
+    const settingsOpenRef = useRef(settingsOpen);
+    const presetManagerOpenRef = useRef(presetManagerOpen);
+    const presetDialogOpenRef = useRef(presetDialogOpen);
+
+    useEffect(() => {
+        presetsRef.current = presets;
+        presetIndexRef.current = presetIndex;
+        menuOpenRef.current = menuOpen;
+        settingsOpenRef.current = settingsOpen;
+        presetManagerOpenRef.current = presetManagerOpen;
+        presetDialogOpenRef.current = presetDialogOpen;
+    }, [presets, presetIndex, menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen]);
+
+    // Global keybindings: F = menu, P = presets, S = settings, X = compact, 1–9 = load/save presets
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             // Check if hotkeys are enabled
@@ -439,8 +456,8 @@ export default function Dashboard() {
             }
 
             const key = e.key.toLowerCase();
-            const otherModalOpen = settingsOpen || presetManagerOpen || presetDialogOpen;
-            const anyModalOpen = otherModalOpen || menuOpen;
+            const otherModalOpen = settingsOpenRef.current || presetManagerOpenRef.current || presetDialogOpenRef.current;
+            const anyModalOpen = otherModalOpen || menuOpenRef.current;
 
             if (key === "f") {
                 if (otherModalOpen) {
@@ -457,7 +474,7 @@ export default function Dashboard() {
             }
 
             if (key === "p") {
-                if (menuOpen || settingsOpen || presetDialogOpen) {
+                if (menuOpenRef.current || settingsOpenRef.current || presetDialogOpenRef.current) {
                     return;
                 }
                 e.preventDefault();
@@ -466,7 +483,7 @@ export default function Dashboard() {
             }
 
             if (key === "s") {
-                if (menuOpen || presetManagerOpen || presetDialogOpen) {
+                if (menuOpenRef.current || presetManagerOpenRef.current || presetDialogOpenRef.current) {
                     return;
                 }
                 e.preventDefault();
@@ -513,7 +530,7 @@ export default function Dashboard() {
                     if (e.shiftKey) {
                         const liveLayout = readLayoutFromStorage();
                         if (liveLayout) {
-                            const newPresets = [...presets];
+                            const newPresets = [...presetsRef.current];
                             const existingPreset = newPresets[index];
                             const now = new Date().toISOString();
 
@@ -543,8 +560,8 @@ export default function Dashboard() {
                 if (anyModalOpen) {
                     return;
                 }
-                const newIndex = findNextPresetIndex(presets, presetIndex, -1);
-                if (newIndex !== presetIndex) loadPreset(newIndex);
+                const newIndex = findNextPresetIndex(presetsRef.current, presetIndexRef.current, -1);
+                if (newIndex !== presetIndexRef.current) loadPreset(newIndex);
                 return;
             }
 
@@ -552,11 +569,11 @@ export default function Dashboard() {
                 if (anyModalOpen) {
                     return;
                 }
-                const newIndex = findNextPresetIndex(presets, presetIndex, 1);
-                if (newIndex !== presetIndex) loadPreset(newIndex);
+                const newIndex = findNextPresetIndex(presetsRef.current, presetIndexRef.current, 1);
+                if (newIndex !== presetIndexRef.current) loadPreset(newIndex);
             }
         },
-        [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, presets, presetIndex, loadPreset, updateTempLayout, togglePrivacy, isPrivate]
+        [loadPreset, updateTempLayout, togglePrivacy, isPrivate]
     );
 
     useEffect(() => {
