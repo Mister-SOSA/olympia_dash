@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { ToasterProvider } from "@/components/ToasterProvider";
+import { SnowOverlay } from "@/components/SnowOverlay";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,6 +65,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <ToasterProvider />
+          <SnowOverlay />
         </Providers>
       </body>
     </html>

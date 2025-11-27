@@ -13,6 +13,7 @@ interface SettingsContextType {
     compactMode: boolean;
     fontSize: 'small' | 'medium' | 'large';
     enableHotkeys: boolean;
+    snowEffect: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -20,6 +21,7 @@ const SettingsContext = createContext<SettingsContextType>({
     compactMode: APPEARANCE_SETTINGS.compactMode.default,
     fontSize: APPEARANCE_SETTINGS.fontSize.default,
     enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.default,
+    snowEffect: APPEARANCE_SETTINGS.snowEffect.default,
 });
 
 export function useAppSettings() {
@@ -38,6 +40,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         compactMode: APPEARANCE_SETTINGS.compactMode.default,
         fontSize: APPEARANCE_SETTINGS.fontSize.default,
         enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.default,
+        snowEffect: APPEARANCE_SETTINGS.snowEffect.default,
     });
 
     const loadSettings = useCallback(() => {
@@ -61,7 +64,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             KEYBOARD_SETTINGS.enableHotkeys.default
         ) as boolean;
 
-        setSettings({ animations, compactMode, fontSize, enableHotkeys });
+        const snowEffect = preferencesService.get(
+            APPEARANCE_SETTINGS.snowEffect.key,
+            APPEARANCE_SETTINGS.snowEffect.default
+        ) as boolean;
+
+        setSettings({ animations, compactMode, fontSize, enableHotkeys, snowEffect });
     }, []);
 
     // Load settings on mount and subscribe to changes

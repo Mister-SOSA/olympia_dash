@@ -34,6 +34,12 @@ export const APPEARANCE_SETTINGS = {
         label: 'Font Size',
         description: 'Base font size for the dashboard',
     },
+    snowEffect: {
+        key: 'appearance.snowEffect',
+        default: true,
+        label: 'Christmas Mode',
+        description: 'Snow and twinkling lights',
+    },
 } as const;
 
 // ============================================

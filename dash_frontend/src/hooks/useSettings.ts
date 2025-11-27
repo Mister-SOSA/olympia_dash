@@ -33,6 +33,7 @@ export interface UserSettings {
     animations: boolean;
     compactMode: boolean;
     fontSize: FontSize;
+    snowEffect: boolean;
 
     // Date & Time
     timezone: TimezoneOption;
@@ -96,6 +97,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     animations: APPEARANCE_SETTINGS.animations.default,
     compactMode: APPEARANCE_SETTINGS.compactMode.default,
     fontSize: APPEARANCE_SETTINGS.fontSize.default,
+    snowEffect: APPEARANCE_SETTINGS.snowEffect.default,
 
     // Date & Time
     timezone: DATETIME_SETTINGS.timezone.default as TimezoneOption,
@@ -158,6 +160,7 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     animations: APPEARANCE_SETTINGS.animations.key,
     compactMode: APPEARANCE_SETTINGS.compactMode.key,
     fontSize: APPEARANCE_SETTINGS.fontSize.key,
+    snowEffect: APPEARANCE_SETTINGS.snowEffect.key,
 
     timezone: DATETIME_SETTINGS.timezone.key,
     dateFormat: DATETIME_SETTINGS.dateFormat.key,

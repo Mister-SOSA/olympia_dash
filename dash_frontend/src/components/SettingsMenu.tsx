@@ -535,6 +535,17 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                         />
                                                     </div>
                                                 </Subsection>
+
+                                                <Subsection title="Seasonal">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden">
+                                                        <ToggleSetting
+                                                            label="Christmas Mode 🎄"
+                                                            description="Snow and twinkling lights"
+                                                            enabled={settings.snowEffect}
+                                                            onChange={(val) => updateSetting('snowEffect', val)}
+                                                        />
+                                                    </div>
+                                                </Subsection>
                                             </div>
                                         </div>
                                     )}
