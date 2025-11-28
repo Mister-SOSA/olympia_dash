@@ -265,13 +265,15 @@ function Subsection({ title, children }: { title: string; children: React.ReactN
     );
 }
 
-type SettingsView = 'account' | 'appearance' | 'interface' | 'data' | 'notifications' | 'privacy' | 'presets' | 'shortcuts';
+type SettingsView = 'account' | 'appearance' | 'layout' | 'dock' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts';
 
 const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: string; badge?: string }[] = [
     { id: 'account', icon: MdPerson, label: 'Account' },
     { id: 'appearance', icon: MdPalette, label: 'Appearance' },
-    { id: 'interface', icon: MdTune, label: 'Interface', badge: 'Sync' },
-    { id: 'data', icon: MdStorage, label: 'Data & Formats' },
+    { id: 'layout', icon: MdGridOn, label: 'Layout & Grid', badge: 'Sync' },
+    { id: 'dock', icon: MdDock, label: 'Dock' },
+    { id: 'widgets', icon: MdTune, label: 'Widgets' },
+    { id: 'regional', icon: MdSchedule, label: 'Regional' },
     { id: 'notifications', icon: MdNotifications, label: 'Notifications' },
     { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy' },
     { id: 'presets', icon: MdRefresh, label: 'Presets' },
@@ -522,7 +524,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                     </div>
                                                 </Subsection>
 
-                                                <Subsection title="Display">
+                                                <Subsection title="Visual Style">
                                                     <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                         <ToggleSetting
                                                             label="Animations"
@@ -536,22 +538,6 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             enabled={settings.compactMode}
                                                             onChange={(val) => updateSetting('compactMode', val)}
                                                         />
-                                                        <SelectSetting
-                                                            label="Font Size"
-                                                            description="Base font size for the dashboard"
-                                                            value={settings.fontSize}
-                                                            onChange={(val) => updateSetting('fontSize', val as 'small' | 'medium' | 'large')}
-                                                            options={[
-                                                                { value: 'small', label: 'Small' },
-                                                                { value: 'medium', label: 'Medium' },
-                                                                { value: 'large', label: 'Large' },
-                                                            ]}
-                                                        />
-                                                    </div>
-                                                </Subsection>
-
-                                                <Subsection title="Seasonal">
-                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden">
                                                         <ToggleSetting
                                                             label="Christmas Mode 🎄"
                                                             description="Snow and twinkling lights"
@@ -560,53 +546,46 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         />
                                                     </div>
                                                 </Subsection>
+
+                                                <Subsection title="Typography">
+                                                    <div className="flex items-center justify-between p-3 rounded-lg border border-ui-border-primary bg-ui-bg-secondary/20">
+                                                        <div>
+                                                            <div className="text-sm font-medium text-ui-text-primary">Font Size</div>
+                                                            <div className="text-xs text-ui-text-secondary">Base text size across dashboard</div>
+                                                        </div>
+                                                        <div className="flex gap-0.5 p-0.5 bg-ui-bg-tertiary rounded-lg">
+                                                            {(['small', 'medium', 'large'] as const).map((size) => (
+                                                                <button
+                                                                    key={size}
+                                                                    onClick={() => updateSetting('fontSize', size)}
+                                                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${settings.fontSize === size
+                                                                        ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                                                        : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                                                        }`}
+                                                                >
+                                                                    {size}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Interface View */}
-                                    {activeView === 'interface' && (
+                                    {/* Layout & Grid View */}
+                                    {activeView === 'layout' && (
                                         <div className="space-y-6">
                                             <div>
-                                                <h3 className="text-lg font-bold text-ui-text-primary">Interface</h3>
-                                                <p className="text-sm text-ui-text-secondary mt-1">Dashboard layout, grid, and dock settings</p>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Layout & Grid</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Dashboard organization and grid configuration</p>
                                             </div>
                                             <div className="space-y-5">
-                                                <Subsection title="Dashboard">
-                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                        <ToggleSetting
-                                                            label="Auto-save Layout"
-                                                            description="Save widget positions automatically"
-                                                            enabled={settings.autoSave}
-                                                            onChange={(val) => updateSetting('autoSave', val)}
-                                                        />
-                                                        <ToggleSetting
-                                                            label="Confirm Widget Removal"
-                                                            description="Ask before removing widgets"
-                                                            enabled={settings.confirmDelete}
-                                                            onChange={(val) => updateSetting('confirmDelete', val)}
-                                                        />
-                                                        <ToggleSetting
-                                                            label="Auto-compact Layout"
-                                                            description="Fill gaps when widgets are removed"
-                                                            enabled={settings.autoCompact}
-                                                            onChange={(val) => updateSetting('autoCompact', val)}
-                                                        />
-                                                        <ToggleSetting
-                                                            label="Refresh Indicators"
-                                                            description="Show countdown rings on widgets"
-                                                            enabled={settings.showRefreshIndicators}
-                                                            onChange={(val) => updateSetting('showRefreshIndicators', val)}
-                                                        />
-                                                        <ToggleSetting
-                                                            label="Widget Titles"
-                                                            description="Show titles in widget headers"
-                                                            enabled={settings.showWidgetTitles}
-                                                            onChange={(val) => updateSetting('showWidgetTitles', val)}
-                                                        />
+                                                <Subsection title="Keyboard">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden">
                                                         <ToggleSetting
                                                             label="Enable Hotkeys"
-                                                            description="Allow keyboard shortcuts"
+                                                            description="Allow keyboard shortcuts throughout dashboard"
                                                             enabled={settings.enableHotkeys}
                                                             onChange={(val) => updateSetting('enableHotkeys', val)}
                                                         />
@@ -661,134 +640,6 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         <p className="text-[10px] text-ui-text-tertiary text-center">
                                                             Grid changes require reload
                                                         </p>
-                                                    </div>
-                                                </Subsection>
-
-                                                {/* Dock Section with Live Preview */}
-                                                <Subsection title="Dock">
-                                                    {/* Live Preview */}
-                                                    <DockPreview settings={settings} />
-
-                                                    {/* Behavior */}
-                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                        <ToggleSetting
-                                                            label="Auto-hide Dock"
-                                                            description="Hide dock until mouse approaches bottom"
-                                                            enabled={settings.dockAutoHide}
-                                                            onChange={(val) => updateSetting('dockAutoHide', val)}
-                                                        />
-                                                        <SliderSetting
-                                                            label="Trigger Distance"
-                                                            description="How close to bottom edge activates dock"
-                                                            value={settings.dockTriggerDistance}
-                                                            onChange={(val) => updateSetting('dockTriggerDistance', val)}
-                                                            min={DOCK_SETTINGS.triggerDistance.min}
-                                                            max={DOCK_SETTINGS.triggerDistance.max}
-                                                            step={DOCK_SETTINGS.triggerDistance.step}
-                                                            disabled={!settings.dockAutoHide}
-                                                            unit="px"
-                                                        />
-                                                        <SliderSetting
-                                                            label="Hide Delay"
-                                                            description="Wait before hiding dock"
-                                                            value={settings.dockHideDelay}
-                                                            onChange={(val) => updateSetting('dockHideDelay', val)}
-                                                            min={DOCK_SETTINGS.hideDelay.min}
-                                                            max={DOCK_SETTINGS.hideDelay.max}
-                                                            step={DOCK_SETTINGS.hideDelay.step}
-                                                            disabled={!settings.dockAutoHide}
-                                                            unit="ms"
-                                                        />
-                                                    </div>
-
-                                                    {/* Appearance */}
-                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                        <SliderSetting
-                                                            label="Icon Size"
-                                                            description="Base size of dock icons"
-                                                            value={settings.dockIconSize}
-                                                            onChange={(val) => updateSetting('dockIconSize', val)}
-                                                            min={DOCK_SETTINGS.iconSize.min}
-                                                            max={DOCK_SETTINGS.iconSize.max}
-                                                            step={DOCK_SETTINGS.iconSize.step}
-                                                            unit="px"
-                                                        />
-                                                        <SliderSetting
-                                                            label="Opacity"
-                                                            description="Dock background transparency"
-                                                            value={settings.dockOpacity}
-                                                            onChange={(val) => updateSetting('dockOpacity', val)}
-                                                            min={DOCK_SETTINGS.opacity.min}
-                                                            max={DOCK_SETTINGS.opacity.max}
-                                                            step={DOCK_SETTINGS.opacity.step}
-                                                            unit="%"
-                                                        />
-                                                        <ToggleSetting
-                                                            label="Active Preset Indicator"
-                                                            description="Show glowing dot on active preset"
-                                                            enabled={settings.dockShowActiveIndicator}
-                                                            onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
-                                                        />
-                                                    </div>
-
-                                                    {/* Magnification (macOS-style) */}
-                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                        <ToggleSetting
-                                                            label="Magnification"
-                                                            description="macOS-style hover zoom effect"
-                                                            enabled={settings.dockMagnification}
-                                                            onChange={(val) => updateSetting('dockMagnification', val)}
-                                                        />
-                                                        <SliderSetting
-                                                            label="Magnification Scale"
-                                                            description="How much icons enlarge on hover"
-                                                            value={settings.dockMagnificationScale}
-                                                            onChange={(val) => updateSetting('dockMagnificationScale', val)}
-                                                            min={DOCK_SETTINGS.magnificationScale.min}
-                                                            max={DOCK_SETTINGS.magnificationScale.max}
-                                                            step={DOCK_SETTINGS.magnificationScale.step}
-                                                            disabled={!settings.dockMagnification}
-                                                            unit="×"
-                                                            decimals={1}
-                                                        />
-                                                    </div>
-
-                                                    {/* Dock Toggles */}
-                                                    <div>
-                                                        <div className="text-xs font-medium text-ui-text-secondary mb-2">Visible Toggles</div>
-                                                        <p className="text-xs text-ui-text-tertiary mb-3">Choose which buttons appear in the dock</p>
-                                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                                            <ToggleSetting
-                                                                label="Add Widgets"
-                                                                description="Show widget picker button"
-                                                                enabled={settings.dockShowWidgetsToggle}
-                                                                onChange={(val) => updateSetting('dockShowWidgetsToggle', val)}
-                                                            />
-                                                            <ToggleSetting
-                                                                label="Preset Manager"
-                                                                description="Show preset management button"
-                                                                enabled={settings.dockShowPresetManager}
-                                                                onChange={(val) => updateSetting('dockShowPresetManager', val)}
-                                                            />
-                                                            <ToggleSetting
-                                                                label="Privacy Mode"
-                                                                description="Show privacy toggle button"
-                                                                enabled={settings.dockShowPrivacyToggle}
-                                                                onChange={(val) => updateSetting('dockShowPrivacyToggle', val)}
-                                                            />
-                                                            <ToggleSetting
-                                                                label="Settings"
-                                                                description="Show settings button"
-                                                                enabled={settings.dockShowSettingsToggle}
-                                                                onChange={(val) => updateSetting('dockShowSettingsToggle', val)}
-                                                            />
-                                                            <ToggleSetting
-                                                                label="Create Preset"
-                                                                description="Show add preset button when available"
-                                                                enabled={settings.dockShowCreatePreset}
-                                                                onChange={(val) => updateSetting('dockShowCreatePreset', val)}
-                                                            />
-                                                        </div>
                                                     </div>
                                                 </Subsection>
 
@@ -908,18 +759,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             updateSetting('dockAutoHide', DOCK_SETTINGS.autoHide.default);
                                                             updateSetting('dockMagnification', DOCK_SETTINGS.magnification.default);
                                                             updateSetting('dockMagnificationScale', DOCK_SETTINGS.magnificationScale.default);
-                                                            updateSetting('dockIconSize', DOCK_SETTINGS.iconSize.default);
-                                                            updateSetting('dockShowActiveIndicator', DOCK_SETTINGS.showActiveIndicator.default);
-                                                            updateSetting('dockTriggerDistance', DOCK_SETTINGS.triggerDistance.default);
-                                                            updateSetting('dockHideDelay', DOCK_SETTINGS.hideDelay.default);
-                                                            updateSetting('dockOpacity', DOCK_SETTINGS.opacity.default);
-                                                            updateSetting('dockShowWidgetsToggle', DOCK_SETTINGS.showWidgetsToggle.default);
-                                                            updateSetting('dockShowPresetManager', DOCK_SETTINGS.showPresetManager.default);
-                                                            updateSetting('dockShowPrivacyToggle', DOCK_SETTINGS.showPrivacyToggle.default);
-                                                            updateSetting('dockShowSettingsToggle', DOCK_SETTINGS.showSettingsToggle.default);
-                                                            updateSetting('dockShowCreatePreset', DOCK_SETTINGS.showCreatePreset.default);
                                                             updateSetting('dragHandleAlwaysShow', DRAG_HANDLE_SETTINGS.alwaysShow.default);
-                                                            updateSetting('showResizeHandles', DRAG_HANDLE_SETTINGS.showResizeHandles.default);
                                                             updateSetting('dragHandleOpacity', DRAG_HANDLE_SETTINGS.handleOpacity.default);
                                                             updateSetting('dragHandleSize', DRAG_HANDLE_SETTINGS.handleSize.default);
                                                             updateSetting('dragHandleStyle', DRAG_HANDLE_SETTINGS.handleStyle.default);
@@ -928,19 +768,242 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
                                                     >
                                                         <MdRefresh className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Reset Dock & Handles to Defaults</span>
+                                                        <span className="text-sm font-medium">Reset to Defaults</span>
                                                     </button>
                                                 </Subsection>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Data & Formatting View */}
-                                    {activeView === 'data' && (
+                                    {/* Dock View */}
+                                    {activeView === 'dock' && (
                                         <div className="space-y-6">
                                             <div>
-                                                <h3 className="text-lg font-bold text-ui-text-primary">Data & Formatting</h3>
-                                                <p className="text-sm text-ui-text-secondary mt-1">Numbers, dates, and regional settings</p>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Dock</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Quick access toolbar settings</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                                {/* Live Preview */}
+                                                <DockPreview settings={settings} />
+
+                                                <Subsection title="Behavior">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Auto-hide"
+                                                            description="Hide dock until mouse approaches bottom"
+                                                            enabled={settings.dockAutoHide}
+                                                            onChange={(val) => updateSetting('dockAutoHide', val)}
+                                                        />
+                                                        <SliderSetting
+                                                            label="Trigger Distance"
+                                                            description="How close to bottom edge activates dock"
+                                                            value={settings.dockTriggerDistance}
+                                                            onChange={(val) => updateSetting('dockTriggerDistance', val)}
+                                                            min={DOCK_SETTINGS.triggerDistance.min}
+                                                            max={DOCK_SETTINGS.triggerDistance.max}
+                                                            step={DOCK_SETTINGS.triggerDistance.step}
+                                                            disabled={!settings.dockAutoHide}
+                                                            unit="px"
+                                                        />
+                                                        <SliderSetting
+                                                            label="Hide Delay"
+                                                            description="Wait before hiding dock"
+                                                            value={settings.dockHideDelay}
+                                                            onChange={(val) => updateSetting('dockHideDelay', val)}
+                                                            min={DOCK_SETTINGS.hideDelay.min}
+                                                            max={DOCK_SETTINGS.hideDelay.max}
+                                                            step={DOCK_SETTINGS.hideDelay.step}
+                                                            disabled={!settings.dockAutoHide}
+                                                            unit="ms"
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Appearance">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <SliderSetting
+                                                            label="Icon Size"
+                                                            description="Base size of dock icons"
+                                                            value={settings.dockIconSize}
+                                                            onChange={(val) => updateSetting('dockIconSize', val)}
+                                                            min={DOCK_SETTINGS.iconSize.min}
+                                                            max={DOCK_SETTINGS.iconSize.max}
+                                                            step={DOCK_SETTINGS.iconSize.step}
+                                                            unit="px"
+                                                        />
+                                                        <SliderSetting
+                                                            label="Opacity"
+                                                            description="Dock background transparency"
+                                                            value={settings.dockOpacity}
+                                                            onChange={(val) => updateSetting('dockOpacity', val)}
+                                                            min={DOCK_SETTINGS.opacity.min}
+                                                            max={DOCK_SETTINGS.opacity.max}
+                                                            step={DOCK_SETTINGS.opacity.step}
+                                                            unit="%"
+                                                        />
+                                                        <ToggleSetting
+                                                            label="Active Preset Indicator"
+                                                            description="Show glowing dot on active preset"
+                                                            enabled={settings.dockShowActiveIndicator}
+                                                            onChange={(val) => updateSetting('dockShowActiveIndicator', val)}
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Magnification">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Enable Magnification"
+                                                            description="macOS-style hover zoom effect"
+                                                            enabled={settings.dockMagnification}
+                                                            onChange={(val) => updateSetting('dockMagnification', val)}
+                                                        />
+                                                        <SliderSetting
+                                                            label="Scale"
+                                                            description="How much icons enlarge on hover"
+                                                            value={settings.dockMagnificationScale}
+                                                            onChange={(val) => updateSetting('dockMagnificationScale', val)}
+                                                            min={DOCK_SETTINGS.magnificationScale.min}
+                                                            max={DOCK_SETTINGS.magnificationScale.max}
+                                                            step={DOCK_SETTINGS.magnificationScale.step}
+                                                            disabled={!settings.dockMagnification}
+                                                            unit="×"
+                                                            decimals={1}
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Dock Items">
+                                                    <p className="text-xs text-ui-text-tertiary mb-3">Choose which controls appear in your dock</p>
+
+                                                    {/* Visual Multi-Select */}
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <DockItemToggle
+                                                            icon={<MdGridOn className="w-5 h-5" />}
+                                                            label="Widgets"
+                                                            enabled={settings.dockShowWidgetsToggle}
+                                                            onChange={(val) => updateSetting('dockShowWidgetsToggle', val)}
+                                                        />
+                                                        <DockItemToggle
+                                                            icon={<MdRefresh className="w-5 h-5" />}
+                                                            label="Presets"
+                                                            enabled={settings.dockShowPresetManager}
+                                                            onChange={(val) => updateSetting('dockShowPresetManager', val)}
+                                                        />
+                                                        <DockItemToggle
+                                                            icon={<MdVisibilityOff className="w-5 h-5" />}
+                                                            label="Privacy"
+                                                            enabled={settings.dockShowPrivacyToggle}
+                                                            onChange={(val) => updateSetting('dockShowPrivacyToggle', val)}
+                                                        />
+                                                        <DockItemToggle
+                                                            icon={<MdTune className="w-5 h-5" />}
+                                                            label="Settings"
+                                                            enabled={settings.dockShowSettingsToggle}
+                                                            onChange={(val) => updateSetting('dockShowSettingsToggle', val)}
+                                                        />
+                                                    </div>
+
+                                                    {/* Additional option */}
+                                                    <div className="mt-3 rounded-lg border border-ui-border-primary overflow-hidden">
+                                                        <ToggleSetting
+                                                            label="Create Preset Button"
+                                                            description="Show when preset slots are available"
+                                                            enabled={settings.dockShowCreatePreset}
+                                                            onChange={(val) => updateSetting('dockShowCreatePreset', val)}
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                {/* Reset to Defaults */}
+                                                <button
+                                                    onClick={() => {
+                                                        updateSetting('dockAutoHide', DOCK_SETTINGS.autoHide.default);
+                                                        updateSetting('dockMagnification', DOCK_SETTINGS.magnification.default);
+                                                        updateSetting('dockMagnificationScale', DOCK_SETTINGS.magnificationScale.default);
+                                                        updateSetting('dockIconSize', DOCK_SETTINGS.iconSize.default);
+                                                        updateSetting('dockShowActiveIndicator', DOCK_SETTINGS.showActiveIndicator.default);
+                                                        updateSetting('dockTriggerDistance', DOCK_SETTINGS.triggerDistance.default);
+                                                        updateSetting('dockHideDelay', DOCK_SETTINGS.hideDelay.default);
+                                                        updateSetting('dockOpacity', DOCK_SETTINGS.opacity.default);
+                                                        updateSetting('dockShowWidgetsToggle', DOCK_SETTINGS.showWidgetsToggle.default);
+                                                        updateSetting('dockShowPresetManager', DOCK_SETTINGS.showPresetManager.default);
+                                                        updateSetting('dockShowPrivacyToggle', DOCK_SETTINGS.showPrivacyToggle.default);
+                                                        updateSetting('dockShowSettingsToggle', DOCK_SETTINGS.showSettingsToggle.default);
+                                                        updateSetting('dockShowCreatePreset', DOCK_SETTINGS.showCreatePreset.default);
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
+                                                >
+                                                    <MdRefresh className="w-4 h-4" />
+                                                    <span className="text-sm font-medium">Reset to Defaults</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Widgets View */}
+                                    {activeView === 'widgets' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Widgets</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Widget behavior and display settings</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                                <Subsection title="Display">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Widget Titles"
+                                                            description="Show titles in widget headers"
+                                                            enabled={settings.showWidgetTitles}
+                                                            onChange={(val) => updateSetting('showWidgetTitles', val)}
+                                                        />
+                                                        <ToggleSetting
+                                                            label="Refresh Indicators"
+                                                            description="Show countdown rings on widgets"
+                                                            enabled={settings.showRefreshIndicators}
+                                                            onChange={(val) => updateSetting('showRefreshIndicators', val)}
+                                                        />
+                                                        <ToggleSetting
+                                                            label="Resize Handles"
+                                                            description="Show corner handles for resizing"
+                                                            enabled={settings.showResizeHandles}
+                                                            onChange={(val) => updateSetting('showResizeHandles', val)}
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Behavior">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Auto-save Layout"
+                                                            description="Save widget positions automatically"
+                                                            enabled={settings.autoSave}
+                                                            onChange={(val) => updateSetting('autoSave', val)}
+                                                        />
+                                                        <ToggleSetting
+                                                            label="Confirm Removal"
+                                                            description="Ask before removing widgets"
+                                                            enabled={settings.confirmDelete}
+                                                            onChange={(val) => updateSetting('confirmDelete', val)}
+                                                        />
+                                                        <ToggleSetting
+                                                            label="Auto-compact"
+                                                            description="Fill gaps when widgets are removed"
+                                                            enabled={settings.autoCompact}
+                                                            onChange={(val) => updateSetting('autoCompact', val)}
+                                                        />
+                                                    </div>
+                                                </Subsection>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Regional View */}
+                                    {activeView === 'regional' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Regional</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Timezone, date formats, and number formatting</p>
                                             </div>
                                             <div className="space-y-5">
                                                 <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-3">
@@ -949,11 +1012,11 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                     </p>
                                                 </div>
 
-                                                <Subsection title="Regional">
+                                                <Subsection title="Time & Date">
                                                     <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                         <SelectSetting
                                                             label="Timezone"
-                                                            description="Default timezone for widgets"
+                                                            description="Display times in this timezone"
                                                             value={settings.timezone}
                                                             onChange={(val) => updateSetting('timezone', val as any)}
                                                             options={TIMEZONE_OPTIONS.map(tz => ({
@@ -963,7 +1026,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         />
                                                         <SelectSetting
                                                             label="Date Format"
-                                                            description="Default date format"
+                                                            description="How dates are displayed"
                                                             value={settings.dateFormat}
                                                             onChange={(val) => updateSetting('dateFormat', val as any)}
                                                             options={DATE_FORMAT_OPTIONS.map(df => ({
@@ -974,11 +1037,11 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                     </div>
                                                 </Subsection>
 
-                                                <Subsection title="Numbers">
+                                                <Subsection title="Numbers & Currency">
                                                     <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                                         <SelectSetting
                                                             label="Number Format"
-                                                            description="Separators and decimals"
+                                                            description="Thousand separators and decimals"
                                                             value={settings.numberFormat}
                                                             onChange={(val) => updateSetting('numberFormat', val as any)}
                                                             options={[
@@ -1372,6 +1435,39 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
 }
 
 // Helper Components
+function DockItemToggle({
+    icon,
+    label,
+    enabled,
+    onChange,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    enabled: boolean;
+    onChange: (val: boolean) => void;
+}) {
+    return (
+        <button
+            onClick={() => onChange(!enabled)}
+            className={`relative p-3 rounded-xl border-2 transition-all hover:scale-[1.02] ${enabled
+                ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                }`}
+        >
+            <div className="flex flex-col items-center gap-2">
+                <div className={`p-2 rounded-lg transition-colors ${enabled ? 'bg-ui-accent-primary text-white' : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                    }`}>
+                    {icon}
+                </div>
+                <span className="text-xs font-medium text-ui-text-primary">{label}</span>
+            </div>
+            {enabled && (
+                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-ui-accent-primary rounded-full" />
+            )}
+        </button>
+    );
+}
+
 function ToggleSetting({
     label,
     description,
