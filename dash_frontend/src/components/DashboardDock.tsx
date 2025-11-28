@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dock, DockIcon, DockDivider } from "@/components/ui/dock";
-import { MdWidgets, MdSettings, MdBookmarks, MdVisibilityOff, MdVisibility, MdAdd } from "react-icons/md";
+import { MdWidgets, MdSettings, MdBookmarks, MdVisibilityOff, MdVisibility, MdAdd, MdAutorenew } from "react-icons/md";
 import { DashboardPreset } from "@/types";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { useSettings } from "@/hooks/useSettings";
@@ -78,7 +78,8 @@ export default function DashboardDock({
         dockShowPresetManager,
         dockShowPrivacyToggle,
         dockShowSettingsToggle,
-        dockShowCreatePreset
+        dockShowCreatePreset,
+        dockShowAutoCycleToggle
     } = settings;
 
     // Calculate initialized presets and first available slot
@@ -227,7 +228,24 @@ export default function DashboardDock({
                                 </DockIconWithTooltip>
                             )}
 
-                            {(dockShowPresetManager || dockShowPrivacyToggle || dockShowSettingsToggle) && <DockDivider />}
+                            {(dockShowAutoCycleToggle || dockShowPresetManager || dockShowPrivacyToggle || dockShowSettingsToggle) && <DockDivider />}
+
+                            {/* Auto-Cycle Toggle */}
+                            {dockShowAutoCycleToggle && (
+                                <DockIconWithTooltip
+                                    tooltip={settings.autoCycleEnabled ? "Disable Auto-Cycle" : "Enable Auto-Cycle"}
+                                    onClick={() => {
+                                        const { preferencesService } = require('@/lib/preferences');
+                                        preferencesService.set('presets.autoCycle.enabled', !settings.autoCycleEnabled);
+                                    }}
+                                    className={settings.autoCycleEnabled
+                                        ? "bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50 hover:border-blue-500 text-blue-400 hover:text-blue-300 ring-2 ring-blue-500/40"
+                                        : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                                    }
+                                >
+                                    <MdAutorenew className={`w-6 h-6 ${settings.autoCycleEnabled ? 'animate-spin' : ''}`} style={settings.autoCycleEnabled ? { animationDuration: '3s' } : {}} />
+                                </DockIconWithTooltip>
+                            )}
 
                             {/* Preset Manager Icon */}
                             {dockShowPresetManager && (

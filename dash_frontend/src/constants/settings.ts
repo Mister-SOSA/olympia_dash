@@ -243,6 +243,12 @@ export const DOCK_SETTINGS = {
         label: 'Create Preset Button',
         description: 'Show add preset button when slots available',
     },
+    showAutoCycleToggle: {
+        key: 'dock.showAutoCycleToggle',
+        default: true,
+        label: 'Auto-Cycle Toggle',
+        description: 'Show preset auto-cycle toggle',
+    },
 } as const;
 
 // ============================================

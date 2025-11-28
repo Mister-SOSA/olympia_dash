@@ -33,6 +33,10 @@ import {
     MdGridOn,
     MdChevronRight,
     MdDragIndicator,
+    MdAutorenew,
+    MdWidgets,
+    MdBookmarks,
+    MdSettings,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -876,28 +880,36 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                 <Subsection title="Dock Items">
                                                     <p className="text-xs text-ui-text-tertiary mb-3">Choose which controls appear in your dock</p>
 
-                                                    {/* Visual Multi-Select */}
-                                                    <div className="grid grid-cols-2 gap-2">
+                                                    {/* Single row of dock icons matching actual dock */}
+                                                    <div className="flex items-start gap-3 p-3 bg-ui-bg-secondary/30 rounded-xl border border-ui-border-primary">
                                                         <DockItemToggle
-                                                            icon={<MdGridOn className="w-5 h-5" />}
+                                                            icon={<MdWidgets className="w-5 h-5" />}
                                                             label="Widgets"
                                                             enabled={settings.dockShowWidgetsToggle}
                                                             onChange={(val) => updateSetting('dockShowWidgetsToggle', val)}
                                                         />
                                                         <DockItemToggle
-                                                            icon={<MdRefresh className="w-5 h-5" />}
+                                                            icon={<MdBookmarks className="w-5 h-5" />}
                                                             label="Presets"
                                                             enabled={settings.dockShowPresetManager}
                                                             onChange={(val) => updateSetting('dockShowPresetManager', val)}
+                                                        />
+                                                        <DockItemToggle
+                                                            icon={<MdAutorenew className="w-5 h-5" />}
+                                                            label="Auto-Cycle"
+                                                            enabled={settings.dockShowAutoCycleToggle}
+                                                            onChange={(val) => updateSetting('dockShowAutoCycleToggle', val)}
+                                                            variant="autocycle"
                                                         />
                                                         <DockItemToggle
                                                             icon={<MdVisibilityOff className="w-5 h-5" />}
                                                             label="Privacy"
                                                             enabled={settings.dockShowPrivacyToggle}
                                                             onChange={(val) => updateSetting('dockShowPrivacyToggle', val)}
+                                                            variant="privacy"
                                                         />
                                                         <DockItemToggle
-                                                            icon={<MdTune className="w-5 h-5" />}
+                                                            icon={<MdSettings className="w-5 h-5" />}
                                                             label="Settings"
                                                             enabled={settings.dockShowSettingsToggle}
                                                             onChange={(val) => updateSetting('dockShowSettingsToggle', val)}
@@ -913,9 +925,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             onChange={(val) => updateSetting('dockShowCreatePreset', val)}
                                                         />
                                                     </div>
-                                                </Subsection>
-
-                                                {/* Reset to Defaults */}
+                                                </Subsection>                                                {/* Reset to Defaults */}
                                                 <button
                                                     onClick={() => {
                                                         updateSetting('dockAutoHide', DOCK_SETTINGS.autoHide.default);
@@ -931,6 +941,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         updateSetting('dockShowPrivacyToggle', DOCK_SETTINGS.showPrivacyToggle.default);
                                                         updateSetting('dockShowSettingsToggle', DOCK_SETTINGS.showSettingsToggle.default);
                                                         updateSetting('dockShowCreatePreset', DOCK_SETTINGS.showCreatePreset.default);
+                                                        updateSetting('dockShowAutoCycleToggle', DOCK_SETTINGS.showAutoCycleToggle.default);
                                                     }}
                                                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-ui-border-primary text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
                                                 >
@@ -1440,31 +1451,46 @@ function DockItemToggle({
     label,
     enabled,
     onChange,
+    variant = 'default',
 }: {
     icon: React.ReactNode;
     label: string;
     enabled: boolean;
     onChange: (val: boolean) => void;
+    variant?: 'default' | 'privacy' | 'autocycle';
 }) {
+    // Match EXACT dock icon styling from dock.tsx
+    const getClassName = () => {
+        if (!enabled) {
+            return 'bg-ui-bg-tertiary/50 border-ui-border-primary/50 text-ui-text-secondary/20 grayscale';
+        }
+
+        switch (variant) {
+            case 'privacy':
+                return 'bg-amber-500/20 border-amber-500/50 text-amber-400 ring-2 ring-amber-500/30';
+            case 'autocycle':
+                return 'bg-blue-500/20 border-blue-500/50 text-blue-400 ring-2 ring-blue-500/30';
+            default:
+                return 'bg-ui-accent-primary-bg border-ui-accent-primary-border text-ui-accent-primary ring-2 ring-ui-accent-primary/30';
+        }
+    };
+
     return (
-        <button
-            onClick={() => onChange(!enabled)}
-            className={`relative p-3 rounded-xl border-2 transition-all hover:scale-[1.02] ${enabled
-                ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
-                : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
-                }`}
-        >
-            <div className="flex flex-col items-center gap-2">
-                <div className={`p-2 rounded-lg transition-colors ${enabled ? 'bg-ui-accent-primary text-white' : 'bg-ui-bg-tertiary text-ui-text-secondary'
-                    }`}>
-                    {icon}
-                </div>
-                <span className="text-xs font-medium text-ui-text-primary">{label}</span>
-            </div>
-            {enabled && (
-                <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-ui-accent-primary rounded-full" />
-            )}
-        </button>
+        <div className="flex flex-col items-center gap-1.5">
+            <button
+                onClick={() => onChange(!enabled)}
+                className={`w-12 h-12 flex items-center justify-center rounded-xl border transition-all shadow-lg hover:shadow-xl relative ${getClassName()}`}
+            >
+                {icon}
+                {/* Checkmark when enabled */}
+                {enabled && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-ui-accent-primary rounded-full flex items-center justify-center">
+                        <MdCheck className="w-3 h-3 text-white" />
+                    </div>
+                )}
+            </button>
+            <span className={`text-[10px] font-medium text-center leading-tight ${enabled ? 'text-ui-text-primary' : 'text-ui-text-secondary/50'}`}>{label}</span>
+        </div>
     );
 }
 
