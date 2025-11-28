@@ -47,7 +47,7 @@ interface DashboardDockProps {
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
     onPresetSave: (index: number) => void;
-    onSettingsClick: () => void;
+    onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'dock') => void;
 }
 
 export default function DashboardDock({
@@ -184,6 +184,10 @@ export default function DashboardDock({
                                 <DockIconWithTooltip
                                     tooltip="Add Widgets (F)"
                                     onClick={onWidgetsClick}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        onSettingsClick('widgets');
+                                    }}
                                     className="bg-ui-accent-primary-bg hover:bg-ui-accent-primary border-ui-accent-primary-border hover:border-ui-accent-primary text-ui-accent-primary-text hover:text-white"
                                 >
                                     <MdWidgets className="w-6 h-6" />
@@ -238,6 +242,10 @@ export default function DashboardDock({
                                         const { preferencesService } = require('@/lib/preferences');
                                         preferencesService.set('presets.autoCycle.enabled', !settings.autoCycleEnabled);
                                     }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        onSettingsClick('presets');
+                                    }}
                                     className={settings.autoCycleEnabled
                                         ? "bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50 hover:border-blue-500 text-blue-400 hover:text-blue-300 ring-2 ring-blue-500/40"
                                         : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
@@ -252,6 +260,10 @@ export default function DashboardDock({
                                 <DockIconWithTooltip
                                     tooltip="Manage Presets (P)"
                                     onClick={onPresetManagerClick}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        onSettingsClick('presets');
+                                    }}
                                     className="bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary border-ui-accent-secondary-border hover:border-ui-accent-secondary text-ui-accent-secondary-text hover:text-white"
                                 >
                                     <MdBookmarks className="w-6 h-6" />
@@ -263,6 +275,10 @@ export default function DashboardDock({
                                 <DockIconWithTooltip
                                     tooltip="Privacy Mode (\\)"
                                     onClick={togglePrivacy}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        onSettingsClick('privacy');
+                                    }}
                                     className={isPrivate
                                         ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400 hover:text-amber-300 ring-2 ring-amber-500/40"
                                         : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
@@ -280,7 +296,11 @@ export default function DashboardDock({
                             {dockShowSettingsToggle && (
                                 <DockIconWithTooltip
                                     tooltip="Settings (S)"
-                                    onClick={onSettingsClick}
+                                    onClick={() => onSettingsClick()}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        onSettingsClick('dock');
+                                    }}
                                     className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
                                 >
                                     <MdSettings className="w-6 h-6" />

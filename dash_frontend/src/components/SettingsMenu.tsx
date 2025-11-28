@@ -45,6 +45,7 @@ interface SettingsMenuProps {
     onClose: () => void;
     onAdminClick?: () => void;
     presets?: Array<DashboardPreset | null>;
+    initialView?: SettingsView;
 }
 
 // Real Drag Handle Component - self-contained preview matching the actual CSS
@@ -284,11 +285,11 @@ const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: stri
     { id: 'shortcuts', icon: MdKeyboard, label: 'Shortcuts' },
 ];
 
-export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, presets = [] }: SettingsMenuProps) {
+export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, presets = [], initialView = 'account' }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
     const { settings, updateSetting, isLoaded } = useSettings();
     const { settings: privacySettings, updateSetting: updatePrivacySetting, toggle: togglePrivacy } = usePrivacy();
-    const [activeView, setActiveView] = useState<SettingsView>('account');
+    const [activeView, setActiveView] = useState<SettingsView>(initialView);
     const [themeCategory, setThemeCategory] = useState<'dark' | 'light'>(
         THEMES.find(t => t.id === theme)?.category as 'dark' | 'light' || 'dark'
     );

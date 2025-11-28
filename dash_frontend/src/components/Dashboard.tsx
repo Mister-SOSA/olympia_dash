@@ -205,6 +205,7 @@ export default function Dashboard() {
 
     const [menuOpen, setMenuOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [settingsView, setSettingsView] = useState<'account' | 'widgets' | 'presets' | 'privacy' | 'dock'>('account');
     const [presetManagerOpen, setPresetManagerOpen] = useState(false);
     const [presetDialogOpen, setPresetDialogOpen] = useState(false);
     const [presetDialogType, setPresetDialogType] = useState<"empty" | "save" | "overwrite">("save");
@@ -523,6 +524,7 @@ export default function Dashboard() {
                     return;
                 }
                 e.preventDefault();
+                setSettingsView('account');
                 setSettingsOpen((prev) => !prev);
                 return;
             }
@@ -784,7 +786,10 @@ export default function Dashboard() {
                     {/* Mobile Dashboard with Swipeable Widgets */}
                     <MobileDashboard
                         layout={layout}
-                        onSettingsClick={() => setSettingsOpen(true)}
+                        onSettingsClick={() => {
+                            setSettingsView('account');
+                            setSettingsOpen(true);
+                        }}
                         onWidgetsClick={() => {
                             setMenuOpen(true);
                             updateTempLayout();
@@ -839,7 +844,10 @@ export default function Dashboard() {
                     onPresetManagerClick={() => setPresetManagerOpen(true)}
                     onPresetClick={handlePresetClick}
                     onPresetSave={handlePresetSave}
-                    onSettingsClick={() => setSettingsOpen(true)}
+                    onSettingsClick={(view) => {
+                        setSettingsView(view || 'account');
+                        setSettingsOpen(true);
+                    }}
                 />
 
                 {/* Preset Manager */}
@@ -937,6 +945,7 @@ export default function Dashboard() {
                             onClose={() => setSettingsOpen(false)}
                             onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
                             presets={presets}
+                            initialView={settingsView}
                         />
                     )}
                 </AnimatePresence>
@@ -961,7 +970,10 @@ export default function Dashboard() {
                             setMenuOpen(true);
                             updateTempLayout();
                         }}
-                        onOpenSettings={() => setSettingsOpen(true)}
+                        onOpenSettings={() => {
+                            setSettingsView('account');
+                            setSettingsOpen(true);
+                        }}
                     />
 
                     {/* Fullscreen Widget Overlay */}
