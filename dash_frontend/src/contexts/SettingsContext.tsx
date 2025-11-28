@@ -42,7 +42,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.default,
         snowEffect: APPEARANCE_SETTINGS.snowEffect.default,
     });
-    
+
     const settingsJsonRef = useRef<string>(JSON.stringify(settings));
 
     const loadSettings = useCallback(() => {
@@ -73,7 +73,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         const newSettings = { animations, compactMode, fontSize, enableHotkeys, snowEffect };
         const newJson = JSON.stringify(newSettings);
-        
+
         // Only update if settings actually changed
         if (newJson !== settingsJsonRef.current) {
             settingsJsonRef.current = newJson;
@@ -86,11 +86,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         loadSettings();
 
         const unsubscribe = preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
-            // Only reload for remote changes or appearance/keyboard changes
+            // For remote changes, always reload
             if (isRemote) {
                 loadSettings();
-            } else if (changedKeys) {
-                const hasRelevantChanges = changedKeys.some(key => 
+                return;
+            }
+
+            // For local changes, check if relevant keys changed
+            if (changedKeys && changedKeys.length > 0) {
+                const hasRelevantChanges = changedKeys.some(key =>
                     key.startsWith('appearance') || key.startsWith('keyboard')
                 );
                 if (hasRelevantChanges) {

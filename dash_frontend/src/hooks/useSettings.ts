@@ -219,9 +219,12 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
 export function useSettings() {
     const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
     const [isLoaded, setIsLoaded] = useState(false);
-    
+
     // Track which setting categories we care about for selective updates
     const settingsJsonRef = useRef<string>(JSON.stringify(DEFAULT_SETTINGS));
+
+    // Track if we're the one making changes (to avoid reloading from our own updates)
+    const isUpdatingRef = useRef<boolean>(false);
 
     // Load settings from preferences service
     const loadSettings = useCallback(() => {
@@ -236,7 +239,7 @@ export function useSettings() {
         });
 
         const newJson = JSON.stringify(loadedSettings);
-        
+
         // Only update state if settings actually changed
         if (newJson !== settingsJsonRef.current) {
             settingsJsonRef.current = newJson;
@@ -250,13 +253,21 @@ export function useSettings() {
         loadSettings();
 
         const unsubscribe = preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
-            // Only reload settings for remote changes, or if relevant keys changed
+            // Skip if we're the one making the change (we already updated our state)
+            if (isUpdatingRef.current) {
+                return;
+            }
+
+            // For remote changes, always reload
             if (isRemote) {
                 loadSettings();
-            } else if (changedKeys) {
-                // Check if any changed keys are settings-related
-                const hasRelevantChanges = changedKeys.some(key => 
-                    key.startsWith('appearance') || 
+                return;
+            }
+
+            // For local changes from other hooks, check if relevant keys changed
+            if (changedKeys) {
+                const hasRelevantChanges = changedKeys.some(key =>
+                    key.startsWith('appearance') ||
                     key.startsWith('datetime') ||
                     key.startsWith('dashboard') ||
                     key.startsWith('grid') ||
@@ -282,7 +293,7 @@ export function useSettings() {
         value: UserSettings[K]
     ) => {
         const prefKey = SETTINGS_KEY_MAP[key];
-        
+
         // Update local state immediately
         setSettings(prev => {
             if (prev[key] === value) {
@@ -295,9 +306,17 @@ export function useSettings() {
             settingsJsonRef.current = JSON.stringify(newSettings);
             return newSettings;
         });
-        
-        // Sync to preferences (will debounce automatically)
-        preferencesService.set(prefKey, value, { notifyLocal: false });
+
+        // Mark that we're updating to avoid reacting to our own notification
+        isUpdatingRef.current = true;
+
+        // Sync to preferences - notify local so SettingsContext and other consumers update
+        preferencesService.set(prefKey, value);
+
+        // Clear the flag after a short delay (after notifications are processed)
+        setTimeout(() => {
+            isUpdatingRef.current = false;
+        }, 100);
     }, []);
 
     // Update multiple settings at once
@@ -316,8 +335,16 @@ export function useSettings() {
             return newSettings;
         });
 
-        // Set in preferences (will debounce automatically)
-        preferencesService.setMany(prefUpdates, { notifyLocal: false });
+        // Mark that we're updating to avoid reacting to our own notification
+        isUpdatingRef.current = true;
+
+        // Sync to preferences - notify local so SettingsContext and other consumers update
+        preferencesService.setMany(prefUpdates);
+
+        // Clear the flag after a short delay
+        setTimeout(() => {
+            isUpdatingRef.current = false;
+        }, 100);
     }, []);
 
     // Reset a setting to default
