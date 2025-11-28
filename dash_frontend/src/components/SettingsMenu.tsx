@@ -1,9 +1,10 @@
 'use client';
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES } from "@/contexts/ThemeContext";
+import { DashboardPreset } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import { usePrivacy, ObfuscationStyle } from "@/contexts/PrivacyContext";
 import {
@@ -39,6 +40,7 @@ interface SettingsMenuProps {
     onLogout: () => void;
     onClose: () => void;
     onAdminClick?: () => void;
+    presets?: Array<DashboardPreset | null>;
 }
 
 // Real Drag Handle Component - self-contained preview matching the actual CSS
@@ -263,7 +265,7 @@ function Subsection({ title, children }: { title: string; children: React.ReactN
     );
 }
 
-type SettingsView = 'account' | 'appearance' | 'interface' | 'data' | 'notifications' | 'privacy' | 'shortcuts';
+type SettingsView = 'account' | 'appearance' | 'interface' | 'data' | 'notifications' | 'privacy' | 'presets' | 'shortcuts';
 
 const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: string; badge?: string }[] = [
     { id: 'account', icon: MdPerson, label: 'Account' },
@@ -272,10 +274,11 @@ const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: stri
     { id: 'data', icon: MdStorage, label: 'Data & Formats' },
     { id: 'notifications', icon: MdNotifications, label: 'Notifications' },
     { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy' },
+    { id: 'presets', icon: MdRefresh, label: 'Presets' },
     { id: 'shortcuts', icon: MdKeyboard, label: 'Shortcuts' },
 ];
 
-export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: SettingsMenuProps) {
+export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, presets = [] }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
     const { settings, updateSetting, isLoaded } = useSettings();
     const { settings: privacySettings, updateSetting: updatePrivacySetting, toggle: togglePrivacy } = usePrivacy();
@@ -288,6 +291,17 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
     // Local state for grid settings
     const [localGridColumns, setLocalGridColumns] = useState(settings.gridColumns);
     const [localGridCellHeight, setLocalGridCellHeight] = useState(settings.gridCellHeight);
+
+    // Calculate available presets (those that are initialized with layouts)
+    const availablePresets = useMemo(() => {
+        return presets.map((preset, index) => ({
+            index,
+            preset,
+            isValid: preset !== null && preset.layout.some(w => w.enabled),
+            name: preset?.name || `Preset ${index + 1}`,
+            widgetCount: preset?.layout.filter(w => w.enabled).length || 0,
+        })).filter(p => p.isValid);
+    }, [presets]);
 
     useEffect(() => {
         setLocalGridColumns(settings.gridColumns);
@@ -1112,6 +1126,171 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick }: 
                                                             onChange={(val) => updatePrivacySetting('showIndicator', val)}
                                                         />
                                                     </div>
+                                                </Subsection>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Presets View */}
+                                    {activeView === 'presets' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Preset Auto-Cycle</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Automatically rotate through saved presets</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                                {/* Info Box */}
+                                                <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <MdRefresh className="w-5 h-5 text-ui-accent-primary mt-0.5 flex-shrink-0" />
+                                                        <div>
+                                                            <p className="text-sm font-medium text-ui-text-primary mb-1">
+                                                                Auto-cycle lets your dashboard rotate through presets automatically
+                                                            </p>
+                                                            <p className="text-xs text-ui-text-secondary">
+                                                                Perfect for display monitors, presentations, or just getting a comprehensive view of your data.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <Subsection title="Auto-Cycle">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Enable Auto-Cycle"
+                                                            description="Automatically switch between presets"
+                                                            enabled={settings.autoCycleEnabled}
+                                                            onChange={(val) => updateSetting('autoCycleEnabled', val)}
+                                                        />
+                                                        <SliderSetting
+                                                            label="Cycle Interval"
+                                                            description="Seconds between preset changes"
+                                                            value={settings.autoCycleInterval}
+                                                            onChange={(val) => updateSetting('autoCycleInterval', val)}
+                                                            min={5}
+                                                            max={300}
+                                                            step={5}
+                                                            disabled={!settings.autoCycleEnabled}
+                                                            unit="s"
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Behavior">
+                                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                        <ToggleSetting
+                                                            label="Pause on Interaction"
+                                                            description="Pause cycling when you interact with dashboard"
+                                                            enabled={settings.autoCyclePauseOnInteraction}
+                                                            onChange={(val) => updateSetting('autoCyclePauseOnInteraction', val)}
+                                                            disabled={!settings.autoCycleEnabled}
+                                                        />
+                                                        <SliderSetting
+                                                            label="Resume Delay"
+                                                            description="Seconds to wait before resuming after interaction"
+                                                            value={settings.autoCycleResumeDelay}
+                                                            onChange={(val) => updateSetting('autoCycleResumeDelay', val)}
+                                                            min={5}
+                                                            max={60}
+                                                            step={5}
+                                                            disabled={!settings.autoCycleEnabled || !settings.autoCyclePauseOnInteraction}
+                                                            unit="s"
+                                                        />
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Preset Selection">
+                                                    {availablePresets.length === 0 ? (
+                                                        <div className="p-6 rounded-lg border-2 border-dashed border-ui-border-primary bg-ui-bg-secondary/30 text-center">
+                                                            <MdGridOn className="w-12 h-12 text-ui-text-muted mx-auto mb-3 opacity-50" />
+                                                            <p className="text-sm font-medium text-ui-text-primary mb-1">
+                                                                No Saved Presets
+                                                            </p>
+                                                            <p className="text-xs text-ui-text-secondary">
+                                                                Save some presets first using <kbd className="px-1.5 py-0.5 rounded bg-ui-bg-tertiary text-[10px]">⇧1-9</kbd> or the preset manager
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-xs text-ui-text-tertiary mb-3">
+                                                                Select which presets to include in the rotation cycle
+                                                            </p>
+                                                            <div className="space-y-2">
+                                                                {availablePresets.map(({ index, preset, name, widgetCount }: {
+                                                                    index: number;
+                                                                    preset: DashboardPreset | null;
+                                                                    name: string;
+                                                                    widgetCount: number;
+                                                                }) => {
+                                                                    const isSelected = settings.autoCyclePresets.includes(index);
+                                                                    return (
+                                                                        <button
+                                                                            key={index}
+                                                                            onClick={() => {
+                                                                                const newPresets = isSelected
+                                                                                    ? settings.autoCyclePresets.filter(i => i !== index)
+                                                                                    : [...settings.autoCyclePresets, index].sort((a, b) => a - b);
+                                                                                updateSetting('autoCyclePresets', newPresets);
+                                                                            }}
+                                                                            disabled={!settings.autoCycleEnabled}
+                                                                            className={`w-full p-3 rounded-lg border-2 transition-all text-left disabled:opacity-40 disabled:cursor-not-allowed ${isSelected
+                                                                                    ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                                                                    : 'border-ui-border-primary hover:border-ui-accent-primary/50 bg-ui-bg-secondary/30'
+                                                                                }`}
+                                                                        >
+                                                                            <div className="flex items-center justify-between">
+                                                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${isSelected
+                                                                                            ? 'bg-ui-accent-primary text-white'
+                                                                                            : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                                                        }`}>
+                                                                                        {index + 1}
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <div className="text-sm font-medium text-ui-text-primary truncate">
+                                                                                            {name}
+                                                                                        </div>
+                                                                                        <div className="flex items-center gap-1.5 text-xs text-ui-text-secondary mt-0.5">
+                                                                                            <MdGridOn className="w-3 h-3" />
+                                                                                            <span>{widgetCount} widget{widgetCount !== 1 ? 's' : ''}</span>
+                                                                                            {preset?.type === 'fullscreen' && (
+                                                                                                <>
+                                                                                                    <span className="text-ui-text-muted">•</span>
+                                                                                                    <span className="text-ui-accent-secondary">Fullscreen</span>
+                                                                                                </>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                {isSelected && (
+                                                                                    <MdCheck className="w-5 h-5 text-ui-accent-primary flex-shrink-0" />
+                                                                                )}
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            {settings.autoCyclePresets.length === 0 && settings.autoCycleEnabled ? (
+                                                                <div className="mt-3 p-3 rounded-lg border border-ui-danger-border bg-ui-danger-bg">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <MdClose className="w-4 h-4 text-ui-danger-text mt-0.5 flex-shrink-0" />
+                                                                        <p className="text-xs text-ui-danger-text">
+                                                                            No presets selected. Select at least one preset to enable auto-cycling.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            ) : settings.autoCyclePresets.length > 0 && settings.autoCycleEnabled ? (
+                                                                <div className="mt-3 p-3 rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <MdCheck className="w-4 h-4 text-ui-accent-primary mt-0.5 flex-shrink-0" />
+                                                                        <p className="text-xs text-ui-text-secondary">
+                                                                            Auto-cycling through {settings.autoCyclePresets.length} preset{settings.autoCyclePresets.length !== 1 ? 's' : ''} every {settings.autoCycleInterval} seconds
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            ) : null}
+                                                        </>
+                                                    )}
                                                 </Subsection>
                                             </div>
                                         </div>

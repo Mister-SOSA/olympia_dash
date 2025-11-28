@@ -370,6 +370,48 @@ export const DATA_SETTINGS = {
 } as const;
 
 // ============================================
+// PRESET SETTINGS
+// ============================================
+export const PRESET_SETTINGS = {
+    autoCycleEnabled: {
+        key: 'presets.autoCycle.enabled',
+        default: false,
+        label: 'Auto-Cycle Presets',
+        description: 'Automatically switch between presets',
+    },
+    autoCycleInterval: {
+        key: 'presets.autoCycle.interval',
+        default: 30,
+        min: 5,
+        max: 300,
+        step: 5,
+        label: 'Cycle Interval',
+        description: 'Seconds between preset changes',
+    },
+    autoCyclePresets: {
+        key: 'presets.autoCycle.presets',
+        default: [] as number[],
+        label: 'Presets to Cycle',
+        description: 'Which presets to include in rotation',
+    },
+    autoCyclePauseOnInteraction: {
+        key: 'presets.autoCycle.pauseOnInteraction',
+        default: true,
+        label: 'Pause on Interaction',
+        description: 'Pause cycling when user interacts with dashboard',
+    },
+    autoCycleResumeDelay: {
+        key: 'presets.autoCycle.resumeDelay',
+        default: 10,
+        min: 5,
+        max: 60,
+        step: 5,
+        label: 'Resume Delay',
+        description: 'Seconds to wait before resuming after interaction',
+    },
+} as const;
+
+// ============================================
 // KEYBOARD SETTINGS
 // ============================================
 export const KEYBOARD_SETTINGS = {
@@ -394,6 +436,7 @@ export const ALL_SETTINGS = {
     ...WIDGET_SETTINGS,
     ...NOTIFICATION_SETTINGS,
     ...DATA_SETTINGS,
+    ...PRESET_SETTINGS,
     ...KEYBOARD_SETTINGS,
 } as const;
 
@@ -456,6 +499,12 @@ export const SETTINGS_CATEGORIES = [
         label: 'Data & Formats',
         description: 'Number and currency formatting',
         settings: DATA_SETTINGS,
+    },
+    {
+        id: 'presets',
+        label: 'Presets',
+        description: 'Preset auto-cycling and rotation',
+        settings: PRESET_SETTINGS,
     },
     {
         id: 'keyboard',

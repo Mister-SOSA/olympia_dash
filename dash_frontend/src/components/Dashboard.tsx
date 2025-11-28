@@ -35,6 +35,7 @@ import { Loader } from "./ui/loader";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { usePrivacy } from "@/contexts/PrivacyContext";
+import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -218,6 +219,17 @@ export default function Dashboard() {
     // ✅ FIX: Track if preferences have been initialized to prevent duplicate loads
     const preferencesInitialized = useRef(false);
 
+    // Load a preset (forward declaration for auto-cycle hook)
+    const loadPresetRef = useRef<((index: number) => void) | null>(null);
+
+    // Auto-cycle presets hook
+    usePresetAutoCycle({
+        presets,
+        currentPresetIndex: activePresetIndex,
+        onLoadPreset: (index) => loadPresetRef.current?.(index),
+        isAnyModalOpen: menuOpen || settingsOpen || presetManagerOpen || presetDialogOpen,
+    });
+
     // Check authentication on mount
     useEffect(() => {
         const checkAuth = async () => {
@@ -370,10 +382,10 @@ export default function Dashboard() {
 
         // Update state first
         setLayout(normalizedLayout);
-        
+
         // Save layout (this will debounce via preferencesService)
         saveLayoutToStorage(normalizedLayout);
-        
+
         // Update active preset if one is selected
         if (activePresetIndex !== null) {
             setPresets((prevPresets) => {
@@ -390,11 +402,11 @@ export default function Dashboard() {
                 };
 
                 // Use setMany to batch this with other preference changes
-                preferencesService.set('dashboard.presets', updatedPresets, { 
+                preferencesService.set('dashboard.presets', updatedPresets, {
                     debounce: true,
                     notifyLocal: false // Already updating our own state
                 });
-                
+
                 return updatedPresets;
             });
         }
@@ -431,7 +443,12 @@ export default function Dashboard() {
             }, 300);
         },
         [presets]
-    );    // ✅ FIX: Use refs for values that change frequently to avoid event listener re-registration
+    );
+
+    // Update loadPresetRef for auto-cycle hook
+    useEffect(() => {
+        loadPresetRef.current = loadPreset;
+    }, [loadPreset]);    // ✅ FIX: Use refs for values that change frequently to avoid event listener re-registration
     const presetsRef = useRef(presets);
     const presetIndexRef = useRef(presetIndex);
     const menuOpenRef = useRef(menuOpen);
@@ -914,6 +931,7 @@ export default function Dashboard() {
                             onLogout={handleLogout}
                             onClose={() => setSettingsOpen(false)}
                             onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+                            presets={presets}
                         />
                     )}
                 </AnimatePresence>

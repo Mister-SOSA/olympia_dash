@@ -22,6 +22,7 @@ import {
     WIDGET_SETTINGS,
     NOTIFICATION_SETTINGS,
     DATA_SETTINGS,
+    PRESET_SETTINGS,
     KEYBOARD_SETTINGS,
     type TimezoneOption,
     type DateFormatOption,
@@ -91,6 +92,13 @@ export interface UserSettings {
     currencySymbol: string;
     cacheEnabled: boolean;
 
+    // Presets
+    autoCycleEnabled: boolean;
+    autoCycleInterval: number;
+    autoCyclePresets: number[];
+    autoCyclePauseOnInteraction: boolean;
+    autoCycleResumeDelay: number;
+
     // Keyboard
     enableHotkeys: boolean;
 }
@@ -155,6 +163,13 @@ const DEFAULT_SETTINGS: UserSettings = {
     currencySymbol: DATA_SETTINGS.currencySymbol.default,
     cacheEnabled: DATA_SETTINGS.cacheEnabled.default,
 
+    // Presets
+    autoCycleEnabled: PRESET_SETTINGS.autoCycleEnabled.default,
+    autoCycleInterval: PRESET_SETTINGS.autoCycleInterval.default,
+    autoCyclePresets: PRESET_SETTINGS.autoCyclePresets.default,
+    autoCyclePauseOnInteraction: PRESET_SETTINGS.autoCyclePauseOnInteraction.default,
+    autoCycleResumeDelay: PRESET_SETTINGS.autoCycleResumeDelay.default,
+
     // Keyboard
     enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.default,
 };
@@ -209,6 +224,12 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     numberFormat: DATA_SETTINGS.numberFormat.key,
     currencySymbol: DATA_SETTINGS.currencySymbol.key,
     cacheEnabled: DATA_SETTINGS.cacheEnabled.key,
+
+    autoCycleEnabled: PRESET_SETTINGS.autoCycleEnabled.key,
+    autoCycleInterval: PRESET_SETTINGS.autoCycleInterval.key,
+    autoCyclePresets: PRESET_SETTINGS.autoCyclePresets.key,
+    autoCyclePauseOnInteraction: PRESET_SETTINGS.autoCyclePauseOnInteraction.key,
+    autoCycleResumeDelay: PRESET_SETTINGS.autoCycleResumeDelay.key,
 
     enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.key,
 };
@@ -276,6 +297,7 @@ export function useSettings() {
                     key.startsWith('widget') ||
                     key.startsWith('notifications') ||
                     key.startsWith('data') ||
+                    key.startsWith('presets') ||
                     key.startsWith('keyboard')
                 );
                 if (hasRelevantChanges) {
