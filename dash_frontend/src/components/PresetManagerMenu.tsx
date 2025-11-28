@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
 import { DashboardPreset, Widget, PresetType } from "@/types";
 import {
     X,
@@ -517,7 +518,11 @@ export default function PresetManagerMenu({
                 }}
                 onClick={onClose}
             >
-                <div
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
                     className="rounded-xl border w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
                     style={{
                         backgroundColor: 'var(--ui-bg-primary)',
@@ -643,7 +648,7 @@ export default function PresetManagerMenu({
                             </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
             </div>
 
             {/* Preset Dialog */}
