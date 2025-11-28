@@ -752,6 +752,44 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             decimals={1}
                                                         />
                                                     </div>
+
+                                                    {/* Dock Toggles */}
+                                                    <div>
+                                                        <div className="text-xs font-medium text-ui-text-secondary mb-2">Visible Toggles</div>
+                                                        <p className="text-xs text-ui-text-tertiary mb-3">Choose which buttons appear in the dock</p>
+                                                        <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                                            <ToggleSetting
+                                                                label="Add Widgets"
+                                                                description="Show widget picker button"
+                                                                enabled={settings.dockShowWidgetsToggle}
+                                                                onChange={(val) => updateSetting('dockShowWidgetsToggle', val)}
+                                                            />
+                                                            <ToggleSetting
+                                                                label="Preset Manager"
+                                                                description="Show preset management button"
+                                                                enabled={settings.dockShowPresetManager}
+                                                                onChange={(val) => updateSetting('dockShowPresetManager', val)}
+                                                            />
+                                                            <ToggleSetting
+                                                                label="Privacy Mode"
+                                                                description="Show privacy toggle button"
+                                                                enabled={settings.dockShowPrivacyToggle}
+                                                                onChange={(val) => updateSetting('dockShowPrivacyToggle', val)}
+                                                            />
+                                                            <ToggleSetting
+                                                                label="Settings"
+                                                                description="Show settings button"
+                                                                enabled={settings.dockShowSettingsToggle}
+                                                                onChange={(val) => updateSetting('dockShowSettingsToggle', val)}
+                                                            />
+                                                            <ToggleSetting
+                                                                label="Create Preset"
+                                                                description="Show add preset button when available"
+                                                                enabled={settings.dockShowCreatePreset}
+                                                                onChange={(val) => updateSetting('dockShowCreatePreset', val)}
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </Subsection>
 
                                                 {/* Drag Handles Section with Visual Picker */}
@@ -875,6 +913,11 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             updateSetting('dockTriggerDistance', DOCK_SETTINGS.triggerDistance.default);
                                                             updateSetting('dockHideDelay', DOCK_SETTINGS.hideDelay.default);
                                                             updateSetting('dockOpacity', DOCK_SETTINGS.opacity.default);
+                                                            updateSetting('dockShowWidgetsToggle', DOCK_SETTINGS.showWidgetsToggle.default);
+                                                            updateSetting('dockShowPresetManager', DOCK_SETTINGS.showPresetManager.default);
+                                                            updateSetting('dockShowPrivacyToggle', DOCK_SETTINGS.showPrivacyToggle.default);
+                                                            updateSetting('dockShowSettingsToggle', DOCK_SETTINGS.showSettingsToggle.default);
+                                                            updateSetting('dockShowCreatePreset', DOCK_SETTINGS.showCreatePreset.default);
                                                             updateSetting('dragHandleAlwaysShow', DRAG_HANDLE_SETTINGS.alwaysShow.default);
                                                             updateSetting('showResizeHandles', DRAG_HANDLE_SETTINGS.showResizeHandles.default);
                                                             updateSetting('dragHandleOpacity', DRAG_HANDLE_SETTINGS.handleOpacity.default);
@@ -1234,15 +1277,15 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                                             }}
                                                                             disabled={!settings.autoCycleEnabled}
                                                                             className={`w-full p-3 rounded-lg border-2 transition-all text-left disabled:opacity-40 disabled:cursor-not-allowed ${isSelected
-                                                                                    ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
-                                                                                    : 'border-ui-border-primary hover:border-ui-accent-primary/50 bg-ui-bg-secondary/30'
+                                                                                ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                                                                : 'border-ui-border-primary hover:border-ui-accent-primary/50 bg-ui-bg-secondary/30'
                                                                                 }`}
                                                                         >
                                                                             <div className="flex items-center justify-between">
                                                                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${isSelected
-                                                                                            ? 'bg-ui-accent-primary text-white'
-                                                                                            : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                                                        ? 'bg-ui-accent-primary text-white'
+                                                                                        : 'bg-ui-bg-tertiary text-ui-text-secondary'
                                                                                         }`}>
                                                                                         {index + 1}
                                                                                     </div>

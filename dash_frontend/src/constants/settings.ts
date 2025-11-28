@@ -212,6 +212,37 @@ export const DOCK_SETTINGS = {
         label: 'Dock Opacity',
         description: 'Background transparency of the dock',
     },
+    // Toggle visibility settings
+    showWidgetsToggle: {
+        key: 'dock.showWidgetsToggle',
+        default: true,
+        label: 'Widgets Toggle',
+        description: 'Show add widgets button',
+    },
+    showPresetManager: {
+        key: 'dock.showPresetManager',
+        default: true,
+        label: 'Preset Manager',
+        description: 'Show preset manager button',
+    },
+    showPrivacyToggle: {
+        key: 'dock.showPrivacyToggle',
+        default: true,
+        label: 'Privacy Toggle',
+        description: 'Show privacy mode button',
+    },
+    showSettingsToggle: {
+        key: 'dock.showSettingsToggle',
+        default: true,
+        label: 'Settings Toggle',
+        description: 'Show settings button',
+    },
+    showCreatePreset: {
+        key: 'dock.showCreatePreset',
+        default: true,
+        label: 'Create Preset Button',
+        description: 'Show add preset button when slots available',
+    },
 } as const;
 
 // ============================================

@@ -80,7 +80,11 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
     }, ref) => {
         const iconRef = useRef<HTMLButtonElement>(null);
 
-        const distance = useTransform(mouseX, (val: number) => {
+        // Use a fallback mouseX value if not provided
+        const fallbackMouseX = useMotionValue(Infinity);
+        const effectiveMouseX = mouseX || fallbackMouseX;
+
+        const distance = useTransform(effectiveMouseX, (val: number) => {
             const bounds = iconRef.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
             return val - bounds.x - bounds.width / 2;
         });

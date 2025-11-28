@@ -65,6 +65,11 @@ export interface UserSettings {
     dockTriggerDistance: number;
     dockHideDelay: number;
     dockOpacity: number;
+    dockShowWidgetsToggle: boolean;
+    dockShowPresetManager: boolean;
+    dockShowPrivacyToggle: boolean;
+    dockShowSettingsToggle: boolean;
+    dockShowCreatePreset: boolean;
 
     // Drag Handle
     dragHandleAlwaysShow: boolean;
@@ -136,6 +141,11 @@ const DEFAULT_SETTINGS: UserSettings = {
     dockTriggerDistance: DOCK_SETTINGS.triggerDistance.default,
     dockHideDelay: DOCK_SETTINGS.hideDelay.default,
     dockOpacity: DOCK_SETTINGS.opacity.default,
+    dockShowWidgetsToggle: DOCK_SETTINGS.showWidgetsToggle.default,
+    dockShowPresetManager: DOCK_SETTINGS.showPresetManager.default,
+    dockShowPrivacyToggle: DOCK_SETTINGS.showPrivacyToggle.default,
+    dockShowSettingsToggle: DOCK_SETTINGS.showSettingsToggle.default,
+    dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.default,
 
     // Drag Handle
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.default,
@@ -202,6 +212,11 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     dockTriggerDistance: DOCK_SETTINGS.triggerDistance.key,
     dockHideDelay: DOCK_SETTINGS.hideDelay.key,
     dockOpacity: DOCK_SETTINGS.opacity.key,
+    dockShowWidgetsToggle: DOCK_SETTINGS.showWidgetsToggle.key,
+    dockShowPresetManager: DOCK_SETTINGS.showPresetManager.key,
+    dockShowPrivacyToggle: DOCK_SETTINGS.showPrivacyToggle.key,
+    dockShowSettingsToggle: DOCK_SETTINGS.showSettingsToggle.key,
+    dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.key,
 
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.key,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.key,
