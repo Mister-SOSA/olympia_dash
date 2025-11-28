@@ -212,7 +212,7 @@ export default function Dashboard() {
     const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
     const [presetIndex, setPresetIndex] = useState<number>(0);
     const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
-    const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
@@ -412,7 +412,7 @@ export default function Dashboard() {
         }
     }, [layout, activePresetIndex]);
 
-    // Load a preset with fade transition
+    // Load a preset with smooth fade transition
     const loadPreset = useCallback(
         (index: number) => {
             const preset = presets[index];
@@ -424,8 +424,11 @@ export default function Dashboard() {
             }
 
             toast.info(`Loaded Preset ${index + 1}`);
-            setTransitionPhase("fadeIn");
 
+            // Start fade out
+            setIsTransitioning(true);
+
+            // Wait for fade out, then switch layout, then fade in
             setTimeout(() => {
                 const merged = normalizeLayout(mergePreset(deepClone(preset.layout)));
 
@@ -434,13 +437,15 @@ export default function Dashboard() {
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
                 setActivePresetIndex(index);
-                saveLayoutToStorage(merged);                // Save the preset type so it persists across page reloads
+                saveLayoutToStorage(merged);
                 saveCurrentPresetType(preset.type);
                 saveActivePresetIndex(index);
 
-                setTransitionPhase("fadeOut");
-                setTimeout(() => setTransitionPhase("none"), 300);
-            }, 300);
+                // End transition to fade back in
+                setTimeout(() => {
+                    setIsTransitioning(false);
+                }, 50); // Small delay to ensure layout has updated
+            }, 200); // Fade out duration
         },
         [presets]
     );
@@ -936,38 +941,34 @@ export default function Dashboard() {
                     )}
                 </AnimatePresence>
 
-                <GridDashboard
-                    ref={gridDashboardRef}
-                    layout={layout.filter((widget) => widget.enabled)}
-                    onExternalLayoutChange={handleExternalLayoutChange}
-                    onAddWidget={() => {
-                        setMenuOpen(true);
-                        updateTempLayout();
+                <motion.div
+                    animate={{ opacity: isTransitioning ? 0 : 1 }}
+                    transition={{
+                        duration: 0.2,
+                        ease: [0.4, 0.0, 0.2, 1] // Apple-like ease curve
                     }}
-                    onOpenSettings={() => setSettingsOpen(true)}
-                />
-
-                {/* Fullscreen Widget Overlay */}
-                {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
-                    <FullscreenWidget layout={layout} />
-                )}
-
-                {transitionPhase !== "none" && (
-                    <motion.div
-                        initial={{ opacity: transitionPhase === "fadeIn" ? 0 : 1 }}
-                        animate={{ opacity: transitionPhase === "fadeIn" ? 1 : 0 }}
-                        transition={{ duration: 0.3 }}
-                        style={{
-                            position: "fixed",
-                            top: 0,
-                            left: 0,
-                            width: "100vw",
-                            height: "100vh",
-                            backgroundColor: "black",
-                            zIndex: 9999,
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                    }}
+                    className={isTransitioning ? 'transitioning-preset' : ''}
+                >
+                    <GridDashboard
+                        ref={gridDashboardRef}
+                        layout={layout.filter((widget) => widget.enabled)}
+                        onExternalLayoutChange={handleExternalLayoutChange}
+                        onAddWidget={() => {
+                            setMenuOpen(true);
+                            updateTempLayout();
                         }}
+                        onOpenSettings={() => setSettingsOpen(true)}
                     />
-                )}
+
+                    {/* Fullscreen Widget Overlay */}
+                    {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
+                        <FullscreenWidget layout={layout} />
+                    )}
+                </motion.div>
             </div>
         </>
     );

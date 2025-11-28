@@ -153,6 +153,20 @@ nextjs-portal {
   transition: transform 0.2s ease;
 }
 
+/* Disable GridStack animations during preset transitions */
+.transitioning-preset .grid-stack .grid-stack-item {
+  transition: none !important;
+}
+
+.transitioning-preset .grid-stack .grid-stack-item-content {
+  transition: none !important;
+}
+
+.transitioning-preset .grid-stack * {
+  transition: none !important;
+  animation: none !important;
+}
+
 /* Placeholder when dragging widget from menu */
 .grid-stack-placeholder {
   background: rgba(59, 130, 246, 0.2) !important;
