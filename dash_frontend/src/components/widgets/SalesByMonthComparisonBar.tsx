@@ -234,64 +234,119 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, s
                                                     onMouseEnter={() => setHoveredIndex(index)}
                                                     onMouseLeave={() => setHoveredIndex(null)}
                                                 />
-                                                {/* Label positioning based on partial vs full amount ratio */}
-                                                {partialPrevious / fullPrevious > 0.75 ? (
-                                                    // If partial is more than 75% of full, put labels inside bars to avoid overlap
-                                                    <>
-                                                        {/* Full month label - inside the faded top portion */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight + 20}
-                                                            textAnchor="middle"
-                                                            fill="var(--text-muted)"
-                                                            fontSize="13"
-                                                            fontWeight="500"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(fullPrevious, 2)}
-                                                        </text>
-                                                        {/* Partial amount label - inside the solid bottom portion */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight + 20}
-                                                            textAnchor="middle"
-                                                            fill="var(--text-primary)"
-                                                            fontSize="14"
-                                                            fontWeight="600"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(partialPrevious, 2)}
-                                                        </text>
-                                                    </>
-                                                ) : (
-                                                    // If partial is less than 75% of full, put labels above bars with safe spacing
-                                                    <>
-                                                        {/* Full month label at the very top */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight - 8}
-                                                            textAnchor="middle"
-                                                            fill="var(--text-muted)"
-                                                            fontSize="13"
-                                                            fontWeight="500"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(fullPrevious, 2)}
-                                                        </text>
-                                                        {/* Partial amount label at partial bar top */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight - 8}
-                                                            textAnchor="middle"
-                                                            fill="var(--text-secondary)"
-                                                            fontSize="14"
-                                                            fontWeight="600"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(partialPrevious, 2)}
-                                                        </text>
-                                                    </>
-                                                )}
+                                                {/* Label positioning based on available space */}
+                                                {(() => {
+                                                    const fullY = padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight;
+                                                    const partialY = padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight;
+                                                    const spaceBetween = partialY - fullY;
+                                                    const minSpaceNeeded = 35;
+                                                    const partialHeight = (partialPrevious / maxValue) * chartHeight;
+                                                    const remainingHeight = (remainingPrevious / maxValue) * chartHeight;
+
+                                                    if (spaceBetween >= minSpaceNeeded) {
+                                                        // Enough space between labels - show both outside
+                                                        return (
+                                                            <>
+                                                                {/* Full month label at the very top */}
+                                                                <text
+                                                                    x={prevX + barWidth / 2}
+                                                                    y={fullY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-muted)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ${nFormatter(fullPrevious, 2)}
+                                                                </text>
+                                                                {/* Partial amount label at partial bar top */}
+                                                                {partialHeight < 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-secondary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-secondary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else {
+                                                        // Not enough space - use inside positioning for both
+                                                        return (
+                                                            <>
+                                                                {/* Full month label - inside the faded top portion if tall enough */}
+                                                                {remainingHeight >= 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={fullY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-muted)"
+                                                                        fontSize="13"
+                                                                        fontWeight="500"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(fullPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={fullY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-muted)"
+                                                                        fontSize="13"
+                                                                        fontWeight="500"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(fullPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                                {/* Partial amount label - inside the solid bottom portion if tall enough */}
+                                                                {partialHeight >= 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    }
+                                                })()}
 
                                                 {/* Current period bar (solid, blinking) */}
                                                 <rect
@@ -351,52 +406,95 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, s
                                                     }}
                                                 />
 
-                                                {/* Current value label */}
-                                                {item.currentPeriodSales > 0 && (
-                                                    <>
-                                                        {currentBarHeight < 40 ? (
-                                                            // If bar is too short, put label above
-                                                            <text
-                                                                x={currX + barWidth / 2}
-                                                                y={currY - 8}
-                                                                textAnchor="middle"
-                                                                fill="var(--text-primary)"
-                                                                fontSize="15"
-                                                                fontWeight="700"
-                                                                style={{ pointerEvents: "none" }}
-                                                            >
-                                                                ${nFormatter(item.currentPeriodSales, 2)}
-                                                            </text>
-                                                        ) : (
-                                                            // If bar is tall enough, put inside
-                                                            <text
-                                                                x={currX + barWidth / 2}
-                                                                y={currY + 20}
-                                                                textAnchor="middle"
-                                                                fill="var(--text-primary)"
-                                                                fontSize="15"
-                                                                fontWeight="700"
-                                                                style={{ pointerEvents: "none" }}
-                                                            >
-                                                                ${nFormatter(item.currentPeriodSales, 2)}
-                                                            </text>
-                                                        )}
-                                                    </>
-                                                )}
+                                                {/* Current value label and Projected value label with smart spacing */}
+                                                {(() => {
+                                                    const projectedY = padding.top + chartHeight - projectedHeight;
+                                                    const currentY = currY;
+                                                    const spaceBetween = currentY - projectedY;
+                                                    const minSpaceNeeded = 35;
 
-                                                {/* Projected value label with indicator */}
-                                                <text
-                                                    x={currX + barWidth / 2}
-                                                    y={padding.top + chartHeight - projectedHeight - 8}
-                                                    textAnchor="middle"
-                                                    fill="var(--text-secondary)"
-                                                    fontSize="13"
-                                                    fontWeight="500"
-                                                    fontStyle="italic"
-                                                    style={{ pointerEvents: "none" }}
-                                                >
-                                                    ~${nFormatter(projectedTotal, 2)}
-                                                </text>
+                                                    if (spaceBetween >= minSpaceNeeded) {
+                                                        // Enough space - show both labels outside
+                                                        return (
+                                                            <>
+                                                                {/* Projected value label above projection */}
+                                                                <text
+                                                                    x={currX + barWidth / 2}
+                                                                    y={projectedY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-secondary)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    fontStyle="italic"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ~${nFormatter(projectedTotal, 2)}
+                                                                </text>
+                                                                {/* Current value label */}
+                                                                {item.currentPeriodSales > 0 && (
+                                                                    currentBarHeight < 40 ? (
+                                                                        <text
+                                                                            x={currX + barWidth / 2}
+                                                                            y={currentY - 8}
+                                                                            textAnchor="middle"
+                                                                            fill="var(--text-primary)"
+                                                                            fontSize="15"
+                                                                            fontWeight="700"
+                                                                            style={{ pointerEvents: "none" }}
+                                                                        >
+                                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                                        </text>
+                                                                    ) : (
+                                                                        <text
+                                                                            x={currX + barWidth / 2}
+                                                                            y={currentY + 20}
+                                                                            textAnchor="middle"
+                                                                            fill="var(--text-primary)"
+                                                                            fontSize="15"
+                                                                            fontWeight="700"
+                                                                            style={{ pointerEvents: "none" }}
+                                                                        >
+                                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                                        </text>
+                                                                    )
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else {
+                                                        // Not enough space - put current inside, projected above
+                                                        return (
+                                                            <>
+                                                                {/* Projected value label above projection */}
+                                                                <text
+                                                                    x={currX + barWidth / 2}
+                                                                    y={projectedY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-secondary)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    fontStyle="italic"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ~${nFormatter(projectedTotal, 2)}
+                                                                </text>
+                                                                {/* Current value label inside bar */}
+                                                                {item.currentPeriodSales > 0 && (
+                                                                    <text
+                                                                        x={currX + barWidth / 2}
+                                                                        y={currentY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="15"
+                                                                        fontWeight="700"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(item.currentPeriodSales, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    }
+                                                })()}
                                             </>
                                         );
                                     })()}

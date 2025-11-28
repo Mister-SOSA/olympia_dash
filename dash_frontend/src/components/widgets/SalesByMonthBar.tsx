@@ -187,46 +187,91 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, s
                             {/* Value labels */}
                             {isLast && showProjection && projectedRemaining > 0 ? (
                                 <>
-                                    {/* Current value label */}
-                                    {barHeight < 40 ? (
-                                        <text
-                                            x={x + actualBarWidth / 2}
-                                            y={y - 10}
-                                            textAnchor="middle"
-                                            fill="var(--text-primary)"
-                                            fontSize="15"
-                                            fontWeight="700"
-                                            style={{ pointerEvents: "none" }}
-                                        >
-                                            ${nFormatter(item.currentPeriodSales, 2)}
-                                        </text>
-                                    ) : (
-                                        <text
-                                            x={x + actualBarWidth / 2}
-                                            y={y + 20}
-                                            textAnchor="middle"
-                                            fill="var(--text-primary)"
-                                            fontSize="15"
-                                            fontWeight="700"
-                                            style={{ pointerEvents: "none" }}
-                                        >
-                                            ${nFormatter(item.currentPeriodSales, 2)}
-                                        </text>
-                                    )}
+                                    {(() => {
+                                        // Calculate space between projected top and current bar top
+                                        const projectedY = padding.top + chartHeight - projectedHeight;
+                                        const currentY = y;
+                                        const spaceBetween = currentY - projectedY;
+                                        const minSpaceNeeded = 35; // Minimum pixels needed for both labels
 
-                                    {/* Projected value label (always above) */}
-                                    <text
-                                        x={x + actualBarWidth / 2}
-                                        y={padding.top + chartHeight - projectedHeight - 10}
-                                        textAnchor="middle"
-                                        fill="var(--text-secondary)"
-                                        fontSize="13"
-                                        fontWeight="500"
-                                        fontStyle="italic"
-                                        style={{ pointerEvents: "none" }}
-                                    >
-                                        ~${nFormatter(projectedTotal, 2)}
-                                    </text>
+                                        // If there's enough space, show both labels outside their bars
+                                        if (spaceBetween >= minSpaceNeeded) {
+                                            return (
+                                                <>
+                                                    {/* Projected value label above projection */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={projectedY - 10}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-secondary)"
+                                                        fontSize="13"
+                                                        fontWeight="500"
+                                                        fontStyle="italic"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ~${nFormatter(projectedTotal, 2)}
+                                                    </text>
+                                                    {/* Current value label */}
+                                                    {barHeight < 40 ? (
+                                                        <text
+                                                            x={x + actualBarWidth / 2}
+                                                            y={currentY - 10}
+                                                            textAnchor="middle"
+                                                            fill="var(--text-primary)"
+                                                            fontSize="15"
+                                                            fontWeight="700"
+                                                            style={{ pointerEvents: "none" }}
+                                                        >
+                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                        </text>
+                                                    ) : (
+                                                        <text
+                                                            x={x + actualBarWidth / 2}
+                                                            y={currentY + 20}
+                                                            textAnchor="middle"
+                                                            fill="var(--text-primary)"
+                                                            fontSize="15"
+                                                            fontWeight="700"
+                                                            style={{ pointerEvents: "none" }}
+                                                        >
+                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                        </text>
+                                                    )}
+                                                </>
+                                            );
+                                        } else {
+                                            // Not enough space - put current inside bar, projected above
+                                            return (
+                                                <>
+                                                    {/* Projected value label above projection */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={projectedY - 10}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-secondary)"
+                                                        fontSize="13"
+                                                        fontWeight="500"
+                                                        fontStyle="italic"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ~${nFormatter(projectedTotal, 2)}
+                                                    </text>
+                                                    {/* Current value label inside current bar */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={currentY + 20}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-primary)"
+                                                        fontSize="15"
+                                                        fontWeight="700"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ${nFormatter(item.currentPeriodSales, 2)}
+                                                    </text>
+                                                </>
+                                            );
+                                        }
+                                    })()}
                                 </>
                             ) : (
                                 <text
