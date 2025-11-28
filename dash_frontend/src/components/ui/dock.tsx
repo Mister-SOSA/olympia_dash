@@ -28,8 +28,8 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                 onMouseLeave={() => mouseX.set(Infinity)}
                 className={cn(
                     "flex gap-2 items-end rounded-2xl px-3 pb-2",
-                    "bg-ui-bg-primary border-2 border-ui-border-primary/80",
-                    "shadow-[0_8px_32px_rgba(0,0,0,0.6)]",
+                    "bg-ui-bg-primary border border-ui-border-primary",
+                    "shadow-2xl",
                     className
                 )}
                 style={{
@@ -110,12 +110,9 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
                 onContextMenu={onContextMenu}
                 title={title}
                 className={cn(
-                    "flex aspect-square items-center justify-center rounded-xl",
-                    "bg-ui-bg-secondary/90 hover:bg-ui-bg-tertiary",
-                    "border-2 border-ui-border-primary hover:border-ui-border-secondary",
-                    "text-ui-text-secondary hover:text-ui-text-primary",
+                    "flex aspect-square items-center justify-center rounded-xl relative",
+                    "border transition-colors duration-200",
                     "shadow-lg hover:shadow-xl",
-                    "transition-[background-color,border-color,color,box-shadow] duration-200",
                     className
                 )}
             >
@@ -128,6 +125,6 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
 DockIcon.displayName = "DockIcon";
 
 export const DockDivider = () => {
-    return <div className="w-[2px] h-full bg-ui-border-primary rounded-full mx-1 shadow-sm" />;
+    return <div className="w-px h-6 bg-ui-border-primary mx-1" />;
 };
 

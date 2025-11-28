@@ -1,12 +1,44 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dock, DockIcon, DockDivider } from "@/components/ui/dock";
-import { MdWidgets, MdSettings, MdBookmarks, MdVisibilityOff, MdVisibility } from "react-icons/md";
+import { MdWidgets, MdSettings, MdBookmarks, MdVisibilityOff, MdVisibility, MdAdd } from "react-icons/md";
 import { DashboardPreset } from "@/types";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { useSettings } from "@/hooks/useSettings";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+interface DockIconWithTooltipProps {
+    tooltip: string;
+    onClick?: () => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
+    className?: string;
+    children: React.ReactNode;
+    mouseX?: any;
+    magnification?: boolean;
+    iconSize?: number;
+    magnificationScale?: number;
+}
+
+// Wrapper that handles tooltip without breaking mouseX prop passing
+const DockIconWithTooltip = ({ tooltip, ...props }: DockIconWithTooltipProps) => {
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div>
+                    <DockIcon {...props} />
+                </div>
+            </TooltipTrigger>
+            <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+    );
+};
 
 interface DashboardDockProps {
     presets: Array<DashboardPreset | null>;
@@ -43,6 +75,27 @@ export default function DashboardDock({
         dockMagnificationScale,
         dockOpacity
     } = settings;
+
+    // Calculate initialized presets and first available slot
+    const { initializedPresets, firstAvailableSlot, hasAvailableSlot } = useMemo(() => {
+        const initialized: Array<{ index: number; preset: DashboardPreset }> = [];
+        let firstAvailable = -1;
+
+        presets.forEach((preset, index) => {
+            const hasWidgets = preset !== null && preset.layout.filter(w => w.enabled).length > 0;
+            if (hasWidgets) {
+                initialized.push({ index, preset });
+            } else if (firstAvailable === -1) {
+                firstAvailable = index;
+            }
+        });
+
+        return {
+            initializedPresets: initialized,
+            firstAvailableSlot: firstAvailable,
+            hasAvailableSlot: firstAvailable !== -1
+        };
+    }, [presets]);
 
     // Reference for hide timeout
     const hideTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -93,6 +146,12 @@ export default function DashboardDock({
         onPresetSave(index);
     };
 
+    const handleCreatePreset = () => {
+        if (firstAvailableSlot !== -1) {
+            onPresetSave(firstAvailableSlot);
+        }
+    };
+
     return (
         <AnimatePresence>
             {isVisible && (
@@ -108,98 +167,96 @@ export default function DashboardDock({
                         ['--dock-magnification-scale' as string]: dockMagnificationScale,
                     }}
                 >
-                    <Dock
-                        magnification={dockMagnification}
-                        iconSize={dockIconSize}
-                        magnificationScale={dockMagnificationScale}
-                    >
-                        {/* Widgets Icon */}
-                        <DockIcon
-                            onClick={onWidgetsClick}
-                            title="Widgets (F)"
-                            className="bg-ui-accent-primary-bg hover:bg-ui-accent-primary-bg border-ui-accent-primary-border hover:border-ui-accent-primary"
+                    <TooltipProvider delayDuration={200}>
+                        <Dock
+                            magnification={dockMagnification}
+                            iconSize={dockIconSize}
+                            magnificationScale={dockMagnificationScale}
                         >
-                            <MdWidgets className="w-6 h-6" />
-                        </DockIcon>
+                            {/* Widgets Icon */}
+                            <DockIconWithTooltip
+                                tooltip="Add Widgets (F)"
+                                onClick={onWidgetsClick}
+                                className="bg-ui-accent-primary-bg hover:bg-ui-accent-primary border-ui-accent-primary-border hover:border-ui-accent-primary text-ui-accent-primary-text hover:text-white"
+                            >
+                                <MdWidgets className="w-6 h-6" />
+                            </DockIconWithTooltip>
 
-                        {/* Preset Manager Icon */}
-                        <DockIcon
-                            onClick={onPresetManagerClick}
-                            title="Manage Presets (P)"
-                            className="bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary"
-                        >
-                            <MdBookmarks className="w-6 h-6" />
-                        </DockIcon>
+                            <DockDivider />
 
-                        <DockDivider />
+                            {/* Initialized Preset Slots */}
+                            {initializedPresets.map(({ index, preset }) => {
+                                const isActive = activePresetIndex === index;
+                                const presetName = preset?.name || `Preset ${index + 1}`;
 
-                        {/* Preset Slots 1-9 */}
-                        {presets.map((preset, index) => {
-                            const isFilled = preset !== null && preset.layout.filter(w => w.enabled).length > 0;
-                            const isActive = activePresetIndex === index;
-                            const presetName = preset?.name || `Preset ${index + 1}`;
+                                return (
+                                    <DockIconWithTooltip
+                                        key={index}
+                                        tooltip={presetName}
+                                        onClick={() => onPresetClick(index)}
+                                        onContextMenu={(e) => handlePresetRightClick(e, index)}
+                                        className={
+                                            isActive
+                                                ? "bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover border-ui-accent-secondary text-white ring-2 ring-ui-accent-secondary/50"
+                                                : "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary border-ui-accent-secondary-border hover:border-ui-accent-secondary text-ui-accent-secondary-text hover:text-white"
+                                        }
+                                    >
+                                        <span className="font-bold text-base">{index + 1}</span>
+                                        {dockShowActiveIndicator && isActive && (
+                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-ui-accent-secondary rounded-full shadow-lg animate-pulse" />
+                                        )}
+                                    </DockIconWithTooltip>
+                                );
+                            })}
 
-                            let tooltipText = `${presetName}`;
-                            if (isActive) {
-                                tooltipText += " (Active)";
-                            } else if (isFilled) {
-                                tooltipText += " - Click to load, Right-click to overwrite";
-                            } else {
-                                tooltipText += " - Right-click to save";
-                            }
-
-                            return (
-                                <DockIcon
-                                    key={index}
-                                    onClick={() => onPresetClick(index)}
-                                    onContextMenu={(e) => handlePresetRightClick(e, index)}
-                                    title={tooltipText}
-                                    className={
-                                        isActive
-                                            ? "bg-ui-accent-primary hover:bg-ui-accent-primary-hover border-ui-accent-primary relative ring-2 ring-ui-accent-primary/50"
-                                            : isFilled
-                                                ? "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border-ui-accent-secondary-border hover:border-ui-accent-secondary relative"
-                                                : "bg-ui-bg-secondary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
-                                    }
+                            {/* Add Preset Button - Only show if there's an available slot */}
+                            {hasAvailableSlot && (
+                                <DockIconWithTooltip
+                                    tooltip={`Create Preset ${firstAvailableSlot + 1}`}
+                                    onClick={handleCreatePreset}
+                                    className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-accent-secondary-border border-dashed text-ui-text-secondary hover:text-ui-accent-secondary-text"
                                 >
-                                    <span className="font-semibold text-sm">{index + 1}</span>
-                                    {dockShowActiveIndicator && isActive && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
-                                    )}
-                                    {dockShowActiveIndicator && !isActive && isFilled && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-ui-accent-secondary-text rounded-full shadow-[0_0_8px_rgba(147,51,234,0.6)]" />
-                                    )}
-                                </DockIcon>
-                            );
-                        })}
-
-                        <DockDivider />
-
-                        {/* Privacy Toggle */}
-                        <DockIcon
-                            onClick={togglePrivacy}
-                            title={isPrivate ? "Privacy Mode ON (\\)" : "Privacy Mode OFF (\\)"}
-                            className={isPrivate
-                                ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400"
-                                : "bg-ui-bg-tertiary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
-                            }
-                        >
-                            {isPrivate ? (
-                                <MdVisibilityOff className="w-6 h-6" />
-                            ) : (
-                                <MdVisibility className="w-6 h-6" />
+                                    <MdAdd className="w-6 h-6" />
+                                </DockIconWithTooltip>
                             )}
-                        </DockIcon>
 
-                        {/* Settings Icon */}
-                        <DockIcon
-                            onClick={onSettingsClick}
-                            title="Settings (S)"
-                            className="bg-ui-bg-tertiary/90 hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary"
-                        >
-                            <MdSettings className="w-6 h-6" />
-                        </DockIcon>
-                    </Dock>
+                            <DockDivider />
+
+                            {/* Preset Manager Icon */}
+                            <DockIconWithTooltip
+                                tooltip="Manage Presets (P)"
+                                onClick={onPresetManagerClick}
+                                className="bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary border-ui-accent-secondary-border hover:border-ui-accent-secondary text-ui-accent-secondary-text hover:text-white"
+                            >
+                                <MdBookmarks className="w-6 h-6" />
+                            </DockIconWithTooltip>
+
+                            {/* Privacy Toggle */}
+                            <DockIconWithTooltip
+                                tooltip="Privacy Mode (\\)"
+                                onClick={togglePrivacy}
+                                className={isPrivate
+                                    ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400 hover:text-amber-300 ring-2 ring-amber-500/40"
+                                    : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                                }
+                            >
+                                {isPrivate ? (
+                                    <MdVisibilityOff className="w-6 h-6" />
+                                ) : (
+                                    <MdVisibility className="w-6 h-6" />
+                                )}
+                            </DockIconWithTooltip>
+
+                            {/* Settings Icon */}
+                            <DockIconWithTooltip
+                                tooltip="Settings (S)"
+                                onClick={onSettingsClick}
+                                className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                            >
+                                <MdSettings className="w-6 h-6" />
+                            </DockIconWithTooltip>
+                        </Dock>
+                    </TooltipProvider>
                 </motion.div>
             )}
         </AnimatePresence>
