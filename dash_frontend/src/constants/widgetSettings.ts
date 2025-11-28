@@ -941,6 +941,95 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
             },
         ],
     },
+
+    // Entry Logs Widget (UniFi Access)
+    EntryLogsWidget: {
+        widgetId: 'EntryLogsWidget',
+        title: 'Entry Logs Settings',
+        description: 'Configure door access log display and filtering',
+        sections: [
+            {
+                title: 'Time Display',
+                fields: [
+                    {
+                        key: 'useRelativeTime',
+                        type: 'toggle',
+                        label: 'Use Relative Time',
+                        description: 'Show "5 min ago" instead of exact time for recent entries',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'relativeTimeThreshold',
+                        type: 'slider',
+                        label: 'Relative Time Window',
+                        description: 'Show relative time for entries within this many minutes',
+                        default: 60,
+                        min: 15,
+                        max: 120,
+                        step: 15,
+                        unit: ' min',
+                    } as SliderSettingField,
+                ],
+            },
+            {
+                title: 'Filtering',
+                fields: [
+                    {
+                        key: 'showIntercomEvents',
+                        type: 'toggle',
+                        label: 'Show Intercom Events',
+                        description: 'Include doorbell calls, missed calls, and intercom activity',
+                        default: false,
+                    } as ToggleSettingField,
+                    {
+                        key: 'filterByResult',
+                        type: 'select',
+                        label: 'Filter by Result',
+                        description: 'Show only specific access results',
+                        default: 'all',
+                        options: [
+                            { value: 'all', label: 'All Results' },
+                            { value: 'ACCESS', label: 'Access Granted Only' },
+                            { value: 'BLOCKED', label: 'Blocked/Denied Only' },
+                            { value: 'SUCCESS', label: 'Successful Actions Only' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'filterByDoor',
+                        type: 'select',
+                        label: 'Filter by Door',
+                        description: 'Show only specific doors',
+                        default: 'all',
+                        options: [
+                            { value: 'all', label: 'All Doors' },
+                            { value: 'door 1', label: 'Door 1 (Main Entry)' },
+                            { value: 'door 12', label: 'Door 12' },
+                            { value: '2nd floor', label: '2nd Floor Office' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+            {
+                title: 'Display Options',
+                fields: [
+                    {
+                        key: 'showAccessMethod',
+                        type: 'toggle',
+                        label: 'Show Access Method',
+                        description: 'Display how access was granted (NFC, Face, PIN, etc.)',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'highlightNewEntries',
+                        type: 'toggle',
+                        label: 'Highlight New Entries',
+                        description: 'Flash animation when new access events appear',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
 };
 
 // ============================================

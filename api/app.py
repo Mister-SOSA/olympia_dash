@@ -26,6 +26,7 @@ from auth.widget_routes import widget_bp
 from auth.analytics_routes import analytics_bp
 from auth.middleware import require_auth
 from services.usda_mpr import get_beef_prices, get_beef_heart_prices
+from services.unifi_access import get_entry_logs as fetch_entry_logs
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -375,6 +376,57 @@ def get_beef_heart_prices_endpoint():
         logger.error('Endpoint: /api/beef-heart-prices | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
 
+
+@app.route('/api/access-logs', methods=['GET'])
+@require_auth
+def get_access_logs():
+    """
+    Retrieve entry/access logs from UniFi Access.
+    
+    Query Parameters:
+        hours: Number of hours to look back (default: 24, max: 720)
+        topic: Log topic filter - door_openings, critical, updates, 
+               device_events, admin_activity, visitor (default: door_openings)
+        page: Page number for pagination (default: 1)
+        page_size: Results per page (default: 50, max: 100)
+    """
+    try:
+        hours = min(int(request.args.get('hours', 24)), 720)  # Max 30 days
+        topic = request.args.get('topic', 'door_openings')
+        page = max(int(request.args.get('page', 1)), 1)
+        page_size = min(int(request.args.get('page_size', 50)), 100)
+        
+        # Validate topic
+        valid_topics = ['all', 'door_openings', 'critical', 'updates', 
+                       'device_events', 'admin_activity', 'visitor']
+        if topic not in valid_topics:
+            topic = 'door_openings'
+        
+        result = fetch_entry_logs(
+            hours_back=hours,
+            topic=topic,
+            page_num=page,
+            page_size=page_size
+        )
+        
+        if not result['success']:
+            return jsonify({
+                "success": False, 
+                "error": result.get('error', 'Unknown error')
+            }), 200
+        
+        return jsonify({
+            "success": True, 
+            "data": result['data'],
+            "total": result.get('total', len(result['data']))
+        }), 200
+
+    except ValueError as e:
+        logger.warning('Endpoint: /api/access-logs | Invalid parameter: %s', e)
+        return jsonify({"success": False, "error": "Invalid parameter value"}), 200
+    except Exception as e:
+        logger.error('Endpoint: /api/access-logs | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
 
 
 if __name__ == "__main__":

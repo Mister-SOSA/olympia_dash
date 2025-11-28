@@ -346,6 +346,21 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
         minSize: { w: 4, h: 3 },
         searchKeywords: ["commodity", "meat", "pricing"],
     },
+
+    // ─────────────────────────────────────────
+    // Operations Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "EntryLogsWidget",
+        title: "Entry Logs",
+        description: "Real-time door access and entry logs from UniFi Access",
+        category: "Operations",
+        subcategory: "Security",
+        tags: ["table", "log", "access", "security", "door", "entry"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["unifi", "badge", "nfc", "face", "building", "who entered"],
+    },
 ];
 
 // ============================================
@@ -375,6 +390,7 @@ export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.C
     DateWidget: React.lazy(() => import("./DateWidget")),
     Humidity: React.lazy(() => import("./Humidity")),
     BeefPricesChart: React.lazy(() => import("./BeefPricesChart")),
+    EntryLogsWidget: React.lazy(() => import("./EntryLogsWidget")),
 };
 
 // ============================================

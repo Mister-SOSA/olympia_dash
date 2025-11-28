@@ -202,3 +202,46 @@ export interface WidgetAccessControl {
     permissions: Record<string, 'view' | 'edit' | 'admin'>;
     all_access: boolean;
 }
+
+// ============ UniFi Access Entry Logs Types ============
+
+export type AccessResult = 'ACCESS' | 'BLOCKED' | 'SUCCESS' | 'INCOMPLETE' | 'UNKNOWN';
+export type AccessDirection = 'entry' | 'exit' | 'call';
+export type AccessMethod = 'NFC' | 'Face' | 'PIN' | 'Remote' | 'Apple Wallet' | 'Google Wallet' | 'Fingerprint' | 'QR Code' | 'Unknown';
+
+export interface AccessLogEntry {
+    id: string;
+    timestamp: string;
+    published: number;
+
+    // Actor (person)
+    actor_id: string;
+    actor_name: string;
+    actor_type: 'user' | 'visitor' | 'device';
+
+    // Event details
+    result: AccessResult;
+    event_type: string;
+    message: string;
+    direction: AccessDirection;
+
+    // Access method
+    access_method: AccessMethod;
+    credential_provider: string;
+
+    // Location
+    door_name: string;
+    floor: string | null;
+    building: string | null;
+
+    // Metadata
+    log_key: string;
+    tag: string;
+}
+
+export interface AccessLogResponse {
+    success: boolean;
+    data: AccessLogEntry[];
+    total: number;
+    error?: string;
+}
