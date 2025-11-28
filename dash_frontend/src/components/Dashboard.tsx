@@ -309,43 +309,41 @@ export default function Dashboard() {
         const initialGridColumns = preferencesService.get('grid.columns', 11) as number;
         const initialGridCellHeight = preferencesService.get('grid.cellHeight', 80) as number;
 
-        const unsubscribe = preferencesService.subscribe((isRemote: boolean) => {
+        const unsubscribe = preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
             // IGNORE local changes - state is already updated directly by the caller
             // Only react to REMOTE changes from other sessions
             if (!isRemote) {
                 return;
             }
 
-            console.log('🔄 Remote preferences change detected...');
+            console.log('[Dashboard] Remote preferences change detected...', changedKeys);
 
             // Check for grid setting changes that require reload
             const newGridColumns = preferencesService.get('grid.columns', 11) as number;
             const newGridCellHeight = preferencesService.get('grid.cellHeight', 80) as number;
 
             if (newGridColumns !== initialGridColumns || newGridCellHeight !== initialGridCellHeight) {
-                console.log('🔲 Grid settings changed from another session, reloading...');
-                console.log(`   Columns: ${initialGridColumns} → ${newGridColumns}`);
-                console.log(`   Cell Height: ${initialGridCellHeight} → ${newGridCellHeight}`);
-
-                // Auto-reload to apply new grid settings from remote session
+                console.log('[Dashboard] Grid settings changed from another session, reloading...');
                 window.location.reload();
                 return;
             }
 
-            // Sync other preference changes from remote sessions
-            const storedLayout = readLayoutFromStorage();
-            const normalizedLayout = normalizeLayout(storedLayout);
-            setLayout(normalizedLayout);
+            // Only update state for keys that changed
+            if (!changedKeys || changedKeys.length === 0 || changedKeys.includes('dashboard')) {
+                const storedLayout = readLayoutFromStorage();
+                const normalizedLayout = normalizeLayout(storedLayout);
+                setLayout(normalizedLayout);
 
-            setPresets(readPresetsFromStorage());
-            setCurrentPresetType(readCurrentPresetType() as PresetType);
-            setActivePresetIndex(readActivePresetIndex());
+                setPresets(readPresetsFromStorage());
+                setCurrentPresetType(readCurrentPresetType() as PresetType);
+                setActivePresetIndex(readActivePresetIndex());
+            }
 
             // Update user state to reflect impersonation changes
             setUser(authService.getUser());
             setIsImpersonating(authService.isImpersonating());
 
-            console.log('✅ Dashboard state updated from remote');
+            console.log('[Dashboard] State updated from remote');
         });
 
         return unsubscribe;
@@ -365,8 +363,19 @@ export default function Dashboard() {
         const mergedLayout = mergeLayoutWithActive(layout, activeLayout);
         const normalizedLayout = normalizeLayout(mergedLayout);
 
+        // Check if layout actually changed before saving
+        if (areLayoutsEqual(layout, normalizedLayout)) {
+            return;
+        }
+
+        // Update state first
         setLayout(normalizedLayout);
-        saveLayoutToStorage(normalizedLayout); if (activePresetIndex !== null) {
+        
+        // Save layout (this will debounce via preferencesService)
+        saveLayoutToStorage(normalizedLayout);
+        
+        // Update active preset if one is selected
+        if (activePresetIndex !== null) {
             setPresets((prevPresets) => {
                 const currentPreset = prevPresets[activePresetIndex];
                 if (!currentPreset || areLayoutsEqual(currentPreset.layout, normalizedLayout)) {
@@ -380,7 +389,12 @@ export default function Dashboard() {
                     updatedAt: new Date().toISOString()
                 };
 
-                savePresetsToStorage(updatedPresets);
+                // Use setMany to batch this with other preference changes
+                preferencesService.set('dashboard.presets', updatedPresets, { 
+                    debounce: true,
+                    notifyLocal: false // Already updating our own state
+                });
+                
                 return updatedPresets;
             });
         }

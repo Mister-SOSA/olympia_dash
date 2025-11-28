@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from "react";
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useCallback } from "react";
 import { GridStack, GridStackNode } from "gridstack";
 import "gridstack/dist/gridstack.css";
 import { createRoot, Root } from "react-dom/client";
@@ -44,11 +44,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // Track if user is actively interacting with grid
         const isInteracting = useRef<boolean>(false);
-        const hasPendingSave = useRef<boolean>(false);
+        
+        // Track pending layout update to coalesce rapid changes
+        const pendingLayoutUpdate = useRef<Widget[] | null>(null);
+        const layoutUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
-        // Track the previous layout to detect changes
-        // This is updated both when GridStack changes internally AND when external layout changes are applied
-        const prevLayoutRef = useRef<Widget[]>(layout);
+        // Track the last layout we sent to parent to avoid duplicate updates
+        const lastSentLayout = useRef<string>("");
+        
+        // Track the last layout we received from parent to detect actual changes
+        const lastReceivedLayout = useRef<string>(JSON.stringify(layout));
 
         // ✅ FIX: Get widget permissions
         const { hasAccess } = useWidgetPermissions();
@@ -435,7 +440,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             }));
             gridInstance.current.load(layoutWithMinimums);
 
-            // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
+        // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
             gridInstance.current.el.querySelectorAll('.grid-stack-item').forEach((item: Element) => {
                 applyDragHandleRestriction(item as HTMLElement);
             });
@@ -443,10 +448,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Track when user starts/stops interacting
             gridInstance.current.on("dragstart", () => {
                 isInteracting.current = true;
+                preferencesService.setInteractionLock(true);
             });
 
             gridInstance.current.on("dragstop", (_event: Event, el: HTMLElement) => {
                 isInteracting.current = false;
+                preferencesService.setInteractionLock(false);
                 // Track widget move
                 const widgetId = el.getAttribute('data-widget-id');
                 if (widgetId) {
@@ -457,10 +464,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             gridInstance.current.on("resizestart", () => {
                 isInteracting.current = true;
+                preferencesService.setInteractionLock(true);
             });
 
             gridInstance.current.on("resizestop", (_event: Event, el: HTMLElement) => {
                 isInteracting.current = false;
+                preferencesService.setInteractionLock(false);
                 // Track widget resize (manual drag resize)
                 const widgetId = el.getAttribute('data-widget-id');
                 if (widgetId) {
@@ -469,48 +478,59 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 }
             });
 
-            // Listen to layout changes – on any change, grab the new state
-            // and propagate it to the parent and local storage.
-            // ✅ DEBOUNCED: Prevent feedback loops during resize/responsive changes
-            let changeTimer: NodeJS.Timeout;
+            // Listen to layout changes with coalesced debouncing
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
 
-                // Mark that we have a pending save
-                hasPendingSave.current = true;
+                const nodes = gridInstance.current.save() as GridStackNode[];
+                const updatedLayout = nodes.map((node) => ({
+                    id: node.id as string,
+                    x: node.x || 0,
+                    y: node.y || 0,
+                    w: node.w || 1,
+                    h: node.h || 1,
+                    enabled: true,
+                }));
 
-                // Debounce change events to prevent rapid-fire updates during resize
-                clearTimeout(changeTimer);
-                changeTimer = setTimeout(() => {
-                    if (!gridInstance.current) return;
-                    const nodes = gridInstance.current.save() as GridStackNode[];
-                    const updatedLayout = nodes.map((node) => ({
-                        id: node.id as string,
-                        x: node.x || 0,
-                        y: node.y || 0,
-                        w: node.w || 1,
-                        h: node.h || 1,
-                        enabled: true,
-                    }));
+                // Serialize for comparison
+                const layoutJson = JSON.stringify(updatedLayout);
+                
+                // Skip if this is the same as what we last sent
+                if (layoutJson === lastSentLayout.current) {
+                    return;
+                }
 
-                    // Update prevLayoutRef BEFORE calling the external handler
-                    // This ensures we don't try to reload the grid with the same layout we just saved
-                    prevLayoutRef.current = updatedLayout.map(w => ({ ...w }));
+                // Store as pending update
+                pendingLayoutUpdate.current = updatedLayout;
 
-                    externalLayoutChangeRef.current?.(updatedLayout);
+                // Clear existing timer
+                if (layoutUpdateTimer.current) {
+                    clearTimeout(layoutUpdateTimer.current);
+                }
 
-                    // Clear the pending save flag after a short delay
-                    // This should be long enough for React to process the state update
-                    // but short enough not to block legitimate external changes
-                    setTimeout(() => {
-                        hasPendingSave.current = false;
-                    }, 100);
-                }, 300); // Wait 300ms after last change before saving
+                // Coalesce rapid changes with debouncing
+                layoutUpdateTimer.current = setTimeout(() => {
+                    if (!pendingLayoutUpdate.current) return;
+                    
+                    const layoutToSend = pendingLayoutUpdate.current;
+                    const layoutJsonToSend = JSON.stringify(layoutToSend);
+                    
+                    // Update tracking refs BEFORE sending to parent
+                    lastSentLayout.current = layoutJsonToSend;
+                    lastReceivedLayout.current = layoutJsonToSend;
+                    pendingLayoutUpdate.current = null;
+                    layoutUpdateTimer.current = null;
+
+                    // Send to parent
+                    externalLayoutChangeRef.current?.(layoutToSend);
+                }, 300);
             });
 
             return () => {
                 // Clean up timers, React roots and destroy the grid instance.
-                clearTimeout(changeTimer);
+                if (layoutUpdateTimer.current) {
+                    clearTimeout(layoutUpdateTimer.current);
+                }
                 widgetRoots.current.forEach((root) => root.unmount());
                 widgetRoots.current.clear();
                 gridInstance.current!.destroy(false);
@@ -525,40 +545,45 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         useEffect(() => {
             if (!gridInstance.current) return;
 
-            // Check if widgets were added/removed (not just moved)
-            const prevIds = new Set(prevLayoutRef.current.map(w => w.id));
+            // Serialize incoming layout for comparison
+            const incomingLayoutJson = JSON.stringify(layout);
+            
+            // Skip if this is the same layout we just sent (our own change echoing back)
+            if (incomingLayoutJson === lastSentLayout.current) {
+                return;
+            }
+            
+            // Skip if layout hasn't changed from what we last received
+            if (incomingLayoutJson === lastReceivedLayout.current) {
+                return;
+            }
+
+            // Skip if user is actively interacting
+            if (isInteracting.current) {
+                console.log('[GridDashboard] Skipping layout update - user is interacting');
+                return;
+            }
+
+            // Skip if we have a pending local update (prevents race condition)
+            if (pendingLayoutUpdate.current) {
+                console.log('[GridDashboard] Skipping layout update - have pending local changes');
+                return;
+            }
+
+            // Check what actually changed
+            const prevIds = new Set(JSON.parse(lastReceivedLayout.current).map((w: Widget) => w.id));
             const currentIds = new Set(layout.map(w => w.id));
 
             const widgetsAdded = layout.some(w => !prevIds.has(w.id));
-            const widgetsRemoved = prevLayoutRef.current.some(w => !currentIds.has(w.id));
+            const widgetsRemoved = Array.from(prevIds).some(id => !currentIds.has(id as string));
 
-            // Check if any widget positions/sizes changed significantly
-            // Compare against what we last loaded into the grid, not what the grid currently has
-            const layoutChanged = layout.some(widget => {
-                const prev = prevLayoutRef.current.find(w => w.id === widget.id);
-                return !prev || prev.x !== widget.x || prev.y !== widget.y ||
-                    prev.w !== widget.w || prev.h !== widget.h;
-            });
-
-            // Skip reload if user is actively interacting
-            // Note: We DON'T skip for hasPendingSave anymore - the prevLayoutRef is now
-            // updated in the change handler, so if the incoming layout matches what
-            // we just saved, layoutChanged will be false and we won't reload anyway
-            if (isInteracting.current) {
-                console.log('⏸️ Skipping layout update - user is actively interacting');
-                return;
-            }
-
-            // If nothing changed, don't reload
-            if (!widgetsAdded && !widgetsRemoved && !layoutChanged) {
-                return;
-            }
-
-            console.log('🔄 Reloading GridStack with updated layout', {
+            console.log('[GridDashboard] Reloading with updated layout', {
                 widgetsAdded,
-                widgetsRemoved,
-                layoutChanged
+                widgetsRemoved
             });
+
+            // Update our tracking ref
+            lastReceivedLayout.current = incomingLayoutJson;
 
             // Create a set of widget IDs from the new layout
             const newWidgetIds = new Set(layout.map(widget => widget.id));
@@ -594,9 +619,6 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     });
                 }
             }, 100); // Small delay to ensure DOM is ready
-
-            // Update the previous layout reference
-            prevLayoutRef.current = layout;
         }, [layout, hasAccess]);
 
         // Build CSS classes based on settings

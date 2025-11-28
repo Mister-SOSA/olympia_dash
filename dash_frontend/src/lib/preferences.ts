@@ -3,12 +3,20 @@ import { authService } from './auth';
 import { io, Socket } from 'socket.io-client';
 
 /**
- * User Preferences Service - Real-time Sync Edition
+ * User Preferences Service - Real-time Sync Edition v2
  * 
- * - WebSocket for instant cross-session sync
- * - Session-aware: ignores own broadcasts
- * - LocalStorage caching
- * - Automatic debouncing
+ * ARCHITECTURE:
+ * - Optimistic updates: Local state updates immediately, then syncs to server
+ * - Debounced batching: Multiple rapid changes are batched into single server saves
+ * - Conflict resolution: Version-based conflict detection with automatic refresh
+ * - WebSocket sync: Real-time updates from other sessions
+ * - Session isolation: Ignores own broadcasts to prevent feedback loops
+ * 
+ * KEY IMPROVEMENTS:
+ * - Single debounce timer for ALL saves (no per-key timers that race)
+ * - Dirty tracking to know when local changes are pending
+ * - Interaction locks to prevent remote overwrites during user activity
+ * - Batched subscriber notifications to reduce re-renders
  */
 
 interface PreferencesResponse {
@@ -28,32 +36,55 @@ interface SaveResponse {
     conflict?: boolean;
 }
 
+type ChangeCallback = (isRemote: boolean, changedKeys?: string[]) => void;
+
 class PreferencesService {
     private readonly sessionId: string = crypto.randomUUID();
     private preferences: Record<string, any> = {};
     private version: number = 0;
-    private saveTimers: Map<string, NodeJS.Timeout> = new Map();
+    
+    // Single save timer - no more racing per-key timers
+    private saveTimer: NodeJS.Timeout | null = null;
+    private savePromise: Promise<boolean> | null = null;
+    
+    // Track which keys have unsaved changes
+    private dirtyKeys: Set<string> = new Set();
+    
+    // Track if a save is currently in flight
+    private isSaving: boolean = false;
+    
+    // Interaction lock - when true, ignore remote updates
+    private interactionLock: boolean = false;
+    private interactionLockTimer: NodeJS.Timeout | null = null;
+    
+    // Notification batching
+    private pendingNotification: boolean = false;
+    private notificationTimer: NodeJS.Timeout | null = null;
+    private pendingChangedKeys: Set<string> = new Set();
+    
     private syncInProgress: boolean = false;
     private socket: Socket | null = null;
-    private changeCallbacks: Set<(isRemote: boolean) => void> = new Set();
+    private changeCallbacks: Set<ChangeCallback> = new Set();
     private currentUserId: number | null = null;
-    private sessionCount: number = 1; // Track session count to skip broadcasts when alone
-    private readonly DEBOUNCE_MS = 500;
+    private sessionCount: number = 1;
+    
+    // Debounce timings
+    private readonly SAVE_DEBOUNCE_MS = 500;        // Wait 500ms after last change before saving
+    private readonly NOTIFICATION_DEBOUNCE_MS = 50;  // Batch notifications within 50ms
+    private readonly INTERACTION_LOCK_MS = 1000;     // Keep lock for 1s after last interaction
 
     constructor() {
         if (typeof window !== 'undefined') {
-            // Get current user to set cache keys
             const user = this.getCurrentUserFromAuth();
             if (user) {
                 this.currentUserId = user.id;
                 this.loadFromCache();
             }
-            console.log(`Session ID: ${this.sessionId.substring(0, 8)}...`);
+            console.log(`[Prefs] Session ID: ${this.sessionId.substring(0, 8)}...`);
         }
     }
 
     private getCurrentUserFromAuth(): { id: number } | null {
-        // Import auth service to get current user
         const { authService: auth } = require('./auth');
         return auth.getUser();
     }
@@ -67,7 +98,7 @@ class PreferencesService {
     }
 
     /**
-     * Load preferences from localStorage cache (user-specific)
+     * Load preferences from localStorage cache
      */
     private loadFromCache(): void {
         try {
@@ -80,17 +111,15 @@ class PreferencesService {
             if (cached) {
                 this.preferences = JSON.parse(cached);
                 this.version = cachedVersion ? parseInt(cachedVersion, 10) : 0;
-                console.log(`📦 Loaded from cache for user ${this.currentUserId} (v${this.version})`);
-            } else {
-                console.log(`📦 No cache found for user ${this.currentUserId}`);
+                console.log(`[Prefs] Loaded from cache for user ${this.currentUserId} (v${this.version})`);
             }
         } catch (e) {
-            console.error('Failed to load preferences from cache', e);
+            console.error('[Prefs] Failed to load from cache', e);
         }
     }
 
     /**
-     * Save preferences to localStorage cache (user-specific)
+     * Save preferences to localStorage cache
      */
     private saveToCache(): void {
         try {
@@ -100,7 +129,7 @@ class PreferencesService {
             localStorage.setItem(cacheKey, JSON.stringify(this.preferences));
             localStorage.setItem(versionKey, this.version.toString());
         } catch (e) {
-            console.error('Failed to save preferences to cache', e);
+            console.error('[Prefs] Failed to save to cache', e);
         }
     }
 
@@ -109,58 +138,53 @@ class PreferencesService {
      */
     async fetchFromServer(): Promise<boolean> {
         if (!authService.isAuthenticated()) {
-            console.warn('Cannot fetch preferences: not authenticated');
+            console.warn('[Prefs] Cannot fetch: not authenticated');
             return false;
         }
 
         try {
-            // Add impersonation parameter if active
             let url = `${API_BASE_URL}/api/preferences`;
             if (authService.isImpersonating()) {
                 const impersonatedId = authService.getImpersonatedUser()?.id;
                 if (impersonatedId) {
                     url += `?impersonated_user_id=${impersonatedId}`;
-                    console.log(`🎭 Fetching preferences for impersonated user ${impersonatedId}`);
                 }
             }
 
             const response = await authService.fetchWithAuth(url);
-
             const data: PreferencesResponse = await response.json();
 
             if (data.success) {
                 this.preferences = data.preferences;
                 this.version = data.version;
+                this.dirtyKeys.clear();
                 this.saveToCache();
                 return true;
             }
 
             return false;
         } catch (error) {
-            console.error('Failed to fetch preferences from server', error);
+            console.error('[Prefs] Failed to fetch from server', error);
             return false;
         }
     }
 
     /**
-     * Sync preferences from server on login and connect WebSocket
+     * Sync preferences on login
      */
     async syncOnLogin(): Promise<void> {
         if (this.syncInProgress) {
-            console.log('⏸️ Sync already in progress, waiting...');
+            console.log('[Prefs] Sync already in progress');
             return;
         }
         this.syncInProgress = true;
 
         try {
-            console.log(`📡 Syncing preferences for user ${this.currentUserId}...`);
+            console.log(`[Prefs] Syncing for user ${this.currentUserId}...`);
             const success = await this.fetchFromServer();
             if (success) {
-                console.log(`✅ Fetched preferences for user ${this.currentUserId} (v${this.version})`);
-            } else {
-                console.warn(`⚠️ Failed to fetch preferences for user ${this.currentUserId}`);
+                console.log(`[Prefs] Fetched preferences (v${this.version})`);
             }
-
             this.connectWebSocket();
         } finally {
             this.syncInProgress = false;
@@ -168,7 +192,7 @@ class PreferencesService {
     }
 
     /**
-     * Join the appropriate WebSocket rooms based on impersonation state
+     * Join appropriate WebSocket rooms
      */
     private joinAppropriateRooms(): void {
         if (!this.socket?.connected) return;
@@ -176,18 +200,16 @@ class PreferencesService {
         const user = authService.getUser();
         if (!user?.id) return;
 
-        // Always join own room (admin's room)
-        console.log(`Joining room for user ${user.id} with session ${this.sessionId.substring(0, 8)}...`);
+        console.log(`[Prefs] Joining room for user ${user.id}`);
         this.socket.emit('join', {
             user_id: user.id,
             session_id: this.sessionId
         });
 
-        // If impersonating, also join the impersonated user's room
         if (authService.isImpersonating()) {
             const impersonatedUser = authService.getImpersonatedUser();
             if (impersonatedUser?.id) {
-                console.log(`🎭 Also joining room for impersonated user ${impersonatedUser.id}`);
+                console.log(`[Prefs] Also joining room for impersonated user ${impersonatedUser.id}`);
                 this.socket.emit('join', {
                     user_id: impersonatedUser.id,
                     session_id: this.sessionId
@@ -206,63 +228,40 @@ class PreferencesService {
         const user = authService.getUser();
         if (!user?.id) return;
 
-        // Use the same origin as the current page for WebSocket connection
-        // This ensures it works in both development (localhost) and production (dash.olympiasuite.com)
         const wsUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
-
-        console.log(`🔌 Connecting to WebSocket at ${wsUrl}`);
+        console.log(`[Prefs] Connecting WebSocket to ${wsUrl}`);
 
         this.socket = io(wsUrl, {
-            // Use polling only for Cloudflare Tunnel compatibility
-            // Cloudflare tunnels don't support WebSocket upgrades reliably
             transports: ['polling'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             reconnectionAttempts: 5,
             timeout: 20000,
-            // Use /api/socket.io path since we're proxying through Next.js API routes
             path: '/api/socket.io/'
         });
 
         this.socket.on('connect', () => {
-            console.log('✅ WebSocket connected');
+            console.log('[Prefs] WebSocket connected');
             this.joinAppropriateRooms();
         });
 
         this.socket.on('joined', (data: any) => {
-            const sessionCount = data.session_count || 1;
-            this.sessionCount = sessionCount;
-            console.log(`✅ Joined room: ${data.room} (${sessionCount} session${sessionCount > 1 ? 's' : ''} active)`);
-
-            if (sessionCount === 1) {
-                console.log('ℹ️ You are the only session - broadcasts disabled for efficiency');
-            }
+            this.sessionCount = data.session_count || 1;
+            console.log(`[Prefs] Joined room: ${data.room} (${this.sessionCount} sessions)`);
         });
 
         this.socket.on('session_count_updated', (data: any) => {
-            const sessionCount = data.session_count || 1;
-            this.sessionCount = sessionCount;
-            console.log(`📊 Session count updated: ${sessionCount} session${sessionCount > 1 ? 's' : ''} active`);
-
-            if (sessionCount === 1) {
-                console.log('ℹ️ You are now alone - broadcasts will be disabled');
-            } else if (sessionCount === 2) {
-                console.log('ℹ️ Another session joined - broadcasts now active');
-            }
+            this.sessionCount = data.session_count || 1;
+            console.log(`[Prefs] Session count: ${this.sessionCount}`);
         });
 
         this.socket.on('connect_error', (error: any) => {
-            console.error('❌ WebSocket connection error:', error);
+            console.error('[Prefs] WebSocket error:', error);
         });
 
         this.socket.on('disconnect', (reason: string) => {
-            console.warn('⚠️ WebSocket disconnected:', reason);
-        });
-
-        this.socket.on('test_received', (data: any) => {
-            console.log('🧪 TEST BROADCAST RECEIVED:', data);
-            alert('Test broadcast received! Check console.');
+            console.warn('[Prefs] WebSocket disconnected:', reason);
         });
 
         this.socket.on('preferences_updated', (data: {
@@ -270,100 +269,197 @@ class PreferencesService {
             version: number,
             origin_session_id?: string
         }) => {
-            console.log(`📥 Broadcast received`);
-            console.log(`   From session: ${data.origin_session_id?.substring(0, 8) || 'unknown'}...`);
-            console.log(`   My session: ${this.sessionId.substring(0, 8)}...`);
-            console.log(`   Version: ${data.version} (my version: ${this.version})`);
-            console.log(`   Is own broadcast: ${data.origin_session_id === this.sessionId}`);
-
-            // Ignore our own broadcasts
+            // Ignore own broadcasts
             if (data.origin_session_id === this.sessionId) {
-                console.log('⏭️ Ignoring own broadcast');
                 return;
             }
 
-            // Only apply if version is newer
+            // Ignore if version is not newer
             if (data.version <= this.version) {
-                console.log('⏭️ Version not newer, ignoring');
                 return;
             }
 
-            console.log(`✅ Applying update from another session (v${this.version} → v${data.version})`);
+            // CRITICAL: Check interaction lock
+            if (this.interactionLock) {
+                console.log('[Prefs] Ignoring remote update - user is interacting');
+                return;
+            }
+
+            // CRITICAL: Check if we have unsaved local changes
+            if (this.dirtyKeys.size > 0) {
+                console.log(`[Prefs] Remote update received but have ${this.dirtyKeys.size} dirty keys - deferring`);
+                return;
+            }
+
+            console.log(`[Prefs] Applying remote update (v${this.version} → v${data.version})`);
+            
+            // Detect which keys changed
+            const changedKeys = this.detectChangedKeys(this.preferences, data.preferences);
+            
             this.preferences = data.preferences;
             this.version = data.version;
             this.saveToCache();
 
-            // Notify all subscribers (isRemote=true since this came from another session)
-            this.changeCallbacks.forEach(cb => cb(true));
+            // Notify subscribers about the remote change
+            this.notifySubscribers(true, changedKeys);
         });
     }
 
     /**
-     * Rejoin WebSocket rooms (called when impersonation state changes)
+     * Detect which top-level keys changed between two preference objects
+     */
+    private detectChangedKeys(oldPrefs: Record<string, any>, newPrefs: Record<string, any>): string[] {
+        const changedKeys: string[] = [];
+        const allKeys = new Set([...Object.keys(oldPrefs), ...Object.keys(newPrefs)]);
+        
+        for (const key of allKeys) {
+            if (JSON.stringify(oldPrefs[key]) !== JSON.stringify(newPrefs[key])) {
+                changedKeys.push(key);
+            }
+        }
+        
+        return changedKeys;
+    }
+
+    /**
+     * Rejoin WebSocket rooms (for impersonation changes)
      */
     rejoinRooms(): void {
         if (this.socket?.connected) {
-            console.log('🔄 Rejoining WebSocket rooms due to impersonation change...');
             this.joinAppropriateRooms();
         }
     }
 
     /**
      * Subscribe to preference changes
-     * Callback receives isRemote=true if change came from another session
+     * Callback receives (isRemote, changedKeys?)
      */
-    subscribe(callback: (isRemote: boolean) => void): () => void {
+    subscribe(callback: ChangeCallback): () => void {
         this.changeCallbacks.add(callback);
         return () => this.changeCallbacks.delete(callback);
     }
 
     /**
-     * Switch to a different user (for impersonation)
-     * Disconnects, clears state, fetches new user's preferences, reconnects
+     * Notify all subscribers with batching to reduce re-renders
+     */
+    private notifySubscribers(isRemote: boolean, changedKeys?: string[]): void {
+        // Add changed keys to pending set
+        if (changedKeys) {
+            changedKeys.forEach(key => this.pendingChangedKeys.add(key));
+        }
+        
+        // If already pending a notification, don't schedule another
+        if (this.pendingNotification) {
+            return;
+        }
+        
+        this.pendingNotification = true;
+        
+        // Clear existing timer if any
+        if (this.notificationTimer) {
+            clearTimeout(this.notificationTimer);
+        }
+        
+        // Batch notifications within a short window
+        this.notificationTimer = setTimeout(() => {
+            const keys = Array.from(this.pendingChangedKeys);
+            this.pendingChangedKeys.clear();
+            this.pendingNotification = false;
+            this.notificationTimer = null;
+            
+            // Notify all subscribers
+            this.changeCallbacks.forEach(cb => cb(isRemote, keys));
+        }, this.NOTIFICATION_DEBOUNCE_MS);
+    }
+
+    /**
+     * Set interaction lock - prevents remote updates from overwriting local changes
+     */
+    setInteractionLock(locked: boolean): void {
+        if (locked) {
+            this.interactionLock = true;
+            
+            if (this.interactionLockTimer) {
+                clearTimeout(this.interactionLockTimer);
+                this.interactionLockTimer = null;
+            }
+        } else {
+            if (this.interactionLockTimer) {
+                clearTimeout(this.interactionLockTimer);
+            }
+            
+            this.interactionLockTimer = setTimeout(() => {
+                this.interactionLock = false;
+                this.interactionLockTimer = null;
+            }, this.INTERACTION_LOCK_MS);
+        }
+    }
+
+    /**
+     * Check if interaction lock is active
+     */
+    isInteractionLocked(): boolean {
+        return this.interactionLock;
+    }
+
+    /**
+     * Switch user context (for impersonation)
      */
     async switchUser(): Promise<void> {
         const oldUserId = this.currentUserId;
         const newUser = this.getCurrentUserFromAuth();
         const newUserId = newUser?.id || null;
 
-        console.log(`🔄 Switching user context: ${oldUserId} → ${newUserId}`);
+        console.log(`[Prefs] Switching user: ${oldUserId} → ${newUserId}`);
 
-        // Disconnect current WebSocket
+        // Disconnect WebSocket
         if (this.socket?.connected) {
-            console.log('Disconnecting WebSocket...');
             this.socket.disconnect();
             this.socket = null;
         }
 
-        // Clear local state
+        // Clear all state
         this.preferences = {};
         this.version = 0;
-        this.saveTimers.forEach(timer => clearTimeout(timer));
-        this.saveTimers.clear();
+        this.dirtyKeys.clear();
+        this.clearAllTimers();
         this.syncInProgress = false;
+        this.interactionLock = false;
 
-        // Update user ID BEFORE loading cache (changes cache keys)
+        // Update user ID before loading cache
         this.currentUserId = newUserId;
-
-        // Load new user's cached preferences (if any)
         this.loadFromCache();
 
-        // Fetch fresh from server and reconnect WebSocket
-        console.log(`Fetching preferences for user ${newUserId}...`);
+        // Fetch from server and reconnect
         await this.syncOnLogin();
-
-        // Rejoin rooms with new impersonation state
         this.rejoinRooms();
 
-        // Notify subscribers (isRemote=false since this is a local user switch)
-        this.changeCallbacks.forEach(cb => cb(false));
+        // Notify subscribers
+        this.notifySubscribers(false);
 
-        console.log(`✅ User context switched to user ${newUserId}`);
+        console.log(`[Prefs] User context switched to ${newUserId}`);
     }
 
     /**
-     * Get a specific preference value
-     * Supports dot notation for nested values (e.g., 'dashboard.layout')
+     * Clear all timers
+     */
+    private clearAllTimers(): void {
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (this.notificationTimer) {
+            clearTimeout(this.notificationTimer);
+            this.notificationTimer = null;
+        }
+        if (this.interactionLockTimer) {
+            clearTimeout(this.interactionLockTimer);
+            this.interactionLockTimer = null;
+        }
+    }
+
+    /**
+     * Get a specific preference value (supports dot notation)
      */
     get<T = any>(key: string, defaultValue?: T): T | undefined {
         const keys = key.split('.');
@@ -389,13 +485,20 @@ class PreferencesService {
 
     /**
      * Set a specific preference value
-     * Supports dot notation for nested values (e.g., 'dashboard.layout')
-     * Automatically saves to server with debouncing
+     * 
+     * Options:
+     * - debounce: Whether to debounce the server save (default: true)
+     * - sync: Whether to sync to server at all (default: true)
+     * - notifyLocal: Whether to notify local subscribers (default: true)
      */
-    set(key: string, value: any, options: { debounce?: boolean; sync?: boolean; notifyLocal?: boolean } = {}): void {
+    set(key: string, value: any, options: { 
+        debounce?: boolean; 
+        sync?: boolean; 
+        notifyLocal?: boolean 
+    } = {}): void {
         const { debounce = true, sync = true, notifyLocal = true } = options;
 
-        // Update the preference value
+        // Update local state immediately (optimistic update)
         const keys = key.split('.');
         let target: any = this.preferences;
 
@@ -407,20 +510,29 @@ class PreferencesService {
             target = target[k];
         }
 
-        target[keys[keys.length - 1]] = value;
-
-        // Save to cache immediately
-        this.saveToCache();
-
-        // Notify local subscribers so other components using useSettings get updated
-        if (notifyLocal) {
-            this.changeCallbacks.forEach(cb => cb(false));
+        const finalKey = keys[keys.length - 1];
+        const oldValue = target[finalKey];
+        
+        // Skip if value hasn't changed
+        if (JSON.stringify(oldValue) === JSON.stringify(value)) {
+            return;
         }
 
-        // Save to server with optional debouncing
+        target[finalKey] = value;
+
+        // Mark as dirty and save to cache
+        this.dirtyKeys.add(keys[0]);
+        this.saveToCache();
+
+        // Notify local subscribers
+        if (notifyLocal) {
+            this.notifySubscribers(false, [keys[0]]);
+        }
+
+        // Schedule server save
         if (sync) {
             if (debounce) {
-                this.debouncedSaveToServer(key);
+                this.scheduleSave();
             } else {
                 this.saveToServer();
             }
@@ -430,23 +542,49 @@ class PreferencesService {
     /**
      * Set multiple preferences at once
      */
-    setMany(preferences: Record<string, any>, options: { sync?: boolean; notifyLocal?: boolean } = {}): void {
+    setMany(preferences: Record<string, any>, options: { 
+        sync?: boolean; 
+        notifyLocal?: boolean 
+    } = {}): void {
         const { sync = true, notifyLocal = true } = options;
 
-        // Deep merge preferences
-        this.preferences = this.deepMerge(this.preferences, preferences);
+        const changedKeys: string[] = [];
 
-        // Save to cache immediately
-        this.saveToCache();
+        // Update each preference
+        for (const [key, value] of Object.entries(preferences)) {
+            const keys = key.split('.');
+            let target: any = this.preferences;
 
-        // Notify local subscribers so other components using useSettings get updated
-        if (notifyLocal) {
-            this.changeCallbacks.forEach(cb => cb(false));
+            for (let i = 0; i < keys.length - 1; i++) {
+                const k = keys[i];
+                if (!(k in target) || typeof target[k] !== 'object') {
+                    target[k] = {};
+                }
+                target = target[k];
+            }
+
+            const finalKey = keys[keys.length - 1];
+            const oldValue = target[finalKey];
+            
+            if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
+                target[finalKey] = value;
+                this.dirtyKeys.add(keys[0]);
+                changedKeys.push(keys[0]);
+            }
         }
 
-        // Save to server
+        if (changedKeys.length === 0) {
+            return;
+        }
+
+        this.saveToCache();
+
+        if (notifyLocal) {
+            this.notifySubscribers(false, changedKeys);
+        }
+
         if (sync) {
-            this.saveToServer();
+            this.scheduleSave();
         }
     }
 
@@ -459,16 +597,13 @@ class PreferencesService {
 
         for (let i = 0; i < keys.length - 1; i++) {
             const k = keys[i];
-            if (!(k in target)) return true; // Already doesn't exist
+            if (!(k in target)) return true;
             target = target[k];
         }
 
         delete target[keys[keys.length - 1]];
-
-        // Save to cache
         this.saveToCache();
 
-        // Delete from server
         if (authService.isAuthenticated()) {
             try {
                 const response = await authService.fetchWithAuth(
@@ -477,13 +612,12 @@ class PreferencesService {
                 );
 
                 const data: SaveResponse = await response.json();
-
                 if (data.success) {
                     this.version = data.version;
                     return true;
                 }
             } catch (error) {
-                console.error('Failed to delete preference from server', error);
+                console.error('[Prefs] Failed to delete from server', error);
             }
         }
 
@@ -496,6 +630,7 @@ class PreferencesService {
     async clearAll(): Promise<void> {
         this.preferences = {};
         this.version = 0;
+        this.dirtyKeys.clear();
         this.saveToCache();
 
         if (authService.isAuthenticated()) {
@@ -504,139 +639,137 @@ class PreferencesService {
     }
 
     /**
-     * Save preferences to server with debouncing
+     * Schedule a save with debouncing
      */
-    private debouncedSaveToServer(key: string): void {
-        // Clear ALL existing timers (not just for this key)
-        this.saveTimers.forEach(timer => clearTimeout(timer));
-        this.saveTimers.clear();
+    private scheduleSave(): void {
+        // Clear existing timer
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+        }
 
-        // Set single new timer
-        const timer = setTimeout(() => {
+        // Schedule new save
+        this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
             this.saveToServer();
-            this.saveTimers.clear();
-        }, this.DEBOUNCE_MS);
-
-        this.saveTimers.set('save', timer);
+        }, this.SAVE_DEBOUNCE_MS);
     }
 
     /**
-     * Save preferences to server immediately
+     * Save preferences to server
      */
     private async saveToServer(useVersionCheck: boolean = true): Promise<boolean> {
         if (!authService.isAuthenticated()) {
             return false;
         }
 
-        try {
-            console.log('💾 Saving to server...');
-
-            const body: any = {
-                preferences: this.preferences,
-                session_id: this.sessionId
-            };
-
-            if (useVersionCheck && this.version > 0) {
-                body.version = this.version;
-            }
-
-            // Add impersonation info if active
-            if (authService.isImpersonating()) {
-                const impersonatedId = authService.getImpersonatedUser()?.id;
-                if (impersonatedId) {
-                    body.impersonated_user_id = impersonatedId;
-                    console.log(`🎭 Saving preferences for impersonated user ${impersonatedId}`);
+        // If already saving, wait for current save to complete then retry
+        if (this.isSaving) {
+            console.log('[Prefs] Save already in progress, will retry after');
+            if (this.savePromise) {
+                await this.savePromise;
+                if (this.dirtyKeys.size > 0) {
+                    return this.saveToServer(useVersionCheck);
                 }
             }
-
-            const response = await authService.fetchWithAuth(
-                `${API_BASE_URL}/api/preferences`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body),
-                }
-            );
-
-            const data: SaveResponse = await response.json();
-
-            if (data.success) {
-                this.version = data.version;
-                this.saveToCache();
-                console.log(`✅ Saved (v${this.version})`);
-
-                // Trigger broadcast via WebSocket event (works reliably!)
-                if (this.socket?.connected && this.sessionCount > 1) {
-                    // Use impersonated user ID if impersonating, otherwise use admin's ID
-                    const targetUserId = authService.isImpersonating()
-                        ? authService.getImpersonatedUser()?.id
-                        : authService.getUser()?.id;
-
-                    this.socket.emit('broadcast_preferences', {
-                        user_id: targetUserId,
-                        preferences: this.preferences,
-                        version: this.version,
-                        origin_session_id: this.sessionId
-                    });
-
-                    console.log(`📡 Broadcasting to room user_${targetUserId}${authService.isImpersonating() ? ' (impersonated)' : ''} (${this.sessionCount} sessions)`);
-                } else if (this.socket?.connected) {
-                    console.log(`⏭️ Skipping broadcast - only ${this.sessionCount} session(s) active`);
-                } return true;
-            } else if (data.conflict) {
-                console.warn('⚠️ Version conflict, syncing...');
-                await this.fetchFromServer();
-                return false;
-            }
-
-            return false;
-        } catch (error) {
-            console.error('Failed to save preferences to server', error);
-            return false;
+            return true;
         }
+
+        this.isSaving = true;
+        const keysBeingSaved = new Set(this.dirtyKeys);
+
+        this.savePromise = (async () => {
+            try {
+                console.log(`[Prefs] Saving to server (${keysBeingSaved.size} dirty keys)...`);
+
+                const body: any = {
+                    preferences: this.preferences,
+                    session_id: this.sessionId
+                };
+
+                if (useVersionCheck && this.version > 0) {
+                    body.version = this.version;
+                }
+
+                if (authService.isImpersonating()) {
+                    const impersonatedId = authService.getImpersonatedUser()?.id;
+                    if (impersonatedId) {
+                        body.impersonated_user_id = impersonatedId;
+                    }
+                }
+
+                const response = await authService.fetchWithAuth(
+                    `${API_BASE_URL}/api/preferences`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    }
+                );
+
+                const data: SaveResponse = await response.json();
+
+                if (data.success) {
+                    this.version = data.version;
+                    
+                    // Clear the dirty keys we just saved
+                    keysBeingSaved.forEach(key => this.dirtyKeys.delete(key));
+                    
+                    this.saveToCache();
+                    console.log(`[Prefs] Saved successfully (v${this.version})`);
+
+                    // Broadcast to other sessions
+                    if (this.socket?.connected && this.sessionCount > 1) {
+                        const targetUserId = authService.isImpersonating()
+                            ? authService.getImpersonatedUser()?.id
+                            : authService.getUser()?.id;
+
+                        this.socket.emit('broadcast_preferences', {
+                            user_id: targetUserId,
+                            preferences: this.preferences,
+                            version: this.version,
+                            origin_session_id: this.sessionId
+                        });
+                        console.log(`[Prefs] Broadcasting to ${this.sessionCount} sessions`);
+                    }
+
+                    return true;
+                } else if (data.conflict) {
+                    console.warn('[Prefs] Version conflict, refreshing...');
+                    await this.fetchFromServer();
+                    this.notifySubscribers(true);
+                    return false;
+                }
+
+                return false;
+            } catch (error) {
+                console.error('[Prefs] Failed to save to server', error);
+                return false;
+            } finally {
+                this.isSaving = false;
+                this.savePromise = null;
+            }
+        })();
+
+        return this.savePromise;
     }
 
     /**
      * Force immediate sync to server (bypasses debouncing)
      */
     async forceSync(): Promise<boolean> {
-        // Clear all pending timers
-        this.saveTimers.forEach(timer => clearTimeout(timer));
-        this.saveTimers.clear();
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
 
         return await this.saveToServer();
     }
 
     /**
-     * Deep merge two objects
+     * Check if there are unsaved changes
      */
-    private deepMerge(target: any, source: any): any {
-        const output = { ...target };
-
-        if (this.isObject(target) && this.isObject(source)) {
-            Object.keys(source).forEach(key => {
-                if (this.isObject(source[key])) {
-                    if (!(key in target)) {
-                        output[key] = source[key];
-                    } else {
-                        output[key] = this.deepMerge(target[key], source[key]);
-                    }
-                } else {
-                    output[key] = source[key];
-                }
-            });
-        }
-
-        return output;
-    }
-
-    /**
-     * Check if value is a plain object
-     */
-    private isObject(item: any): boolean {
-        return item && typeof item === 'object' && !Array.isArray(item);
+    hasPendingChanges(): boolean {
+        return this.dirtyKeys.size > 0 || this.saveTimer !== null;
     }
 
     /**
@@ -647,7 +780,7 @@ class PreferencesService {
     }
 
     /**
-     * Get current user ID (for debugging)
+     * Get current user ID
      */
     getCurrentUserId(): number | null {
         return this.currentUserId;
@@ -663,7 +796,12 @@ class PreferencesService {
             version: this.version,
             cacheKey: this.getCacheKey(),
             preferencesKeys: Object.keys(this.preferences),
-            socketConnected: this.socket?.connected || false
+            socketConnected: this.socket?.connected || false,
+            sessionCount: this.sessionCount,
+            dirtyKeys: Array.from(this.dirtyKeys),
+            hasPendingSave: this.saveTimer !== null,
+            isSaving: this.isSaving,
+            interactionLock: this.interactionLock
         };
     }
 }
@@ -689,7 +827,7 @@ export const preferenceHelpers = {
 // Expose for debugging in browser console
 if (typeof window !== 'undefined') {
     (window as any).testSync = () => {
-        console.log('🧪 Testing sync by setting test value...');
+        console.log('[Test] Setting test value...');
         preferencesService.set('test', Date.now());
     };
     (window as any).testBroadcast = () => {
@@ -698,16 +836,14 @@ if (typeof window !== 'undefined') {
             console.error('Not logged in!');
             return;
         }
-        console.log('🧪 Sending test broadcast request...');
+        console.log('[Test] Sending test broadcast...');
         (preferencesService as any).socket?.emit('test_broadcast', { user_id: user.id });
     };
     (window as any).debugPrefs = () => {
-        console.log('🔍 Preferences Debug Info:');
+        console.log('[Debug] Preferences Info:');
         const info = preferencesService.getDebugInfo();
         console.table(info);
         console.log('Current preferences:', preferencesService.getAll());
-        console.log('Dashboard layout:', preferencesService.get('dashboard.layout'));
-        console.log('Dashboard presets:', preferencesService.get('dashboard.presets'));
     };
     (window as any).prefs = preferencesService;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { preferencesService } from "@/lib/preferences";
 import {
     APPEARANCE_SETTINGS,
@@ -42,6 +42,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         enableHotkeys: KEYBOARD_SETTINGS.enableHotkeys.default,
         snowEffect: APPEARANCE_SETTINGS.snowEffect.default,
     });
+    
+    const settingsJsonRef = useRef<string>(JSON.stringify(settings));
 
     const loadSettings = useCallback(() => {
         const animations = preferencesService.get(
@@ -69,15 +71,32 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             APPEARANCE_SETTINGS.snowEffect.default
         ) as boolean;
 
-        setSettings({ animations, compactMode, fontSize, enableHotkeys, snowEffect });
+        const newSettings = { animations, compactMode, fontSize, enableHotkeys, snowEffect };
+        const newJson = JSON.stringify(newSettings);
+        
+        // Only update if settings actually changed
+        if (newJson !== settingsJsonRef.current) {
+            settingsJsonRef.current = newJson;
+            setSettings(newSettings);
+        }
     }, []);
 
     // Load settings on mount and subscribe to changes
     useEffect(() => {
         loadSettings();
 
-        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => {
-            loadSettings();
+        const unsubscribe = preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
+            // Only reload for remote changes or appearance/keyboard changes
+            if (isRemote) {
+                loadSettings();
+            } else if (changedKeys) {
+                const hasRelevantChanges = changedKeys.some(key => 
+                    key.startsWith('appearance') || key.startsWith('keyboard')
+                );
+                if (hasRelevantChanges) {
+                    loadSettings();
+                }
+            }
         });
 
         return unsubscribe;

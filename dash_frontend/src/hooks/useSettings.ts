@@ -3,9 +3,14 @@
  * 
  * A type-safe React hook for accessing and updating user settings.
  * Provides real-time synchronization across sessions via preferencesService.
+ * 
+ * OPTIMIZATIONS:
+ * - Only re-renders when relevant settings actually change
+ * - Batches multiple updates efficiently
+ * - Uses shallow comparison to avoid unnecessary state updates
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { preferencesService } from '@/lib/preferences';
 import {
     APPEARANCE_SETTINGS,
@@ -214,6 +219,9 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
 export function useSettings() {
     const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
     const [isLoaded, setIsLoaded] = useState(false);
+    
+    // Track which setting categories we care about for selective updates
+    const settingsJsonRef = useRef<string>(JSON.stringify(DEFAULT_SETTINGS));
 
     // Load settings from preferences service
     const loadSettings = useCallback(() => {
@@ -227,16 +235,13 @@ export function useSettings() {
             }
         });
 
-        // Only update state if settings actually changed (shallow compare)
-        setSettings(prev => {
-            const hasChanges = (Object.keys(loadedSettings) as Array<keyof UserSettings>).some(
-                key => prev[key] !== loadedSettings[key]
-            );
-            if (hasChanges) {
-                return loadedSettings;
-            }
-            return prev;
-        });
+        const newJson = JSON.stringify(loadedSettings);
+        
+        // Only update state if settings actually changed
+        if (newJson !== settingsJsonRef.current) {
+            settingsJsonRef.current = newJson;
+            setSettings(loadedSettings);
+        }
         setIsLoaded(true);
     }, []);
 
@@ -244,8 +249,28 @@ export function useSettings() {
     useEffect(() => {
         loadSettings();
 
-        const unsubscribe = preferencesService.subscribe((_isRemote: boolean) => {
-            loadSettings();
+        const unsubscribe = preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
+            // Only reload settings for remote changes, or if relevant keys changed
+            if (isRemote) {
+                loadSettings();
+            } else if (changedKeys) {
+                // Check if any changed keys are settings-related
+                const hasRelevantChanges = changedKeys.some(key => 
+                    key.startsWith('appearance') || 
+                    key.startsWith('datetime') ||
+                    key.startsWith('dashboard') ||
+                    key.startsWith('grid') ||
+                    key.startsWith('dock') ||
+                    key.startsWith('dragHandle') ||
+                    key.startsWith('widget') ||
+                    key.startsWith('notifications') ||
+                    key.startsWith('data') ||
+                    key.startsWith('keyboard')
+                );
+                if (hasRelevantChanges) {
+                    loadSettings();
+                }
+            }
         });
 
         return unsubscribe;
@@ -257,14 +282,22 @@ export function useSettings() {
         value: UserSettings[K]
     ) => {
         const prefKey = SETTINGS_KEY_MAP[key];
-        // Set in preferences but don't notify this instance (we update our own state below)
-        // Other useSettings instances will be notified and re-read from preferences
-        preferencesService.set(prefKey, value);
-
-        setSettings(prev => ({
-            ...prev,
-            [key]: value,
-        }));
+        
+        // Update local state immediately
+        setSettings(prev => {
+            if (prev[key] === value) {
+                return prev; // No change
+            }
+            const newSettings = {
+                ...prev,
+                [key]: value,
+            };
+            settingsJsonRef.current = JSON.stringify(newSettings);
+            return newSettings;
+        });
+        
+        // Sync to preferences (will debounce automatically)
+        preferencesService.set(prefKey, value, { notifyLocal: false });
     }, []);
 
     // Update multiple settings at once
@@ -276,13 +309,15 @@ export function useSettings() {
             prefUpdates[prefKey] = updates[key];
         });
 
-        // Set in preferences (will notify other instances)
-        preferencesService.setMany(prefUpdates);
+        // Update local state immediately
+        setSettings(prev => {
+            const newSettings = { ...prev, ...updates };
+            settingsJsonRef.current = JSON.stringify(newSettings);
+            return newSettings;
+        });
 
-        setSettings(prev => ({
-            ...prev,
-            ...updates,
-        }));
+        // Set in preferences (will debounce automatically)
+        preferencesService.setMany(prefUpdates, { notifyLocal: false });
     }, []);
 
     // Reset a setting to default
