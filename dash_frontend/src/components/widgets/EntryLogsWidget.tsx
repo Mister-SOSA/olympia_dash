@@ -221,11 +221,11 @@ const getMethodStyles = (method: AccessMethod): React.CSSProperties => {
 const getDoorStyles = (doorName: string): React.CSSProperties => {
     const nameLower = doorName.toLowerCase();
 
-    if (nameLower.includes('main') || nameLower.includes('front') || nameLower.includes('entry')) {
+    if (nameLower.includes('door') || nameLower.includes('front') || nameLower.includes('entry')) {
         return {
-            backgroundColor: 'var(--badge-primary-bg)',
-            color: 'var(--badge-primary-text)',
-            borderColor: 'var(--badge-primary-border)'
+            backgroundColor: 'var(--badge-warning-bg)',
+            color: 'var(--badge-warning-text)',
+            borderColor: 'var(--badge-warning-border)'
         };
     }
     if (nameLower.includes('office')) {
