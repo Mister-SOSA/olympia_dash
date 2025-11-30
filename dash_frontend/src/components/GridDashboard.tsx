@@ -110,6 +110,58 @@ const layoutToWidgets = (rglLayout: Layout[], existingWidgets: Widget[]): Widget
     });
 };
 
+/**
+ * Compact a layout vertically, filling gaps and moving items up.
+ * This is a proper bin-packing algorithm that finds the first available position for each widget.
+ */
+const compactLayout = (layout: Layout[], cols: number): Layout[] => {
+    // Sort by y then x to process top-to-bottom, left-to-right
+    const sorted = [...layout].sort((a, b) => {
+        if (a.y !== b.y) return a.y - b.y;
+        return a.x - b.x;
+    });
+
+    // Track occupied cells
+    const occupied: boolean[][] = [];
+
+    const isOccupied = (x: number, y: number, w: number, h: number): boolean => {
+        for (let row = y; row < y + h; row++) {
+            for (let col = x; col < x + w; col++) {
+                if (occupied[row]?.[col]) return true;
+            }
+        }
+        return false;
+    };
+
+    const markOccupied = (x: number, y: number, w: number, h: number): void => {
+        for (let row = y; row < y + h; row++) {
+            if (!occupied[row]) occupied[row] = [];
+            for (let col = x; col < x + w; col++) {
+                occupied[row][col] = true;
+            }
+        }
+    };
+
+    const findFirstAvailablePosition = (w: number, h: number): { x: number; y: number } => {
+        for (let y = 0; ; y++) {
+            for (let x = 0; x <= cols - w; x++) {
+                if (!isOccupied(x, y, w, h)) {
+                    return { x, y };
+                }
+            }
+        }
+    };
+
+    // Place each widget in the first available position
+    const compacted: Layout[] = sorted.map(item => {
+        const pos = findFirstAvailablePosition(item.w, item.h);
+        markOccupied(pos.x, pos.y, item.w, item.h);
+        return { ...item, x: pos.x, y: pos.y };
+    });
+
+    return compacted;
+};
+
 const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
     ({ layout, layoutKey, onExternalLayoutChange, onAddWidget, onOpenSettings }, ref) => {
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
@@ -340,13 +392,18 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Compact method exposed to parent
         useImperativeHandle(ref, () => ({
             compact: (mode: 'list' | 'compact' = 'list') => {
-                // react-grid-layout handles compacting automatically with compactType="vertical"
                 console.log(`Compact requested: ${mode}`);
-                // Trigger a save of current state
-                const currentWidgets = layoutToWidgets(gridLayout, layout);
-                externalLayoutChangeRef.current?.(currentWidgets, 'compact');
+
+                // Run the compaction algorithm on the current layout
+                const compactedRglLayout = compactLayout(gridLayout, columnCount);
+
+                // Convert back to Widget[] format
+                const compactedWidgets = layoutToWidgets(compactedRglLayout, layout);
+
+                // Send to parent - this will update state and re-render with compacted positions
+                externalLayoutChangeRef.current?.(compactedWidgets, 'compact');
             },
-        }), [gridLayout, layout]);
+        }), [gridLayout, layout, columnCount]);
 
         // Cleanup on unmount
         useEffect(() => {
@@ -514,8 +571,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     onClose={hideDashboardContextMenu}
                     onAddWidget={() => onAddWidget?.()}
                     onCompact={() => {
-                        const currentWidgets = layoutToWidgets(gridLayout, layout);
-                        externalLayoutChangeRef.current?.(currentWidgets, 'compact');
+                        // Run the compaction algorithm
+                        const compactedRglLayout = compactLayout(gridLayout, columnCount);
+                        const compactedWidgets = layoutToWidgets(compactedRglLayout, layout);
+                        externalLayoutChangeRef.current?.(compactedWidgets, 'compact');
                     }}
                     onSettings={() => onOpenSettings?.()}
                     onRefreshAll={handleRefreshAll}
