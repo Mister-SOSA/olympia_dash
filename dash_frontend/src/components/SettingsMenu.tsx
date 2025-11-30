@@ -7,6 +7,9 @@ import { useTheme, THEMES } from "@/contexts/ThemeContext";
 import { DashboardPreset } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import { usePrivacy, ObfuscationStyle } from "@/contexts/PrivacyContext";
+import { preferencesService } from "@/lib/preferences";
+import { widgetSettingsService } from "@/lib/widgetSettings";
+import { ConfirmModal } from "@/components/ui/modal";
 import {
     TIMEZONE_OPTIONS,
     DATE_FORMAT_OPTIONS,
@@ -37,6 +40,8 @@ import {
     MdWidgets,
     MdBookmarks,
     MdSettings,
+    MdDelete,
+    MdWarning,
 } from "react-icons/md";
 
 interface SettingsMenuProps {
@@ -270,7 +275,7 @@ function Subsection({ title, children }: { title: string; children: React.ReactN
     );
 }
 
-type SettingsView = 'account' | 'appearance' | 'layout' | 'dock' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts';
+type SettingsView = 'account' | 'appearance' | 'layout' | 'dock' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts' | 'advanced';
 
 const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: string; badge?: string }[] = [
     { id: 'account', icon: MdPerson, label: 'Account' },
@@ -283,6 +288,7 @@ const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: stri
     { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy' },
     { id: 'presets', icon: MdRefresh, label: 'Presets' },
     { id: 'shortcuts', icon: MdKeyboard, label: 'Shortcuts' },
+    { id: 'advanced', icon: MdStorage, label: 'Advanced' },
 ];
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, presets = [], initialView = 'account' }: SettingsMenuProps) {
@@ -298,6 +304,17 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
     // Local state for grid settings
     const [localGridColumns, setLocalGridColumns] = useState(settings.gridColumns);
     const [localGridCellHeight, setLocalGridCellHeight] = useState(settings.gridCellHeight);
+
+    // State for Advanced section modals
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        type?: 'warning' | 'danger' | 'info';
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, type: 'warning' });
+    const [nuclearInput, setNuclearInput] = useState('');
+    const [showNuclearModal, setShowNuclearModal] = useState(false);
 
     // Calculate available presets (those that are initialized with layouts)
     const availablePresets = useMemo(() => {
@@ -1414,6 +1431,466 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                         </div>
                                     )}
 
+                                    {/* Advanced View */}
+                                    {activeView === 'advanced' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-ui-text-primary">Advanced</h3>
+                                                <p className="text-sm text-ui-text-secondary mt-1">Data management and preferences</p>
+                                            </div>
+                                            <div className="space-y-5">
+                                                {/* Warning Banner */}
+                                                <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <MdWarning className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                                                        <div>
+                                                            <p className="text-sm font-medium text-ui-text-primary mb-1">
+                                                                Clearing preferences is permanent
+                                                            </p>
+                                                            <p className="text-xs text-ui-text-secondary">
+                                                                These actions cannot be undone. Your data is synced across all sessions.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <Subsection title="Dashboard & Layout">
+                                                    <div className="space-y-3">
+                                                        {/* Clear Widget Layouts */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdGridOn className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Widget Layouts</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Clears all widget positions and sizes. Does not remove widgets.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">dashboard.layout</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Clear Widget Layouts',
+                                                                            message: 'Clear all widget layout data? Widgets will reset to default positions.',
+                                                                            type: 'danger',
+                                                                            onConfirm: async () => {
+                                                                                await preferencesService.delete('dashboard.layout');
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Clear
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Clear All Presets */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdBookmarks className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">All Presets</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Deletes all saved presets and their configurations.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">dashboard.presets</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Delete All Presets',
+                                                                            message: 'Delete ALL presets? This will remove all saved preset configurations.',
+                                                                            type: 'danger',
+                                                                            onConfirm: async () => {
+                                                                                await preferencesService.delete('dashboard.presets');
+                                                                                await preferencesService.delete('dashboard.activePresetIndex');
+                                                                                await preferencesService.delete('dashboard.currentPresetType');
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Clear
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Clear Grid Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdGridOn className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Grid Settings</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets columns and cell height to defaults.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">grid.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Grid Settings',
+                                                                            message: 'Reset grid settings to defaults?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                await preferencesService.delete('grid.columns');
+                                                                                await preferencesService.delete('grid.cellHeight');
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Widget Settings">
+                                                    <div className="space-y-3">
+                                                        {/* Clear All Widget Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdTune className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">All Widget Configurations</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets ALL widget-specific settings (colors, thresholds, filters, etc).
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">widgetSettings.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Widget Settings',
+                                                                            message: 'Reset ALL widget settings to defaults? This affects all widgets.',
+                                                                            type: 'danger',
+                                                                            onConfirm: async () => {
+                                                                                const allPrefs = preferencesService.getAll();
+                                                                                const widgetSettingsKeys = Object.keys(allPrefs).filter(key => key.startsWith('widgetSettings.'));
+                                                                                for (const key of widgetSettingsKeys) {
+                                                                                    await preferencesService.delete(key);
+                                                                                }
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Appearance & Interface">
+                                                    <div className="space-y-3">
+                                                        {/* Clear Theme */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdPalette className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Theme</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Reset theme to default (Slate).
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">theme</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Theme',
+                                                                            message: 'Reset theme to default (Slate)?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                await preferencesService.delete('theme');
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Clear Dock Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdDock className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Dock Settings</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets dock appearance, behavior, and visible items.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">dock.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Dock Settings',
+                                                                            message: 'Reset all dock settings to defaults?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                const allPrefs = preferencesService.getAll();
+                                                                                const dockKeys = Object.keys(allPrefs).filter(key => key.startsWith('dock.'));
+                                                                                for (const key of dockKeys) {
+                                                                                    await preferencesService.delete(key);
+                                                                                }
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Clear Privacy Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdVisibilityOff className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Privacy Mode Settings</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets privacy mode preferences and obfuscation settings.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">privacy.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Privacy Settings',
+                                                                            message: 'Reset privacy mode preferences and obfuscation settings?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                const allPrefs = preferencesService.getAll();
+                                                                                const privacyKeys = Object.keys(allPrefs).filter(key => key.startsWith('privacy.'));
+                                                                                for (const key of privacyKeys) {
+                                                                                    await preferencesService.delete(key);
+                                                                                }
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Regional & Notifications">
+                                                    <div className="space-y-3">
+                                                        {/* Clear Regional Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdSchedule className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Regional Settings</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets timezone, date/time formats, currency, and number formats.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">regional.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Regional Settings',
+                                                                            message: 'Reset timezone, date/time formats, currency, and number formats?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                const allPrefs = preferencesService.getAll();
+                                                                                const regionalKeys = Object.keys(allPrefs).filter(key => 
+                                                                                    key.startsWith('timezone') || 
+                                                                                    key.startsWith('dateFormat') || 
+                                                                                    key.startsWith('timeFormat') ||
+                                                                                    key.startsWith('numberFormat') ||
+                                                                                    key.startsWith('currencySymbol')
+                                                                                );
+                                                                                for (const key of regionalKeys) {
+                                                                                    await preferencesService.delete(key);
+                                                                                }
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Clear Notification Settings */}
+                                                        <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <MdNotifications className="w-4 h-4 text-ui-text-secondary" />
+                                                                        <h4 className="text-sm font-semibold text-ui-text-primary">Notification Settings</h4>
+                                                                    </div>
+                                                                    <p className="text-xs text-ui-text-secondary">
+                                                                        Resets sound, toast, and notification preferences.
+                                                                    </p>
+                                                                    <p className="text-xs text-ui-text-tertiary mt-1">
+                                                                        Stored in: <code className="px-1 py-0.5 bg-ui-bg-tertiary rounded text-[10px]">notification.*</code>
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setConfirmModal({
+                                                                            isOpen: true,
+                                                                            title: 'Reset Notification Settings',
+                                                                            message: 'Reset sound, toast, and notification preferences?',
+                                                                            type: 'warning',
+                                                                            onConfirm: async () => {
+                                                                                const allPrefs = preferencesService.getAll();
+                                                                                const notificationKeys = Object.keys(allPrefs).filter(key => 
+                                                                                    key.startsWith('soundEnabled') ||
+                                                                                    key.startsWith('toastPosition') ||
+                                                                                    key.startsWith('toastDuration')
+                                                                                );
+                                                                                for (const key of notificationKeys) {
+                                                                                    await preferencesService.delete(key);
+                                                                                }
+                                                                                window.location.reload();
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-all whitespace-nowrap flex items-center gap-1.5"
+                                                                >
+                                                                    <MdDelete className="w-3.5 h-3.5" />
+                                                                    Reset
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
+
+                                                <Subsection title="Nuclear Option">
+                                                    <div className="rounded-lg border-2 border-red-500/50 bg-red-500/10 p-4">
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <MdWarning className="w-5 h-5 text-red-500" />
+                                                                    <h4 className="text-sm font-bold text-ui-text-primary">Clear All Preferences</h4>
+                                                                </div>
+                                                                <p className="text-xs text-ui-text-secondary mb-2">
+                                                                    Completely wipes ALL saved preferences and resets everything to defaults.
+                                                                    This includes layouts, presets, themes, widget settings, and all configurations.
+                                                                </p>
+                                                                <p className="text-xs font-semibold text-red-500">
+                                                                    ⚠️ This action is PERMANENT and cannot be undone!
+                                                                </p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setShowNuclearModal(true)}
+                                                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 shadow-lg"
+                                                            >
+                                                                <MdDelete className="w-4 h-4" />
+                                                                Wipe All
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </Subsection>
+
+                                                {/* Debug Info */}
+                                                <Subsection title="Debug Information">
+                                                    <div className="rounded-lg border border-ui-border-primary bg-ui-bg-secondary/30 p-4">
+                                                        <div className="space-y-2 text-xs font-mono">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-ui-text-secondary">Version:</span>
+                                                                <span className="text-ui-text-primary">v{preferencesService.getVersion()}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-ui-text-secondary">User ID:</span>
+                                                                <span className="text-ui-text-primary">{preferencesService.getCurrentUserId()}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-ui-text-secondary">Preferences:</span>
+                                                                <span className="text-ui-text-primary">{Object.keys(preferencesService.getAll()).length} keys</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-ui-text-secondary">Pending:</span>
+                                                                <span className="text-ui-text-primary">{preferencesService.hasPendingChanges() ? 'Yes' : 'No'}</span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                console.log('=== Preferences Debug ===');
+                                                                console.log(preferencesService.getDebugInfo());
+                                                                console.log('All preferences:', preferencesService.getAll());
+                                                            }}
+                                                            className="mt-3 w-full px-3 py-1.5 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary text-ui-text-primary rounded-lg text-xs font-medium transition-all"
+                                                        >
+                                                            Log to Console (F12)
+                                                        </button>
+                                                    </div>
+                                                </Subsection>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Keyboard Shortcuts View */}
                                     {activeView === 'shortcuts' && (
                                         <div className="space-y-6">
@@ -1441,6 +1918,105 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                         </div>
                     </div>
                 </div>
+
+                {/* Confirmation Modal for Advanced Settings */}
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    type={confirmModal.type}
+                    confirmText="Confirm"
+                    cancelText="Cancel"
+                />
+
+                {/* Nuclear Option Modal with Text Input */}
+                <AnimatePresence>
+                    {showNuclearModal && (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                                onClick={() => {
+                                    setShowNuclearModal(false);
+                                    setNuclearInput('');
+                                }}
+                            />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="relative bg-ui-bg-secondary rounded-lg shadow-xl border-2 border-red-500/50 w-full max-w-md overflow-hidden"
+                            >
+                                <div className="p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="text-red-500">
+                                            <MdWarning size={24} />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-ui-text-primary">Clear All Preferences</h3>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <p className="text-ui-text-secondary text-sm leading-relaxed">
+                                            This will permanently delete <strong>ALL</strong> your preferences and cannot be undone!
+                                            This includes layouts, presets, themes, widget settings, and all configurations.
+                                        </p>
+                                        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                                            <p className="text-xs font-semibold text-red-400">
+                                                ⚠️ This action is PERMANENT and syncs across all sessions!
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-ui-text-primary mb-2">
+                                                Type <code className="px-2 py-1 bg-ui-bg-tertiary rounded text-red-400 font-mono text-xs">DELETE ALL PREFERENCES</code> to confirm:
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={nuclearInput}
+                                                onChange={(e) => setNuclearInput(e.target.value)}
+                                                placeholder="DELETE ALL PREFERENCES"
+                                                className="w-full px-3 py-2 bg-ui-bg-tertiary border border-ui-border-primary rounded-lg text-ui-text-primary placeholder-ui-text-muted focus:outline-none focus:ring-2 focus:ring-red-500/50 font-mono text-sm"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-ui-bg-tertiary px-6 py-4 flex gap-3 justify-end border-t border-ui-border-primary">
+                                    <button
+                                        onClick={() => {
+                                            setShowNuclearModal(false);
+                                            setNuclearInput('');
+                                        }}
+                                        className="px-4 py-2 text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (nuclearInput === 'DELETE ALL PREFERENCES') {
+                                                await preferencesService.clearAll();
+                                                window.location.reload();
+                                            }
+                                        }}
+                                        disabled={nuclearInput !== 'DELETE ALL PREFERENCES'}
+                                        className={`px-5 py-2 text-sm font-bold rounded-md transition-colors shadow-lg ${
+                                            nuclearInput === 'DELETE ALL PREFERENCES'
+                                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                                : 'bg-ui-bg-quaternary text-ui-text-muted cursor-not-allowed'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <MdDelete className="w-4 h-4" />
+                                            Wipe Everything
+                                        </div>
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </motion.div>
         </motion.div>
     );
