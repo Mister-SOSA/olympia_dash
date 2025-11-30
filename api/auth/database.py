@@ -1073,6 +1073,7 @@ def get_user_widget_permissions(user_id):
     """
     Get all widget permissions for a user (both direct and through groups).
     Returns a dict mapping widget_id to access_level.
+    Special widget_id '*' means access to all widgets.
     """
     conn = get_db()
     cursor = conn.cursor()
@@ -1098,6 +1099,15 @@ def get_user_widget_permissions(user_id):
     # Merge permissions (direct permissions override group permissions)
     all_permissions = {**group_permissions, **direct_permissions}
     return all_permissions
+
+
+def has_all_widgets_access(user_id):
+    """
+    Check if user has the special '*' (all widgets) permission.
+    Returns the access level if they have it, or None if not.
+    """
+    permissions = get_user_widget_permissions(user_id)
+    return permissions.get('*')
 
 def check_widget_access(user_id, widget_id, required_level='view'):
     """

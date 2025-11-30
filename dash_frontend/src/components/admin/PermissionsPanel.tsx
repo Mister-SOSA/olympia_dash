@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { MdPerson, MdGroup, MdSearch, MdSecurity } from 'react-icons/md';
+import { MdPerson, MdGroup, MdSearch, MdSecurity, MdAllInclusive } from 'react-icons/md';
 import { WIDGETS } from '@/constants/widgets';
 import type { UserGroup, WidgetPermission } from '@/types';
 
@@ -82,6 +82,9 @@ export function PermissionsPanel() {
       ? userPermissions.filter(p => p.user_id === targetId)
       : groupPermissions.filter(p => p.group_id === targetId);
 
+    // Check for "all widgets" permission (widget_id = '*')
+    const allWidgetsPermission = permissions.find(p => p.widget_id === '*');
+
     const rows: WidgetPermissionRow[] = WIDGETS.map(widget => {
       const permission = permissions.find(p => p.widget_id === widget.id);
       return {
@@ -93,6 +96,52 @@ export function PermissionsPanel() {
     });
 
     setWidgetRows(rows);
+  };
+
+  // Check if current selection has "all widgets" permission
+  const hasAllWidgetsPermission = (): AccessLevel => {
+    const permissions = mode === 'user'
+      ? userPermissions.filter(p => p.user_id === selectedUserId)
+      : groupPermissions.filter(p => p.group_id === selectedGroupId);
+
+    const allWidgets = permissions.find(p => p.widget_id === '*');
+    return (allWidgets?.access_level as AccessLevel) || 'none';
+  };
+
+  const handleAllWidgetsToggle = async (newLevel: AccessLevel) => {
+    const targetId = mode === 'user' ? selectedUserId : selectedGroupId;
+    if (!targetId) return;
+
+    setSaving('*');
+
+    try {
+      if (newLevel === 'none') {
+        // Revoke "all widgets" permission
+        if (mode === 'user') {
+          await adminService.revokeUserWidgetPermission(targetId, '*');
+        } else {
+          await adminService.revokeGroupWidgetPermission(targetId, '*');
+        }
+        toast.success('All Widgets access removed');
+      } else {
+        // Grant "all widgets" permission
+        if (mode === 'user') {
+          await adminService.grantUserWidgetPermission(targetId, '*', newLevel);
+        } else {
+          await adminService.grantGroupWidgetPermission(targetId, '*', newLevel);
+        }
+        toast.success(`All Widgets access set to ${newLevel}`);
+      }
+
+      // Reload permissions
+      const permissionsData = await adminService.getAllWidgetPermissions();
+      setUserPermissions(permissionsData.user_permissions);
+      setGroupPermissions(permissionsData.group_permissions);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update permission');
+    } finally {
+      setSaving(null);
+    }
   };
 
   const handlePermissionChange = async (widgetId: string, newLevel: AccessLevel) => {
@@ -199,8 +248,8 @@ export function PermissionsPanel() {
                     key={user.id}
                     onClick={() => setSelectedUserId(user.id)}
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedUserId === user.id
-                        ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
-                        : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
+                      ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
+                      : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
                       }`}
                   >
                     <div className="flex justify-between items-start">
@@ -222,8 +271,8 @@ export function PermissionsPanel() {
                     key={group.id}
                     onClick={() => setSelectedGroupId(group.id)}
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedGroupId === group.id
-                        ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
-                        : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
+                      ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
+                      : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
                       }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -299,6 +348,40 @@ export function PermissionsPanel() {
                     />
                   </div>
                 </div>
+
+                {/* All Widgets Quick Toggle */}
+                <div className="mt-4 p-3 bg-ui-bg-tertiary rounded-lg border border-ui-border-primary">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MdAllInclusive className="text-ui-accent-secondary-text" />
+                      <div>
+                        <p className="text-sm font-medium text-ui-text-primary">All Widgets Access</p>
+                        <p className="text-xs text-ui-text-muted">Grant access to all current and future widgets</p>
+                      </div>
+                    </div>
+                    <div className="flex bg-ui-bg-secondary rounded-md p-1 border border-ui-border-primary">
+                      {(['none', 'view', 'edit', 'admin'] as AccessLevel[]).map(level => (
+                        <button
+                          key={level}
+                          onClick={() => handleAllWidgetsToggle(level)}
+                          disabled={saving === '*'}
+                          className={`px-3 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide ${hasAllWidgetsPermission() === level
+                            ? level === 'none'
+                              ? 'bg-ui-text-muted text-white shadow-sm'
+                              : level === 'view'
+                                ? 'bg-ui-accent-primary text-white shadow-sm'
+                                : level === 'edit'
+                                  ? 'bg-ui-warning-text text-white shadow-sm'
+                                  : 'bg-ui-accent-secondary-text text-white shadow-sm'
+                            : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary'
+                            }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <>
@@ -343,15 +426,15 @@ export function PermissionsPanel() {
                               key={level}
                               onClick={() => handlePermissionChange(row.widgetId, level)}
                               disabled={saving === row.widgetId}
-                                                className={`flex-1 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide transform hover:scale-105 ${row.currentLevel === level
-                                  ? level === 'none'
-                                    ? 'bg-ui-text-muted text-white shadow-sm scale-105'
-                                    : level === 'view'
-                                      ? 'bg-ui-accent-primary text-white shadow-sm scale-105'
-                                      : level === 'edit'
-                                        ? 'bg-ui-warning-text text-white shadow-sm scale-105'
-                                        : 'bg-ui-accent-secondary-text text-white shadow-sm scale-105'
-                                  : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
+                              className={`flex-1 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide transform hover:scale-105 ${row.currentLevel === level
+                                ? level === 'none'
+                                  ? 'bg-ui-text-muted text-white shadow-sm scale-105'
+                                  : level === 'view'
+                                    ? 'bg-ui-accent-primary text-white shadow-sm scale-105'
+                                    : level === 'edit'
+                                      ? 'bg-ui-warning-text text-white shadow-sm scale-105'
+                                      : 'bg-ui-accent-secondary-text text-white shadow-sm scale-105'
+                                : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                                 }`}
                             >
                               {level}

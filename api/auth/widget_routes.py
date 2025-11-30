@@ -364,6 +364,14 @@ def get_available_widgets():
                 'all_access': True
             }), 200
         
+        # Check for special '*' (all widgets) permission
+        if '*' in permissions:
+            return jsonify({
+                'success': True,
+                'permissions': permissions,
+                'all_access': True
+            }), 200
+        
         return jsonify({
             'success': True,
             'permissions': permissions,
