@@ -192,8 +192,10 @@ export default function Widget({
 
     return (
         <div className="widget">
-            {/* Drag Handle - Apple-style: minimal, centered, appears on hover */}
-            <div className="widget-drag-handle" title="Drag to move widget" />
+            {/* Drag Handle Container - clips the handle so it slides from the edge */}
+            <div className="widget-drag-handle-container">
+                <div className="widget-drag-handle" title="Drag to move widget" />
+            </div>
 
             {/* Persistent refresh indicator - respects user settings */}
             {endpoint && refreshInterval && showRefreshIndicator && (

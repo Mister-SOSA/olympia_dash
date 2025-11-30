@@ -258,14 +258,31 @@ main {
   position: relative;
   padding: 0;
   margin: 0;
+  /* Allow drag handle to overflow above */
+  overflow: visible;
+  /* Create stacking context - drag handle will be above all content */
+  isolation: isolate;
+}
+
+/* Widget Drag Handle Container - clips the handle at the top edge */
+.widget-drag-handle-container {
+  position: absolute;
+  /* Offset by parent padding (0.7rem) + border (2px) to align with actual widget edge */
+  top: calc(-0.7rem - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 40px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9999;
 }
 
 /* Widget Drag Handle - Edge-Activated Sliding Design */
-/* Instead of covering the title, the handle peeks from the top edge and slides down on hover */
+/* Handle slides down from behind the top edge on hover */
 .widget-drag-handle {
   position: absolute;
-  top: calc(-0.7rem - 2px);
-  /* Offset by grid-stack-item-content padding-top + border */
+  top: 0;
   left: 50%;
   transform: translateX(-50%) translateY(-100%);
   display: flex;
@@ -274,7 +291,6 @@ main {
   gap: 3px;
   padding: 6px 16px;
   min-width: 60px;
-  /* Ensure enough width for dots */
   cursor: grab;
   opacity: 0;
   pointer-events: none;
@@ -289,22 +305,7 @@ main {
   border: 0.5px solid rgba(255, 255, 255, 0.15);
   border-top: none;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
-  z-index: 10;
   will-change: opacity, transform;
-}
-
-/* Top edge "peek" indicator - subtle line that hints at the handle */
-.widget-drag-handle::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(-100%);
-  width: 40px;
-  height: 4px;
-  border-radius: 4px 4px 0 0;
-  background: rgba(255, 255, 255, 0.2);
-  transition: all 0.2s ease;
 }
 
 /* Inner dots - 3 dots with generous spacing */
@@ -324,11 +325,6 @@ main {
   background-color: rgba(0, 0, 0, 0.7);
   border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 3px 8px rgba(0, 0, 0, 0.2);
-}
-
-.widget-drag-handle:hover::before {
-  background: rgba(255, 255, 255, 0.4);
-  width: 40px;
 }
 
 .widget-drag-handle:hover::after {
@@ -376,7 +372,11 @@ main {
   display: none;
 }
 
-/* Show drag handle on widget hover - smooth fade in from top */
+/* Show drag handle on widget hover - smooth slide down */
+.grid-stack-item:hover .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
 .grid-stack-item:hover .widget-drag-handle {
   opacity: 1;
   pointer-events: auto;
@@ -384,6 +384,10 @@ main {
 }
 
 /* Always show drag handle when actively dragging */
+.grid-stack-item.ui-draggable-dragging .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
 .grid-stack-item.ui-draggable-dragging .widget-drag-handle {
   opacity: 1;
   pointer-events: auto;
@@ -402,6 +406,10 @@ main {
 }
 
 /* Always show drag handles mode */
+.drag-handles-always-visible .grid-stack-item .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
 .drag-handles-always-visible .grid-stack-item .widget-drag-handle {
   opacity: var(--drag-handle-opacity);
   pointer-events: auto;
@@ -437,11 +445,6 @@ main {
   border-radius: 0 0 10px 10px;
 }
 
-.drag-handle-size-small .widget-drag-handle::before {
-  width: 24px;
-  height: 2px;
-}
-
 .drag-handle-size-small .widget-drag-handle::after {
   width: 3px;
   height: 3px;
@@ -457,11 +460,6 @@ main {
   border-radius: 0 0 14px 14px;
 }
 
-.drag-handle-size-medium .widget-drag-handle::before {
-  width: 32px;
-  height: 3px;
-}
-
 .drag-handle-size-medium .widget-drag-handle::after {
   width: 4px;
   height: 4px;
@@ -475,11 +473,6 @@ main {
   padding: 8px 24px;
   min-width: 90px;
   border-radius: 0 0 18px 18px;
-}
-
-.drag-handle-size-large .widget-drag-handle::before {
-  width: 40px;
-  height: 4px;
 }
 
 .drag-handle-size-large .widget-drag-handle::after {
@@ -572,31 +565,26 @@ main {
     28px 0 0 rgba(255, 255, 255, 0.95);
 }
 
-/* Minimal style - just the peek indicator, no body */
+/* Minimal style - subtle, barely visible */
 .drag-handle-style-minimal .widget-drag-handle {
   padding: 4px 16px;
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.3);
   border: none;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
-.drag-handle-style-minimal .widget-drag-handle::before {
-  background: rgba(255, 255, 255, 0.3);
-}
-
 .drag-handle-style-minimal .widget-drag-handle::after {
-  display: none;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .drag-handle-style-minimal .widget-drag-handle:hover {
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
-.drag-handle-style-minimal .widget-drag-handle:hover::before {
-  background: rgba(255, 255, 255, 0.6);
-  width: 48px;
+.drag-handle-style-minimal .widget-drag-handle:hover::after {
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .widget-header {
@@ -608,6 +596,8 @@ main {
   flex-shrink: 0;
   min-height: 2rem;
   /* reserve space to avoid loader reflow when title appears */
+  position: relative;
+  z-index: 1;
 }
 
 .widget-content {
@@ -615,6 +605,11 @@ main {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  /* Create stacking context to contain child z-indices */
+  position: relative;
+  z-index: 0;
+  /* Clip any content that might overflow into drag handle area */
+  overflow: hidden;
 }
 
 .widget-data-container {
@@ -625,6 +620,10 @@ main {
   overflow: hidden;
   padding: 0.5rem;
   animation: fadeIn 0.4s ease-in;
+  /* Create stacking context to isolate child z-indices from the drag handle */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 
 /* Center-aligned content for empty state */
@@ -2385,6 +2384,8 @@ body.privacy-mode-active .sensitive-data {
 /* Grid items - default state with smooth transitions for layout shifts */
 .react-grid-layout>div {
   transition: transform 200ms ease;
+  /* Allow drag handles to overflow outside the grid item bounds */
+  overflow: visible !important;
 }
 
 /* CRITICAL: Disable ALL transitions during active resize */
@@ -2415,7 +2416,8 @@ body.privacy-mode-active .sensitive-data {
   width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Allow drag handle to overflow above the widget */
+  overflow: visible;
   position: relative;
   box-sizing: border-box;
 }
@@ -2426,8 +2428,8 @@ body.privacy-mode-active .sensitive-data {
   min-height: 0;
   height: 100%;
   width: 100%;
-  /* Prevent widget content from causing layout shifts during resize */
-  overflow: hidden;
+  /* Allow drag handle to overflow above widget */
+  overflow: visible;
 }
 
 /* Placeholder styling - make it snappy */
