@@ -12,7 +12,7 @@
  * The source of a layout update. This allows components to make intelligent decisions
  * about how to handle updates based on their origin.
  * 
- * - 'local-interaction': User directly interacted with GridStack (drag, resize, delete)
+ * - 'local-interaction': User directly interacted with the grid (drag, resize, delete)
  * - 'preset-load': Layout came from loading a preset
  * - 'remote-sync': Layout came from another session via WebSocket
  * - 'widget-add': A widget was added via the widget picker
@@ -59,27 +59,30 @@ export interface SaveLayoutOptions {
 }
 
 /**
- * A helper to check if a layout update should cause a GridStack reload.
- * GridStack should only reload when:
+ * A helper to check if a layout update should trigger a re-render.
+ * With react-grid-layout (declarative), this is mainly used for logging
+ * and determining sync behavior rather than forcing reloads.
+ * 
+ * Should re-render when:
  * - A preset is loaded
  * - A widget is added from the picker
  * - Remote sync (but only if widgets were added/removed, not just repositioned)
  * 
- * GridStack should NOT reload when:
- * - Local interactions (drag/resize) - GridStack already has this state
- * - Widget removal - GridStack already removed it
- * - Compact - GridStack already compacted
+ * Already handled by React (no special action needed):
+ * - Local interactions (drag/resize) - React state already in sync
+ * - Widget removal - React state already updated
+ * - Compact - React state already updated
  */
 export function shouldReloadGrid(source: LayoutUpdateSource, hasStructuralChange: boolean): boolean {
     switch (source) {
         case 'local-interaction':
-            // Never reload for local interactions - GridStack is already in sync
+            // Never reload for local interactions - state is already in sync
             return false;
         case 'compact':
-            // Never reload for compact - GridStack already compacted
+            // Never reload for compact - state already updated
             return false;
         case 'widget-remove':
-            // Never reload for removal - GridStack already removed the widget
+            // Never reload for removal - state already updated
             return false;
         case 'preset-load':
             // Always reload for preset loads - this is a wholesale layout replacement

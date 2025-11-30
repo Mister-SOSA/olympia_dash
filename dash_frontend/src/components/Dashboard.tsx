@@ -200,9 +200,6 @@ export default function Dashboard() {
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
-    // Key that increments when GridStack should do a full reload (preset loads, remote structural changes)
-    const [layoutKey, setLayoutKey] = useState(0);
-
     // ✅ FIX: Get widget permissions
     const { hasAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
 
@@ -368,9 +365,9 @@ export default function Dashboard() {
                     console.log(`[Dashboard] Widgets removed remotely: ${structuralChanges.removedIds.join(', ')}`);
                 }
 
-                // Apply the remote layout and force GridStack to reload
+                // Apply the remote layout - react-grid-layout handles this declaratively
+                // No need to force reload, just update state and React will re-render
                 setLayout(normalizedLayout);
-                setLayoutKey(k => k + 1);
 
                 // Always sync presets and other metadata
                 setPresets(readPresetsFromStorage());
@@ -462,12 +459,10 @@ export default function Dashboard() {
 
                 setLayout(merged);
                 setTempLayout(merged);
-                // ✅ Force GridStack reload for preset switch
-                setLayoutKey(k => k + 1);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
                 setActivePresetIndex(index);
-                // ✅ Tag as preset-load so GridStack knows to fully reload
+                // Tag as preset-load for remote sessions
                 saveLayoutToStorage(merged, { source: 'preset-load' });
                 saveCurrentPresetType(preset.type);
                 saveActivePresetIndex(index);
@@ -1015,7 +1010,6 @@ export default function Dashboard() {
                             setSettingsView('account');
                             setSettingsOpen(true);
                         }}
-                        layoutKey={layoutKey}
                     />
 
                     {/* Fullscreen Widget Overlay */}

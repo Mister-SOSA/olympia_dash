@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 @import 'gridstack/dist/gridstack.css';
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 @import './theme.css';
 
 /* Base styles */
@@ -2357,4 +2359,273 @@ body.privacy-mode-active .sensitive-data {
 
 [data-theme="dark"] .privacy-blur {
   filter: blur(6px);
+}
+
+/* ============================================
+   REACT-GRID-LAYOUT OVERRIDES
+   ============================================ */
+
+/* Main grid dashboard container */
+.grid-dashboard {
+  min-height: 100vh;
+  height: auto;
+  width: 100%;
+  position: relative;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* React Grid Layout base styles */
+.react-grid-layout {
+  position: relative;
+  /* Disable container height transition to prevent jolt */
+  transition: none;
+}
+
+/* Grid items - default state with smooth transitions for layout shifts */
+.react-grid-layout>div {
+  transition: transform 200ms ease;
+}
+
+/* CRITICAL: Disable ALL transitions during active resize */
+.react-grid-layout>div.react-resizable-resizing {
+  transition: none !important;
+  z-index: 100;
+  opacity: 0.95;
+}
+
+/* Disable transitions on the item being dragged */
+.react-grid-layout>div.react-draggable-dragging {
+  transition: none !important;
+  z-index: 100;
+  cursor: grabbing;
+  opacity: 0.9;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Disable transitions on all OTHER items while one is being resized/dragged */
+.react-grid-layout.resizing-active>div:not(.react-resizable-resizing),
+.react-grid-layout.dragging-active>div:not(.react-draggable-dragging) {
+  transition: transform 100ms ease;
+}
+
+/* CRITICAL: Content container must fill the grid item */
+.react-grid-layout .grid-stack-item-content {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* CRITICAL: Widget inside content must fill it */
+.react-grid-layout .grid-stack-item-content>.widget {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  /* Prevent widget content from causing layout shifts during resize */
+  overflow: hidden;
+}
+
+/* Placeholder styling - make it snappy */
+.react-grid-layout .react-grid-placeholder {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.6) !important;
+  border-radius: 1rem !important;
+  opacity: 1 !important;
+  transition: all 100ms ease !important;
+  z-index: 2;
+}
+
+/* ============================================
+   CUSTOM RESIZE HANDLES - Apple-style minimal design
+   ============================================ */
+
+/* Base custom handle styles - invisible by default */
+.custom-resize-handle {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Only show handles on direct widget hover - very subtle */
+.grid-stack-item:hover .custom-resize-handle {
+  opacity: 0.4;
+}
+
+/* Full visibility only when hovering the handle itself */
+.custom-resize-handle:hover {
+  opacity: 1;
+}
+
+/* Always show handles during resize */
+.react-resizable-resizing .custom-resize-handle {
+  opacity: 1;
+}
+
+/* === CORNER BRACKETS (L-shaped) - smaller, more subtle === */
+.corner-bracket {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  transition: all 0.2s ease;
+}
+
+/* SE corner - bottom-right L */
+.corner-bracket-se {
+  right: 3px;
+  bottom: 3px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 2px 0;
+}
+
+.custom-resize-handle-se:hover .corner-bracket-se {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* SW corner - bottom-left L */
+.corner-bracket-sw {
+  left: 3px;
+  bottom: 3px;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 0 2px;
+}
+
+.custom-resize-handle-sw:hover .corner-bracket-sw {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* NE corner - top-right L */
+.corner-bracket-ne {
+  right: 3px;
+  top: 3px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 2px 0 0;
+}
+
+.custom-resize-handle-ne:hover .corner-bracket-ne {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* NW corner - top-left L */
+.corner-bracket-nw {
+  left: 3px;
+  top: 3px;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px 0 0 0;
+}
+
+.custom-resize-handle-nw:hover .corner-bracket-nw {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* === EDGE PILLS - very subtle thin lines === */
+/* Horizontal pill (for S and N edges) */
+.edge-pill-horizontal {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1.5px;
+  transition: all 0.2s ease;
+}
+
+.custom-resize-handle-s .edge-pill-horizontal {
+  bottom: 3px;
+}
+
+.custom-resize-handle-n .edge-pill-horizontal {
+  top: 3px;
+}
+
+.custom-resize-handle:hover .edge-pill-horizontal {
+  background: rgba(255, 255, 255, 0.6);
+  width: 32px;
+}
+
+/* Vertical pill (for E and W edges) */
+.edge-pill-vertical {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1.5px;
+  transition: all 0.2s ease;
+}
+
+.custom-resize-handle-e .edge-pill-vertical {
+  right: 3px;
+}
+
+.custom-resize-handle-w .edge-pill-vertical {
+  left: 3px;
+}
+
+.custom-resize-handle:hover .edge-pill-vertical {
+  background: rgba(255, 255, 255, 0.6);
+  height: 32px;
+}
+
+/* === Handle hover glow on widget border - very subtle === */
+.react-grid-layout .grid-stack-item:has(.custom-resize-handle:hover) .grid-stack-item-content {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Active resize glow on widget border - subtle feedback */
+.react-grid-layout>div.react-resizable-resizing .grid-stack-item-content {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Active drag glow on widget border */
+.react-grid-layout>div.react-draggable-dragging .grid-stack-item-content {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 8px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Hide resize handles during drag */
+.react-grid-layout>div.react-draggable-dragging .custom-resize-handle {
+  opacity: 0 !important;
+}
+
+/* Hide resize handles when setting is off */
+.hide-resize-handles .custom-resize-handle {
+  display: none !important;
+}
+
+/* Drag handle icon styles for react-grid-layout */
+.grid-dashboard .widget-drag-handle .drag-handle-icon {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.grid-dashboard .widget-drag-handle:hover .drag-handle-icon {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Hide the default drag handle icon when using dots pattern */
+.drag-handle-style-pill .drag-handle-icon,
+.drag-handle-style-bar .drag-handle-icon,
+.drag-handle-style-dots .drag-handle-icon,
+.drag-handle-style-minimal .drag-handle-icon {
+  display: none;
 }
