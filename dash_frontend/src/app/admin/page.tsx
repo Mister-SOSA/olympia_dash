@@ -37,7 +37,9 @@ interface Stats {
   admin_count: number;
   active_sessions: number;
   active_device_sessions: number;
-  recent_logins: number;
+  total_sessions: number;
+  recent_active: number;
+  currently_online: number;
   total_preferences: number;
   total_audit_logs: number;
   db_size_mb: number;
@@ -63,6 +65,9 @@ interface DeviceSession {
   expires_at: string;
   user_email: string;
   user_name: string;
+  session_type?: 'browser' | 'device';
+  icon?: 'desktop' | 'mobile' | 'tablet' | 'tv';
+  ip_address?: string;
 }
 
 interface SystemHealth {
@@ -653,14 +658,16 @@ export default function AdminPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-ui-text-secondary text-sm font-medium mb-1">System Load</p>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Online Now</p>
                           <div className="flex items-baseline gap-2">
-                            <p className="text-3xl font-bold text-ui-warning-text">{stats.active_sessions}</p>
-                            <span className="text-xs text-ui-text-muted">sessions</span>
+                            <p className="text-3xl font-bold text-ui-success-text">{stats.currently_online || 0}</p>
+                            <span className="text-xs text-ui-text-muted">
+                              {stats.recent_active || 0} active today
+                            </span>
                           </div>
                         </div>
-                        <div className="p-3 bg-ui-warning-bg rounded-xl">
-                          <IoTime className="w-6 h-6 text-ui-warning-text" />
+                        <div className="p-3 bg-ui-success-bg rounded-xl">
+                          <IoTime className="w-6 h-6 text-ui-success-text" />
                         </div>
                       </div>
                     </CardContent>
@@ -670,14 +677,16 @@ export default function AdminPage() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Database</p>
+                          <p className="text-ui-text-secondary text-sm font-medium mb-1">Active Sessions</p>
                           <div className="flex items-baseline gap-2">
-                            <p className="text-3xl font-bold text-ui-accent-secondary-text">{stats.db_size_mb}</p>
-                            <span className="text-xs text-ui-text-muted">MB</span>
+                            <p className="text-3xl font-bold text-ui-accent-secondary-text">{stats.total_sessions || (stats.active_sessions + stats.active_device_sessions)}</p>
+                            <span className="text-xs text-ui-text-muted">
+                              {stats.active_sessions} browser, {stats.active_device_sessions} TV
+                            </span>
                           </div>
                         </div>
                         <div className="p-3 bg-ui-accent-secondary-bg rounded-xl">
-                          <MdStorage className="w-6 h-6 text-ui-accent-secondary-text" />
+                          <MdDevices className="w-6 h-6 text-ui-accent-secondary-text" />
                         </div>
                       </div>
                     </CardContent>
@@ -905,7 +914,7 @@ export default function AdminPage() {
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Role</th>
                         <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Status</th>
-                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Login</th>
+                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Active</th>
                         <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -954,9 +963,11 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="p-4 text-ui-text-secondary text-sm">
-                            {user.last_login
-                              ? formatDate(user.last_login)
-                              : 'Never'}
+                            {(user as any).last_active
+                              ? formatDate((user as any).last_active)
+                              : user.last_login
+                                ? formatDate(user.last_login)
+                                : 'Never'}
                           </td>
                           <td className="p-4 text-right">
                             <div className="flex justify-end gap-2">
@@ -1102,52 +1113,96 @@ export default function AdminPage() {
           {activeTab === 'devices' && (
             <Card className="bg-ui-bg-secondary border-ui-border-primary shadow-sm">
               <CardHeader>
-                <CardTitle className="text-ui-text-primary text-lg">Active Sessions</CardTitle>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-ui-text-primary text-lg">Active Sessions</CardTitle>
+                    <CardDescription className="text-ui-text-secondary text-sm mt-1">
+                      All active browser and TV dashboard sessions
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-ui-text-muted">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-ui-accent-primary"></span>
+                      Browser: {deviceSessions.filter(s => s.session_type === 'browser').length}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-ui-success-text"></span>
+                      TV: {deviceSessions.filter(s => s.session_type === 'device').length}
+                    </span>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-ui-bg-tertiary">
-                      <tr>
-                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Device</th>
-                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
-                        <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Active</th>
-                        <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-ui-border-primary">
-                      {deviceSessions.map((session) => (
-                        <tr key={session.id} className="hover:bg-ui-bg-tertiary/50 transition-colors">
-                          <td className="p-4">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-ui-bg-tertiary rounded-lg">
-                                <MdDevices className="text-ui-text-secondary" />
-                              </div>
-                              <span className="text-ui-text-primary font-medium">{session.device_name || 'Unknown Device'}</span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <div className="text-sm text-ui-text-primary">{session.user_name}</div>
-                            <div className="text-xs text-ui-text-muted">{session.user_email}</div>
-                          </td>
-                          <td className="p-4 text-ui-text-secondary text-sm">
-                            {formatDateTime(session.last_used)}
-                          </td>
-                          <td className="p-4 text-right">
-                            <Button
-                              onClick={() => handleDeleteDeviceSession(session.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="text-ui-danger-text hover:bg-ui-danger-bg"
-                            >
-                              Revoke
-                            </Button>
-                          </td>
+                {deviceSessions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-ui-text-muted">
+                    <MdDevices className="w-12 h-12 mb-4 opacity-30" />
+                    <p className="text-lg font-medium">No active sessions</p>
+                    <p className="text-sm mt-1">Sessions will appear here when users are logged in</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-ui-bg-tertiary">
+                        <tr>
+                          <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Device</th>
+                          <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Type</th>
+                          <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">User</th>
+                          <th className="text-left p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Last Active</th>
+                          <th className="text-right p-4 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-ui-border-primary">
+                        {deviceSessions.map((session) => {
+                          const isTV = session.session_type === 'device';
+                          const iconClass = isTV ? 'text-ui-success-text' : 'text-ui-accent-primary-text';
+                          const badgeClass = isTV
+                            ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border'
+                            : 'bg-ui-accent-primary-bg text-ui-accent-primary-text border-ui-accent-primary-border';
+
+                          return (
+                            <tr key={`${session.session_type}-${session.id}`} className="hover:bg-ui-bg-tertiary/50 transition-colors">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-lg ${isTV ? 'bg-ui-success-bg' : 'bg-ui-accent-primary-bg'}`}>
+                                    <MdDevices className={iconClass} />
+                                  </div>
+                                  <div>
+                                    <span className="text-ui-text-primary font-medium">{session.device_name || 'Unknown Device'}</span>
+                                    {session.ip_address && (
+                                      <div className="text-xs text-ui-text-muted font-mono">{session.ip_address}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeClass}`}>
+                                  {isTV ? 'TV Dashboard' : 'Browser'}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="text-sm text-ui-text-primary">{session.user_name}</div>
+                                <div className="text-xs text-ui-text-muted">{session.user_email}</div>
+                              </td>
+                              <td className="p-4 text-ui-text-secondary text-sm">
+                                {formatDateTime(session.last_used)}
+                              </td>
+                              <td className="p-4 text-right">
+                                <Button
+                                  onClick={() => handleDeleteDeviceSession(session.id)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-ui-danger-text hover:bg-ui-danger-bg"
+                                >
+                                  Revoke
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

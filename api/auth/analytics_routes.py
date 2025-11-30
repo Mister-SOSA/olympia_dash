@@ -10,7 +10,8 @@ from auth.database import (
     start_activity_session,
     update_activity_session,
     end_activity_session,
-    track_feature_usage
+    track_feature_usage,
+    update_last_active
 )
 from auth.middleware import require_auth, get_client_ip
 
@@ -90,6 +91,9 @@ def start_session():
             device_type=device_type
         )
         
+        # Update last_active timestamp
+        update_last_active(user['id'])
+        
         return jsonify({
             'success': True,
             'session_id': session_id
@@ -103,6 +107,7 @@ def start_session():
 def session_heartbeat():
     """Update activity session with heartbeat."""
     try:
+        user = request.current_user  # type: ignore
         data = request.get_json() or {}
         
         session_id = data.get('session_id')
@@ -120,6 +125,9 @@ def session_heartbeat():
             page_count_increment=page_count_increment,
             widget_count_increment=widget_count_increment
         )
+        
+        # Update last_active timestamp on every heartbeat
+        update_last_active(user['id'])
         
         return jsonify({'success': True}), 200
     except Exception as e:

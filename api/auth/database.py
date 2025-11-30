@@ -37,9 +37,16 @@ def init_db():
             role TEXT DEFAULT 'user',
             is_active BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_login TIMESTAMP
+            last_login TIMESTAMP,
+            last_active TIMESTAMP
         )
     ''')
+    
+    # Add last_active column if it doesn't exist (migration for existing databases)
+    cursor.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'last_active' not in columns:
+        cursor.execute('ALTER TABLE users ADD COLUMN last_active TIMESTAMP')
     
     # Sessions table for JWT refresh tokens
     cursor.execute('''
@@ -370,6 +377,16 @@ def update_last_login(user_id):
     cursor = conn.cursor()
     cursor.execute('''
         UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?
+    ''', (user_id,))
+    conn.commit()
+    conn.close()
+
+def update_last_active(user_id):
+    """Update user's last active timestamp (for tracking actual dashboard usage)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = ?
     ''', (user_id,))
     conn.commit()
     conn.close()

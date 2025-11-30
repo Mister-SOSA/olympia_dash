@@ -5,12 +5,14 @@ import config from "@/config";
 import { authService } from "@/lib/auth";
 import { preferencesService } from "@/lib/preferences";
 import { WIDGET_SETTINGS } from "@/constants/settings";
+import { trackWidgetInteraction } from "@/lib/analytics";
 
 interface WidgetProps {
     title?: string;
     endpoint?: string;
     payload?: object;
     refreshInterval?: number;
+    widgetId?: string;  // Widget identifier for tracking
     children: (data: any, loading: boolean, error?: string) => React.ReactNode;
 }
 
@@ -19,6 +21,7 @@ export default function Widget({
     endpoint,
     payload,
     refreshInterval = 30000,
+    widgetId,
     children
 }: WidgetProps) {
     // Read settings directly from preferences service (not via hook to avoid re-render loops)
@@ -46,6 +49,22 @@ export default function Widget({
     const loaderHideRef = useRef<NodeJS.Timeout | null>(null);
     const loaderShownAtRef = useRef<number | null>(null);
     const lastFetchTimeRef = useRef<number>(Date.now());
+    const viewTrackedRef = useRef(false);
+
+    // Track widget view on mount (only once per session)
+    useEffect(() => {
+        if (!viewTrackedRef.current) {
+            // Try to get widget identifier from multiple sources
+            const moduleId = (payload as any)?.module || (payload as any)?.queryId;
+            const widgetType = title || moduleId || widgetId || 'Unknown';
+            const trackingId = widgetId || moduleId || title || 'unknown';
+
+            if (widgetType !== 'Unknown') {
+                trackWidgetInteraction(widgetType, trackingId, 'view');
+                viewTrackedRef.current = true;
+            }
+        }
+    }, [widgetId, title, payload]);
 
     // Tunables for buttery-smooth UX
     const LOADER_DELAY_MS = 150; // don't flash loader for super-fast fetches

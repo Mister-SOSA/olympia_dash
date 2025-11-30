@@ -411,7 +411,7 @@ def get_logs():
 def get_stats():
     """Get system statistics."""
     try:
-        from auth.database import get_db
+        from auth.database import get_db, DB_PATH
         import os
         conn = get_db()
         cursor = conn.cursor()
@@ -428,20 +428,29 @@ def get_stats():
         cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'admin'")
         admin_count = cursor.fetchone()[0]
         
-        # Count active sessions
+        # Count active browser sessions
         cursor.execute('SELECT COUNT(*) FROM sessions WHERE expires_at > CURRENT_TIMESTAMP')
         active_sessions = cursor.fetchone()[0]
         
-        # Count active device sessions
+        # Count active device sessions (TV dashboards)
         cursor.execute('SELECT COUNT(*) FROM device_sessions WHERE expires_at > CURRENT_TIMESTAMP')
         active_device_sessions = cursor.fetchone()[0]
         
-        # Recent logins (last 24 hours)
+        # Recently active users (last 24 hours based on last_active, fallback to last_login)
         cursor.execute("""
             SELECT COUNT(*) FROM users 
-            WHERE last_login > datetime('now', '-1 day')
+            WHERE (last_active > datetime('now', '-1 day')) 
+               OR (last_active IS NULL AND last_login > datetime('now', '-1 day'))
         """)
-        recent_logins = cursor.fetchone()[0]
+        recent_active = cursor.fetchone()[0]
+        
+        # Currently online (users with activity session heartbeat in last 15 minutes)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id) FROM user_activity_sessions
+            WHERE last_heartbeat > datetime('now', '-15 minutes')
+            AND (session_end IS NULL OR session_end > datetime('now', '-15 minutes'))
+        """)
+        currently_online = cursor.fetchone()[0]
         
         # Count total preferences
         cursor.execute('SELECT COUNT(*) FROM user_preferences')
@@ -452,7 +461,6 @@ def get_stats():
         total_audit_logs = cursor.fetchone()[0]
         
         # Get database size
-        from auth.database import DB_PATH
         db_size_bytes = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
         db_size_mb = round(db_size_bytes / (1024 * 1024), 2)
         
@@ -466,7 +474,9 @@ def get_stats():
                 'admin_count': admin_count,
                 'active_sessions': active_sessions,
                 'active_device_sessions': active_device_sessions,
-                'recent_logins': recent_logins,
+                'total_sessions': active_sessions + active_device_sessions,
+                'recent_active': recent_active,
+                'currently_online': currently_online,
                 'total_preferences': total_preferences,
                 'total_audit_logs': total_audit_logs,
                 'db_size_mb': db_size_mb
@@ -481,12 +491,15 @@ def get_stats():
 @admin_bp.route('/device-sessions', methods=['GET'])
 @require_role('admin')
 def list_device_sessions():
-    """List all active device sessions."""
+    """List all active sessions (both browser and TV device sessions)."""
     try:
         from auth.database import get_db
         conn = get_db()
         cursor = conn.cursor()
         
+        all_sessions = []
+        
+        # Get TV/Device sessions (paired devices)
         cursor.execute('''
             SELECT 
                 ds.id,
@@ -496,31 +509,101 @@ def list_device_sessions():
                 ds.last_used,
                 ds.expires_at,
                 u.email,
-                u.name
+                u.name,
+                'device' as session_type
             FROM device_sessions ds
             JOIN users u ON ds.user_id = u.id
             WHERE ds.expires_at > CURRENT_TIMESTAMP
             ORDER BY ds.last_used DESC
         ''')
         
-        sessions = []
         for row in cursor.fetchall():
-            sessions.append({
+            all_sessions.append({
                 'id': row[0],
                 'user_id': row[1],
-                'device_name': row[2],
+                'device_name': row[2] or 'TV Dashboard',
                 'created_at': row[3],
                 'last_used': row[4],
                 'expires_at': row[5],
                 'user_email': row[6],
-                'user_name': row[7]
+                'user_name': row[7],
+                'session_type': 'device',
+                'icon': 'tv'
             })
+        
+        # Get regular browser sessions
+        cursor.execute('''
+            SELECT 
+                s.id,
+                s.user_id,
+                s.user_agent,
+                s.created_at,
+                s.last_used,
+                s.expires_at,
+                s.ip_address,
+                u.email,
+                u.name
+            FROM sessions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.expires_at > CURRENT_TIMESTAMP
+            ORDER BY s.last_used DESC
+        ''')
+        
+        for row in cursor.fetchall():
+            user_agent = row[2] or ''
+            # Parse device type from user agent
+            device_name = 'Browser'
+            icon = 'desktop'
+            
+            ua_lower = user_agent.lower()
+            if 'mobile' in ua_lower or 'android' in ua_lower or 'iphone' in ua_lower:
+                device_name = 'Mobile Browser'
+                icon = 'mobile'
+            elif 'tablet' in ua_lower or 'ipad' in ua_lower:
+                device_name = 'Tablet Browser'
+                icon = 'tablet'
+            elif 'windows' in ua_lower:
+                device_name = 'Windows Browser'
+                icon = 'desktop'
+            elif 'mac' in ua_lower:
+                device_name = 'Mac Browser'
+                icon = 'desktop'
+            elif 'linux' in ua_lower:
+                device_name = 'Linux Browser'
+                icon = 'desktop'
+            
+            # Try to get browser name
+            if 'chrome' in ua_lower and 'edg' not in ua_lower:
+                device_name = f'Chrome ({device_name.replace(" Browser", "")})'
+            elif 'firefox' in ua_lower:
+                device_name = f'Firefox ({device_name.replace(" Browser", "")})'
+            elif 'safari' in ua_lower and 'chrome' not in ua_lower:
+                device_name = f'Safari ({device_name.replace(" Browser", "")})'
+            elif 'edg' in ua_lower:
+                device_name = f'Edge ({device_name.replace(" Browser", "")})'
+            
+            all_sessions.append({
+                'id': row[0],
+                'user_id': row[1],
+                'device_name': device_name,
+                'created_at': row[3],
+                'last_used': row[4],
+                'expires_at': row[5],
+                'ip_address': row[6],
+                'user_email': row[7],
+                'user_name': row[8],
+                'session_type': 'browser',
+                'icon': icon
+            })
+        
+        # Sort all sessions by last_used
+        all_sessions.sort(key=lambda x: x['last_used'] or x['created_at'], reverse=True)
         
         conn.close()
         
         return jsonify({
             'success': True,
-            'sessions': sessions
+            'sessions': all_sessions
         }), 200
     except Exception as e:
         return jsonify({
@@ -531,7 +614,7 @@ def list_device_sessions():
 @admin_bp.route('/device-sessions/<int:session_id>', methods=['DELETE'])
 @require_role('admin')
 def delete_device_session(session_id):
-    """Delete a specific device session."""
+    """Delete a specific session (browser or device)."""
     try:
         admin_user = request.current_user  # type: ignore
         from auth.database import get_db
@@ -539,36 +622,62 @@ def delete_device_session(session_id):
         conn = get_db()
         cursor = conn.cursor()
         
-        # Get session info before deleting
+        # Try to find in device_sessions first
         cursor.execute('SELECT user_id, device_name FROM device_sessions WHERE id = ?', (session_id,))
         session = cursor.fetchone()
         
-        if not session:
+        if session:
+            user_id, device_name = session
+            cursor.execute('DELETE FROM device_sessions WHERE id = ?', (session_id,))
+            conn.commit()
             conn.close()
+            
+            log_action(admin_user['id'], 'device_session_deleted', 
+                       f'Deleted TV device session {session_id} for user {user_id} ({device_name})', 
+                       get_client_ip())
+            
             return jsonify({
-                'success': False,
-                'error': 'Device session not found'
-            }), 404
+                'success': True,
+                'message': 'Device session deleted'
+            }), 200
         
-        user_id, device_name = session
+        # If not found in device_sessions, check regular sessions
+        cursor.execute('SELECT user_id, user_agent FROM sessions WHERE id = ?', (session_id,))
+        session = cursor.fetchone()
         
-        cursor.execute('DELETE FROM device_sessions WHERE id = ?', (session_id,))
-        conn.commit()
+        if session:
+            user_id, user_agent = session
+            cursor.execute('DELETE FROM sessions WHERE id = ?', (session_id,))
+            conn.commit()
+            conn.close()
+            
+            log_action(admin_user['id'], 'browser_session_deleted', 
+                       f'Deleted browser session {session_id} for user {user_id}', 
+                       get_client_ip())
+            
+            return jsonify({
+                'success': True,
+                'message': 'Browser session deleted'
+            }), 200
+        
         conn.close()
-        
-        log_action(admin_user['id'], 'device_session_deleted', 
-                   f'Deleted device session {session_id} for user {user_id} ({device_name})', 
-                   get_client_ip())
-        
         return jsonify({
-            'success': True,
-            'message': 'Device session deleted'
-        }), 200
+            'success': False,
+            'error': 'Session not found'
+        }), 404
+        
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
+
+
+@admin_bp.route('/sessions/<int:session_id>', methods=['DELETE'])
+@require_role('admin')
+def delete_session_admin(session_id):
+    """Delete a specific browser session (alias for device-sessions delete)."""
+    return delete_device_session(session_id)
 
 @admin_bp.route('/preferences', methods=['GET'])
 @require_role('admin')
