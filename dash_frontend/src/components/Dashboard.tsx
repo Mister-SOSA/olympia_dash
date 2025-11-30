@@ -200,6 +200,9 @@ export default function Dashboard() {
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
+    // Key that increments when GridStack should do a full reload (preset loads, remote structural changes)
+    const [layoutKey, setLayoutKey] = useState(0);
+
     // ✅ FIX: Get widget permissions
     const { hasAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
 
@@ -349,39 +352,25 @@ export default function Dashboard() {
                 const storedLayout = readLayoutFromStorage();
                 const normalizedLayout = normalizeLayout(storedLayout);
 
-                // Check if this is a structural change (widgets added/removed)
+                // Check if this is a structural change (widgets added/removed) for logging
                 const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
-                const hasStructuralChange = structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved;
 
                 // Check the source metadata to understand WHY the originating session made this change
-                // This helps us decide how to handle it
                 const layoutMeta = preferencesService.get<{ source?: LayoutUpdateSource, sessionId?: string }>('dashboard.layoutMeta');
                 const originalSource: LayoutUpdateSource = layoutMeta?.source || 'remote-sync';
 
-                // For remote syncs, we apply:
-                // - ALL structural changes (widgets added/removed)
-                // - Preset loads from other sessions (wholesale replacement)
-                // - But NOT position-only changes from drag/resize (user might be actively working)
-                const shouldApply = hasStructuralChange || originalSource === 'preset-load' || originalSource === 'widget-add';
+                console.log(`[Dashboard] Remote layout update: originalSource=${describeSource(originalSource)}, structural=${structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved}`);
 
-                console.log(`[Dashboard] Remote layout update: originalSource=${describeSource(originalSource)}, structural=${hasStructuralChange}, shouldApply=${shouldApply}`);
-
-                if (shouldApply) {
-                    if (structuralChanges.addedIds.length > 0) {
-                        console.log(`[Dashboard] Widgets added remotely: ${structuralChanges.addedIds.join(', ')}`);
-                    }
-                    if (structuralChanges.removedIds.length > 0) {
-                        console.log(`[Dashboard] Widgets removed remotely: ${structuralChanges.removedIds.join(', ')}`);
-                    }
-                    setLayout(normalizedLayout);
-                } else {
-                    // This is just a position change from another session's drag/resize
-                    // We still update our internal state silently so we don't lose the change
-                    // But we don't trigger a GridStack reload to avoid disrupting the user
-                    console.log('[Dashboard] Remote position-only change - applying silently without GridStack reload');
-                    // Update layout state but GridDashboard will skip reload because layout JSON matches lastReceivedLayout
-                    setLayout(normalizedLayout);
+                if (structuralChanges.addedIds.length > 0) {
+                    console.log(`[Dashboard] Widgets added remotely: ${structuralChanges.addedIds.join(', ')}`);
                 }
+                if (structuralChanges.removedIds.length > 0) {
+                    console.log(`[Dashboard] Widgets removed remotely: ${structuralChanges.removedIds.join(', ')}`);
+                }
+
+                // Apply the remote layout and force GridStack to reload
+                setLayout(normalizedLayout);
+                setLayoutKey(k => k + 1);
 
                 // Always sync presets and other metadata
                 setPresets(readPresetsFromStorage());
@@ -473,6 +462,8 @@ export default function Dashboard() {
 
                 setLayout(merged);
                 setTempLayout(merged);
+                // ✅ Force GridStack reload for preset switch
+                setLayoutKey(k => k + 1);
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
                 setActivePresetIndex(index);
@@ -1024,6 +1015,7 @@ export default function Dashboard() {
                             setSettingsView('account');
                             setSettingsOpen(true);
                         }}
+                        layoutKey={layoutKey}
                     />
 
                     {/* Fullscreen Widget Overlay */}

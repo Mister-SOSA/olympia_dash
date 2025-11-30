@@ -23,6 +23,9 @@ import { type LayoutUpdateSource } from "@/utils/layoutUtils";
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
     layout: Widget[];
+    // Key that changes when layout should be fully reloaded (e.g., preset loads)
+    // When this changes, GridStack will reload even if widget IDs are the same
+    layoutKey?: number;
     // Callback to notify parent of layout changes
     // Second parameter is the source of the change for proper handling
     onExternalLayoutChange?: (layout: Widget[], source?: LayoutUpdateSource) => void;
@@ -36,7 +39,7 @@ export interface GridDashboardHandle {
 }
 
 const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
-    ({ layout, onExternalLayoutChange, onAddWidget, onOpenSettings }, ref) => {
+    ({ layout, layoutKey, onExternalLayoutChange, onAddWidget, onOpenSettings }, ref) => {
         const gridRef = useRef<HTMLDivElement>(null);
         const gridInstance = useRef<GridStack | null>(null);
         // Keep track of React roots for proper unmounting of widget components.
@@ -57,6 +60,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Track the last layout we received from parent to detect actual changes
         // Initialize empty - will be set when grid initializes
         const lastReceivedLayout = useRef<string>("");
+
+        // Track the last layoutKey to detect forced reloads (preset loads)
+        const lastLayoutKey = useRef<number | undefined>(undefined);
 
         // ✅ ROBUST FIX: Track if we're currently applying a layout update to prevent feedback loops
         // This is deterministic - we set it true before applying, false after.
@@ -572,12 +578,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // They are captured at mount time via refs. Changes require a page reload to take effect.
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
-        // ✅ CRITICAL FIX: Only call load() when widgets are ADDED, not for position changes.
-        // GridStack's load() method will reposition all widgets according to its algorithm,
-        // which causes the "random movement" bug. We only need to reload when:
+        // ✅ CRITICAL FIX: Only call load() when:
         // 1. Widgets are added (new widgets need to be rendered)
-        // 2. A preset is loaded (wholesale replacement)
-        // Position changes from GridStack are already reflected in the DOM.
+        // 2. layoutKey changes (preset load - wholesale replacement)
+        // Position changes from GridStack are already reflected in the DOM and should NOT trigger reload.
         useEffect(() => {
             if (!gridInstance.current) return;
 
@@ -587,29 +591,38 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 return;
             }
 
+            // Check if this is a forced reload (layoutKey changed = preset load)
+            const forceReload = layoutKey !== undefined && layoutKey !== lastLayoutKey.current;
+            if (forceReload) {
+                console.log(`[GridDashboard] layoutKey changed (${lastLayoutKey.current} → ${layoutKey}) - forcing reload`);
+                lastLayoutKey.current = layoutKey;
+            }
+
             // Serialize incoming layout for comparison
             const incomingLayoutJson = JSON.stringify(layout);
 
             // Skip if this is the same layout we just sent (our own change echoing back)
-            if (incomingLayoutJson === lastSentLayout.current) {
+            // BUT don't skip if forceReload is true
+            if (!forceReload && incomingLayoutJson === lastSentLayout.current) {
                 console.log('[GridDashboard] Skipping - same as last sent');
                 return;
             }
 
             // Skip if layout hasn't changed from what we last received
-            if (incomingLayoutJson === lastReceivedLayout.current) {
+            // BUT don't skip if forceReload is true
+            if (!forceReload && incomingLayoutJson === lastReceivedLayout.current) {
                 console.log('[GridDashboard] Skipping - same as last received');
                 return;
             }
 
-            // Skip if user is actively interacting
-            if (isInteracting.current) {
+            // Skip if user is actively interacting (unless force reload)
+            if (!forceReload && isInteracting.current) {
                 console.log('[GridDashboard] Skipping layout update - user is interacting');
                 return;
             }
 
-            // Skip if we have a pending local update (prevents race condition)
-            if (pendingLayoutUpdate.current) {
+            // Skip if we have a pending local update (unless force reload)
+            if (!forceReload && pendingLayoutUpdate.current) {
                 console.log('[GridDashboard] Skipping layout update - have pending local changes');
                 return;
             }
@@ -624,14 +637,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             const prevIds = new Set(prevLayout.filter(w => w.enabled).map(w => w.id));
             const currentIds = new Set(layout.filter(w => w.enabled).map(w => w.id));
-            
+
             const addedIds = layout.filter(w => w.enabled && !prevIds.has(w.id)).map(w => w.id);
             const removedIds = prevLayout.filter(w => w.enabled && !currentIds.has(w.id)).map(w => w.id);
-            
+
             const widgetsAdded = addedIds.length > 0;
             const widgetsRemoved = removedIds.length > 0;
 
             console.log('[GridDashboard] Layout prop changed', {
+                forceReload,
                 widgetsAdded,
                 widgetsRemoved,
                 addedIds,
@@ -643,16 +657,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Update our tracking ref
             lastReceivedLayout.current = incomingLayoutJson;
 
-            // ✅ CRITICAL: Only reload GridStack if widgets were ADDED
-            // - Widget removal: Already handled by handleDeleteWidget
-            // - Position changes: GridStack DOM is already correct, don't reload
-            // - Widget addition: Must reload to render new widgets
-            if (!widgetsAdded) {
-                console.log('[GridDashboard] No widgets added - skipping GridStack reload');
+            // Only reload GridStack if:
+            // 1. forceReload is true (preset load)
+            // 2. widgets were added
+            if (!forceReload && !widgetsAdded) {
+                console.log('[GridDashboard] No widgets added and no force reload - skipping GridStack reload');
                 return;
             }
 
-            console.log('[GridDashboard] Widgets added - reloading GridStack');
+            console.log(`[GridDashboard] Reloading GridStack (forceReload=${forceReload}, widgetsAdded=${widgetsAdded})`);
 
             // Set flag to prevent change events during layout application
             isApplyingLayout.current = true;
@@ -696,7 +709,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     });
                 }
             }, 100); // Small delay to ensure DOM is ready
-        }, [layout, hasAccess]);
+        }, [layout, layoutKey, hasAccess]);
 
         // Build CSS classes based on settings
         const gridClasses = [
