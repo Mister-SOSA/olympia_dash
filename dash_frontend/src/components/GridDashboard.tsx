@@ -18,7 +18,7 @@ import { preferencesService } from "@/lib/preferences";
 import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
 import { useAnalytics } from "@/contexts/AnalyticsContext";
-import { type LayoutUpdateSource, detectStructuralChanges, describeSource } from "@/utils/layoutUtils";
+import { type LayoutUpdateSource } from "@/utils/layoutUtils";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
@@ -572,11 +572,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // They are captured at mount time via refs. Changes require a page reload to take effect.
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
-        // ✅ ROBUST: Only reload if widgets actually changed, not just positions
+        // ✅ CRITICAL FIX: Only call load() when widgets are ADDED, not for position changes.
+        // GridStack's load() method will reposition all widgets according to its algorithm,
+        // which causes the "random movement" bug. We only need to reload when:
+        // 1. Widgets are added (new widgets need to be rendered)
+        // 2. A preset is loaded (wholesale replacement)
+        // Position changes from GridStack are already reflected in the DOM.
         useEffect(() => {
             if (!gridInstance.current) return;
 
-            // ✅ Skip if grid hasn't been initialized yet (refs not set)
+            // Skip if grid hasn't been initialized yet
             if (!gridInitialized.current) {
                 console.log('[GridDashboard] Skipping layout update - grid not initialized yet');
                 return;
@@ -587,11 +592,13 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Skip if this is the same layout we just sent (our own change echoing back)
             if (incomingLayoutJson === lastSentLayout.current) {
+                console.log('[GridDashboard] Skipping - same as last sent');
                 return;
             }
 
             // Skip if layout hasn't changed from what we last received
             if (incomingLayoutJson === lastReceivedLayout.current) {
+                console.log('[GridDashboard] Skipping - same as last received');
                 return;
             }
 
@@ -607,11 +614,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 return;
             }
 
-            // ✅ ROBUST: No cooldown check needed - source tagging handles this
-            // If this is our own layout echoing back (from local-interaction save),
-            // Dashboard.tsx won't trigger a re-render because notifyLocal=false
-
-            // Check what actually changed using the proper helper function
+            // Check what actually changed
             let prevLayout: Widget[];
             try {
                 prevLayout = JSON.parse(lastReceivedLayout.current || '[]');
@@ -619,20 +622,39 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 prevLayout = [];
             }
 
-            const structuralChanges = detectStructuralChanges(prevLayout, layout);
-            const { widgetsAdded, widgetsRemoved, addedIds, removedIds } = structuralChanges;
+            const prevIds = new Set(prevLayout.filter(w => w.enabled).map(w => w.id));
+            const currentIds = new Set(layout.filter(w => w.enabled).map(w => w.id));
+            
+            const addedIds = layout.filter(w => w.enabled && !prevIds.has(w.id)).map(w => w.id);
+            const removedIds = prevLayout.filter(w => w.enabled && !currentIds.has(w.id)).map(w => w.id);
+            
+            const widgetsAdded = addedIds.length > 0;
+            const widgetsRemoved = removedIds.length > 0;
 
-            console.log('[GridDashboard] Layout update received', {
+            console.log('[GridDashboard] Layout prop changed', {
                 widgetsAdded,
                 widgetsRemoved,
                 addedIds,
-                removedIds
+                removedIds,
+                prevCount: prevIds.size,
+                currentCount: currentIds.size
             });
 
             // Update our tracking ref
             lastReceivedLayout.current = incomingLayoutJson;
 
-            // ✅ ROBUST: Set flag to prevent change events during layout application
+            // ✅ CRITICAL: Only reload GridStack if widgets were ADDED
+            // - Widget removal: Already handled by handleDeleteWidget
+            // - Position changes: GridStack DOM is already correct, don't reload
+            // - Widget addition: Must reload to render new widgets
+            if (!widgetsAdded) {
+                console.log('[GridDashboard] No widgets added - skipping GridStack reload');
+                return;
+            }
+
+            console.log('[GridDashboard] Widgets added - reloading GridStack');
+
+            // Set flag to prevent change events during layout application
             isApplyingLayout.current = true;
 
             // Create a set of widget IDs from the new layout
@@ -646,7 +668,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 }
             });
 
-            // ✅ FIX: Filter out widgets user doesn't have access to
+            // Filter out widgets user doesn't have access to
             const accessibleLayout = layout.filter(widget => hasAccess(widget.id, 'view'));
 
             // Enforce minimum widget dimensions before loading
@@ -661,7 +683,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Load the new layout into GridStack
             gridInstance.current.load(layoutWithMinimums);
 
-            // ✅ FIX: Clear the applying flag after a short delay to allow GridStack to settle
+            // Clear the applying flag after GridStack settles
             setTimeout(() => {
                 isApplyingLayout.current = false;
             }, 100);
