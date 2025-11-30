@@ -18,12 +18,14 @@ import { preferencesService } from "@/lib/preferences";
 import { DASHBOARD_SETTINGS, DRAG_HANDLE_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
 import { useAnalytics } from "@/contexts/AnalyticsContext";
+import { type LayoutUpdateSource, detectStructuralChanges, describeSource } from "@/utils/layoutUtils";
 
 export interface GridDashboardProps {
     // The current serialized layout (list of widgets)
     layout: Widget[];
     // Callback to notify parent of layout changes
-    onExternalLayoutChange?: (layout: Widget[]) => void;
+    // Second parameter is the source of the change for proper handling
+    onExternalLayoutChange?: (layout: Widget[], source?: LayoutUpdateSource) => void;
     // Dashboard context menu callbacks
     onAddWidget?: () => void;
     onOpenSettings?: () => void;
@@ -44,18 +46,27 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // Track if user is actively interacting with grid
         const isInteracting = useRef<boolean>(false);
-        
+
         // Track pending layout update to coalesce rapid changes
         const pendingLayoutUpdate = useRef<Widget[] | null>(null);
         const layoutUpdateTimer = useRef<NodeJS.Timeout | null>(null);
 
         // Track the last layout we sent to parent to avoid duplicate updates
         const lastSentLayout = useRef<string>("");
-        
-        // Track the last layout we received from parent to detect actual changes
-        const lastReceivedLayout = useRef<string>(JSON.stringify(layout));
 
-        // ✅ FIX: Get widget permissions
+        // Track the last layout we received from parent to detect actual changes
+        // Initialize empty - will be set when grid initializes
+        const lastReceivedLayout = useRef<string>("");
+
+        // ✅ ROBUST FIX: Track if we're currently applying a layout update to prevent feedback loops
+        // This is deterministic - we set it true before applying, false after.
+        // No timing-based cooldowns needed.
+        const isApplyingLayout = useRef<boolean>(false);
+
+        // ✅ ROBUST FIX: Track if grid has been initialized
+        const gridInitialized = useRef<boolean>(false);
+
+        // ✅ ROBUST FIX: Get widget permissions
         const { hasAccess } = useWidgetPermissions();
 
         // Analytics tracking
@@ -127,7 +138,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     const currentLayout = layout.filter(widget => widget.id !== widgetId);
                     console.log(`Updated layout:`, currentLayout);
 
-                    externalLayoutChangeRef.current?.(currentLayout);
+                    // ✅ ROBUST: Tag as widget-remove so parent knows not to reload GridStack
+                    externalLayoutChangeRef.current?.(currentLayout, 'widget-remove');
 
                     console.log(`Widget ${widgetId} successfully removed${autoCompact ? ' and layout compacted' : ''}`);
                 } else {
@@ -236,7 +248,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                     h: node.h || 1,
                     enabled: true,
                 }));
-                externalLayoutChangeRef.current?.(updatedLayout);
+                // ✅ ROBUST: Tag as local-interaction (resize from context menu)
+                externalLayoutChangeRef.current?.(updatedLayout, 'local-interaction');
                 console.log('[Resize] Layout persisted after resize');
             }
 
@@ -319,7 +332,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         h: node.h || 1,
                         enabled: true,
                     }));
-                    externalLayoutChangeRef.current?.(updatedLayout);
+                    // ✅ ROBUST: Tag as 'compact' source
+                    externalLayoutChangeRef.current?.(updatedLayout, 'compact');
                 }
             },
         }));
@@ -438,9 +452,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 minW: MIN_WIDGET_WIDTH,
                 minH: MIN_WIDGET_HEIGHT,
             }));
+
+            // ✅ FIX: Initialize tracking refs before loading layout
+            const initialLayoutJson = JSON.stringify(layout);
+            lastReceivedLayout.current = initialLayoutJson;
+            lastSentLayout.current = initialLayoutJson;
+            gridInitialized.current = true;
+
             gridInstance.current.load(layoutWithMinimums);
 
-        // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
+            // ✅ CRITICAL FIX: Apply drag handle restrictions to all loaded widgets
             gridInstance.current.el.querySelectorAll('.grid-stack-item').forEach((item: Element) => {
                 applyDragHandleRestriction(item as HTMLElement);
             });
@@ -482,6 +503,12 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             gridInstance.current.on("change", () => {
                 if (!gridInstance.current) return;
 
+                // ✅ FIX: Skip if we're currently applying a layout (prevents feedback loop)
+                if (isApplyingLayout.current) {
+                    console.log('[GridDashboard] Skipping change event - currently applying layout');
+                    return;
+                }
+
                 const nodes = gridInstance.current.save() as GridStackNode[];
                 const updatedLayout = nodes.map((node) => ({
                     id: node.id as string,
@@ -494,7 +521,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                 // Serialize for comparison
                 const layoutJson = JSON.stringify(updatedLayout);
-                
+
                 // Skip if this is the same as what we last sent
                 if (layoutJson === lastSentLayout.current) {
                     return;
@@ -511,18 +538,22 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 // Coalesce rapid changes with debouncing
                 layoutUpdateTimer.current = setTimeout(() => {
                     if (!pendingLayoutUpdate.current) return;
-                    
+
                     const layoutToSend = pendingLayoutUpdate.current;
                     const layoutJsonToSend = JSON.stringify(layoutToSend);
-                    
+
                     // Update tracking refs BEFORE sending to parent
                     lastSentLayout.current = layoutJsonToSend;
                     lastReceivedLayout.current = layoutJsonToSend;
                     pendingLayoutUpdate.current = null;
                     layoutUpdateTimer.current = null;
 
-                    // Send to parent
-                    externalLayoutChangeRef.current?.(layoutToSend);
+                    // ✅ ROBUST FIX: No cooldown needed - we use source tagging instead
+                    // The parent (Dashboard.tsx) will save with source='local-interaction'
+                    // which prevents the preferences subscription from triggering a reload
+
+                    // Send to parent with 'local-interaction' source
+                    externalLayoutChangeRef.current?.(layoutToSend, 'local-interaction');
                 }, 300);
             });
 
@@ -541,18 +572,24 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // They are captured at mount time via refs. Changes require a page reload to take effect.
 
         // Reload the grid if the external layout prop changes (e.g. via presets or widget menu).
-        // ✅ OPTIMIZED: Only reload if widgets actually changed, not just positions
+        // ✅ ROBUST: Only reload if widgets actually changed, not just positions
         useEffect(() => {
             if (!gridInstance.current) return;
 
+            // ✅ Skip if grid hasn't been initialized yet (refs not set)
+            if (!gridInitialized.current) {
+                console.log('[GridDashboard] Skipping layout update - grid not initialized yet');
+                return;
+            }
+
             // Serialize incoming layout for comparison
             const incomingLayoutJson = JSON.stringify(layout);
-            
+
             // Skip if this is the same layout we just sent (our own change echoing back)
             if (incomingLayoutJson === lastSentLayout.current) {
                 return;
             }
-            
+
             // Skip if layout hasn't changed from what we last received
             if (incomingLayoutJson === lastReceivedLayout.current) {
                 return;
@@ -570,20 +607,33 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 return;
             }
 
-            // Check what actually changed
-            const prevIds = new Set(JSON.parse(lastReceivedLayout.current).map((w: Widget) => w.id));
-            const currentIds = new Set(layout.map(w => w.id));
+            // ✅ ROBUST: No cooldown check needed - source tagging handles this
+            // If this is our own layout echoing back (from local-interaction save),
+            // Dashboard.tsx won't trigger a re-render because notifyLocal=false
 
-            const widgetsAdded = layout.some(w => !prevIds.has(w.id));
-            const widgetsRemoved = Array.from(prevIds).some(id => !currentIds.has(id as string));
+            // Check what actually changed using the proper helper function
+            let prevLayout: Widget[];
+            try {
+                prevLayout = JSON.parse(lastReceivedLayout.current || '[]');
+            } catch {
+                prevLayout = [];
+            }
 
-            console.log('[GridDashboard] Reloading with updated layout', {
+            const structuralChanges = detectStructuralChanges(prevLayout, layout);
+            const { widgetsAdded, widgetsRemoved, addedIds, removedIds } = structuralChanges;
+
+            console.log('[GridDashboard] Layout update received', {
                 widgetsAdded,
-                widgetsRemoved
+                widgetsRemoved,
+                addedIds,
+                removedIds
             });
 
             // Update our tracking ref
             lastReceivedLayout.current = incomingLayoutJson;
+
+            // ✅ ROBUST: Set flag to prevent change events during layout application
+            isApplyingLayout.current = true;
 
             // Create a set of widget IDs from the new layout
             const newWidgetIds = new Set(layout.map(widget => widget.id));
@@ -610,6 +660,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             // Load the new layout into GridStack
             gridInstance.current.load(layoutWithMinimums);
+
+            // ✅ FIX: Clear the applying flag after a short delay to allow GridStack to settle
+            setTimeout(() => {
+                isApplyingLayout.current = false;
+            }, 100);
 
             // Re-apply drag handle restrictions after reload
             setTimeout(() => {
@@ -721,7 +776,8 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                                 h: node.h || 1,
                                 enabled: true,
                             }));
-                            externalLayoutChangeRef.current?.(updatedLayout);
+                            // ✅ ROBUST: Tag as 'compact' source
+                            externalLayoutChangeRef.current?.(updatedLayout, 'compact');
                         }
                     }}
                     onSettings={() => onOpenSettings?.()}

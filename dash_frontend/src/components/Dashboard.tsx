@@ -26,6 +26,9 @@ import {
     normalizeLayout,
     mergeLayoutWithActive,
     areLayoutsEqual,
+    detectStructuralChanges,
+    describeSource,
+    type LayoutUpdateSource,
 } from "@/utils/layoutUtils";
 import { masterWidgetList, getWidgetById } from "@/constants/widgets";
 import { toast } from "sonner";
@@ -345,8 +348,42 @@ export default function Dashboard() {
             if (!changedKeys || changedKeys.length === 0 || changedKeys.includes('dashboard')) {
                 const storedLayout = readLayoutFromStorage();
                 const normalizedLayout = normalizeLayout(storedLayout);
-                setLayout(normalizedLayout);
 
+                // Check if this is a structural change (widgets added/removed)
+                const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
+                const hasStructuralChange = structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved;
+
+                // Check the source metadata to understand WHY the originating session made this change
+                // This helps us decide how to handle it
+                const layoutMeta = preferencesService.get<{ source?: LayoutUpdateSource, sessionId?: string }>('dashboard.layoutMeta');
+                const originalSource: LayoutUpdateSource = layoutMeta?.source || 'remote-sync';
+
+                // For remote syncs, we apply:
+                // - ALL structural changes (widgets added/removed)
+                // - Preset loads from other sessions (wholesale replacement)
+                // - But NOT position-only changes from drag/resize (user might be actively working)
+                const shouldApply = hasStructuralChange || originalSource === 'preset-load' || originalSource === 'widget-add';
+
+                console.log(`[Dashboard] Remote layout update: originalSource=${describeSource(originalSource)}, structural=${hasStructuralChange}, shouldApply=${shouldApply}`);
+
+                if (shouldApply) {
+                    if (structuralChanges.addedIds.length > 0) {
+                        console.log(`[Dashboard] Widgets added remotely: ${structuralChanges.addedIds.join(', ')}`);
+                    }
+                    if (structuralChanges.removedIds.length > 0) {
+                        console.log(`[Dashboard] Widgets removed remotely: ${structuralChanges.removedIds.join(', ')}`);
+                    }
+                    setLayout(normalizedLayout);
+                } else {
+                    // This is just a position change from another session's drag/resize
+                    // We still update our internal state silently so we don't lose the change
+                    // But we don't trigger a GridStack reload to avoid disrupting the user
+                    console.log('[Dashboard] Remote position-only change - applying silently without GridStack reload');
+                    // Update layout state but GridDashboard will skip reload because layout JSON matches lastReceivedLayout
+                    setLayout(normalizedLayout);
+                }
+
+                // Always sync presets and other metadata
                 setPresets(readPresetsFromStorage());
                 setCurrentPresetType(readCurrentPresetType() as PresetType);
                 setActivePresetIndex(readActivePresetIndex());
@@ -360,7 +397,7 @@ export default function Dashboard() {
         });
 
         return unsubscribe;
-    }, [isAuthenticated]);
+    }, [isAuthenticated, layout]);
 
     // Prepare a temporary layout for the widget menu
     const updateTempLayout = useCallback(() => {
@@ -372,7 +409,7 @@ export default function Dashboard() {
         );
     }, [layout]);
 
-    const handleExternalLayoutChange = useCallback((activeLayout: Widget[]) => {
+    const handleExternalLayoutChange = useCallback((activeLayout: Widget[], source: LayoutUpdateSource = 'local-interaction') => {
         const mergedLayout = mergeLayoutWithActive(layout, activeLayout);
         const normalizedLayout = normalizeLayout(mergedLayout);
 
@@ -384,8 +421,9 @@ export default function Dashboard() {
         // Update state first
         setLayout(normalizedLayout);
 
-        // Save layout (this will debounce via preferencesService)
-        saveLayoutToStorage(normalizedLayout);
+        // Save layout with source tag - this controls notifyLocal behavior
+        // For local-interaction, notifyLocal defaults to false to prevent feedback loops
+        saveLayoutToStorage(normalizedLayout, { source });
 
         // Update active preset if one is selected
         if (activePresetIndex !== null) {
@@ -438,7 +476,8 @@ export default function Dashboard() {
                 setPresetIndex(index);
                 setCurrentPresetType(preset.type);
                 setActivePresetIndex(index);
-                saveLayoutToStorage(merged);
+                // ✅ Tag as preset-load so GridStack knows to fully reload
+                saveLayoutToStorage(merged, { source: 'preset-load' });
                 saveCurrentPresetType(preset.type);
                 saveActivePresetIndex(index);
 
@@ -623,8 +662,16 @@ export default function Dashboard() {
     const handleSave = useCallback(() => {
         const normalizedLayout = normalizeLayout(tempLayout);
 
-        // ✅ DON'T filter here - save everything, filter only when displaying
-        saveLayoutToStorage(normalizedLayout);
+        // Check what changed to determine the source
+        const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
+        const source: LayoutUpdateSource = structuralChanges.widgetsAdded
+            ? 'widget-add'
+            : structuralChanges.widgetsRemoved
+                ? 'widget-remove'
+                : 'local-interaction';
+
+        // ✅ Save with appropriate source tag
+        saveLayoutToStorage(normalizedLayout, { source });
         setMenuOpen(false);
 
         if (!areLayoutsEqual(layout, normalizedLayout)) {
@@ -734,7 +781,8 @@ export default function Dashboard() {
         setPresetIndex(index);
         saveActivePresetIndex(index);
         setLayout(blankLayout);
-        saveLayoutToStorage(blankLayout);
+        // ✅ Creating a new blank preset is effectively a preset-load
+        saveLayoutToStorage(blankLayout, { source: 'preset-load' });
         setCurrentPresetType("grid");
         saveCurrentPresetType("grid");
         toast.success(`Created blank Preset ${index + 1}`);
@@ -763,7 +811,8 @@ export default function Dashboard() {
         setPresetIndex(index);
         saveActivePresetIndex(index);
         setLayout(normalizedLayout);
-        saveLayoutToStorage(normalizedLayout);
+        // ✅ Saving to a preset is effectively loading that preset
+        saveLayoutToStorage(normalizedLayout, { source: 'preset-load' });
         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
     }, [presets, generatePresetName]); if (checkingAuth) {
         return (
@@ -877,7 +926,8 @@ export default function Dashboard() {
                         setPresetIndex(index);
                         saveActivePresetIndex(index);
                         setLayout(normalizedLayout);
-                        saveLayoutToStorage(normalizedLayout);
+                        // ✅ Saving to a preset is effectively loading that preset
+                        saveLayoutToStorage(normalizedLayout, { source: 'preset-load' });
                         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
                     }}
                     onUpdatePreset={(index, updates) => {

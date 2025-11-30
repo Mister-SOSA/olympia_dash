@@ -1,7 +1,18 @@
 import { Widget, DashboardPreset } from "@/types";
-import { COLUMN_COUNT } from "@/constants/dashboard";
+import { DEFAULT_COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
 import { preferencesService } from "@/lib/preferences";
+import {
+    type LayoutUpdateSource,
+    type SaveLayoutOptions,
+    shouldReloadGrid as shouldReloadGridHelper,
+    detectStructuralChanges,
+    describeSource
+} from "@/types/layout";
+
+// Re-export for convenience
+export type { LayoutUpdateSource, SaveLayoutOptions, LayoutUpdate } from "@/types/layout";
+export { shouldReloadGridHelper as shouldReloadGrid, detectStructuralChanges, describeSource };
 
 /**
  * Generate a smart default name for a preset based on its widgets
@@ -163,15 +174,48 @@ export const readLayoutFromStorage = (): Widget[] => {
 
 /**
  * Saves the full layout to preferences service.
+ * 
+ * @param layout - The layout to save
+ * @param options - Optional configuration for the save operation:
+ *   - source: The source of this layout change (default: 'local-interaction')
+ *   - sync: Whether to sync to server (default: true)
+ *   - notifyLocal: Whether to notify local subscribers. 
+ *     Defaults to false for 'local-interaction' to prevent feedback loops,
+ *     true for other sources.
  */
-export const saveLayoutToStorage = (layout: Widget[]) => {
-    preferencesService.set('dashboard.layout', normalizeLayout(layout));
+export const saveLayoutToStorage = (
+    layout: Widget[],
+    options: Partial<SaveLayoutOptions> = {}
+) => {
+    const {
+        source = 'local-interaction',
+        sync = true,
+        // Default notifyLocal based on source - local interactions shouldn't notify
+        // to prevent Dashboard from re-rendering GridDashboard unnecessarily
+        notifyLocal = source !== 'local-interaction' && source !== 'compact'
+    } = options;
+
+    console.log(`[Layout] Saving layout (source: ${describeSource(source)}, sync: ${sync}, notifyLocal: ${notifyLocal})`);
+
+    // Store the source in metadata for remote subscribers to access
+    // This MUST sync so remote sessions know the source of the change
+    preferencesService.set('dashboard.layoutMeta', {
+        source,
+        timestamp: Date.now(),
+        sessionId: preferencesService.getDebugInfo().sessionId
+    }, { sync: true, notifyLocal: false });
+
+    // Save the actual layout - this triggers the broadcast to other sessions
+    preferencesService.set('dashboard.layout', normalizeLayout(layout), {
+        sync,
+        notifyLocal
+    });
 };
 
 /**
  * Ensures that each widget fits within the given column count.
  */
-export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_COUNT): Widget[] =>
+export const validateLayout = (layout: Widget[], columnCount: number = DEFAULT_COLUMN_COUNT): Widget[] =>
     layout.map((widget) => ({
         ...widget,
         w: Math.min(widget.w, columnCount),
