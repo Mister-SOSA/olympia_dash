@@ -78,8 +78,14 @@ export default function MobileWidgetMenu({
         const isCurrentlyEnabled = existingWidget?.enabled || false;
 
         if (existingWidget) {
+            // Reset to default size when re-enabling a previously disabled widget
             setTempLayout((prev) =>
-                prev.map((w) => (w.id === widgetId ? { ...w, enabled: !isCurrentlyEnabled } : w))
+                prev.map((w) => (w.id === widgetId ? {
+                    ...w,
+                    enabled: !isCurrentlyEnabled,
+                    w: widgetDef.defaultSize.w,
+                    h: widgetDef.defaultSize.h,
+                } : w))
             );
         } else {
             const newWidget: Widget = {
