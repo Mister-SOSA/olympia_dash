@@ -280,16 +280,30 @@ type SettingsView = 'account' | 'appearance' | 'layout' | 'dock' | 'widgets' | '
 const NAVIGATION_ITEMS: { id: SettingsView; icon: React.ElementType; label: string; badge?: string }[] = [
     { id: 'account', icon: MdPerson, label: 'Account' },
     { id: 'appearance', icon: MdPalette, label: 'Appearance' },
-    { id: 'layout', icon: MdGridOn, label: 'Layout & Grid', badge: 'Sync' },
+    { id: 'layout', icon: MdGridOn, label: 'Layout & Grid', badge: 'Beta' },
     { id: 'dock', icon: MdDock, label: 'Dock' },
     { id: 'widgets', icon: MdTune, label: 'Widgets' },
     { id: 'regional', icon: MdSchedule, label: 'Regional' },
     { id: 'notifications', icon: MdNotifications, label: 'Notifications' },
-    { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy' },
-    { id: 'presets', icon: MdRefresh, label: 'Presets' },
+    { id: 'privacy', icon: MdVisibilityOff, label: 'Privacy', badge: 'Beta' },
+    { id: 'presets', icon: MdRefresh, label: 'Preset Cycle', badge: 'Beta' },
     { id: 'shortcuts', icon: MdKeyboard, label: 'Shortcuts' },
     { id: 'advanced', icon: MdStorage, label: 'Advanced' },
 ];
+
+// Get badge colors based on badge type
+const getBadgeColors = (badge: string): React.CSSProperties => {
+    const badgeLower = badge.toLowerCase();
+
+    if (badgeLower === 'beta') {
+        return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)' };
+    }
+    if (badgeLower === 'new') {
+        return { backgroundColor: 'var(--badge-success-bg)', color: 'var(--badge-success-text)', borderColor: 'var(--badge-success-border)' };
+    }
+    // Default to primary
+    return { backgroundColor: 'var(--badge-primary-bg)', color: 'var(--badge-primary-text)', borderColor: 'var(--badge-primary-border)' };
+};
 
 export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, presets = [], initialView = 'account' }: SettingsMenuProps) {
     const { theme, setTheme } = useTheme();
@@ -312,7 +326,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
         message: string;
         onConfirm: () => void;
         type?: 'warning' | 'danger' | 'info';
-    }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, type: 'warning' });
+    }>({ isOpen: false, title: '', message: '', onConfirm: () => { }, type: 'warning' });
     const [nuclearInput, setNuclearInput] = useState('');
     const [showNuclearModal, setShowNuclearModal] = useState(false);
 
@@ -386,8 +400,13 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                             <Icon className="w-4 h-4 flex-shrink-0" />
                                             <span className="flex-1 text-left truncate">{item.label}</span>
                                             {item.badge && !showBadge && (
-                                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${isActive ? 'bg-white/20 text-white' : 'bg-ui-accent-primary/20 text-ui-accent-primary'
-                                                    }`}>
+                                                <span
+                                                    className="inline-flex items-center px-1 py-0 rounded text-[9px] font-medium border"
+                                                    style={isActive
+                                                        ? { backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', borderColor: 'rgba(255,255,255,0.2)' }
+                                                        : getBadgeColors(item.badge)
+                                                    }
+                                                >
                                                     {item.badge}
                                                 </span>
                                             )}
@@ -1759,9 +1778,9 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                                             type: 'warning',
                                                                             onConfirm: async () => {
                                                                                 const allPrefs = preferencesService.getAll();
-                                                                                const regionalKeys = Object.keys(allPrefs).filter(key => 
-                                                                                    key.startsWith('timezone') || 
-                                                                                    key.startsWith('dateFormat') || 
+                                                                                const regionalKeys = Object.keys(allPrefs).filter(key =>
+                                                                                    key.startsWith('timezone') ||
+                                                                                    key.startsWith('dateFormat') ||
                                                                                     key.startsWith('timeFormat') ||
                                                                                     key.startsWith('numberFormat') ||
                                                                                     key.startsWith('currencySymbol')
@@ -1805,7 +1824,7 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                                             type: 'warning',
                                                                             onConfirm: async () => {
                                                                                 const allPrefs = preferencesService.getAll();
-                                                                                const notificationKeys = Object.keys(allPrefs).filter(key => 
+                                                                                const notificationKeys = Object.keys(allPrefs).filter(key =>
                                                                                     key.startsWith('soundEnabled') ||
                                                                                     key.startsWith('toastPosition') ||
                                                                                     key.startsWith('toastDuration')
@@ -2001,11 +2020,10 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                             }
                                         }}
                                         disabled={nuclearInput !== 'DELETE ALL PREFERENCES'}
-                                        className={`px-5 py-2 text-sm font-bold rounded-md transition-colors shadow-lg ${
-                                            nuclearInput === 'DELETE ALL PREFERENCES'
-                                                ? 'bg-red-600 hover:bg-red-700 text-white'
-                                                : 'bg-ui-bg-quaternary text-ui-text-muted cursor-not-allowed'
-                                        }`}
+                                        className={`px-5 py-2 text-sm font-bold rounded-md transition-colors shadow-lg ${nuclearInput === 'DELETE ALL PREFERENCES'
+                                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                                            : 'bg-ui-bg-quaternary text-ui-text-muted cursor-not-allowed'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-2">
                                             <MdDelete className="w-4 h-4" />
