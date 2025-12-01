@@ -201,7 +201,7 @@ export default function Dashboard() {
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
     // ✅ FIX: Get widget permissions
-    const { hasAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
+    const { hasAccess, widgetAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
 
     // Privacy mode
     const { toggle: togglePrivacy, isPrivate } = usePrivacy();
@@ -267,6 +267,37 @@ export default function Dashboard() {
             console.error('Failed to refresh widget permissions after auth:', error);
         });
     }, [isAuthenticated, refreshWidgetPermissions]);
+
+    // Clean up unauthorized widgets from layout when permissions change
+    useEffect(() => {
+        // Skip if permissions not loaded yet or user has all access
+        if (permissionsLoading || widgetAccess.all_access) return;
+        // Skip if layout is empty
+        if (layout.length === 0) return;
+
+        // Find enabled widgets that user no longer has access to
+        const unauthorizedWidgets = layout.filter(
+            w => w.enabled && !hasAccess(w.id, 'view')
+        );
+
+        if (unauthorizedWidgets.length > 0) {
+            console.log('[Dashboard] Removing unauthorized widgets:', unauthorizedWidgets.map(w => w.id));
+
+            // Disable (remove) unauthorized widgets from layout
+            const cleanedLayout = layout.map(w => {
+                if (unauthorizedWidgets.some(uw => uw.id === w.id)) {
+                    return { ...w, enabled: false };
+                }
+                return w;
+            });
+
+            // Update layout state
+            setLayout(cleanedLayout);
+
+            // Save to preferences
+            saveLayoutToStorage(cleanedLayout, { source: 'widget-remove', sync: true });
+        }
+    }, [widgetAccess, permissionsLoading, layout, hasAccess]);
 
     // Sync preferences from server and migrate old localStorage data
     useEffect(() => {

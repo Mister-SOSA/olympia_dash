@@ -137,17 +137,13 @@ export function WidgetPermissionsProvider({ children }: { children: React.ReactN
             }
 
             const userLevel = widgetAccess.permissions[widgetId];
-            const hasPermission = userLevel ? (() => {
-                const levels = { view: 1, edit: 2, admin: 3 };
-                return levels[userLevel] >= levels[requiredLevel];
-            })() : false;
-
-            // Log denied access for debugging (only log denials to avoid spam)
-            if (!hasPermission) {
-                console.log(`[WidgetPermissions] Access DENIED for widget "${widgetId}" - user level: ${userLevel || 'none'}, required: ${requiredLevel}`);
+            if (!userLevel) {
+                return false;
             }
 
-            return hasPermission;
+            // Define access level hierarchy
+            const levels = { view: 1, edit: 2, admin: 3 };
+            return levels[userLevel] >= levels[requiredLevel];
         },
         [widgetAccess]
     );
