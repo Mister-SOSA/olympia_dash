@@ -22,6 +22,7 @@ import { GroupsPanel } from '@/components/admin/GroupsPanel';
 import { PermissionsPanel } from '@/components/admin/PermissionsPanel';
 import { ActivityPanel } from '@/components/admin/ActivityPanel';
 import { AnalyticsPanel } from '@/components/admin/AnalyticsPanel';
+import { DatabasePanel } from '@/components/admin/DatabasePanel';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
 export const dynamic = 'force-dynamic';
@@ -98,7 +99,7 @@ export default function AdminPage() {
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions' | 'activity' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions' | 'activity' | 'analytics' | 'database'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -560,6 +561,7 @@ export default function AdminPage() {
     { id: 'activity', label: 'Activity', icon: MdHistory },
     { id: 'logs', label: 'Audit Logs', icon: MdDescription },
     { id: 'devices', label: 'Devices', icon: MdDevices },
+    { id: 'database', label: 'Database', icon: MdStorage },
   ];
 
   return (
@@ -620,6 +622,7 @@ export default function AdminPage() {
               {activeTab === 'activity' && 'Monitor system activity and events'}
               {activeTab === 'logs' && 'Track system activity and security events'}
               {activeTab === 'devices' && 'Manage paired displays and sessions'}
+              {activeTab === 'database' && 'Browse database tables (read-only)'}
             </p>
           </div>
 
@@ -1205,6 +1208,10 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {activeTab === 'database' && (
+            <DatabasePanel />
           )}
         </div>
       </main>

@@ -1018,6 +1018,144 @@ def cleanup_analytics():
         }), 500
 
 
+# ============ Database Browser Endpoints ============
+
+@admin_bp.route('/database/tables', methods=['GET'])
+@require_role('admin')
+def list_database_tables():
+    """List all tables in the database with row counts."""
+    try:
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get all table names
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' 
+            AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+        """)
+        table_names = [row[0] for row in cursor.fetchall()]
+        
+        tables = []
+        for table_name in table_names:
+            # Get row count
+            cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+            row_count = cursor.fetchone()[0]
+            
+            # Get column info
+            cursor.execute(f'PRAGMA table_info("{table_name}")')
+            columns = [{'name': row[1], 'type': row[2], 'nullable': not row[3], 'pk': row[5] == 1} for row in cursor.fetchall()]
+            
+            tables.append({
+                'name': table_name,
+                'row_count': row_count,
+                'column_count': len(columns),
+                'columns': columns
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'tables': tables
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route('/database/table/<table_name>', methods=['GET'])
+@require_role('admin')
+def get_table_data(table_name):
+    """Get data from a specific table with pagination."""
+    try:
+        from auth.database import get_db
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Validate table exists
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name=?
+        """, (table_name,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({
+                'success': False,
+                'error': f'Table "{table_name}" not found'
+            }), 404
+        
+        # Get pagination params
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        per_page = min(per_page, 100)  # Cap at 100 rows
+        offset = (page - 1) * per_page
+        
+        # Get sort params
+        sort_by = request.args.get('sort_by', None)
+        sort_order = request.args.get('sort_order', 'asc')
+        if sort_order not in ['asc', 'desc']:
+            sort_order = 'asc'
+        
+        # Get column info for masking sensitive data
+        cursor.execute(f'PRAGMA table_info("{table_name}")')
+        columns_info = cursor.fetchall()
+        column_names = [col[1] for col in columns_info]
+        
+        # Sensitive columns to mask
+        sensitive_columns = {'password_hash', 'token', 'session_token', 'refresh_token', 'api_key', 'secret'}
+        
+        # Build query
+        if sort_by and sort_by in column_names:
+            query = f'SELECT * FROM "{table_name}" ORDER BY "{sort_by}" {sort_order} LIMIT ? OFFSET ?'
+        else:
+            query = f'SELECT * FROM "{table_name}" LIMIT ? OFFSET ?'
+        
+        cursor.execute(query, (per_page, offset))
+        rows = cursor.fetchall()
+        
+        # Get total count
+        cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+        total_count = cursor.fetchone()[0]
+        
+        # Convert to list of dicts and mask sensitive data
+        data = []
+        for row in rows:
+            row_dict = {}
+            for i, col_name in enumerate(column_names):
+                value = row[i]
+                # Mask sensitive columns
+                if col_name.lower() in sensitive_columns and value:
+                    row_dict[col_name] = '••••••••'
+                else:
+                    row_dict[col_name] = value
+            data.append(row_dict)
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'table': table_name,
+            'columns': column_names,
+            'data': data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_rows': total_count,
+                'total_pages': (total_count + per_page - 1) // per_page
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @admin_bp.route('/analytics/realtime', methods=['GET'])
 @require_role('admin')
 def get_realtime_analytics():
