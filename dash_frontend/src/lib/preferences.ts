@@ -42,32 +42,35 @@ class PreferencesService {
     private readonly sessionId: string = crypto.randomUUID();
     private preferences: Record<string, any> = {};
     private version: number = 0;
-    
+
     // Single save timer - no more racing per-key timers
     private saveTimer: NodeJS.Timeout | null = null;
     private savePromise: Promise<boolean> | null = null;
-    
+
     // Track which keys have unsaved changes
     private dirtyKeys: Set<string> = new Set();
-    
+
     // Track if a save is currently in flight
     private isSaving: boolean = false;
-    
+
     // Interaction lock - when true, ignore remote updates
     private interactionLock: boolean = false;
     private interactionLockTimer: NodeJS.Timeout | null = null;
-    
+
     // Notification batching
     private pendingNotification: boolean = false;
     private notificationTimer: NodeJS.Timeout | null = null;
     private pendingChangedKeys: Set<string> = new Set();
-    
+
     private syncInProgress: boolean = false;
     private socket: Socket | null = null;
     private changeCallbacks: Set<ChangeCallback> = new Set();
     private currentUserId: number | null = null;
     private sessionCount: number = 1;
-    
+
+    // Generic event emitter for custom events (permissions_updated, etc.)
+    private eventListeners: Map<string, Set<() => void>> = new Map();
+
     // Debounce timings
     private readonly SAVE_DEBOUNCE_MS = 500;        // Wait 500ms after last change before saving
     private readonly NOTIFICATION_DEBOUNCE_MS = 50;  // Batch notifications within 50ms
@@ -264,6 +267,16 @@ class PreferencesService {
             console.warn('[Prefs] WebSocket disconnected:', reason);
         });
 
+        // Listen for permission updates from server
+        this.socket.on('permissions_updated', (data: { user_id?: number }) => {
+            const currentUser = authService.getUser();
+            // If this update is for the current user (or broadcast to all), emit event
+            if (!data.user_id || data.user_id === currentUser?.id) {
+                console.log('[Prefs] Received permissions_updated event');
+                this.emit('permissions_updated');
+            }
+        });
+
         this.socket.on('preferences_updated', (data: {
             preferences: Record<string, any>,
             version: number,
@@ -292,10 +305,10 @@ class PreferencesService {
             }
 
             console.log(`[Prefs] Applying remote update (v${this.version} → v${data.version})`);
-            
+
             // Detect which keys changed
             const changedKeys = this.detectChangedKeys(this.preferences, data.preferences);
-            
+
             this.preferences = data.preferences;
             this.version = data.version;
             this.saveToCache();
@@ -311,13 +324,13 @@ class PreferencesService {
     private detectChangedKeys(oldPrefs: Record<string, any>, newPrefs: Record<string, any>): string[] {
         const changedKeys: string[] = [];
         const allKeys = new Set([...Object.keys(oldPrefs), ...Object.keys(newPrefs)]);
-        
+
         for (const key of allKeys) {
             if (JSON.stringify(oldPrefs[key]) !== JSON.stringify(newPrefs[key])) {
                 changedKeys.push(key);
             }
         }
-        
+
         return changedKeys;
     }
 
@@ -340,6 +353,30 @@ class PreferencesService {
     }
 
     /**
+     * Subscribe to a custom event (e.g., 'permissions_updated')
+     */
+    on(event: string, callback: () => void): void {
+        if (!this.eventListeners.has(event)) {
+            this.eventListeners.set(event, new Set());
+        }
+        this.eventListeners.get(event)!.add(callback);
+    }
+
+    /**
+     * Unsubscribe from a custom event
+     */
+    off(event: string, callback: () => void): void {
+        this.eventListeners.get(event)?.delete(callback);
+    }
+
+    /**
+     * Emit a custom event to all listeners
+     */
+    emit(event: string): void {
+        this.eventListeners.get(event)?.forEach(cb => cb());
+    }
+
+    /**
      * Notify all subscribers with batching to reduce re-renders
      */
     private notifySubscribers(isRemote: boolean, changedKeys?: string[]): void {
@@ -347,26 +384,26 @@ class PreferencesService {
         if (changedKeys) {
             changedKeys.forEach(key => this.pendingChangedKeys.add(key));
         }
-        
+
         // If already pending a notification, don't schedule another
         if (this.pendingNotification) {
             return;
         }
-        
+
         this.pendingNotification = true;
-        
+
         // Clear existing timer if any
         if (this.notificationTimer) {
             clearTimeout(this.notificationTimer);
         }
-        
+
         // Batch notifications within a short window
         this.notificationTimer = setTimeout(() => {
             const keys = Array.from(this.pendingChangedKeys);
             this.pendingChangedKeys.clear();
             this.pendingNotification = false;
             this.notificationTimer = null;
-            
+
             // Notify all subscribers
             this.changeCallbacks.forEach(cb => cb(isRemote, keys));
         }, this.NOTIFICATION_DEBOUNCE_MS);
@@ -378,7 +415,7 @@ class PreferencesService {
     setInteractionLock(locked: boolean): void {
         if (locked) {
             this.interactionLock = true;
-            
+
             if (this.interactionLockTimer) {
                 clearTimeout(this.interactionLockTimer);
                 this.interactionLockTimer = null;
@@ -387,7 +424,7 @@ class PreferencesService {
             if (this.interactionLockTimer) {
                 clearTimeout(this.interactionLockTimer);
             }
-            
+
             this.interactionLockTimer = setTimeout(() => {
                 this.interactionLock = false;
                 this.interactionLockTimer = null;
@@ -491,10 +528,10 @@ class PreferencesService {
      * - sync: Whether to sync to server at all (default: true)
      * - notifyLocal: Whether to notify local subscribers (default: true)
      */
-    set(key: string, value: any, options: { 
-        debounce?: boolean; 
-        sync?: boolean; 
-        notifyLocal?: boolean 
+    set(key: string, value: any, options: {
+        debounce?: boolean;
+        sync?: boolean;
+        notifyLocal?: boolean
     } = {}): void {
         const { debounce = true, sync = true, notifyLocal = true } = options;
 
@@ -512,7 +549,7 @@ class PreferencesService {
 
         const finalKey = keys[keys.length - 1];
         const oldValue = target[finalKey];
-        
+
         // Skip if value hasn't changed
         if (JSON.stringify(oldValue) === JSON.stringify(value)) {
             return;
@@ -542,9 +579,9 @@ class PreferencesService {
     /**
      * Set multiple preferences at once
      */
-    setMany(preferences: Record<string, any>, options: { 
-        sync?: boolean; 
-        notifyLocal?: boolean 
+    setMany(preferences: Record<string, any>, options: {
+        sync?: boolean;
+        notifyLocal?: boolean
     } = {}): void {
         const { sync = true, notifyLocal = true } = options;
 
@@ -565,7 +602,7 @@ class PreferencesService {
 
             const finalKey = keys[keys.length - 1];
             const oldValue = target[finalKey];
-            
+
             if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
                 target[finalKey] = value;
                 this.dirtyKeys.add(keys[0]);
@@ -710,10 +747,10 @@ class PreferencesService {
 
                 if (data.success) {
                     this.version = data.version;
-                    
+
                     // Clear the dirty keys we just saved
                     keysBeingSaved.forEach(key => this.dirtyKeys.delete(key));
-                    
+
                     this.saveToCache();
                     console.log(`[Prefs] Saved successfully (v${this.version})`);
 

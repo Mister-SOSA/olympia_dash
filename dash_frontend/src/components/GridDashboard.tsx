@@ -217,7 +217,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // Convert layout to react-grid-layout format
         const gridLayout = useMemo(() => {
-            const accessibleWidgets = layout.filter(w => w.enabled && hasAccess(w.id, 'view'));
+            const enabledWidgets = layout.filter(w => w.enabled);
+            const accessibleWidgets = enabledWidgets.filter(w => hasAccess(w.id, 'view'));
+
+            console.log(`[GridDashboard] Layout filter: ${enabledWidgets.length} enabled → ${accessibleWidgets.length} accessible`);
+            if (enabledWidgets.length !== accessibleWidgets.length) {
+                const denied = enabledWidgets.filter(w => !hasAccess(w.id, 'view'));
+                console.log(`[GridDashboard] Widgets denied access:`, denied.map(w => w.id));
+            }
+
             return widgetsToLayout(accessibleWidgets);
         }, [layout, hasAccess]);
 

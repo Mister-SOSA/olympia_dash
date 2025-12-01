@@ -312,7 +312,14 @@ class AdminService {
     }
 
     async getAvailableWidgets(): Promise<WidgetAccessControl> {
-        const response = await authService.fetchWithAuth(`${API_BASE_URL}/api/auth/widgets/available`);
+        // Support impersonation - if admin is impersonating, get permissions for that user
+        let url = `${API_BASE_URL}/api/auth/widgets/available`;
+        const impersonatedUser = authService.getImpersonatedUser();
+        if (impersonatedUser?.id) {
+            url += `?impersonated_user_id=${impersonatedUser.id}`;
+        }
+
+        const response = await authService.fetchWithAuth(url);
         const data = await response.json();
 
         if (!data.success) {

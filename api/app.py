@@ -186,6 +186,35 @@ def handle_disconnect():
     if not any(request.sid in sessions for sessions in active_sessions.values()):  # type: ignore[attr-defined]
         logger.info(f'❌ Client disconnected: {request.sid}')  # type: ignore[attr-defined]
 
+
+def emit_permissions_updated(user_id: int):
+    """
+    Emit a permissions_updated event to a specific user's room.
+    This notifies all their connected sessions to refresh permissions.
+    """
+    room = f'user_{user_id}'
+    socketio.emit('permissions_updated', {'user_id': user_id}, to=room, namespace='/')
+    logger.info(f'📤 Emitted permissions_updated to room {room}')
+
+
+def emit_permissions_updated_for_group(group_id: int):
+    """
+    Emit permissions_updated to all users in a group.
+    """
+    from auth.database import get_db
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT user_id FROM group_members WHERE group_id = ?', (group_id,))
+    user_ids = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    
+    for user_id in user_ids:
+        emit_permissions_updated(user_id)
+    
+    logger.info(f'📤 Emitted permissions_updated to {len(user_ids)} users in group {group_id}')
+
+
 # Register authentication blueprints with /api/auth prefix
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(device_bp, url_prefix='/api/auth/device')

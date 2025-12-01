@@ -25,6 +25,25 @@ from auth.middleware import (
 
 widget_bp = Blueprint('widgets', __name__)
 
+
+def _emit_user_permission_update(user_id: int):
+    """Helper to emit permission update to a user."""
+    try:
+        from app import emit_permissions_updated
+        emit_permissions_updated(user_id)
+    except ImportError:
+        pass  # Socket not available
+
+
+def _emit_group_permission_update(group_id: int):
+    """Helper to emit permission update to all users in a group."""
+    try:
+        from app import emit_permissions_updated_for_group
+        emit_permissions_updated_for_group(group_id)
+    except ImportError:
+        pass  # Socket not available
+
+
 @widget_bp.route('/permissions', methods=['GET'])
 @require_role('admin')
 def list_all_permissions():
@@ -110,6 +129,9 @@ def grant_user_widget_permission(user_id, widget_id):
                    f'Granted "{access_level}" access to widget "{widget_id}" for {user["email"]}', 
                    get_client_ip())
         
+        # Notify user's sessions about permission change
+        _emit_user_permission_update(user_id)
+        
         return jsonify({
             'success': True,
             'message': 'Permission granted successfully'
@@ -145,6 +167,9 @@ def revoke_user_widget_permission(user_id, widget_id):
         log_action(admin_user['id'], 'widget_permission_revoked', 
                    f'Revoked widget "{widget_id}" from {user["email"]}', 
                    get_client_ip())
+        
+        # Notify user's sessions about permission change
+        _emit_user_permission_update(user_id)
         
         return jsonify({
             'success': True,
@@ -192,6 +217,9 @@ def grant_group_widget_permission_route(group_id, widget_id):
                    f'Granted "{access_level}" access to widget "{widget_id}" for group "{group["name"]}"', 
                    get_client_ip())
         
+        # Notify all users in the group about permission change
+        _emit_group_permission_update(group_id)
+        
         return jsonify({
             'success': True,
             'message': 'Permission granted successfully'
@@ -227,6 +255,9 @@ def revoke_group_widget_permission_route(group_id, widget_id):
         log_action(admin_user['id'], 'group_widget_permission_revoked', 
                    f'Revoked widget "{widget_id}" from group "{group["name"]}"', 
                    get_client_ip())
+        
+        # Notify all users in the group about permission change
+        _emit_group_permission_update(group_id)
         
         return jsonify({
             'success': True,
@@ -299,6 +330,10 @@ def bulk_grant_permissions():
                    f'Granted {count} permissions: {len(widget_ids)} widgets ({widget_list}) to {len(user_ids)} users', 
                    get_client_ip())
         
+        # Notify all affected users about permission change
+        for user_id in user_ids:
+            _emit_user_permission_update(user_id)
+        
         return jsonify({
             'success': True,
             'message': f'Granted {count} permissions',
@@ -335,6 +370,10 @@ def bulk_revoke_permissions():
                    f'Revoked {count} permissions: {len(widget_ids)} widgets ({widget_list}) from {len(user_ids)} users', 
                    get_client_ip())
         
+        # Notify all affected users about permission change
+        for user_id in user_ids:
+            _emit_user_permission_update(user_id)
+        
         return jsonify({
             'success': True,
             'message': f'Revoked {count} permissions',
@@ -349,15 +388,30 @@ def bulk_revoke_permissions():
 @widget_bp.route('/available', methods=['GET'])
 @require_auth
 def get_available_widgets():
-    """Get list of widgets current user has access to."""
+    """Get list of widgets current user has access to.
+    
+    Supports admin impersonation via ?impersonated_user_id query param.
+    """
     try:
         current_user = request.current_user  # type: ignore
         
-        # Get user's widget permissions
-        permissions = get_user_widget_permissions(current_user['id'])
+        # Check for impersonation (admin only)
+        impersonated_user_id = request.args.get('impersonated_user_id', type=int)
+        target_user_id = current_user['id']
+        target_role = current_user['role']
+        
+        if impersonated_user_id and current_user['role'] == 'admin':
+            # Admin is impersonating another user - get that user's permissions
+            target_user = get_user_by_id(impersonated_user_id)
+            if target_user:
+                target_user_id = impersonated_user_id
+                target_role = target_user['role']
+        
+        # Get target user's widget permissions
+        permissions = get_user_widget_permissions(target_user_id)
         
         # Admins have access to all widgets
-        if current_user['role'] == 'admin':
+        if target_role == 'admin':
             return jsonify({
                 'success': True,
                 'permissions': permissions,
