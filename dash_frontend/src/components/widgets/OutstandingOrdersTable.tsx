@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect, memo } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
@@ -13,7 +13,6 @@ import { usePrivacy } from "@/contexts/PrivacyContext";
 
 const WIDGET_ID = 'OutstandingOrdersTable';
 
-
 /* -------------------------------------- */
 /* Constants & Helper Functions           */
 /* -------------------------------------- */
@@ -25,6 +24,8 @@ const STATUS_CODES: { [key: string]: string } = {
     '16': 'C', // Closed
     '18': 'I', // Vendor Invoice Received
 };
+
+const RECEIVED_STATUSES = new Set(['14', 'V']);
 
 const renderStatusBadge = (statusCode: string) => {
     const status = STATUS_CODES[statusCode];
@@ -41,44 +42,56 @@ const renderStatusBadge = (statusCode: string) => {
 const adjustDateByOneDay = (dateStr?: string): Date | null =>
     dateStr ? new Date(new Date(dateStr).setDate(new Date(dateStr).getDate() + 1)) : null;
 
+interface TableRowData {
+    poNumber: string;
+    poStatus: string;
+    vendName: string;
+    partCode: string;
+    qtyOrdered: string;
+    dateOrdered: string;
+    vendorPromiseDate: string;
+    lastOrderDate: string;
+    recentUnitPrice: string;
+    lastOrderUnitPrice: string;
+    overdueDays: number;
+    isGrouped: boolean;
+    itemNo: string;
+}
+
 /* -------------------------------------- */
-/* OutstandingOrdersTable Component       */
+/* Inner Content Component (Memoized)     */
 /* -------------------------------------- */
-export default function OutstandingOrdersTable() {
+interface OutstandingOrdersTableContentProps {
+    data: POItemData[];
+    sortBy: 'vendor' | 'date' | 'overdue' | 'poNumber';
+    maxRows: number;
+    overdueAlertThreshold: number;
+    playSoundOnReceived: boolean;
+}
+
+const OutstandingOrdersTableContent = memo(function OutstandingOrdersTableContent({
+    data,
+    sortBy,
+    maxRows,
+    overdueAlertThreshold,
+    playSoundOnReceived
+}: OutstandingOrdersTableContentProps) {
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
-    const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
+    const isInitializedRef = useRef(false);
+    const notificationCooldownRef = useRef<Map<string, number>>(new Map());
+    const [highlightedRows, setHighlightedRows] = useState<Set<string>>(new Set());
 
-    // Widget-specific settings
-    const { settings } = useWidgetSettings(WIDGET_ID);
-    const playSoundOnReceived = settings.playSoundOnReceived as boolean;
-    const sortBy = settings.sortBy as 'vendor' | 'date' | 'overdue' | 'poNumber';
-    const maxRows = settings.maxRows as number;
-    const overdueAlertThreshold = settings.overdueAlertThreshold as number;
-
-    // Privacy mode
-    const { settings: privacySettings } = usePrivacy();
-
-    // Prepare the widget payload to query the backed view securely.
-    const widgetPayload = useMemo(
-        () => ({
-            module: "OutstandingOrdersTable",
-            queryId: "OutstandingOrdersTable"
-        }),
-        []
-    );
-
-    // Transform raw data into table row data.
-    const renderFunction = useCallback((data: POItemData[]) => {
+    // Process data using useMemo - NO state updates here
+    const tableData = useMemo(() => {
         const visibleData = data.filter(
             (item) => !config.HIDDEN_OUTSTANDING_VENDOR_CODES.includes(item.vend_code ?? "")
         );
 
-        const tableData = visibleData.map((item) => {
+        const processed = visibleData.map((item) => {
             const adjustedOrderDate = adjustDateByOneDay(item.recent_date_orderd ?? undefined);
             const adjustedVendPromDate = adjustDateByOneDay(item.vend_prom_date ?? undefined);
 
-            // Calculate overdue days based on the adjusted vendor promise date.
             const overdueDays = adjustedVendPromDate
                 ? Math.floor((new Date().getTime() - adjustedVendPromDate.getTime()) / (1000 * 60 * 60 * 24) + 1)
                 : 0;
@@ -106,55 +119,22 @@ export default function OutstandingOrdersTable() {
                         .format(item.last_order_unit_price)
                     : "N/A",
                 overdueDays,
-                isGrouped: false, // Outstanding orders don't use grouping, default to false.
-                itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
+                isGrouped: false,
+                itemNo: `${item.po_number}-${item.item_no}`,
             };
         });
 
-        // Check for status changes to "V" (status code "14")
-        const newStatusVSet = new Set<string>();
-        tableData.forEach((row) => {
-            const itemKey = row.itemNo;
-            const currentStatus = row.poStatus;
-            const previousStatus = previousStatusesRef.current.get(itemKey);
-
-            // If status changed to "14" (V) and wasn't "14" before
-            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
-                newStatusVSet.add(itemKey);
-            }
-
-            // Update the status tracking
-            previousStatusesRef.current.set(itemKey, currentStatus);
-        });
-
-        // Update the state with new status V rows and play sound once (if enabled)
-        if (newStatusVSet.size > 0) {
-            if (playSoundOnReceived) {
-                playNotificationSound(); // Play once for all status changes
-            }
-            setNewStatusVRows(newStatusVSet);
-
-            // Clear the highlight after animation completes (9 pulses * 0.8s = 7.2 seconds)
-            setTimeout(() => {
-                setNewStatusVRows(new Set());
-            }, 7200);
-        }
-
-        // Sort tableData based on user setting
-        tableData.sort((a, b) => {
+        // Sort data (create new array to avoid mutation)
+        const sortedData = [...processed].sort((a, b) => {
             switch (sortBy) {
                 case 'date':
-                    // Sort by date ordered (most recent first)
                     return b.dateOrdered.localeCompare(a.dateOrdered);
                 case 'overdue':
-                    // Sort by overdue days (most overdue first)
                     return b.overdueDays - a.overdueDays;
                 case 'poNumber':
-                    // Sort by PO number
                     return a.poNumber.localeCompare(b.poNumber);
                 case 'vendor':
                 default:
-                    // Sort by vendor name (default), then by PO number, then by part code
                     const vendorComparison = a.vendName.localeCompare(b.vendName);
                     if (vendorComparison !== 0) return vendorComparison;
                     const poComparison = a.poNumber.localeCompare(b.poNumber);
@@ -163,131 +143,203 @@ export default function OutstandingOrdersTable() {
             }
         });
 
-        // Apply maxRows limit if set (0 means unlimited)
-        const finalData = maxRows > 0 ? tableData.slice(0, maxRows) : tableData;
+        // Apply maxRows limit
+        return maxRows > 0 ? sortedData.slice(0, maxRows) : sortedData;
+    }, [data, sortBy, maxRows]);
 
-        // Render the table within a scrollable container.
-        return (
-            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
-                    <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
-                        <TableRow className="border-border/50 hover:bg-transparent">
-                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center gap-1">
-                                    <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    PO Number
-                                </div>
-                            </TableHead>
-                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center gap-1">
-                                    <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Status
-                                </div>
-                            </TableHead>
-                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center gap-1">
-                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Vendor
-                                </div>
-                            </TableHead>
-                            <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center gap-1">
-                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Part Code
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Qty Ordered
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Date Ordered
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <AlertCircle className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Vendor Promise Date
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <TrendingUp className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Prev. Order
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Unit Price
-                                </div>
-                            </TableHead>
-                            <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
-                                <div className="flex items-center justify-end gap-1">
-                                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                    Prev. Price
-                                </div>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {finalData.map((row, index) => {
-                            const isOverdueAlert = row.overdueDays >= overdueAlertThreshold;
-                            return (
-                                <TableRow
-                                    key={row.itemNo}
-                                    className={`
-                  border-border/30 transition-all duration-300 hover:bg-muted/50
-                  ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
-                  ${row.isGrouped ? "grouped-po" : ""} 
-                  ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
-                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                  ${isOverdueAlert ? "overdue-alert-row" : ""}
-                `}
-                                >
-                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
-                                    <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
-                                    <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>
-                                        <SensitiveName value={row.vendName} />
-                                    </TableCell>
-                                    <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
-                                    <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
-                                    <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
-                                    <TableCell className="text-right py-1.5">
-                                        <div className="flex items-center justify-end gap-1.5">
-                                            <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{
-                                                backgroundColor: 'var(--badge-warning-bg)',
-                                                color: 'var(--badge-warning-text)',
-                                                borderColor: 'var(--badge-warning-border)'
-                                            }}>
-                                                {row.overdueDays}d
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
-                                    <TableCell className="text-right row-secondary py-1.5">
-                                        <div className="table-dollars">
-                                            <SensitiveCurrency value={`$${row.recentUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right row-secondary py-1.5">
-                                        <div className="table-dollars">
-                                            <SensitiveCurrency value={`$${row.lastOrderUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </ScrollArea>
-        );
-    }, [newStatusVRows, playSoundOnReceived, sortBy, maxRows, overdueAlertThreshold]);
+    // Status change detection in useEffect - AFTER render
+    useEffect(() => {
+        if (!isInitializedRef.current) {
+            // First load - just populate the map without triggering notifications
+            tableData.forEach((row) => {
+                previousStatusesRef.current.set(row.itemNo, row.poStatus);
+            });
+            isInitializedRef.current = true;
+            return;
+        }
+
+        const now = Date.now();
+        const COOLDOWN_MS = 60000; // 60 seconds cooldown
+        const newStatusVSet = new Set<string>();
+
+        tableData.forEach((row) => {
+            const itemKey = row.itemNo;
+            const currentStatus = row.poStatus;
+            const previousStatus = previousStatusesRef.current.get(itemKey);
+
+            // Check cooldown
+            const lastNotified = notificationCooldownRef.current.get(itemKey) ?? 0;
+            const isOnCooldown = (now - lastNotified) < COOLDOWN_MS;
+
+            // If status changed to received and not on cooldown
+            if (
+                RECEIVED_STATUSES.has(currentStatus) &&
+                previousStatus &&
+                !RECEIVED_STATUSES.has(previousStatus) &&
+                !isOnCooldown
+            ) {
+                newStatusVSet.add(itemKey);
+                notificationCooldownRef.current.set(itemKey, now);
+            }
+
+            // Update status tracking
+            previousStatusesRef.current.set(itemKey, currentStatus);
+        });
+
+        if (newStatusVSet.size > 0) {
+            if (playSoundOnReceived) {
+                playNotificationSound();
+            }
+            setHighlightedRows(newStatusVSet);
+
+            // Clear highlight after animation
+            setTimeout(() => {
+                setHighlightedRows(new Set());
+            }, 7200);
+        }
+    }, [tableData, playSoundOnReceived]);
+
+    return (
+        <ScrollArea className="h-full w-full border-2 border-border rounded-md">
+            <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                    <TableRow className="border-border/50 hover:bg-transparent">
+                        <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center gap-1">
+                                <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                PO Number
+                            </div>
+                        </TableHead>
+                        <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center gap-1">
+                                <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Status
+                            </div>
+                        </TableHead>
+                        <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center gap-1">
+                                <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Vendor
+                            </div>
+                        </TableHead>
+                        <TableHead className="font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center gap-1">
+                                <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Part Code
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <Hash className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Qty Ordered
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Date Ordered
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <AlertCircle className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Vendor Promise Date
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <TrendingUp className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Prev. Order
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Unit Price
+                            </div>
+                        </TableHead>
+                        <TableHead className="text-right font-bold py-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <div className="flex items-center justify-end gap-1">
+                                <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
+                                Prev. Price
+                            </div>
+                        </TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {tableData.map((row) => {
+                        const isOverdueAlert = row.overdueDays >= overdueAlertThreshold;
+                        return (
+                            <TableRow
+                                key={row.itemNo}
+                                className={`
+                                    border-border/30 transition-all duration-300 hover:bg-muted/50
+                                    ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""} 
+                                    ${row.isGrouped ? "grouped-po" : ""} 
+                                    ${STATUS_CODES[row.poStatus] === "V" ? "received-po" : ""}
+                                    ${highlightedRows.has(row.itemNo) ? "new-status-v-row" : ""}
+                                    ${isOverdueAlert ? "overdue-alert-row" : ""}
+                                `}
+                            >
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
+                                <TableCell className="font-bold py-1.5">{renderStatusBadge(row.poStatus)}</TableCell>
+                                <TableCell className="font-semibold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>
+                                    <SensitiveName value={row.vendName} />
+                                </TableCell>
+                                <TableCell className="font-mono font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+                                <TableCell className="text-right font-bold text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
+                                <TableCell className="text-right py-1.5">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                        <span className="font-medium text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>{row.vendorPromiseDate}</span>
+                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-bold border" style={{
+                                            backgroundColor: 'var(--badge-warning-bg)',
+                                            color: 'var(--badge-warning-text)',
+                                            borderColor: 'var(--badge-warning-border)'
+                                        }}>
+                                            {row.overdueDays}d
+                                        </span>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-[15px] leading-tight py-1.5" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
+                                <TableCell className="text-right row-secondary py-1.5">
+                                    <div className="table-dollars">
+                                        <SensitiveCurrency value={`$${row.recentUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right row-secondary py-1.5">
+                                    <div className="table-dollars">
+                                        <SensitiveCurrency value={`$${row.lastOrderUnitPrice}`} className="font-bold text-[15px] leading-tight" style={{ color: 'var(--table-text-primary)' }} />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+    );
+});
+
+/* -------------------------------------- */
+/* OutstandingOrdersTable Component       */
+/* -------------------------------------- */
+export default function OutstandingOrdersTable() {
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const playSoundOnReceived = settings.playSoundOnReceived as boolean;
+    const sortBy = settings.sortBy as 'vendor' | 'date' | 'overdue' | 'poNumber';
+    const maxRows = settings.maxRows as number;
+    const overdueAlertThreshold = settings.overdueAlertThreshold as number;
+
+    // Prepare the widget payload
+    const widgetPayload = useMemo(
+        () => ({
+            module: "OutstandingOrdersTable",
+            queryId: "OutstandingOrdersTable"
+        }),
+        []
+    );
 
     return (
         <Widget
@@ -301,7 +353,15 @@ export default function OutstandingOrdersTable() {
                     return <div className="widget-empty">No orders found</div>;
                 }
 
-                return renderFunction(data);
+                return (
+                    <OutstandingOrdersTableContent
+                        data={data}
+                        sortBy={sortBy}
+                        maxRows={maxRows}
+                        overdueAlertThreshold={overdueAlertThreshold}
+                        playSoundOnReceived={playSoundOnReceived}
+                    />
+                );
             }}
         </Widget>
     );

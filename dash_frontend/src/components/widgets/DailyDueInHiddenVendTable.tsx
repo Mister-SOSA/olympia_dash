@@ -93,8 +93,8 @@ function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
         orders.sort((a, b) => new Date(a.date_orderd).getTime() - new Date(b.date_orderd).getTime());
     });
 
-    // Now find previous orders in O(n) time
-    data.forEach((item) => {
+    // Now find previous orders in O(n) time - return new objects to avoid mutation
+    return data.map((item) => {
         const ordersForPart = ordersByPartCode.get(item.part_code)!;
         const currentDate = new Date(item.date_orderd).getTime();
 
@@ -107,16 +107,12 @@ function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
             }
         }
 
-        if (lastOrder) {
-            item.last_order_date = lastOrder.date_orderd;
-            item.last_order_unit_price = lastOrder.unit_price;
-        } else {
-            item.last_order_date = null;
-            item.last_order_unit_price = null;
-        }
+        return {
+            ...item,
+            last_order_date: lastOrder ? lastOrder.date_orderd : null,
+            last_order_unit_price: lastOrder ? lastOrder.unit_price : null,
+        };
     });
-
-    return data;
 }
 
 /**
@@ -156,7 +152,7 @@ function removeHiddenVendors(data: POItemData[]): POItemData[] {
  * and finally by part code.
  */
 function sortOrders(data: POItemData[]): POItemData[] {
-    return data.sort((a, b) => {
+    return [...data].sort((a, b) => {
         const vendorComparison = a.vend_name.localeCompare(b.vend_name);
         if (vendorComparison !== 0) return vendorComparison;
         const poComparison = a.po_number.localeCompare(b.po_number);
@@ -387,9 +383,9 @@ export default function DailyDueInHiddenVendTable() {
         }
     }, [playSoundOnReceived]);
 
-    // Custom sort function based on settings
+    // Custom sort function based on settings (use spread to avoid mutation)
     const sortOrdersBySetting = useCallback((data: POItemData[]): POItemData[] => {
-        return data.sort((a, b) => {
+        return [...data].sort((a, b) => {
             switch (sortBy) {
                 case 'date':
                     return new Date(b.date_orderd).getTime() - new Date(a.date_orderd).getTime();
