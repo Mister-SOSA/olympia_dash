@@ -229,6 +229,16 @@ def _register_static_queries() -> None:
         builder=lambda params: _top_5_payables_ytd(params),
     )
 
+    QueryRegistry.register(
+        "SalesYTDCumulative",
+        builder=lambda params: _sales_ytd_cumulative(params),
+    )
+
+    QueryRegistry.register(
+        "SalesYTDCumulativeTwoYear",
+        builder=lambda params: _sales_ytd_cumulative_two_year(params),
+    )
+
 
 def _sales_by_day_bar(params: Dict[str, Any]) -> Dict[str, Any]:
     _validate_no_params(params)
@@ -533,6 +543,40 @@ def _top_5_payables_ytd(params: Dict[str, Any]) -> Dict[str, Any]:
         "table": "Olympia_Top5_Payables_YTD",
         "columns": ["vend_name_group", "total_pay_value"],
         "sort": ["total_pay_value DESC"],
+    }
+
+
+def _sales_ytd_cumulative(params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_params(params)
+    return {
+        "table": "sumsales",
+        "columns": [
+            "FORMAT(sale_date, 'yyyy-MM-dd') AS period",
+            "SUM(sales_dol) AS total",
+        ],
+        "filters": (
+            "sale_date >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1) "
+            "AND sale_date <= GETDATE()"
+        ),
+        "group_by": ["FORMAT(sale_date, 'yyyy-MM-dd')"],
+        "sort": ["period ASC"],
+    }
+
+
+def _sales_ytd_cumulative_two_year(params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_params(params)
+    return {
+        "table": "sumsales",
+        "columns": [
+            "FORMAT(sale_date, 'yyyy-MM-dd') AS period",
+            "SUM(sales_dol) AS total",
+        ],
+        "filters": (
+            "sale_date >= DATEFROMPARTS(YEAR(GETDATE()) - 1, 1, 1) "
+            "AND sale_date <= GETDATE()"
+        ),
+        "group_by": ["FORMAT(sale_date, 'yyyy-MM-dd')"],
+        "sort": ["period ASC"],
     }
 
 

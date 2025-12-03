@@ -591,6 +591,55 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
         ],
     },
 
+    // Sales YTD Cumulative Line Chart
+    SalesYTDCumulativeLine: {
+        widgetId: 'SalesYTDCumulativeLine',
+        title: 'YTD Cumulative Sales Settings',
+        description: 'Configure the year-to-date cumulative sales line chart',
+        sections: [
+            {
+                title: 'Defaults',
+                fields: [
+                    {
+                        key: 'defaultTimeRange',
+                        type: 'select',
+                        label: 'Default Time Range',
+                        description: 'Initial time range when widget loads',
+                        default: 'ytd',
+                        options: [
+                            { value: 'ytd', label: 'Year to Date' },
+                            { value: 'comparison', label: 'Compare vs Last Year' },
+                            { value: 'lastYear', label: 'Last Year Only' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'defaultAggregation',
+                        type: 'select',
+                        label: 'Default Aggregation',
+                        description: 'How to group data points',
+                        default: 'weekly',
+                        options: [
+                            { value: 'weekly', label: 'Weekly' },
+                            { value: 'monthly', label: 'Monthly' },
+                        ],
+                    } as SelectSettingField,
+                ],
+            },
+            {
+                title: 'Display',
+                fields: [
+                    {
+                        key: 'showArea',
+                        type: 'toggle',
+                        label: 'Show Area Fill',
+                        description: 'Fill the area under the line with a gradient',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
     // Sales by Month Comparison Bar Chart
     SalesByMonthComparisonBar: {
         widgetId: 'SalesByMonthComparisonBar',

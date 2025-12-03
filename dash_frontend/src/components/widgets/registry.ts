@@ -191,6 +191,17 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
         defaultSize: { w: 6, h: 5 },
         minSize: { w: 4, h: 4 },
     },
+    {
+        id: "SalesYTDCumulativeLine",
+        title: "YTD Sales (Cumulative)",
+        description: "Cumulative year-to-date sales displayed as a line chart",
+        category: "Sales",
+        subcategory: "Charts",
+        tags: ["chart", "line", "ytd", "cumulative", "trend", "year"],
+        defaultSize: { w: 6, h: 4 },
+        minSize: { w: 3, h: 3 },
+        searchKeywords: ["running total", "year to date", "progress", "annual"],
+    },
 
     // ─────────────────────────────────────────
     // Purchasing Widgets
@@ -377,6 +388,7 @@ export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.C
     SalesByMonthBar: React.lazy(() => import("./SalesByMonthBar")),
     SalesByMonthComparisonBar: React.lazy(() => import("./SalesByMonthComparisonBar")),
     TopCustomersThisYearPie: React.lazy(() => import("./TopCustomersThisYearPie")),
+    SalesYTDCumulativeLine: React.lazy(() => import("./SalesYTDCumulativeLine")),
     OutstandingOrdersTable: React.lazy(() => import("./OutstandingOrdersTable")),
     DailyDueInTable: React.lazy(() => import("./DailyDueInTable")),
     DailyDueInHiddenVendTable: React.lazy(() => import("./DailyDueInHiddenVendTable")),
