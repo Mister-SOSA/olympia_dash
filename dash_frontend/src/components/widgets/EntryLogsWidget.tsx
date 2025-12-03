@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useMemo } from "react";
+import React, { useRef, memo } from "react";
 import Widget from "./Widget";
 import { AccessLogEntry, AccessResult, AccessMethod } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,30 +26,111 @@ import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 const WIDGET_ID = 'EntryLogsWidget';
 
 /* -------------------------------------- */
-/* Helper Functions                        */
+/* Pre-computed Style Objects (cached)    */
 /* -------------------------------------- */
 
-// Format timestamp to be more readable
-const formatTimestamp = (timestamp: string): { date: string; time: string } => {
-    if (!timestamp) return { date: "—", time: "—" };
-    try {
-        const date = new Date(timestamp);
-        return {
-            date: date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-            }),
-            time: date.toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-            })
-        };
-    } catch {
-        return { date: timestamp, time: "—" };
+// Cache style objects to avoid recreating them on every render
+const RESULT_STYLES: Record<string, React.CSSProperties> = {
+    ACCESS: {
+        backgroundColor: 'var(--badge-success-bg)',
+        color: 'var(--badge-success-text)',
+        borderColor: 'var(--badge-success-border)'
+    },
+    BLOCKED: {
+        backgroundColor: 'var(--badge-error-bg)',
+        color: 'var(--badge-error-text)',
+        borderColor: 'var(--badge-error-border)'
+    },
+    SUCCESS: {
+        backgroundColor: 'var(--badge-primary-bg)',
+        color: 'var(--badge-primary-text)',
+        borderColor: 'var(--badge-primary-border)'
+    },
+    INCOMPLETE: {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)'
+    },
+    DEFAULT: {
+        backgroundColor: 'var(--ui-bg-tertiary)',
+        color: 'var(--text-muted)',
+        borderColor: 'var(--ui-border-primary)'
     }
 };
+
+const METHOD_STYLES: Record<string, React.CSSProperties> = {
+    Face: {
+        backgroundColor: 'var(--ui-accent-secondary-bg)',
+        color: 'var(--ui-accent-secondary-text)',
+        borderColor: 'var(--ui-accent-secondary-border)'
+    },
+    NFC: {
+        backgroundColor: 'var(--ui-accent-primary-bg)',
+        color: 'var(--ui-accent-primary-text)',
+        borderColor: 'var(--ui-accent-primary-border)'
+    },
+    'Apple Wallet': {
+        backgroundColor: 'var(--ui-accent-primary-bg)',
+        color: 'var(--ui-accent-primary-text)',
+        borderColor: 'var(--ui-accent-primary-border)'
+    },
+    'Google Wallet': {
+        backgroundColor: 'var(--ui-accent-primary-bg)',
+        color: 'var(--ui-accent-primary-text)',
+        borderColor: 'var(--ui-accent-primary-border)'
+    },
+    Remote: {
+        backgroundColor: 'var(--badge-primary-bg)',
+        color: 'var(--badge-primary-text)',
+        borderColor: 'var(--badge-primary-border)'
+    },
+    PIN: {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)'
+    },
+    Fingerprint: {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)'
+    },
+    DEFAULT: {
+        backgroundColor: 'var(--ui-bg-tertiary)',
+        color: 'var(--text-muted)',
+        borderColor: 'var(--ui-border-primary)'
+    }
+};
+
+const DOOR_STYLES: Record<string, React.CSSProperties> = {
+    entry: {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)'
+    },
+    office: {
+        backgroundColor: 'var(--ui-accent-secondary-bg)',
+        color: 'var(--ui-accent-secondary-text)',
+        borderColor: 'var(--ui-accent-secondary-border)'
+    },
+    warehouse: {
+        backgroundColor: 'var(--badge-warning-bg)',
+        color: 'var(--badge-warning-text)',
+        borderColor: 'var(--badge-warning-border)'
+    },
+    DEFAULT: {
+        backgroundColor: 'var(--ui-bg-tertiary)',
+        color: 'var(--text-secondary)',
+        borderColor: 'var(--ui-border-primary)'
+    }
+};
+
+// Shared static styles
+const TABLE_TEXT_PRIMARY_STYLE: React.CSSProperties = { color: 'var(--table-text-primary)' };
+const TABLE_TEXT_SECONDARY_STYLE: React.CSSProperties = { color: 'var(--table-text-secondary)' };
+
+/* -------------------------------------- */
+/* Helper Functions                        */
+/* -------------------------------------- */
 
 // Format time with "ago" notation for recent times
 const formatTimeAgo = (
@@ -93,74 +174,69 @@ const formatTimeAgo = (
     }
 };
 
-// Get icon for access method
-const getAccessMethodIcon = (method: AccessMethod): React.ReactNode => {
-    const iconProps = { className: "h-3.5 w-3.5" };
-
-    switch (method) {
-        case 'NFC':
-            return <CreditCard {...iconProps} />;
-        case 'Face':
-            return <ScanFace {...iconProps} />;
-        case 'PIN':
-            return <KeyRound {...iconProps} />;
-        case 'Remote':
-            return <Wifi {...iconProps} />;
-        case 'Apple Wallet':
-        case 'Google Wallet':
-            return <Smartphone {...iconProps} />;
-        case 'Fingerprint':
-            return <Fingerprint {...iconProps} />;
-        case 'QR Code':
-            return <QrCode {...iconProps} />;
-        default:
-            return <HelpCircle {...iconProps} />;
-    }
-};
-
-// Get color styles for result badge
+// Get cached style for result badge
 const getResultStyles = (result: AccessResult): React.CSSProperties => {
-    switch (result) {
-        case 'ACCESS':
-            return {
-                backgroundColor: 'var(--badge-success-bg)',
-                color: 'var(--badge-success-text)',
-                borderColor: 'var(--badge-success-border)'
-            };
-        case 'BLOCKED':
-            return {
-                backgroundColor: 'var(--badge-error-bg)',
-                color: 'var(--badge-error-text)',
-                borderColor: 'var(--badge-error-border)'
-            };
-        case 'SUCCESS':
-            return {
-                backgroundColor: 'var(--badge-primary-bg)',
-                color: 'var(--badge-primary-text)',
-                borderColor: 'var(--badge-primary-border)'
-            };
-        case 'INCOMPLETE':
-            return {
-                backgroundColor: 'var(--badge-warning-bg)',
-                color: 'var(--badge-warning-text)',
-                borderColor: 'var(--badge-warning-border)'
-            };
-        default:
-            return {
-                backgroundColor: 'var(--ui-bg-tertiary)',
-                color: 'var(--text-muted)',
-                borderColor: 'var(--ui-border-primary)'
-            };
-    }
+    return RESULT_STYLES[result] || RESULT_STYLES.DEFAULT;
 };
 
-// Get icon for result
-const getResultIcon = (result: AccessResult, message: string): React.ReactNode => {
-    const iconProps = { className: "h-3.5 w-3.5" };
+// Get cached style for method badge
+const getMethodStyles = (method: AccessMethod): React.CSSProperties => {
+    return METHOD_STYLES[method] || METHOD_STYLES.DEFAULT;
+};
 
+// Get cached style for door badge - using a cache map
+const doorStyleCache = new Map<string, React.CSSProperties>();
+const getDoorStyles = (doorName: string): React.CSSProperties => {
+    const cached = doorStyleCache.get(doorName);
+    if (cached) return cached;
+
+    const nameLower = doorName.toLowerCase();
+    let style: React.CSSProperties;
+
+    if (nameLower.includes('door') || nameLower.includes('front') || nameLower.includes('entry')) {
+        style = DOOR_STYLES.entry;
+    } else if (nameLower.includes('office')) {
+        style = DOOR_STYLES.office;
+    } else if (nameLower.includes('warehouse') || nameLower.includes('dock')) {
+        style = DOOR_STYLES.warehouse;
+    } else {
+        style = DOOR_STYLES.DEFAULT;
+    }
+
+    doorStyleCache.set(doorName, style);
+    return style;
+};
+
+/* -------------------------------------- */
+/* Memoized Icon Components               */
+/* -------------------------------------- */
+
+const iconProps = { className: "h-3.5 w-3.5" };
+const smallIconProps = { className: "h-3 w-3" };
+
+// Pre-create icon elements to avoid recreating on each render
+const AccessMethodIcons: Record<string, React.ReactNode> = {
+    NFC: <CreditCard {...iconProps} />,
+    Face: <ScanFace {...iconProps} />,
+    PIN: <KeyRound {...iconProps} />,
+    Remote: <Wifi {...iconProps} />,
+    'Apple Wallet': <Smartphone {...iconProps} />,
+    'Google Wallet': <Smartphone {...iconProps} />,
+    Fingerprint: <Fingerprint {...iconProps} />,
+    'QR Code': <QrCode {...iconProps} />,
+    DEFAULT: <HelpCircle {...iconProps} />
+};
+
+const getAccessMethodIcon = (method: AccessMethod): React.ReactNode => {
+    return AccessMethodIcons[method] || AccessMethodIcons.DEFAULT;
+};
+
+// Memoized result icon component
+const ResultIcon = memo(({ result, message }: { result: AccessResult; message: string }) => {
+    const msgLower = message.toLowerCase();
     // Check for call-related events
-    if (message.toLowerCase().includes('call')) {
-        if (message.toLowerCase().includes('missed')) {
+    if (msgLower.includes('call')) {
+        if (msgLower.includes('missed')) {
             return <PhoneMissed {...iconProps} />;
         }
         return <Phone {...iconProps} />;
@@ -176,83 +252,261 @@ const getResultIcon = (result: AccessResult, message: string): React.ReactNode =
         default:
             return <HelpCircle {...iconProps} />;
     }
-};
+});
+ResultIcon.displayName = 'ResultIcon';
 
-// Get color styles for access method badge
-const getMethodStyles = (method: AccessMethod): React.CSSProperties => {
-    switch (method) {
-        case 'Face':
-            return {
-                backgroundColor: 'var(--ui-accent-secondary-bg)',
-                color: 'var(--ui-accent-secondary-text)',
-                borderColor: 'var(--ui-accent-secondary-border)'
-            };
-        case 'NFC':
-        case 'Apple Wallet':
-        case 'Google Wallet':
-            return {
-                backgroundColor: 'var(--ui-accent-primary-bg)',
-                color: 'var(--ui-accent-primary-text)',
-                borderColor: 'var(--ui-accent-primary-border)'
-            };
-        case 'Remote':
-            return {
-                backgroundColor: 'var(--badge-primary-bg)',
-                color: 'var(--badge-primary-text)',
-                borderColor: 'var(--badge-primary-border)'
-            };
-        case 'PIN':
-        case 'Fingerprint':
-            return {
-                backgroundColor: 'var(--badge-warning-bg)',
-                color: 'var(--badge-warning-text)',
-                borderColor: 'var(--badge-warning-border)'
-            };
-        default:
-            return {
-                backgroundColor: 'var(--ui-bg-tertiary)',
-                color: 'var(--text-muted)',
-                borderColor: 'var(--ui-border-primary)'
-            };
-    }
-};
+/* -------------------------------------- */
+/* Memoized Row Components                */
+/* -------------------------------------- */
 
-// Get color styles for door badge
-const getDoorStyles = (doorName: string): React.CSSProperties => {
-    const nameLower = doorName.toLowerCase();
+interface EntryWithNew extends AccessLogEntry {
+    isNew: boolean;
+}
 
-    if (nameLower.includes('door') || nameLower.includes('front') || nameLower.includes('entry')) {
-        return {
-            backgroundColor: 'var(--badge-warning-bg)',
-            color: 'var(--badge-warning-text)',
-            borderColor: 'var(--badge-warning-border)'
-        };
-    }
-    if (nameLower.includes('office')) {
-        return {
-            backgroundColor: 'var(--ui-accent-secondary-bg)',
-            color: 'var(--ui-accent-secondary-text)',
-            borderColor: 'var(--ui-accent-secondary-border)'
-        };
-    }
-    if (nameLower.includes('warehouse') || nameLower.includes('dock')) {
-        return {
-            backgroundColor: 'var(--badge-warning-bg)',
-            color: 'var(--badge-warning-text)',
-            borderColor: 'var(--badge-warning-border)'
-        };
-    }
+interface CardRowProps {
+    entry: EntryWithNew;
+    useRelativeTime: boolean;
+    relativeTimeThreshold: number;
+    highlightNewEntries: boolean;
+    showAccessMethod: boolean;
+}
 
-    return {
-        backgroundColor: 'var(--ui-bg-tertiary)',
-        color: 'var(--text-secondary)',
-        borderColor: 'var(--ui-border-primary)'
-    };
-};
+// Memoized card row for mobile view
+const CardRow = memo(({ entry, useRelativeTime, relativeTimeThreshold, highlightNewEntries, showAccessMethod }: CardRowProps) => {
+    const timeData = formatTimeAgo(entry.timestamp, useRelativeTime, relativeTimeThreshold);
+    const resultStyles = getResultStyles(entry.result);
+    const doorStyles = getDoorStyles(entry.door_name);
+    const methodStyles = getMethodStyles(entry.access_method);
+
+    return (
+        <div
+            className={`
+                rounded-lg border border-border/50 p-3 space-y-2
+                transition-all duration-300 hover:bg-muted/30
+                ${highlightNewEntries && entry.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
+            `}
+        >
+            {/* Top Row: Time & Result */}
+            <div className="flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">
+                    {timeData.isRelative && timeData.tooltip ? (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="cursor-help underline decoration-dotted">
+                                    {timeData.display}
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{timeData.tooltip}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    ) : timeData.display}
+                </div>
+                <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+                    style={resultStyles}
+                >
+                    <ResultIcon result={entry.result} message={entry.message} />
+                    {entry.result}
+                </span>
+            </div>
+
+            {/* Main Row: User & Door */}
+            <div className="flex items-center justify-between gap-2">
+                <div className="font-medium text-sm truncate" style={TABLE_TEXT_PRIMARY_STYLE}>
+                    <User className="inline h-3.5 w-3.5 mr-1 opacity-60" />
+                    {entry.actor_name}
+                </div>
+                <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border shrink-0"
+                    style={doorStyles}
+                >
+                    <DoorOpen {...smallIconProps} />
+                    {entry.door_name}
+                </span>
+            </div>
+
+            {/* Bottom Row: Method & Message */}
+            {showAccessMethod && (
+                <div className="flex items-center justify-between gap-2 text-xs">
+                    <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border"
+                        style={methodStyles}
+                    >
+                        {getAccessMethodIcon(entry.access_method)}
+                        {entry.access_method}
+                    </span>
+                    <span className="text-muted-foreground truncate">
+                        {entry.message}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}, (prevProps, nextProps) => {
+    // Custom comparison for better memoization
+    return (
+        prevProps.entry.id === nextProps.entry.id &&
+        prevProps.entry.isNew === nextProps.entry.isNew &&
+        prevProps.useRelativeTime === nextProps.useRelativeTime &&
+        prevProps.relativeTimeThreshold === nextProps.relativeTimeThreshold &&
+        prevProps.highlightNewEntries === nextProps.highlightNewEntries &&
+        prevProps.showAccessMethod === nextProps.showAccessMethod
+    );
+});
+CardRow.displayName = 'CardRow';
+
+interface TableRowProps {
+    entry: EntryWithNew;
+    useRelativeTime: boolean;
+    relativeTimeThreshold: number;
+    highlightNewEntries: boolean;
+    showAccessMethod: boolean;
+}
+
+// Memoized table row for desktop view
+const EntryTableRow = memo(({ entry, useRelativeTime, relativeTimeThreshold, highlightNewEntries, showAccessMethod }: TableRowProps) => {
+    const timeData = formatTimeAgo(entry.timestamp, useRelativeTime, relativeTimeThreshold);
+    const resultStyles = getResultStyles(entry.result);
+    const doorStyles = getDoorStyles(entry.door_name);
+    const methodStyles = getMethodStyles(entry.access_method);
+
+    return (
+        <TableRow
+            className={`
+                border-border/30 transition-all duration-300
+                hover:bg-muted/50
+                ${highlightNewEntries && entry.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
+            `}
+        >
+            {/* Time */}
+            <TableCell className="text-sm" style={TABLE_TEXT_SECONDARY_STYLE}>
+                {timeData.isRelative && timeData.tooltip ? (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted decoration-muted-foreground/50">
+                                {timeData.display}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{timeData.tooltip}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                ) : timeData.display}
+            </TableCell>
+
+            {/* Person */}
+            <TableCell className="font-medium">
+                <span style={TABLE_TEXT_PRIMARY_STYLE}>
+                    {entry.actor_name}
+                </span>
+            </TableCell>
+
+            {/* Door */}
+            <TableCell>
+                <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border"
+                    style={doorStyles}
+                >
+                    <DoorOpen {...smallIconProps} />
+                    {entry.door_name}
+                </span>
+            </TableCell>
+
+            {/* Method */}
+            {showAccessMethod && (
+                <TableCell className="hidden @3xl:table-cell">
+                    <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border"
+                        style={methodStyles}
+                    >
+                        {getAccessMethodIcon(entry.access_method)}
+                        {entry.access_method}
+                    </span>
+                </TableCell>
+            )}
+
+            {/* Result */}
+            <TableCell>
+                <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+                    style={resultStyles}
+                >
+                    <ResultIcon result={entry.result} message={entry.message} />
+                    {entry.result}
+                </span>
+            </TableCell>
+
+            {/* Details/Message */}
+            <TableCell className="hidden @4xl:table-cell text-sm" style={TABLE_TEXT_SECONDARY_STYLE}>
+                {entry.message}
+            </TableCell>
+        </TableRow>
+    );
+}, (prevProps, nextProps) => {
+    // Custom comparison for better memoization
+    return (
+        prevProps.entry.id === nextProps.entry.id &&
+        prevProps.entry.isNew === nextProps.entry.isNew &&
+        prevProps.useRelativeTime === nextProps.useRelativeTime &&
+        prevProps.relativeTimeThreshold === nextProps.relativeTimeThreshold &&
+        prevProps.highlightNewEntries === nextProps.highlightNewEntries &&
+        prevProps.showAccessMethod === nextProps.showAccessMethod
+    );
+});
+EntryTableRow.displayName = 'EntryTableRow';
+
+/* -------------------------------------- */
+/* Table Header (memoized)                */
+/* -------------------------------------- */
+
+const TableHeaderComponent = memo(({ showAccessMethod }: { showAccessMethod: boolean }) => (
+    <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+        <TableRow className="border-border/50 hover:bg-transparent">
+            <TableHead className="font-semibold" style={TABLE_TEXT_PRIMARY_STYLE}>
+                <div className="flex items-center gap-1.5">
+                    <Clock {...iconProps} style={TABLE_TEXT_SECONDARY_STYLE} />
+                    Time
+                </div>
+            </TableHead>
+            <TableHead className="font-semibold" style={TABLE_TEXT_PRIMARY_STYLE}>
+                <div className="flex items-center gap-1.5">
+                    <User {...iconProps} style={TABLE_TEXT_SECONDARY_STYLE} />
+                    Person
+                </div>
+            </TableHead>
+            <TableHead className="font-semibold" style={TABLE_TEXT_PRIMARY_STYLE}>
+                <div className="flex items-center gap-1.5">
+                    <DoorOpen {...iconProps} style={TABLE_TEXT_SECONDARY_STYLE} />
+                    Door
+                </div>
+            </TableHead>
+            {showAccessMethod && (
+                <TableHead className="font-semibold hidden @3xl:table-cell" style={TABLE_TEXT_PRIMARY_STYLE}>
+                    <div className="flex items-center gap-1.5">
+                        <Fingerprint {...iconProps} style={TABLE_TEXT_SECONDARY_STYLE} />
+                        Method
+                    </div>
+                </TableHead>
+            )}
+            <TableHead className="font-semibold" style={TABLE_TEXT_PRIMARY_STYLE}>
+                <div className="flex items-center gap-1.5">
+                    <ShieldCheck {...iconProps} style={TABLE_TEXT_SECONDARY_STYLE} />
+                    Result
+                </div>
+            </TableHead>
+            <TableHead className="font-semibold hidden @4xl:table-cell" style={TABLE_TEXT_PRIMARY_STYLE}>
+                Details
+            </TableHead>
+        </TableRow>
+    </TableHeader>
+));
+TableHeaderComponent.displayName = 'TableHeaderComponent';
 
 /* -------------------------------------- */
 /* EntryLogsWidget Component              */
 /* -------------------------------------- */
+
 export default function EntryLogsWidget() {
     // Track previously seen entry IDs for highlighting new entries
     const previousIdsRef = useRef<Set<string>>(new Set());
@@ -267,259 +521,14 @@ export default function EntryLogsWidget() {
     const showAccessMethod = settings.showAccessMethod as boolean ?? true;
     const showIntercomEvents = settings.showIntercomEvents as boolean ?? false;
 
-    // Render function for the widget data
-    const renderFunction = useCallback((data: AccessLogEntry[]) => {
-        // Apply filters
-        let filteredData = data;
-
-        // Filter out intercom/call events unless explicitly enabled
-        if (!showIntercomEvents) {
-            filteredData = filteredData.filter(entry => {
-                const msg = entry.message.toLowerCase();
-                const logKey = entry.log_key?.toLowerCase() || '';
-                // Filter out calls, intercom, doorbell, and remote unlock events
-                const isIntercomEvent =
-                    msg.includes('call') ||
-                    msg.includes('intercom') ||
-                    msg.includes('doorbell') ||
-                    logKey.includes('call') ||
-                    logKey.includes('intercom') ||
-                    entry.direction === 'call' ||
-                    entry.access_method === 'Remote';
-                return !isIntercomEvent;
-            });
-        }
-
-        if (filterByResult && filterByResult !== 'all') {
-            filteredData = filteredData.filter(entry => entry.result === filterByResult);
-        }
-
-        if (filterByDoor && filterByDoor !== 'all') {
-            filteredData = filteredData.filter(entry =>
-                entry.door_name.toLowerCase().includes(filterByDoor.toLowerCase())
-            );
-        }
-
-        // Mark new entries
-        const entriesWithNew = filteredData.map(entry => ({
-            ...entry,
-            isNew: !previousIdsRef.current.has(entry.id)
-        }));
-
-        // Update seen IDs
-        previousIdsRef.current = new Set(filteredData.map(e => e.id));
-
-        return (
-            <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
-                <TooltipProvider delayDuration={200}>
-                    {/* Compact Card View for Small Sizes */}
-                    <div className="@xl:hidden p-2 space-y-2">
-                        {entriesWithNew.map((entry, index) => {
-                            const timeData = formatTimeAgo(entry.timestamp, useRelativeTime, relativeTimeThreshold);
-                            return (
-                                <div
-                                    key={`${entry.id}-${index}`}
-                                    className={`
-                                        rounded-lg border border-border/50 p-3 space-y-2
-                                        transition-all duration-300 hover:bg-muted/30
-                                        ${highlightNewEntries && entry.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
-                                    `}
-                                >
-                                    {/* Top Row: Time & Result */}
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="text-xs text-muted-foreground">
-                                            {timeData.isRelative && timeData.tooltip ? (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span className="cursor-help underline decoration-dotted">
-                                                            {timeData.display}
-                                                        </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{timeData.tooltip}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            ) : timeData.display}
-                                        </div>
-                                        <span
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
-                                            style={getResultStyles(entry.result)}
-                                        >
-                                            {getResultIcon(entry.result, entry.message)}
-                                            {entry.result}
-                                        </span>
-                                    </div>
-
-                                    {/* Main Row: User & Door */}
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="font-medium text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>
-                                            <User className="inline h-3.5 w-3.5 mr-1 opacity-60" />
-                                            {entry.actor_name}
-                                        </div>
-                                        <span
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border shrink-0"
-                                            style={getDoorStyles(entry.door_name)}
-                                        >
-                                            <DoorOpen className="h-3 w-3" />
-                                            {entry.door_name}
-                                        </span>
-                                    </div>
-
-                                    {/* Bottom Row: Method & Message */}
-                                    {showAccessMethod && (
-                                        <div className="flex items-center justify-between gap-2 text-xs">
-                                            <span
-                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border"
-                                                style={getMethodStyles(entry.access_method)}
-                                            >
-                                                {getAccessMethodIcon(entry.access_method)}
-                                                {entry.access_method}
-                                            </span>
-                                            <span className="text-muted-foreground truncate">
-                                                {entry.message}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Table View for Medium+ Sizes */}
-                    <div className="hidden @xl:block p-1">
-                        <Table className="text-left" style={{ color: 'var(--table-text-primary)' }}>
-                            <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
-                                <TableRow className="border-border/50 hover:bg-transparent">
-                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
-                                        <div className="flex items-center gap-1.5">
-                                            <Clock className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                            Time
-                                        </div>
-                                    </TableHead>
-                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
-                                        <div className="flex items-center gap-1.5">
-                                            <User className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                            Person
-                                        </div>
-                                    </TableHead>
-                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
-                                        <div className="flex items-center gap-1.5">
-                                            <DoorOpen className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                            Door
-                                        </div>
-                                    </TableHead>
-                                    {showAccessMethod && (
-                                        <TableHead className="font-semibold hidden @3xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>
-                                            <div className="flex items-center gap-1.5">
-                                                <Fingerprint className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                                Method
-                                            </div>
-                                        </TableHead>
-                                    )}
-                                    <TableHead className="font-semibold" style={{ color: 'var(--table-text-primary)' }}>
-                                        <div className="flex items-center gap-1.5">
-                                            <ShieldCheck className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
-                                            Result
-                                        </div>
-                                    </TableHead>
-                                    <TableHead className="font-semibold hidden @4xl:table-cell" style={{ color: 'var(--table-text-primary)' }}>
-                                        Details
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {entriesWithNew.map((entry, index) => {
-                                    const timeData = formatTimeAgo(entry.timestamp, useRelativeTime, relativeTimeThreshold);
-                                    return (
-                                        <TableRow
-                                            key={`${entry.id}-${index}`}
-                                            className={`
-                                                border-border/30 transition-all duration-300
-                                                hover:bg-muted/50
-                                                ${highlightNewEntries && entry.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
-                                            `}
-                                        >
-                                            {/* Time */}
-                                            <TableCell className="text-sm" style={{ color: 'var(--table-text-secondary)' }}>
-                                                {timeData.isRelative && timeData.tooltip ? (
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <span className="cursor-help underline decoration-dotted decoration-muted-foreground/50">
-                                                                {timeData.display}
-                                                            </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{timeData.tooltip}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                ) : timeData.display}
-                                            </TableCell>
-
-                                            {/* Person */}
-                                            <TableCell className="font-medium">
-                                                <span style={{ color: 'var(--table-text-primary)' }}>
-                                                    {entry.actor_name}
-                                                </span>
-                                            </TableCell>
-
-                                            {/* Door */}
-                                            <TableCell>
-                                                <span
-                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border"
-                                                    style={getDoorStyles(entry.door_name)}
-                                                >
-                                                    <DoorOpen className="h-3 w-3" />
-                                                    {entry.door_name}
-                                                </span>
-                                            </TableCell>
-
-                                            {/* Method */}
-                                            {showAccessMethod && (
-                                                <TableCell className="hidden @3xl:table-cell">
-                                                    <span
-                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border"
-                                                        style={getMethodStyles(entry.access_method)}
-                                                    >
-                                                        {getAccessMethodIcon(entry.access_method)}
-                                                        {entry.access_method}
-                                                    </span>
-                                                </TableCell>
-                                            )}
-
-                                            {/* Result */}
-                                            <TableCell>
-                                                <span
-                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
-                                                    style={getResultStyles(entry.result)}
-                                                >
-                                                    {getResultIcon(entry.result, entry.message)}
-                                                    {entry.result}
-                                                </span>
-                                            </TableCell>
-
-                                            {/* Details/Message */}
-                                            <TableCell className="hidden @4xl:table-cell text-sm" style={{ color: 'var(--table-text-secondary)' }}>
-                                                {entry.message}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </TooltipProvider>
-            </ScrollArea>
-        );
-    }, [useRelativeTime, relativeTimeThreshold, filterByResult, filterByDoor, highlightNewEntries, showAccessMethod, showIntercomEvents]);
-
     return (
         <Widget
             endpoint="/api/access-logs"
             payload={undefined}
             title="Entry Logs"
-            refreshInterval={5000} // Refresh every 5 seconds
+            refreshInterval={5000}
         >
-            {(data, loading) => {
+            {(data: AccessLogEntry[] | null, loading: boolean) => {
                 if (loading && (!data || data.length === 0)) {
                     return (
                         <div className="flex items-center justify-center h-full">
@@ -543,7 +552,86 @@ export default function EntryLogsWidget() {
                     );
                 }
 
-                return renderFunction(data);
+                // Apply filters
+                let filteredData = data;
+
+                // Filter out intercom/call events unless explicitly enabled
+                if (!showIntercomEvents) {
+                    filteredData = filteredData.filter(entry => {
+                        const msg = entry.message.toLowerCase();
+                        const logKey = entry.log_key?.toLowerCase() || '';
+                        const isIntercomEvent =
+                            msg.includes('call') ||
+                            msg.includes('intercom') ||
+                            msg.includes('doorbell') ||
+                            logKey.includes('call') ||
+                            logKey.includes('intercom') ||
+                            entry.direction === 'call' ||
+                            entry.access_method === 'Remote';
+                        return !isIntercomEvent;
+                    });
+                }
+
+                if (filterByResult && filterByResult !== 'all') {
+                    filteredData = filteredData.filter(entry => entry.result === filterByResult);
+                }
+
+                if (filterByDoor && filterByDoor !== 'all') {
+                    filteredData = filteredData.filter(entry =>
+                        entry.door_name.toLowerCase().includes(filterByDoor.toLowerCase())
+                    );
+                }
+
+                // Mark new entries - use a local variable to avoid ref mutation during render
+                const currentIds = new Set(filteredData.map(e => e.id));
+                const entriesWithNew: EntryWithNew[] = filteredData.map(entry => ({
+                    ...entry,
+                    isNew: !previousIdsRef.current.has(entry.id)
+                }));
+
+                // Schedule ref update after render
+                Promise.resolve().then(() => {
+                    previousIdsRef.current = currentIds;
+                });
+
+                return (
+                    <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
+                        <TooltipProvider delayDuration={200}>
+                            {/* Compact Card View for Small Sizes */}
+                            <div className="@xl:hidden p-2 space-y-2">
+                                {entriesWithNew.map((entry) => (
+                                    <CardRow
+                                        key={entry.id}
+                                        entry={entry}
+                                        useRelativeTime={useRelativeTime}
+                                        relativeTimeThreshold={relativeTimeThreshold}
+                                        highlightNewEntries={highlightNewEntries}
+                                        showAccessMethod={showAccessMethod}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Table View for Medium+ Sizes */}
+                            <div className="hidden @xl:block p-1">
+                                <Table className="text-left" style={TABLE_TEXT_PRIMARY_STYLE}>
+                                    <TableHeaderComponent showAccessMethod={showAccessMethod} />
+                                    <TableBody>
+                                        {entriesWithNew.map((entry) => (
+                                            <EntryTableRow
+                                                key={entry.id}
+                                                entry={entry}
+                                                useRelativeTime={useRelativeTime}
+                                                relativeTimeThreshold={relativeTimeThreshold}
+                                                highlightNewEntries={highlightNewEntries}
+                                                showAccessMethod={showAccessMethod}
+                                            />
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </TooltipProvider>
+                    </ScrollArea>
+                );
             }}
         </Widget>
     );
