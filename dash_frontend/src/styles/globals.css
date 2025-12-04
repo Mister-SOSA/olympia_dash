@@ -2215,21 +2215,16 @@ html.font-size-large {
 }
 
 /* Compact Mode - Reduces padding and margins throughout the UI */
-html.compact-mode .widget {
-  padding: 0.5rem;
-}
-
-html.compact-mode .widget-header {
-  padding: 0.25rem 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-html.compact-mode .widget-content {
+html.compact-mode .widget-data-container {
   padding: 0.25rem;
 }
 
-html.compact-mode .dashboard-container {
-  gap: 0.25rem;
+html.compact-mode .widget-header {
+  min-height: 1.5rem;
+}
+
+html.compact-mode .grid-stack {
+  padding: 0.5rem;
 }
 
 html.compact-mode .grid-stack>.grid-stack-item {
