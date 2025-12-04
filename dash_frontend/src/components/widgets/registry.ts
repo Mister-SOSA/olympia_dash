@@ -311,6 +311,17 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
         minSize: { w: 3, h: 4 },
         searchKeywords: ["equipment", "production line"],
     },
+    {
+        id: "InventoryTracker",
+        title: "Inventory Tracker",
+        description: "Track and monitor inventory levels for specific items",
+        category: "Inventory",
+        subcategory: "Stock Levels",
+        tags: ["table", "stock", "levels", "tracking", "items", "parts"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["parts", "available", "on hand", "on hold", "scheduled", "quantities"],
+    },
 
     // ─────────────────────────────────────────
     // Utility Widgets
@@ -398,6 +409,7 @@ export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.C
     DailyProductionPutawaysBar: React.lazy(() => import("./DailyProductionPutawaysBar")),
     TopProductUnitSales: React.lazy(() => import("./TopProductUnitSales")),
     MachineStockStatus: React.lazy(() => import("./MachineStockStatus")),
+    InventoryTracker: React.lazy(() => import("./InventoryTracker")),
     ClockWidget: React.lazy(() => import("./ClockWidget")),
     DateWidget: React.lazy(() => import("./DateWidget")),
     Humidity: React.lazy(() => import("./Humidity")),

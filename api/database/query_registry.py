@@ -239,6 +239,11 @@ def _register_static_queries() -> None:
         builder=lambda params: _sales_ytd_cumulative_two_year(params),
     )
 
+    QueryRegistry.register(
+        "InventoryTracker",
+        builder=lambda params: _inventory_tracker(params),
+    )
+
 
 def _sales_by_day_bar(params: Dict[str, Any]) -> Dict[str, Any]:
     _validate_no_params(params)
@@ -577,6 +582,77 @@ def _sales_ytd_cumulative_two_year(params: Dict[str, Any]) -> Dict[str, Any]:
         ),
         "group_by": ["FORMAT(sale_date, 'yyyy-MM-dd')"],
         "sort": ["period ASC"],
+    }
+
+
+def _inventory_tracker(params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Query builder for the Inventory Tracker widget.
+    Accepts a list of part codes to track and returns their inventory data.
+    """
+    if not isinstance(params, dict):
+        raise QueryRegistryError("Params must be an object")
+
+    item_codes = params.get("itemCodes", [])
+    
+    # Validate item_codes is a list
+    if not isinstance(item_codes, list):
+        raise QueryRegistryError("Parameter 'itemCodes' must be a list")
+    
+    # If no items are specified, return an empty result configuration
+    if not item_codes:
+        # Return a query that will return no results
+        return {
+            "table": "inventory",
+            "columns": [
+                "part_code",
+                "part_desc",
+                "available",
+                "on_hand",
+                "on_hold",
+                "prod_sced",
+            ],
+            "filters": "1 = 0",  # Always false, returns no rows
+            "sort": ["part_code ASC"],
+        }
+    
+    # Sanitize and validate item codes (alphanumeric, hyphens, and underscores only)
+    sanitized_codes = []
+    for code in item_codes:
+        if not isinstance(code, str):
+            continue
+        # Basic sanitization - allow alphanumeric, hyphens, underscores, and spaces
+        sanitized = code.strip()
+        if sanitized and all(c.isalnum() or c in "-_ " for c in sanitized):
+            sanitized_codes.append(sanitized)
+    
+    if not sanitized_codes:
+        return {
+            "table": "inventory",
+            "columns": [
+                "part_code",
+                "part_desc",
+                "available",
+                "on_hand",
+                "on_hold",
+                "prod_sced",
+            ],
+            "filters": "1 = 0",
+            "sort": ["part_code ASC"],
+        }
+
+    return {
+        "table": "inventory",
+        "columns": [
+            "part_code",
+            "part_desc",
+            "available",
+            "on_hand",
+            "on_hold",
+            "prod_sced",
+        ],
+        "filters": f"part_code IN ({_quote_list(sanitized_codes)})",
+        "sort": ["part_code ASC"],
     }
 
 

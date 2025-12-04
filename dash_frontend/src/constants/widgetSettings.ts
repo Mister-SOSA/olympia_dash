@@ -17,7 +17,8 @@ export type SettingFieldType =
     | 'number'      // Numeric input
     | 'text'        // Text input
     | 'color'       // Color picker
-    | 'slider';     // Range slider
+    | 'slider'      // Range slider
+    | 'itemList';   // List of items (strings) with add/remove/paste capabilities
 
 export interface BaseSettingField {
     key: string;
@@ -66,13 +67,24 @@ export interface SliderSettingField extends BaseSettingField {
     unit?: string;
 }
 
+export interface ItemListSettingField extends BaseSettingField {
+    type: 'itemList';
+    default: string[];
+    placeholder?: string;
+    maxItems?: number;
+    allowDuplicates?: boolean;
+    validation?: RegExp;
+    validationMessage?: string;
+}
+
 export type SettingField =
     | ToggleSettingField
     | SelectSettingField
     | NumberSettingField
     | TextSettingField
     | ColorSettingField
-    | SliderSettingField;
+    | SliderSettingField
+    | ItemListSettingField;
 
 export interface WidgetSettingsSchema {
     widgetId: string;
@@ -1073,6 +1085,85 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         type: 'toggle',
                         label: 'Highlight New Entries',
                         description: 'Flash animation when new access events appear',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
+
+    // Inventory Tracker Widget
+    InventoryTracker: {
+        widgetId: 'InventoryTracker',
+        title: 'Inventory Tracker Settings',
+        description: 'Configure which items to track and how to display inventory data',
+        sections: [
+            {
+                title: 'Tracked Items',
+                fields: [
+                    {
+                        key: 'trackedItems',
+                        type: 'itemList',
+                        label: 'Item Codes',
+                        description: 'Add part codes to track. You can type individual codes or paste a comma-separated list.',
+                        default: [],
+                        placeholder: 'Enter part code...',
+                        maxItems: 100,
+                        allowDuplicates: false,
+                    } as ItemListSettingField,
+                ],
+            },
+            {
+                title: 'Data Display',
+                fields: [
+                    {
+                        key: 'primaryDataPoint',
+                        type: 'select',
+                        label: 'Primary Data Point',
+                        description: 'The main quantity to highlight for each item',
+                        default: 'available',
+                        options: [
+                            { value: 'available', label: 'Available' },
+                            { value: 'on_hand', label: 'On Hand' },
+                            { value: 'on_hold', label: 'On Hold' },
+                            { value: 'prod_sced', label: 'Scheduled Production' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'lowStockThreshold',
+                        type: 'slider',
+                        label: 'Low Stock Threshold',
+                        description: 'Items with primary quantity at or below this are marked as low stock',
+                        default: 10,
+                        min: 0,
+                        max: 100,
+                        step: 5,
+                        unit: ' units',
+                    } as SliderSettingField,
+                ],
+            },
+            {
+                title: 'Display Options',
+                fields: [
+                    {
+                        key: 'showDescription',
+                        type: 'toggle',
+                        label: 'Show Description',
+                        description: 'Display part descriptions in the table',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showSummary',
+                        type: 'toggle',
+                        label: 'Show Summary Cards',
+                        description: 'Display summary statistics at the top of the widget',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showSearch',
+                        type: 'toggle',
+                        label: 'Show Search Bar',
+                        description: 'Allow filtering items by search query',
                         default: true,
                     } as ToggleSettingField,
                 ],
