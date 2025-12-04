@@ -651,7 +651,7 @@ def _inventory_tracker(params: Dict[str, Any]) -> Dict[str, Any]:
             "on_hold",
             "prod_sced",
         ],
-        "filters": f"part_code IN ({_quote_list(sanitized_codes)})",
+        "filters": f"part_code IN ({_quote_list(sanitized_codes)}) AND cost_ctr = '1'",
         "sort": ["part_code ASC"],
     }
 

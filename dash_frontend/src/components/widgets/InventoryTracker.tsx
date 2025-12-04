@@ -1,9 +1,9 @@
-import React, { useMemo, useRef, useState, useEffect, memo } from "react";
+import React, { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import Widget from "./Widget";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Package, AlertTriangle, Search, X, Boxes, Clock, CheckCircle, FileText } from "lucide-react";
+import { Package, AlertTriangle, Search, X, Boxes, Clock, CheckCircle, FileText, ChevronUp, ChevronDown } from "lucide-react";
 
 const WIDGET_ID = 'InventoryTracker';
 
@@ -101,15 +101,17 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
         return () => resizeObserver.disconnect();
     }, []);
 
-    // Handle sort toggle
-    const handleSort = (field: SortField) => {
-        if (sortField === field) {
+    // Handle sort toggle - useCallback to maintain stable reference
+    const handleSort = useCallback((field: SortField) => {
+        if (field === sortField) {
+            // Same field - toggle direction
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
+            // New field - set field and reset to ascending
             setSortField(field);
             setSortDirection('asc');
         }
-    };
+    }, [sortField]);
 
     // Process and sort data using useMemo
     const sortedData = useMemo(() => {
@@ -148,17 +150,14 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
         return { lowStock, outOfStock, inStock, total: data.length };
     }, [data, primaryDataPoint, lowStockThreshold]);
 
-    // Sortable header component
-    const SortableHeader = ({ label, field, icon, align = 'left' }: {
-        label: string;
-        field: SortField;
-        icon: React.ReactNode;
-        align?: 'left' | 'right';
-    }) => {
+    // Render a sortable table header cell
+    const renderSortableHeader = (label: string, field: SortField, icon: React.ReactNode, align: 'left' | 'right' = 'left') => {
         const isActive = sortField === field;
         const isPrimary = field === primaryDataPoint;
+
         return (
             <TableHead
+                key={field}
                 className={`font-bold py-2 cursor-pointer select-none transition-colors hover:bg-muted/30 ${align === 'right' ? 'text-right' : ''}`}
                 style={{
                     color: isActive ? 'var(--ui-accent-primary)' : 'var(--table-text-primary)',
@@ -170,9 +169,9 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
                     {icon}
                     <span>{label}</span>
                     {isActive && (
-                        <span className="text-[10px] ml-0.5">
-                            {sortDirection === 'asc' ? '▲' : '▼'}
-                        </span>
+                        sortDirection === 'asc'
+                            ? <ChevronUp className="h-3.5 w-3.5" />
+                            : <ChevronDown className="h-3.5 w-3.5" />
                     )}
                 </div>
             </TableHead>
@@ -264,13 +263,13 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
             <ScrollArea className="flex-1 border-2 border-border rounded-md @container">
                 {/* Compact Card View for Small Sizes */}
                 <div className="@lg:hidden p-2 space-y-2">
-                    {sortedData.map((item) => {
+                    {sortedData.map((item, index) => {
                         const primaryValue = item[primaryDataPoint];
                         const statusStyles = getStockStatusStyles(primaryValue, lowStockThreshold);
 
                         return (
                             <div
-                                key={item.part_code}
+                                key={`${item.part_code}-${index}`}
                                 className="rounded-lg border border-border/50 p-3 space-y-2 transition-all duration-300 hover:bg-muted/30"
                             >
                                 {/* Top Row: Part Code & Primary Value */}
@@ -337,59 +336,51 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
                     <Table className="text-left" style={{ color: 'var(--table-text-primary)' }}>
                         <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
                             <TableRow className="border-border/50 hover:bg-transparent">
-                                <SortableHeader
-                                    label="Part Code"
-                                    field="part_code"
-                                    icon={<FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />}
-                                />
-                                {showDescription && !isCompact && (
-                                    <SortableHeader
-                                        label="Description"
-                                        field="part_desc"
-                                        icon={<Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />}
-                                    />
+                                {renderSortableHeader(
+                                    'Part Code',
+                                    'part_code',
+                                    <FileText className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                 )}
-                                <SortableHeader
-                                    label={COLUMN_LABELS[primaryDataPoint]}
-                                    field={primaryDataPoint}
-                                    icon={<CheckCircle className="h-3.5 w-3.5" style={{ color: 'var(--badge-success-text)' }} />}
-                                    align="right"
-                                />
-                                {primaryDataPoint !== 'on_hand' && (
-                                    <SortableHeader
-                                        label="On Hand"
-                                        field="on_hand"
-                                        icon={<Boxes className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />}
-                                        align="right"
-                                    />
+                                {showDescription && !isCompact && renderSortableHeader(
+                                    'Description',
+                                    'part_desc',
+                                    <Package className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />
                                 )}
-                                {primaryDataPoint !== 'on_hold' && (
-                                    <SortableHeader
-                                        label="On Hold"
-                                        field="on_hold"
-                                        icon={<AlertTriangle className="h-3.5 w-3.5" style={{ color: 'var(--badge-warning-text)' }} />}
-                                        align="right"
-                                    />
+                                {renderSortableHeader(
+                                    COLUMN_LABELS[primaryDataPoint],
+                                    primaryDataPoint,
+                                    <CheckCircle className="h-3.5 w-3.5" style={{ color: 'var(--badge-success-text)' }} />,
+                                    'right'
                                 )}
-                                {primaryDataPoint !== 'prod_sced' && (
-                                    <SortableHeader
-                                        label="Scheduled"
-                                        field="prod_sced"
-                                        icon={<Clock className="h-3.5 w-3.5" style={{ color: 'var(--badge-primary-text)' }} />}
-                                        align="right"
-                                    />
+                                {primaryDataPoint !== 'on_hand' && renderSortableHeader(
+                                    'On Hand',
+                                    'on_hand',
+                                    <Boxes className="h-3.5 w-3.5" style={{ color: 'var(--table-text-secondary)' }} />,
+                                    'right'
+                                )}
+                                {primaryDataPoint !== 'on_hold' && renderSortableHeader(
+                                    'On Hold',
+                                    'on_hold',
+                                    <AlertTriangle className="h-3.5 w-3.5" style={{ color: 'var(--badge-warning-text)' }} />,
+                                    'right'
+                                )}
+                                {primaryDataPoint !== 'prod_sced' && renderSortableHeader(
+                                    'Scheduled',
+                                    'prod_sced',
+                                    <Clock className="h-3.5 w-3.5" style={{ color: 'var(--badge-primary-text)' }} />,
+                                    'right'
                                 )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedData.map((item) => {
+                            {sortedData.map((item, index) => {
                                 const primaryValue = item[primaryDataPoint];
                                 const statusStyles = getStockStatusStyles(primaryValue, lowStockThreshold);
                                 const isLowOrOut = primaryValue <= lowStockThreshold;
 
                                 return (
                                     <TableRow
-                                        key={item.part_code}
+                                        key={`${item.part_code}-${index}`}
                                         className="border-border/30 transition-all duration-300 hover:bg-muted/50"
                                         style={primaryValue <= 0 ? {
                                             backgroundColor: 'var(--badge-error-bg)',
@@ -412,7 +403,7 @@ const InventoryTrackerContent = memo(function InventoryTrackerContent({
                                         {/* Description */}
                                         {showDescription && !isCompact && (
                                             <TableCell className="py-1.5">
-                                                <span className="text-[15px] leading-tight truncate block max-w-[200px]" style={{ color: 'var(--table-text-secondary)' }}>
+                                                <span className="text-[15px] leading-tight" style={{ color: 'var(--table-text-secondary)' }}>
                                                     {item.part_desc || '—'}
                                                 </span>
                                             </TableCell>
