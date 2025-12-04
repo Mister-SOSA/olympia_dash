@@ -5,6 +5,7 @@ import {
     format,
     startOfYear,
     subYears,
+    eachDayOfInterval,
     eachWeekOfInterval,
     eachMonthOfInterval,
     endOfWeek,
@@ -36,7 +37,7 @@ interface ComparisonData {
 }
 
 type TimeRange = "ytd" | "lastYear" | "comparison";
-type Aggregation = "weekly" | "monthly";
+type Aggregation = "daily" | "weekly" | "monthly";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveConfig Hook             */
@@ -197,17 +198,32 @@ const LineChart: React.FC<LineChartProps> = ({
     const yTicks = generateYTicks(maxValue);
     const adjustedMax = yTicks[yTicks.length - 1] || maxValue;
 
-    // Calculate point positions
-    const getPoints = (dataset: CumulativeDataPoint[]) =>
-        dataset.map((item, index) => ({
-            x: padding.left + (index / Math.max(dataset.length - 1, 1)) * chartWidth,
-            y: padding.top + chartHeight - (item.cumulativeSales / adjustedMax) * chartHeight,
-            data: item,
-            index,
-        }));
+    // Calculate date range for X-axis positioning
+    const today = new Date();
+    const yearStart = startOfYear(today);
+    const totalDays = (today.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24);
 
-    const currentPoints = getPoints(currentData);
-    const previousPoints = showComparison ? getPoints(previousData) : [];
+    // Calculate point positions based on actual dates
+    // For previous year data, we normalize dates to current year for proper overlay
+    const getPoints = (dataset: CumulativeDataPoint[], isPreviousYear: boolean = false) =>
+        dataset.map((item, index) => {
+            let dateForPosition = item.date;
+            if (isPreviousYear) {
+                // Shift previous year dates to current year for alignment
+                dateForPosition = new Date(item.date);
+                dateForPosition.setFullYear(today.getFullYear());
+            }
+            const daysFromStart = (dateForPosition.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24);
+            return {
+                x: padding.left + (Math.max(0, daysFromStart) / totalDays) * chartWidth,
+                y: padding.top + chartHeight - (item.cumulativeSales / adjustedMax) * chartHeight,
+                data: item,
+                index,
+            };
+        });
+
+    const currentPoints = getPoints(currentData, false);
+    const previousPoints = showComparison ? getPoints(previousData, true) : [];
 
     // Create smooth curve path using cardinal spline
     const createSmoothPath = (points: { x: number; y: number }[]): string => {
@@ -246,15 +262,25 @@ const LineChart: React.FC<LineChartProps> = ({
         return `${linePath} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
     };
 
-    // Handle mouse interaction
+    // Handle mouse interaction - find nearest point by X position
     const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
+        const mouseX = e.clientX - rect.left;
 
-        if (x >= padding.left && x <= dimensions.width - padding.right) {
-            const relativeX = x - padding.left;
-            const index = Math.round((relativeX / chartWidth) * (currentData.length - 1));
-            setHoveredIndex(Math.max(0, Math.min(currentData.length - 1, index)));
+        if (mouseX >= padding.left && mouseX <= dimensions.width - padding.right) {
+            // Find the nearest point by X position
+            let nearestIndex = 0;
+            let nearestDistance = Infinity;
+            
+            currentPoints.forEach((point, index) => {
+                const distance = Math.abs(point.x - mouseX);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = index;
+                }
+            });
+            
+            setHoveredIndex(nearestIndex);
         } else {
             setHoveredIndex(null);
         }
@@ -266,8 +292,8 @@ const LineChart: React.FC<LineChartProps> = ({
     const percentChange =
         showComparison && latestPrevious?.cumulativeSales
             ? ((latestCurrent.cumulativeSales - latestPrevious.cumulativeSales) /
-                  latestPrevious.cumulativeSales) *
-              100
+                latestPrevious.cumulativeSales) *
+            100
             : null;
 
     return (
@@ -319,45 +345,56 @@ const LineChart: React.FC<LineChartProps> = ({
                     );
                 })}
 
-                {/* X-axis month markers */}
+                {/* X-axis month markers - evenly spaced based on full year range */}
                 {(() => {
-                    // Generate month markers based on data range
-                    const monthMarkers: { month: string; x: number }[] = [];
-                    let lastMonth = "";
+                    if (currentData.length < 2 || totalDays <= 0) return null;
                     
-                    currentData.forEach((item, index) => {
-                        const monthName = format(item.date, "MMM");
-                        if (monthName !== lastMonth) {
-                            const x = padding.left + (index / Math.max(currentData.length - 1, 1)) * chartWidth;
-                            monthMarkers.push({ month: monthName, x });
-                            lastMonth = monthName;
-                        }
+                    // Generate all months from Jan to current month
+                    const months = eachMonthOfInterval({ start: yearStart, end: today });
+                    
+                    return months.map((monthDate, i) => {
+                        // Calculate X position based on days from Jan 1
+                        const daysFromStart = (monthDate.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24);
+                        const x = padding.left + (daysFromStart / totalDays) * chartWidth;
+                        
+                        return (
+                            <g key={`month-${i}`}>
+                                {/* Vertical dashed line through chart area */}
+                                {i > 0 && (
+                                    <line
+                                        x1={x}
+                                        y1={padding.top}
+                                        x2={x}
+                                        y2={padding.top + chartHeight}
+                                        stroke="var(--border-light)"
+                                        strokeWidth="1"
+                                        strokeDasharray="4,4"
+                                        opacity="0.7"
+                                    />
+                                )}
+                                {/* Tick mark below axis */}
+                                <line
+                                    x1={x}
+                                    y1={padding.top + chartHeight}
+                                    x2={x}
+                                    y2={padding.top + chartHeight + 5}
+                                    stroke="var(--text-muted)"
+                                    strokeWidth="1"
+                                    opacity="0.4"
+                                />
+                                <text
+                                    x={x}
+                                    y={padding.top + chartHeight + 20}
+                                    textAnchor={i === 0 ? "start" : "middle"}
+                                    fill="var(--text-muted)"
+                                    fontSize={fontSize.axis}
+                                    fontWeight="500"
+                                >
+                                    {format(monthDate, "MMM")}
+                                </text>
+                            </g>
+                        );
                     });
-
-                    return monthMarkers.map((marker, i) => (
-                        <g key={`month-${i}`}>
-                            {/* Subtle vertical tick at month start */}
-                            <line
-                                x1={marker.x}
-                                y1={padding.top + chartHeight}
-                                x2={marker.x}
-                                y2={padding.top + chartHeight + 5}
-                                stroke="var(--text-muted)"
-                                strokeWidth="1"
-                                opacity="0.4"
-                            />
-                            <text
-                                x={marker.x}
-                                y={padding.top + chartHeight + 20}
-                                textAnchor="middle"
-                                fill="var(--text-muted)"
-                                fontSize={fontSize.axis}
-                                fontWeight="500"
-                            >
-                                {marker.month}
-                            </text>
-                        </g>
-                    ));
                 })()}
 
                 {/* Previous year area & line */}
@@ -659,6 +696,12 @@ const ControlBar: React.FC<ControlBarProps> = ({
             </div>
             <div style={{ display: "flex", gap: 4 }}>
                 <button
+                    style={buttonStyle(aggregation === "daily")}
+                    onClick={() => setAggregation("daily")}
+                >
+                    Daily
+                </button>
+                <button
                     style={buttonStyle(aggregation === "weekly")}
                     onClick={() => setAggregation("weekly")}
                 >
@@ -732,11 +775,27 @@ export default function SalesYTDCumulativeLine() {
                 const points: CumulativeDataPoint[] = [];
                 let cumulative = 0;
 
-                if (aggregation === "monthly") {
+                if (aggregation === "daily") {
+                    const days = eachDayOfInterval({ start: yearStart, end: endDate });
+                    days.forEach((day, idx) => {
+                        const key = format(day, "yyyy-MM-dd");
+                        const periodSales = salesMap.get(key) || 0;
+                        cumulative += periodSales;
+
+                        points.push({
+                            date: day,
+                            label: format(day, "MMMM d, yyyy"),
+                            shortLabel: format(day, "M/d"),
+                            periodSales,
+                            cumulativeSales: cumulative,
+                            isCurrentPeriod: isCurrentYear && idx === days.length - 1,
+                        });
+                    });
+                } else if (aggregation === "monthly") {
                     const months = eachMonthOfInterval({ start: yearStart, end: endDate });
                     months.forEach((monthStart, idx) => {
-                        const monthEnd = idx < months.length - 1 
-                            ? new Date(months[idx + 1].getTime() - 1) 
+                        const monthEnd = idx < months.length - 1
+                            ? new Date(months[idx + 1].getTime() - 1)
                             : endDate;
                         const periodSales = sumSalesInRange(monthStart, monthEnd);
                         cumulative += periodSales;
@@ -750,19 +809,17 @@ export default function SalesYTDCumulativeLine() {
                             isCurrentPeriod: isCurrentYear && idx === months.length - 1,
                         });
                     });
-                } else {
-                    // Weekly aggregation
+                } else if (aggregation === "weekly") {
+                    // Weekly aggregationif somehow none match
                     const weeks = eachWeekOfInterval(
                         { start: yearStart, end: endDate },
                         { weekStartsOn: 0 }
                     );
 
                     weeks.forEach((weekStart, idx) => {
-                        // Ensure we don't go before yearStart
                         const effectiveStart = isBefore(weekStart, yearStart) ? yearStart : weekStart;
                         let weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
-                        
-                        // Don't go past end date
+
                         if (isAfter(weekEnd, endDate)) {
                             weekEnd = endDate;
                         }
