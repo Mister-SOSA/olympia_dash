@@ -1440,13 +1440,24 @@ main {
   background: var(--ui-bg-secondary);
   text-align: left;
   min-height: 100px;
-  transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .mobile-widget-card:active {
   transform: scale(0.98);
   background: var(--ui-bg-tertiary);
+}
+
+/* Drop placeholder - matches desktop react-grid-placeholder style */
+.mobile-widget-card-placeholder {
+  min-height: 100px;
+  border-radius: 1rem;
+  background: rgba(59, 130, 246, 0.2);
+  border: 2px dashed rgba(59, 130, 246, 0.6);
+  transition: all 100ms ease;
 }
 
 /* Widget Card Icon */
