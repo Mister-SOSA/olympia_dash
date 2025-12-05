@@ -871,7 +871,7 @@ export default function Dashboard() {
         return null;
     }
 
-    // Mobile Experience - Completely different UI
+    // Mobile Experience - Independent layout management
     if (isMobile) {
         return (
             <>
@@ -887,35 +887,13 @@ export default function Dashboard() {
 
                 {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
                 <div className="dashboard-container mobile" style={isImpersonating ? { paddingTop: '60px' } : {}}>
-                    {/* Mobile Dashboard with Swipeable Widgets */}
+                    {/* Mobile Dashboard - Self-contained with its own layout management */}
                     <MobileDashboard
-                        layout={layout}
                         onSettingsClick={() => {
                             setSettingsView('account');
                             setSettingsOpen(true);
                         }}
-                        onWidgetsClick={() => {
-                            setMenuOpen(true);
-                            updateTempLayout();
-                        }}
                     />
-
-                    {/* Widget Menu Modal - Unified responsive component */}
-                    <AnimatePresence>
-                        {menuOpen && (
-                            <WidgetPicker
-                                tempLayout={tempLayout}
-                                setTempLayout={setTempLayout}
-                                handleSave={handleSave}
-                                handleCancel={handleCancel}
-                                activePresetName={
-                                    activePresetIndex !== null && presets[activePresetIndex]
-                                        ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
-                                        : undefined
-                                }
-                            />
-                        )}
-                    </AnimatePresence>
 
                     {/* Settings Menu - Unified responsive component */}
                     <AnimatePresence>

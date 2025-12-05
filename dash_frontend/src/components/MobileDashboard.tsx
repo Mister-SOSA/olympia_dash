@@ -1,333 +1,697 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { Widget } from "@/types";
 import { getWidgetById } from "@/constants/widgets";
-import { ChevronLeft, ChevronRight, Grid3x3, Settings, Menu } from "lucide-react";
-import { Suspense } from "react";
+import {
+    WIDGET_CONFIGS,
+    WidgetCategory,
+    getWidgetConfig,
+    getAvailableCategories,
+    searchWidgets,
+    WidgetConfig,
+} from "@/components/widgets/registry";
+import {
+    Grid3x3,
+    Settings,
+    Menu,
+    X,
+    ChevronDown,
+    BarChart3,
+    DollarSign,
+    ShoppingCart,
+    Package,
+    Receipt,
+    FileText,
+    Settings2,
+    Wrench,
+    Clock,
+    TrendingUp,
+    Users,
+    Truck,
+    Table,
+    PieChart,
+    LineChart,
+    Activity,
+    Search,
+    Check,
+    Plus,
+} from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { Loader } from "@/components/ui/loader";
+import { toast } from "sonner";
+import {
+    MobileLayout,
+    readMobileLayout,
+    saveMobileLayout,
+    subscribeMobileLayout,
+    toggleWidget as toggleWidgetInLayout,
+    getStarterMobileLayout,
+} from "@/utils/mobileLayoutUtils";
+
+// ============================================
+// Category Icons
+// ============================================
+
+const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: string }>> = {
+    Sales: DollarSign,
+    Purchasing: ShoppingCart,
+    Inventory: Package,
+    AP: Receipt,
+    Analytics: BarChart3,
+    Reports: FileText,
+    Operations: Settings2,
+    Utilities: Wrench,
+};
+
+// Widget type icons based on common patterns
+const getWidgetTypeIcon = (widgetId: string): React.ComponentType<{ className?: string }> => {
+    const id = widgetId.toLowerCase();
+    if (id.includes('clock') || id.includes('date')) return Clock;
+    if (id.includes('pie')) return PieChart;
+    if (id.includes('line') || id.includes('cumulative')) return LineChart;
+    if (id.includes('bar') || id.includes('chart')) return BarChart3;
+    if (id.includes('table') || id.includes('log') || id.includes('orders')) return Table;
+    if (id.includes('customer') || id.includes('user')) return Users;
+    if (id.includes('due') || id.includes('delivery')) return Truck;
+    if (id.includes('overview') || id.includes('summary')) return TrendingUp;
+    if (id.includes('status') || id.includes('tracker')) return Activity;
+    return BarChart3; // Default
+};
+
+// ============================================
+// Types
+// ============================================
 
 export interface MobileDashboardProps {
-    layout: Widget[];
     onSettingsClick: () => void;
-    onWidgetsClick: () => void;
 }
 
-export default function MobileDashboard({
-    layout,
-    onSettingsClick,
-    onWidgetsClick,
-}: MobileDashboardProps) {
-    const { hasAccess } = useWidgetPermissions();
+// ============================================
+// Widget Card Component (Grid View)
+// ============================================
 
-    // Filter enabled widgets that user has access to
-    const enabledWidgets = layout.filter(
-        (widget) => widget.enabled && hasAccess(widget.id, 'view')
+interface WidgetCardProps {
+    widgetId: string;
+    onClick: () => void;
+    index: number;
+}
+
+const WidgetCard = React.memo(({ widgetId, onClick, index }: WidgetCardProps) => {
+    const config = getWidgetConfig(widgetId);
+    const widgetDef = getWidgetById(widgetId);
+    const CategoryIcon = config ? CATEGORY_ICONS[config.category] : BarChart3;
+    const TypeIcon = getWidgetTypeIcon(widgetId);
+
+    return (
+        <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            onClick={onClick}
+            className="mobile-widget-card group"
+        >
+            {/* Icon */}
+            <div className="mobile-widget-card-icon">
+                <TypeIcon className="w-6 h-6 text-[var(--ui-accent-primary)]" />
+            </div>
+
+            {/* Content */}
+            <div className="mobile-widget-card-content">
+                <h3
+                    className="text-sm font-semibold line-clamp-1"
+                    style={{ color: 'var(--ui-text-primary)' }}
+                >
+                    {widgetDef?.title || config?.title || widgetId}
+                </h3>
+                {config?.category && (
+                    <div className="flex items-center gap-1 mt-1">
+                        <CategoryIcon className="w-3 h-3 text-[var(--ui-text-muted)]" />
+                        <span
+                            className="text-xs"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                        >
+                            {config.category}
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* Tap indicator */}
+            <div
+                className="absolute bottom-2 right-2 opacity-0 group-active:opacity-100 transition-opacity"
+                style={{ color: 'var(--ui-text-muted)' }}
+            >
+                <ChevronDown className="w-4 h-4 rotate-[-90deg]" />
+            </div>
+        </motion.button>
     );
+});
 
-    const [[currentIndex, direction], setPage] = useState([0, 0]);
-    const [showNav, setShowNav] = useState(false);
+WidgetCard.displayName = "WidgetCard";
+
+// ============================================
+// Detail View Component (Full Screen Widget)
+// ============================================
+
+interface DetailViewProps {
+    widgetId: string;
+    onClose: () => void;
+}
+
+const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
+    const widgetDef = getWidgetById(widgetId);
+    const config = getWidgetConfig(widgetId);
     const [isDragging, setIsDragging] = useState(false);
-    const hideNavTimeout = useRef<NodeJS.Timeout | null>(null);
 
-    // Ensure currentIndex stays within bounds when widgets change
-    useEffect(() => {
-        if (currentIndex >= enabledWidgets.length && enabledWidgets.length > 0) {
-            setPage([enabledWidgets.length - 1, -1]);
-        }
-    }, [enabledWidgets.length, currentIndex]);
-
-    // Show navigation on any interaction
-    useEffect(() => {
-        const showNavigation = () => {
-            setShowNav(true);
-            if (hideNavTimeout.current) {
-                clearTimeout(hideNavTimeout.current);
-            }
-            hideNavTimeout.current = setTimeout(() => {
-                setShowNav(false);
-            }, 3000);
-        };
-
-        window.addEventListener('touchstart', showNavigation);
-        window.addEventListener('mousemove', showNavigation);
-
-        // Show nav on initial load
-        showNavigation();
-
-        return () => {
-            window.removeEventListener('touchstart', showNavigation);
-            window.removeEventListener('mousemove', showNavigation);
-            if (hideNavTimeout.current) {
-                clearTimeout(hideNavTimeout.current);
-            }
-        };
-    }, []);
-
-    const paginate = (newDirection: number) => {
-        const newIndex = currentIndex + newDirection;
-        if (newIndex >= 0 && newIndex < enabledWidgets.length) {
-            setPage([newIndex, newDirection]);
-        }
+    const handleDragStart = () => {
+        setIsDragging(true);
     };
 
-    const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDragEnd = (_: any, info: PanInfo) => {
         setIsDragging(false);
-
-        const swipeThreshold = 75; // Increased for more deliberate swipes
-        const swipeVelocityThreshold = 400;
-
-        const offset = info.offset.x;
-        const velocity = info.velocity.x;
-
-        // Swipe right (go to previous)
-        if (offset > swipeThreshold || velocity > swipeVelocityThreshold) {
-            if (currentIndex > 0) {
-                paginate(-1);
-            }
-        }
-        // Swipe left (go to next)
-        else if (offset < -swipeThreshold || velocity < -swipeVelocityThreshold) {
-            if (currentIndex < enabledWidgets.length - 1) {
-                paginate(1);
-            }
+        // Close if dragged down more than 100px or with high velocity
+        if (info.offset.y > 100 || info.velocity.y > 500) {
+            onClose();
         }
     };
 
-    const goToWidget = (index: number) => {
-        if (index !== currentIndex && index >= 0 && index < enabledWidgets.length) {
-            setPage([index, index > currentIndex ? 1 : -1]);
-        }
-    };
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{
+                    type: "spring",
+                    damping: 30,
+                    stiffness: 300,
+                    mass: 0.8
+                }}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0.1, bottom: 0.3 }}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                className="absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] flex flex-col overflow-hidden"
+                style={{
+                    backgroundColor: 'var(--ui-bg-primary)',
+                    borderTopLeftRadius: '1.5rem',
+                    borderTopRightRadius: '1.5rem',
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Drag Handle */}
+                <div className="flex justify-center py-3 flex-shrink-0">
+                    <div
+                        className="w-10 h-1 rounded-full"
+                        style={{ backgroundColor: 'var(--ui-border-secondary)' }}
+                    />
+                </div>
 
-    if (enabledWidgets.length === 0) {
-        return (
-            <div className="mobile-dashboard-empty">
-                <div className="mobile-empty-state">
-                    <Grid3x3 className="w-16 h-16 text-ui-text-tertiary opacity-40 mb-4" />
-                    <h2 className="text-xl font-medium text-ui-text-secondary mb-2">
-                        No widgets enabled
-                    </h2>
-                    <p className="text-sm text-ui-text-tertiary mb-6">
-                        Add widgets to get started
-                    </p>
+                {/* Header */}
+                <div
+                    className="flex items-center justify-between px-4 pb-3 border-b flex-shrink-0"
+                    style={{ borderColor: 'var(--ui-border-primary)' }}
+                >
+                    <div className="flex-1 min-w-0">
+                        <h2
+                            className="text-lg font-semibold truncate"
+                            style={{ color: 'var(--ui-text-primary)' }}
+                        >
+                            {widgetDef?.title || config?.title || widgetId}
+                        </h2>
+                        {config?.category && (
+                            <span
+                                className="text-xs"
+                                style={{ color: 'var(--ui-text-muted)' }}
+                            >
+                                {config.category}
+                            </span>
+                        )}
+                    </div>
                     <button
-                        onClick={onWidgetsClick}
-                        className="mobile-nav-button bg-ui-accent-primary hover:bg-ui-accent-primary-hover"
+                        onClick={onClose}
+                        className="p-2 rounded-full transition-colors flex-shrink-0 ml-3"
+                        style={{
+                            backgroundColor: 'var(--ui-bg-tertiary)',
+                            color: 'var(--ui-text-secondary)'
+                        }}
                     >
-                        <Menu className="w-5 h-5" />
-                        <span>Add Widgets</span>
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
+
+                {/* Widget Content */}
+                <div
+                    className="flex-1 overflow-auto p-4"
+                    style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+                >
+                    {widgetDef && (
+                        <Suspense
+                            fallback={
+                                <div className="flex items-center justify-center h-64">
+                                    <Loader />
+                                </div>
+                            }
+                        >
+                            <div className="h-full min-h-[300px]">
+                                <widgetDef.component />
+                            </div>
+                        </Suspense>
+                    )}
+                </div>
+
+                {/* Swipe hint */}
+                <motion.div
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full pointer-events-none"
+                    style={{
+                        backgroundColor: 'var(--ui-bg-tertiary)',
+                        color: 'var(--ui-text-muted)',
+                        marginBottom: 'env(safe-area-inset-bottom)'
+                    }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 0.8, y: 0 }}
+                    transition={{ delay: 1 }}
+                >
+                    <ChevronDown className="w-4 h-4" />
+                    <span className="text-xs font-medium">Swipe down to close</span>
+                </motion.div>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+// ============================================
+// Mobile Widget Picker (Simple, no presets)
+// ============================================
+
+interface MobileWidgetPickerProps {
+    layout: MobileLayout;
+    onToggleWidget: (widgetId: string) => void;
+    onClose: () => void;
+}
+
+const MobileWidgetPicker = ({ layout, onToggleWidget, onClose }: MobileWidgetPickerProps) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState<WidgetCategory | "all">("all");
+    const { filterAccessibleWidgets } = useWidgetPermissions();
+
+    const accessibleWidgets = useMemo(() => {
+        return filterAccessibleWidgets(WIDGET_CONFIGS, 'view') as WidgetConfig[];
+    }, [filterAccessibleWidgets]);
+
+    const filteredWidgets = useMemo(() => {
+        let widgets = accessibleWidgets;
+        if (selectedCategory !== "all") {
+            widgets = widgets.filter((w) => w.category === selectedCategory);
+        }
+        if (searchTerm) {
+            widgets = searchWidgets(searchTerm, widgets);
+        }
+        return widgets;
+    }, [accessibleWidgets, searchTerm, selectedCategory]);
+
+    const categories = getAvailableCategories();
+    const enabledSet = useMemo(() => new Set(layout.enabledWidgetIds), [layout.enabledWidgetIds]);
+
+    return (
+        <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed inset-0 z-50 flex flex-col"
+            style={{ backgroundColor: 'var(--ui-bg-primary)' }}
+        >
+            {/* Header */}
+            <div
+                className="flex-shrink-0 border-b safe-top"
+                style={{ borderColor: 'var(--ui-border-primary)' }}
+            >
+                <div className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Grid3x3 className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
+                        <div>
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
+                                Edit Widgets
+                            </h2>
+                            <p className="text-xs" style={{ color: 'var(--ui-text-muted)' }}>
+                                {enabledSet.size} of {accessibleWidgets.length} enabled
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-lg"
+                        style={{ color: 'var(--ui-text-secondary)' }}
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Search */}
+                <div className="px-4 pb-3">
+                    <div className="relative">
+                        <Search
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search widgets..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
+                            style={{
+                                backgroundColor: 'var(--ui-bg-secondary)',
+                                borderColor: 'var(--ui-border-primary)',
+                                color: 'var(--ui-text-primary)'
+                            }}
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2"
+                                style={{ color: 'var(--ui-text-muted)' }}
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Category Pills */}
+                <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setSelectedCategory("all")}
+                            className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                            style={selectedCategory === "all" ? {
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                color: '#ffffff'
+                            } : {
+                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                color: 'var(--ui-text-secondary)'
+                            }}
+                        >
+                            All
+                        </button>
+                        {categories.map((category) => {
+                            const IconComponent = CATEGORY_ICONS[category];
+                            return (
+                                <button
+                                    key={category}
+                                    onClick={() => setSelectedCategory(category)}
+                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                                    style={selectedCategory === category ? {
+                                        backgroundColor: 'var(--ui-accent-primary)',
+                                        color: '#ffffff'
+                                    } : {
+                                        backgroundColor: 'var(--ui-bg-tertiary)',
+                                        color: 'var(--ui-text-secondary)'
+                                    }}
+                                >
+                                    {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                                    <span>{category}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
+
+            {/* Widget List */}
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+                {filteredWidgets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full py-12">
+                        <Grid3x3
+                            className="w-12 h-12 mb-3 opacity-40"
+                            style={{ color: 'var(--ui-text-tertiary)' }}
+                        />
+                        <p className="font-medium" style={{ color: 'var(--ui-text-secondary)' }}>
+                            No widgets found
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-2 pb-8">
+                        {filteredWidgets.map((widget) => {
+                            const isEnabled = enabledSet.has(widget.id);
+                            const TypeIcon = getWidgetTypeIcon(widget.id);
+
+                            return (
+                                <button
+                                    key={widget.id}
+                                    onClick={() => onToggleWidget(widget.id)}
+                                    className="w-full flex items-start gap-3 p-4 rounded-xl border transition-all text-left active:scale-[0.98]"
+                                    style={isEnabled ? {
+                                        backgroundColor: 'var(--ui-accent-primary-bg)',
+                                        borderColor: 'var(--ui-accent-primary-border)'
+                                    } : {
+                                        backgroundColor: 'var(--ui-bg-secondary)',
+                                        borderColor: 'var(--ui-border-primary)'
+                                    }}
+                                >
+                                    {/* Checkbox */}
+                                    <div
+                                        className="flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center mt-0.5 transition-all"
+                                        style={isEnabled ? {
+                                            backgroundColor: 'var(--ui-accent-primary)',
+                                            borderColor: 'var(--ui-accent-primary)'
+                                        } : {
+                                            borderColor: 'var(--ui-border-secondary)'
+                                        }}
+                                    >
+                                        {isEnabled && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3
+                                                className="font-semibold truncate"
+                                                style={{ color: isEnabled ? 'var(--ui-accent-primary)' : 'var(--ui-text-primary)' }}
+                                            >
+                                                {widget.title}
+                                            </h3>
+                                        </div>
+                                        <p
+                                            className="text-sm line-clamp-2"
+                                            style={{ color: 'var(--ui-text-muted)' }}
+                                        >
+                                            {widget.description}
+                                        </p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Footer */}
+            <div
+                className="flex-shrink-0 border-t p-4 safe-bottom"
+                style={{ borderColor: 'var(--ui-border-primary)' }}
+            >
+                <button
+                    onClick={onClose}
+                    className="w-full py-3 rounded-xl font-semibold transition-all"
+                    style={{
+                        backgroundColor: 'var(--ui-accent-primary)',
+                        color: '#ffffff'
+                    }}
+                >
+                    Done
+                </button>
+            </div>
+        </motion.div>
+    );
+};
+
+// ============================================
+// Main Component
+// ============================================
+
+export default function MobileDashboard({
+    onSettingsClick,
+}: MobileDashboardProps) {
+    const { hasAccess } = useWidgetPermissions();
+    const [mobileLayout, setMobileLayout] = useState<MobileLayout>(() => readMobileLayout());
+    const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
+    const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
+
+    // Subscribe to remote layout changes
+    useEffect(() => {
+        const unsubscribe = subscribeMobileLayout((newLayout) => {
+            setMobileLayout(newLayout);
+        });
+        return unsubscribe;
+    }, []);
+
+    // Filter enabled widgets that user has access to
+    const enabledWidgetIds = useMemo(() => {
+        return mobileLayout.enabledWidgetIds.filter(id => hasAccess(id, 'view'));
+    }, [mobileLayout.enabledWidgetIds, hasAccess]);
+
+    const handleWidgetClick = useCallback((widgetId: string) => {
+        setSelectedWidgetId(widgetId);
+    }, []);
+
+    const handleCloseDetail = useCallback(() => {
+        setSelectedWidgetId(null);
+    }, []);
+
+    const handleToggleWidget = useCallback((widgetId: string) => {
+        setMobileLayout(prev => {
+            const newLayout = toggleWidgetInLayout(prev, widgetId);
+            saveMobileLayout(newLayout);
+            return newLayout;
+        });
+    }, []);
+
+    const handleAddStarterWidgets = useCallback(() => {
+        const starter = getStarterMobileLayout();
+        setMobileLayout(starter);
+        saveMobileLayout(starter);
+        toast.success("Added starter widgets!");
+    }, []);
+
+    // Empty state
+    if (enabledWidgetIds.length === 0) {
+        return (
+            <>
+                <div className="mobile-dashboard-empty">
+                    <div className="mobile-empty-state">
+                        <Grid3x3 className="w-16 h-16 text-ui-text-tertiary opacity-40 mb-4" />
+                        <h2 className="text-xl font-medium text-ui-text-secondary mb-2">
+                            No widgets enabled
+                        </h2>
+                        <p className="text-sm text-ui-text-tertiary mb-6">
+                            Add widgets to your mobile dashboard
+                        </p>
+                        <div className="flex flex-col gap-3 w-full max-w-xs">
+                            <button
+                                onClick={() => setWidgetPickerOpen(true)}
+                                className="mobile-nav-button justify-center"
+                                style={{
+                                    backgroundColor: 'var(--ui-accent-primary)',
+                                    color: '#ffffff'
+                                }}
+                            >
+                                <Plus className="w-5 h-5" />
+                                <span>Choose Widgets</span>
+                            </button>
+                            <button
+                                onClick={handleAddStarterWidgets}
+                                className="mobile-nav-button justify-center"
+                                style={{
+                                    backgroundColor: 'var(--ui-bg-tertiary)',
+                                    color: 'var(--ui-text-secondary)'
+                                }}
+                            >
+                                <Grid3x3 className="w-5 h-5" />
+                                <span>Use Starter Layout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Widget Picker */}
+                <AnimatePresence>
+                    {widgetPickerOpen && (
+                        <MobileWidgetPicker
+                            layout={mobileLayout}
+                            onToggleWidget={handleToggleWidget}
+                            onClose={() => setWidgetPickerOpen(false)}
+                        />
+                    )}
+                </AnimatePresence>
+            </>
         );
     }
 
-    const currentWidget = enabledWidgets[currentIndex];
-    const widgetDef = currentWidget ? getWidgetById(currentWidget.id) : null;
-
     return (
-        <div className="mobile-dashboard">
-            {/* Top Navigation Bar - Auto-hide */}
-            <AnimatePresence>
-                {showNav && (
-                    <motion.div
-                        initial={{ y: -100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -100, opacity: 0 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="mobile-top-nav"
+        <div className="mobile-dashboard-grid">
+            {/* Header */}
+            <div className="mobile-grid-header">
+                <div className="flex items-center gap-3">
+                    <Grid3x3 className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
+                    <div>
+                        <h1
+                            className="text-lg font-semibold"
+                            style={{ color: 'var(--ui-text-primary)' }}
+                        >
+                            Dashboard
+                        </h1>
+                        <p
+                            className="text-xs"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                        >
+                            {enabledWidgetIds.length} widget{enabledWidgetIds.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setWidgetPickerOpen(true)}
+                        className="mobile-header-button"
+                        aria-label="Edit Widgets"
                     >
-                        <div className="mobile-top-nav-content">
-                            <button
-                                onClick={onWidgetsClick}
-                                className="mobile-nav-button"
-                                aria-label="Widget Menu"
-                            >
-                                <Menu className="w-5 h-5" />
-                            </button>
-
-                            <div className="mobile-widget-title">
-                                <span className="text-sm font-medium text-ui-text-primary">
-                                    {widgetDef?.title || 'Widget'}
-                                </span>
-                                <span className="text-xs text-ui-text-tertiary">
-                                    {currentIndex + 1} / {enabledWidgets.length}
-                                </span>
-                            </div>
-
-                            <button
-                                onClick={onSettingsClick}
-                                className="mobile-nav-button"
-                                aria-label="Settings"
-                            >
-                                <Settings className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Widget Carousel */}
-            <div className="mobile-widget-container">
-                <AnimatePresence initial={false} custom={direction}>
-                    <motion.div
-                        key={currentIndex}
-                        custom={direction}
-                        variants={{
-                            enter: (dir: number) => ({
-                                x: dir > 0 ? '100%' : '-100%',
-                                opacity: 0,
-                            }),
-                            center: {
-                                x: 0,
-                                opacity: 1,
-                            },
-                            exit: (dir: number) => ({
-                                x: dir > 0 ? '-100%' : '100%',
-                                opacity: 0,
-                            }),
-                        }}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{
-                            x: {
-                                type: "spring",
-                                stiffness: 400,
-                                damping: 40,
-                                mass: 0.8,
-                            },
-                            opacity: { duration: 0.15 },
-                        }}
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={{
-                            left: currentIndex === 0 ? 0.1 : 0.2,
-                            right: currentIndex === enabledWidgets.length - 1 ? 0.1 : 0.2,
-                        }}
-                        dragMomentum={false}
-                        onDragStart={() => setIsDragging(true)}
-                        onDragEnd={handleDragEnd}
-                        className="mobile-widget-slide"
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                        }}
+                        <Menu className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={onSettingsClick}
+                        className="mobile-header-button"
+                        aria-label="Settings"
                     >
-                        {widgetDef && (
-                            <div className="mobile-widget-content">
-                                <Suspense
-                                    fallback={
-                                        <div className="mobile-widget-loader">
-                                            <Loader />
-                                        </div>
-                                    }
-                                >
-                                    <widgetDef.component />
-                                </Suspense>
-                            </div>
-                        )}
-                    </motion.div>
-                </AnimatePresence>
-
-                {/* Navigation Arrows - Only show when nav is visible */}
-                <AnimatePresence>
-                    {showNav && enabledWidgets.length > 1 && (
-                        <>
-                            {currentIndex > 0 && (
-                                <motion.button
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    onClick={() => paginate(-1)}
-                                    className="mobile-arrow mobile-arrow-left"
-                                    aria-label="Previous widget"
-                                >
-                                    <ChevronLeft className="w-8 h-8" />
-                                </motion.button>
-                            )}
-
-                            {currentIndex < enabledWidgets.length - 1 && (
-                                <motion.button
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    onClick={() => paginate(1)}
-                                    className="mobile-arrow mobile-arrow-right"
-                                    aria-label="Next widget"
-                                >
-                                    <ChevronRight className="w-8 h-8" />
-                                </motion.button>
-                            )}
-                        </>
-                    )}
-                </AnimatePresence>
+                        <Settings className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
-            {/* Bottom Navigation Dots - Auto-hide */}
+            {/* Widget Grid */}
+            <div className="mobile-grid-content">
+                <div className="mobile-widget-grid">
+                    {enabledWidgetIds.map((widgetId, index) => (
+                        <WidgetCard
+                            key={widgetId}
+                            widgetId={widgetId}
+                            onClick={() => handleWidgetClick(widgetId)}
+                            index={index}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Detail View Modal */}
             <AnimatePresence>
-                {showNav && enabledWidgets.length > 1 && (
-                    <motion.div
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 100, opacity: 0 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="mobile-bottom-nav"
-                    >
-                        <div className="mobile-dots-container">
-                            {enabledWidgets.map((widget, index) => {
-                                const def = getWidgetById(widget.id);
-                                return (
-                                    <button
-                                        key={widget.id}
-                                        onClick={() => goToWidget(index)}
-                                        className={`mobile-dot ${index === currentIndex
-                                            ? 'mobile-dot-active'
-                                            : 'mobile-dot-inactive'
-                                            }`}
-                                        aria-label={`Go to ${def?.title || 'widget'}`}
-                                        title={def?.title}
-                                    >
-                                        {index === currentIndex && (
-                                            <motion.div
-                                                layoutId="activeIndicator"
-                                                className="mobile-dot-indicator"
-                                                transition={{
-                                                    type: "spring",
-                                                    stiffness: 500,
-                                                    damping: 30,
-                                                }}
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
+                {selectedWidgetId && (
+                    <DetailView
+                        widgetId={selectedWidgetId}
+                        onClose={handleCloseDetail}
+                    />
                 )}
             </AnimatePresence>
 
-            {/* Swipe Hint - Only show on first load */}
-            {enabledWidgets.length > 1 && (
-                <div className="mobile-swipe-hint">
-                    <motion.div
-                        animate={{
-                            x: [0, 20, 0],
-                        }}
-                        transition={{
-                            duration: 1.5,
-                            repeat: 3,
-                            ease: "easeInOut",
-                        }}
-                        className="mobile-swipe-icon"
-                    >
-                        <ChevronRight className="w-6 h-6 text-ui-text-tertiary opacity-50" />
-                    </motion.div>
-                </div>
-            )}
+            {/* Widget Picker */}
+            <AnimatePresence>
+                {widgetPickerOpen && (
+                    <MobileWidgetPicker
+                        layout={mobileLayout}
+                        onToggleWidget={handleToggleWidget}
+                        onClose={() => setWidgetPickerOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

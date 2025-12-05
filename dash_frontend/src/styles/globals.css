@@ -1368,6 +1368,141 @@ main {
   }
 }
 
+/* ========================================
+   MOBILE DASHBOARD GRID (Home Screen View)
+   ======================================== */
+
+.mobile-dashboard-grid {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Grid Header */
+.mobile-grid-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--ui-border-primary);
+  background: var(--ui-bg-primary);
+}
+
+.mobile-header-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  color: var(--ui-text-secondary);
+  transition: all 0.2s;
+}
+
+.mobile-header-button:active {
+  transform: scale(0.95);
+  background: var(--ui-bg-secondary);
+}
+
+/* Grid Content Area */
+.mobile-grid-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Widget Grid - 2 columns */
+.mobile-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+/* Widget Card */
+.mobile-widget-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--ui-border-primary);
+  background: var(--ui-bg-secondary);
+  text-align: left;
+  min-height: 100px;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-widget-card:active {
+  transform: scale(0.98);
+  background: var(--ui-bg-tertiary);
+}
+
+/* Widget Card Icon */
+.mobile-widget-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--ui-bg-tertiary);
+  margin-bottom: 0.75rem;
+}
+
+/* Widget Card Content */
+.mobile-widget-card-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Larger screens - 3 column grid */
+@media (min-width: 480px) and (max-width: 768px) {
+  .mobile-widget-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Landscape mode adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-grid-header {
+    padding: 0.5rem 1rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .mobile-grid-content {
+    padding: 0.5rem 1rem;
+  }
+
+  .mobile-widget-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mobile-widget-card {
+    min-height: 80px;
+    padding: 0.75rem;
+  }
+
+  .mobile-widget-card-icon {
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
 /* Disable mobile dashboard on desktop */
 @media (min-width: 769px) {
 
