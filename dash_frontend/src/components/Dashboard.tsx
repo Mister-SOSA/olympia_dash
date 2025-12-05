@@ -842,10 +842,22 @@ export default function Dashboard() {
         // ✅ Saving to a preset is effectively loading that preset
         saveLayoutToStorage(normalizedLayout, { source: 'preset-load' });
         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
-    }, [presets, generatePresetName]); if (checkingAuth) {
+    }, [presets, generatePresetName]);
+
+    if (checkingAuth) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary">
-                <Loader />
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary animate-in fade-in duration-300">
+                <div className="relative mb-6">
+                    {/* Outer pulse ring */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-full border-2 border-ui-accent-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+                    </div>
+                    {/* Loader */}
+                    <Loader />
+                </div>
+                <p className="text-ui-text-secondary text-sm animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
+                    Loading your dashboard...
+                </p>
             </div>
         );
     }

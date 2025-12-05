@@ -531,10 +531,15 @@ export default function EntryLogsWidget() {
             {(data: AccessLogEntry[] | null, loading: boolean) => {
                 if (loading && (!data || data.length === 0)) {
                     return (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-center space-y-2">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                                <p className="text-sm text-muted-foreground">Loading entry logs...</p>
+                        <div className="flex items-center justify-center h-full animate-in fade-in duration-200">
+                            <div className="text-center space-y-3">
+                                <div className="relative w-10 h-10 mx-auto">
+                                    <div className="absolute inset-0 rounded-full border-2 border-ui-accent-primary/20 animate-ping" style={{ animationDuration: '1.5s' }} />
+                                    <div className="relative w-full h-full rounded-full border-2 border-ui-accent-primary border-t-transparent animate-spin" />
+                                </div>
+                                <p className="text-sm text-ui-text-secondary animate-in fade-in slide-in-from-bottom-1 duration-300 delay-100">
+                                    Loading entry logs...
+                                </p>
                             </div>
                         </div>
                     );

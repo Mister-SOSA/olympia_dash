@@ -20,6 +20,7 @@ import { DASHBOARD_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
 import { useAnalytics } from "@/contexts/AnalyticsContext";
 import { type LayoutUpdateSource } from "@/utils/layoutUtils";
+import { Loader } from "@/components/ui/loader";
 
 // Custom resize handle component - replaces the library's default diagonal handles
 const CustomResizeHandle = React.forwardRef<HTMLElement, {
@@ -429,8 +430,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             const WidgetComponent = widgetDef.component;
 
             // Widget component already includes .widget wrapper and .widget-drag-handle
+            // Use empty fallback since widget code loads instantly and Widget handles its own loading state
             return (
-                <Suspense fallback={<div className="widget-loading">Loading...</div>}>
+                <Suspense fallback={<div className="widget-loading-container" />}>
                     <WidgetComponent key={`${widgetId}-${refreshKey}`} />
                 </Suspense>
             );

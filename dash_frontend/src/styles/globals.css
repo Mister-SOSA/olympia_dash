@@ -7,6 +7,63 @@
 @import 'react-resizable/css/styles.css';
 @import './theme.css';
 
+/* ============================================
+   SKELETON LOADING ANIMATIONS
+   ============================================ */
+
+/* Shimmer animation for skeleton loaders */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.08),
+      transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Smooth fade transitions for loading states */
+.loading-fade-enter {
+  opacity: 0;
+}
+
+.loading-fade-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+
+.loading-fade-exit {
+  opacity: 1;
+}
+
+.loading-fade-exit-active {
+  opacity: 0;
+  transition: opacity 150ms ease-in;
+}
+
+/* Widget loading container with minimum height */
+.widget-loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  width: 100%;
+  animation: fadeIn 0.2s ease-out;
+}
+
 /* Base styles */
 nextjs-portal {
   display: none;
@@ -637,6 +694,12 @@ main {
   font-weight: 600;
   color: var(--text-primary);
   opacity: 0.7;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Widget data container with smooth entrance */
+.widget-data-container {
+  animation: fadeIn 0.2s ease-out;
 }
 
 /* ================================== */

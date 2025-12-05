@@ -37,7 +37,6 @@ export default function Widget({
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(!!endpoint);
     const [isTransitioning, setIsTransitioning] = useState(false);
-    const [showLoader, setShowLoader] = useState(!!endpoint);
     const [error, setError] = useState<string | null>(null);
     const [refreshProgress, setRefreshProgress] = useState(0);
     const [isResetting, setIsResetting] = useState(false);
@@ -45,9 +44,7 @@ export default function Widget({
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
-    const loaderDelayRef = useRef<NodeJS.Timeout | null>(null);
     const loaderHideRef = useRef<NodeJS.Timeout | null>(null);
-    const loaderShownAtRef = useRef<number | null>(null);
     const lastFetchTimeRef = useRef<number>(Date.now());
     const viewTrackedRef = useRef(false);
 
@@ -66,10 +63,9 @@ export default function Widget({
         }
     }, [widgetId, title, payload]);
 
-    // Tunables for buttery-smooth UX
-    const LOADER_DELAY_MS = 150; // don't flash loader for super-fast fetches
-    const LOADER_MIN_MS = 250;   // keep loader visible briefly once shown
-    const FADE_OUT_MS = 300;     // CSS fade-out duration
+    // Tunables for smooth UX
+    const LOADER_MIN_MS = 200;   // keep loader visible briefly once shown
+    const FADE_OUT_MS = 250;     // CSS fade-out duration
 
     const fetchData = async () => {
         if (!endpoint) return;
@@ -81,25 +77,15 @@ export default function Widget({
 
         abortControllerRef.current = new AbortController();
 
-        // Only show loader on initial load, not on auto-refresh
+        // Only show loading states on initial load, not on auto-refresh
         const shouldShowLoader = isInitialLoadRef.current;
 
         if (shouldShowLoader) {
             setLoading(true);
             setIsTransitioning(false);
-            setShowLoader(false);
-            if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
-            loaderDelayRef.current = setTimeout(() => {
-                // Only show loader if we're still loading
-                setShowLoader((prev) => {
-                    if (loading) {
-                        loaderShownAtRef.current = Date.now();
-                        return true;
-                    }
-                    return prev;
-                });
-            }, LOADER_DELAY_MS);
         }
+
+        const loadStartTime = Date.now();
 
         try {
             const response = await authService.fetchWithAuth(`${config.API_BASE_URL}${endpoint}`, {
@@ -128,23 +114,16 @@ export default function Widget({
                 isInitialLoadRef.current = false;
             }
 
-            // Clear delayed show timer if still pending
-            if (loaderDelayRef.current) {
-                clearTimeout(loaderDelayRef.current);
-                loaderDelayRef.current = null;
-            }
-
             const finish = () => {
                 setLoading(false);
                 setIsTransitioning(false);
-                setShowLoader(false);
             };
 
-            if (shouldShowLoader && showLoader && loaderShownAtRef.current) {
+            if (shouldShowLoader) {
                 // Ensure loader stayed visible for minimum time, then fade out
-                const elapsed = Date.now() - loaderShownAtRef.current;
+                const elapsed = Date.now() - loadStartTime;
                 const remaining = Math.max(LOADER_MIN_MS - elapsed, 0);
-                // Begin fade-out after remaining time
+
                 if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
                 loaderHideRef.current = setTimeout(() => {
                     setIsTransitioning(true);
@@ -154,7 +133,6 @@ export default function Widget({
                     }, FADE_OUT_MS);
                 }, remaining);
             } else {
-                // Loader never showed (fast fetch) → finish immediately
                 finish();
             }
 
@@ -197,7 +175,6 @@ export default function Widget({
             if (intervalRef.current) clearInterval(intervalRef.current);
             if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
             if (abortControllerRef.current) abortControllerRef.current.abort();
-            if (loaderDelayRef.current) clearTimeout(loaderDelayRef.current);
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
     }, [endpoint, refreshInterval]);
@@ -257,18 +234,33 @@ export default function Widget({
             )}
             <div className="widget-content">
                 {error ? (
-                    <div className="widget-error-container text-[1rem] flex flex-col items-center justify-center">
-                        <MdError size={48} />
-                        <p className="font-[consolas] bg-black p-2 rounded-md m-2 text-center">{error}</p>
+                    <div
+                        className="widget-error-container flex flex-col items-center justify-center gap-3 p-4 animate-in fade-in duration-200"
+                        style={{ color: 'var(--ui-danger-text)' }}
+                    >
+                        <div className="p-3 rounded-full bg-ui-danger-bg/20">
+                            <MdError size={32} className="text-ui-danger-text" />
+                        </div>
+                        <p className="text-sm font-mono bg-ui-bg-tertiary px-3 py-2 rounded-md text-center max-w-xs break-words">
+                            {error}
+                        </p>
+                        <button
+                            onClick={handleRetry}
+                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md bg-ui-bg-secondary hover:bg-ui-bg-tertiary border border-ui-border-primary transition-colors"
+                            style={{ color: 'var(--ui-text-secondary)' }}
+                        >
+                            <MdRefresh size={14} />
+                            Retry
+                        </button>
                     </div>
                 ) : loading ? (
                     <div
-                        className="flex items-center justify-center h-full w-full"
+                        className="widget-loading-container"
                         style={{
-                            animation: isTransitioning ? 'fadeOut 0.3s ease-out forwards' : undefined,
+                            animation: isTransitioning ? 'fadeOut 0.25s ease-out forwards' : undefined,
                         }}
                     >
-                        {showLoader ? <Loader /> : null}
+                        <Loader />
                     </div>
                 ) : (
                     <div className="widget-data-container">
