@@ -486,6 +486,18 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                         </button>
                                                     )}
                                                     <button
+                                                        onClick={() => {
+                                                            preferencesService.set('onboarding.completed', false);
+                                                            preferencesService.delete('onboarding.skipped');
+                                                            preferencesService.delete('onboarding.completedAt');
+                                                            window.location.reload();
+                                                        }}
+                                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-ui-bg-tertiary hover:bg-ui-bg-quaternary border border-ui-border-primary text-ui-text-primary rounded-lg text-sm font-medium transition-all"
+                                                    >
+                                                        <MdRefresh className="w-4 h-4" />
+                                                        Re-run Setup Wizard
+                                                    </button>
+                                                    <button
                                                         onClick={onLogout}
                                                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-ui-danger-bg hover:opacity-90 border border-ui-danger-border text-ui-danger-text rounded-lg text-sm font-medium transition-all"
                                                     >

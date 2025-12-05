@@ -11,6 +11,7 @@ import WidgetPicker from "./WidgetPicker";
 import PresetDialog from "./PresetDialog";
 import PresetManagerMenu from "./PresetManagerMenu";
 import SettingsMenu from "./SettingsMenu";
+import OnboardingFlow from "./OnboardingFlow";
 import { Widget, DashboardPreset, PresetType } from "@/types";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import {
@@ -200,6 +201,9 @@ export default function Dashboard() {
     const [layout, setLayout] = useState<Widget[]>([]);
     const [tempLayout, setTempLayout] = useState<Widget[]>([]);
 
+    // Onboarding state
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
     // ✅ FIX: Get widget permissions
     const { hasAccess, widgetAccess, loading: permissionsLoading, refresh: refreshWidgetPermissions } = useWidgetPermissions();
 
@@ -320,6 +324,13 @@ export default function Dashboard() {
 
             // Sync preferences from server
             await preferencesService.syncOnLogin();
+
+            // Check if user has completed onboarding
+            const onboardingCompleted = preferencesService.get<boolean>('onboarding.completed', false);
+            if (!onboardingCompleted && !authService.isImpersonating()) {
+                console.log('📋 New user detected - showing onboarding flow');
+                setShowOnboarding(true);
+            }
 
             console.log('📊 Loading dashboard state from preferences...');
 
@@ -847,6 +858,16 @@ export default function Dashboard() {
     if (isMobile) {
         return (
             <>
+                {/* Onboarding Flow for new users */}
+                <AnimatePresence>
+                    {showOnboarding && (
+                        <OnboardingFlow
+                            user={user}
+                            onComplete={() => setShowOnboarding(false)}
+                        />
+                    )}
+                </AnimatePresence>
+
                 {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
                 <div className="dashboard-container mobile" style={isImpersonating ? { paddingTop: '60px' } : {}}>
                     {/* Mobile Dashboard with Swipeable Widgets */}
@@ -898,6 +919,16 @@ export default function Dashboard() {
     // Desktop Experience - Original Grid Layout
     return (
         <>
+            {/* Onboarding Flow for new users */}
+            <AnimatePresence>
+                {showOnboarding && (
+                    <OnboardingFlow
+                        user={user}
+                        onComplete={() => setShowOnboarding(false)}
+                    />
+                )}
+            </AnimatePresence>
+
             {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
             <div className="dashboard-container" style={isImpersonating ? { paddingTop: '60px' } : {}}>                {/* Dock - Auto-hides at bottom */}
                 <DashboardDock
