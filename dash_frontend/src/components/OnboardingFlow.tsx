@@ -57,8 +57,8 @@ const StepIndicator = ({ steps, currentStep }: { steps: OnboardingStep[]; curren
                     <div
                         key={step}
                         className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${isCompleted || isCurrent
-                                ? 'bg-ui-accent-primary'
-                                : 'bg-ui-border-primary'
+                            ? 'bg-ui-accent-primary'
+                            : 'bg-ui-border-primary'
                             } ${isCurrent ? 'w-4' : ''}`}
                     />
                 );
@@ -146,8 +146,8 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                         <button
                             onClick={() => setThemeCategory('dark')}
                             className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${themeCategory === 'dark'
-                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                : 'text-ui-text-secondary hover:text-ui-text-primary'
                                 }`}
                         >
                             Dark
@@ -155,8 +155,8 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                         <button
                             onClick={() => setThemeCategory('light')}
                             className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${themeCategory === 'light'
-                                    ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
-                                    : 'text-ui-text-secondary hover:text-ui-text-primary'
+                                ? 'bg-ui-bg-primary text-ui-text-primary shadow-sm'
+                                : 'text-ui-text-secondary hover:text-ui-text-primary'
                                 }`}
                         >
                             Light
@@ -170,8 +170,8 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                                 key={t.id}
                                 onClick={() => setTheme(t.id)}
                                 className={`relative rounded-lg border transition-colors overflow-hidden ${theme === t.id
-                                        ? 'border-ui-accent-primary ring-1 ring-ui-accent-primary'
-                                        : 'border-ui-border-primary hover:border-ui-border-secondary'
+                                    ? 'border-ui-accent-primary ring-1 ring-ui-accent-primary'
+                                    : 'border-ui-border-primary hover:border-ui-border-secondary'
                                     }`}
                             >
                                 {/* Theme Preview */}
@@ -280,8 +280,8 @@ const AppearanceStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => 
                                     key={size}
                                     onClick={() => handleFontSizeChange(size)}
                                     className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors capitalize ${fontSize === size
-                                            ? 'bg-ui-accent-primary text-white'
-                                            : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                        ? 'bg-ui-accent-primary text-white'
+                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
                                         }`}
                                 >
                                     {size}
@@ -422,8 +422,8 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                             <button
                                 onClick={() => handleClockFormatChange('12h')}
                                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${clockFormat === '12h'
-                                        ? 'bg-ui-accent-primary text-white'
-                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                    ? 'bg-ui-accent-primary text-white'
+                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
                                     }`}
                             >
                                 12-Hour
@@ -431,8 +431,8 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                             <button
                                 onClick={() => handleClockFormatChange('24h')}
                                 className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${clockFormat === '24h'
-                                        ? 'bg-ui-accent-primary text-white'
-                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                    ? 'bg-ui-accent-primary text-white'
+                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
                                     }`}
                             >
                                 24-Hour
@@ -469,8 +469,8 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                                     key={df.value}
                                     onClick={() => handleDateFormatChange(df.value)}
                                     className={`py-2.5 px-3 rounded-lg text-xs font-medium transition-colors ${dateFormat === df.value
-                                            ? 'bg-ui-accent-primary text-white'
-                                            : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                        ? 'bg-ui-accent-primary text-white'
+                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
                                         }`}
                                 >
                                     {df.example}
@@ -504,10 +504,23 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
 
 // Complete Step
 const CompleteStep = ({ onComplete }: { onComplete: () => void }) => {
-    const handleComplete = () => {
+    const handleComplete = async () => {
+        console.log('[Onboarding] Starting completion save...');
+        console.log('[Onboarding] Current preferences before set:', preferencesService.getAll());
+
         // Mark onboarding as complete
-        preferencesService.set('onboarding.completed', true);
-        preferencesService.set('onboarding.completedAt', new Date().toISOString());
+        // Use sync: false to skip auto-sync, then force a single sync at the end
+        preferencesService.set('onboarding.completed', true, { sync: false });
+        preferencesService.set('onboarding.completedAt', new Date().toISOString(), { sync: false });
+
+        console.log('[Onboarding] Preferences after set:', preferencesService.getAll());
+        console.log('[Onboarding] Calling forceSync...');
+
+        // Force sync to server to ensure onboarding status is persisted before closing
+        const saved = await preferencesService.forceSync();
+        console.log('[Onboarding] forceSync result:', saved);
+        console.log('[Onboarding] Final preferences:', preferencesService.getAll());
+
         onComplete();
     };
 
@@ -576,10 +589,16 @@ export default function OnboardingFlow({ user, onComplete }: OnboardingFlowProps
     }, [currentStep]);
 
     // Handle skip
-    const handleSkip = useCallback(() => {
-        preferencesService.set('onboarding.completed', true);
-        preferencesService.set('onboarding.skipped', true);
-        preferencesService.set('onboarding.completedAt', new Date().toISOString());
+    const handleSkip = useCallback(async () => {
+        // Use sync: false to skip auto-sync, then force a single sync at the end
+        preferencesService.set('onboarding.completed', true, { sync: false });
+        preferencesService.set('onboarding.skipped', true, { sync: false });
+        preferencesService.set('onboarding.completedAt', new Date().toISOString(), { sync: false });
+
+        // Force sync to server to ensure onboarding status is persisted before closing
+        const saved = await preferencesService.forceSync();
+        console.log('[Onboarding] Skip saved to server:', saved);
+
         onComplete();
     }, [onComplete]);
 

@@ -327,6 +327,12 @@ export default function Dashboard() {
 
             // Check if user has completed onboarding
             const onboardingCompleted = preferencesService.get<boolean>('onboarding.completed', false);
+            console.log(`📋 Onboarding check: completed=${onboardingCompleted}, isImpersonating=${authService.isImpersonating()}`);
+            console.log(`   All onboarding prefs:`, {
+                completed: preferencesService.get('onboarding.completed'),
+                skipped: preferencesService.get('onboarding.skipped'),
+                completedAt: preferencesService.get('onboarding.completedAt'),
+            });
             if (!onboardingCompleted && !authService.isImpersonating()) {
                 console.log('📋 New user detected - showing onboarding flow');
                 setShowOnboarding(true);

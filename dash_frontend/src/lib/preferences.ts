@@ -183,10 +183,20 @@ class PreferencesService {
         this.syncInProgress = true;
 
         try {
+            // Update current user ID before syncing
+            const user = this.getCurrentUserFromAuth();
+            if (user && user.id !== this.currentUserId) {
+                console.log(`[Prefs] Updating user context: ${this.currentUserId} → ${user.id}`);
+                this.currentUserId = user.id;
+                this.loadFromCache(); // Load any cached preferences for this user
+            }
+
             console.log(`[Prefs] Syncing for user ${this.currentUserId}...`);
+            console.log(`[Prefs] Before fetch - local onboarding:`, this.preferences?.onboarding);
             const success = await this.fetchFromServer();
             if (success) {
                 console.log(`[Prefs] Fetched preferences (v${this.version})`);
+                console.log(`[Prefs] After fetch - server onboarding:`, this.preferences?.onboarding);
             }
             this.connectWebSocket();
         } finally {
