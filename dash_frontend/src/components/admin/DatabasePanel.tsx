@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { authService } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { MdStorage, MdTableChart, MdRefresh, MdChevronLeft, MdChevronRight, MdKeyboardArrowUp, MdKeyboardArrowDown, MdArrowBack } from 'react-icons/md';
@@ -136,8 +137,8 @@ export function DatabasePanel() {
     if (loading) {
         return (
             <Card className="bg-ui-bg-secondary border-ui-border-primary">
-                <CardContent className="p-8 text-center">
-                    <div className="animate-spin w-8 h-8 border-2 border-ui-accent-primary border-t-transparent rounded-full mx-auto" />
+                <CardContent className="p-8 flex flex-col items-center justify-center">
+                    <Loader />
                     <p className="mt-4 text-ui-text-secondary">Loading database...</p>
                 </CardContent>
             </Card>
@@ -182,8 +183,8 @@ export function DatabasePanel() {
                                         key={table.name}
                                         onClick={() => setSelectedTable(table.name)}
                                         className={`w-full px-4 py-3 text-left transition-colors ${selectedTable === table.name
-                                                ? 'bg-ui-accent-primary text-white'
-                                                : 'hover:bg-ui-bg-tertiary text-ui-text-primary'
+                                            ? 'bg-ui-accent-primary text-white'
+                                            : 'hover:bg-ui-bg-tertiary text-ui-text-primary'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between">
@@ -193,8 +194,8 @@ export function DatabasePanel() {
                                                 <span className="font-medium text-sm">{table.name}</span>
                                             </div>
                                             <span className={`text-xs px-2 py-0.5 rounded ${selectedTable === table.name
-                                                    ? 'bg-white/20 text-white'
-                                                    : 'bg-ui-bg-tertiary text-ui-text-muted'
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-ui-bg-tertiary text-ui-text-muted'
                                                 }`}>
                                                 {table.row_count.toLocaleString()}
                                             </span>
@@ -260,7 +261,7 @@ export function DatabasePanel() {
                             <CardContent className="p-0 flex-1 overflow-auto">
                                 {loadingData ? (
                                     <div className="flex items-center justify-center h-full">
-                                        <div className="animate-spin w-8 h-8 border-2 border-ui-accent-primary border-t-transparent rounded-full" />
+                                        <Loader />
                                     </div>
                                 ) : tableData ? (
                                     <table className="w-full text-sm">

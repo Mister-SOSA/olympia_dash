@@ -360,8 +360,8 @@ function LoginContent() {
                             {/* Error message with animation */}
                             <div
                                 className={`overflow-hidden transition-all duration-200 ease-out ${errorVisible && error && !deviceCode
-                                        ? 'max-h-20 opacity-100 mt-3 sm:mt-4'
-                                        : 'max-h-0 opacity-0 mt-0'
+                                    ? 'max-h-20 opacity-100 mt-3 sm:mt-4'
+                                    : 'max-h-0 opacity-0 mt-0'
                                     }`}
                             >
                                 <p className="text-xs sm:text-sm text-ui-danger-text break-words bg-ui-danger-bg/10 px-3 py-2 rounded-md border border-ui-danger-border/20">
@@ -391,10 +391,7 @@ function LoginContent() {
                         <CardContent>
                             {deviceLoading ? (
                                 <div className="flex flex-col items-center justify-center py-6 sm:py-8 animate-in fade-in duration-200">
-                                    <div className="relative w-10 h-10">
-                                        <div className="absolute inset-0 rounded-full border-2 border-ui-accent-secondary/20 animate-ping" />
-                                        <div className="relative w-full h-full rounded-full border-2 border-ui-accent-secondary border-t-transparent animate-spin" />
-                                    </div>
+                                    <Loader />
                                     <p className="text-ui-text-secondary mt-4 text-xs sm:text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
                                         Generating pairing code...
                                     </p>
@@ -469,8 +466,8 @@ function LoginContent() {
                                     {/* Error state with animation */}
                                     <div
                                         className={`transition-all duration-200 ease-out ${errorVisible && error
-                                                ? 'opacity-100 transform translate-y-0'
-                                                : 'opacity-0 transform -translate-y-2'
+                                            ? 'opacity-100 transform translate-y-0'
+                                            : 'opacity-0 transform -translate-y-2'
                                             }`}
                                     >
                                         <p className="text-ui-danger-text mb-3 sm:mb-4 text-xs sm:text-sm break-words px-2 bg-ui-danger-bg/10 py-2 rounded-md mx-2">

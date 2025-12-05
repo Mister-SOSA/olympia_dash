@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import Widget from "./Widget";
+import { Loader } from "@/components/ui/loader";
 import { nFormatter } from "@/utils/helpers";
 import appConfig from "@/config";
 import { authService } from "@/lib/auth";
@@ -911,12 +912,15 @@ export default function BeefPricesChart() {
                     <div
                         style={{
                             display: "flex",
+                            flexDirection: "column",
                             alignItems: "center",
                             justifyContent: "center",
                             height: "100%",
-                            flex: 1
+                            flex: 1,
+                            gap: "12px"
                         }}
                     >
+                        <Loader />
                         <div style={{ fontSize: "14px", color: "var(--text-muted)" }}>
                             Loading price data...
                         </div>

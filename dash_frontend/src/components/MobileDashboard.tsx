@@ -7,6 +7,7 @@ import { getWidgetById } from "@/constants/widgets";
 import { ChevronLeft, ChevronRight, Grid3x3, Settings, Menu } from "lucide-react";
 import { Suspense } from "react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { Loader } from "@/components/ui/loader";
 
 export interface MobileDashboardProps {
     layout: Widget[];
@@ -221,7 +222,7 @@ export default function MobileDashboard({
                                 <Suspense
                                     fallback={
                                         <div className="mobile-widget-loader">
-                                            <div className="loader-spinner" />
+                                            <Loader />
                                         </div>
                                     }
                                 >

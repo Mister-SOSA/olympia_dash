@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { authService } from '@/lib/auth';
 import { API_BASE_URL } from '@/config';
+import { Loader } from '@/components/ui/loader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -383,7 +384,7 @@ export function ActivityPanel() {
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="loader-spinner" />
+                            <Loader />
                         </div>
                     ) : filteredLogs.length === 0 ? (
                         <div className="text-center py-12 text-ui-text-muted">

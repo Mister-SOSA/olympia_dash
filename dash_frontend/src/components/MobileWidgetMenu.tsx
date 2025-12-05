@@ -12,6 +12,7 @@ import {
 } from "@/components/widgets/registry";
 import { X, Search, Grid3x3, Check, Package, DollarSign, ShoppingCart, Wrench, Receipt, BarChart3, FileText, Settings2 } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { Loader } from "@/components/ui/loader";
 
 // Category icons mapping
 const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: string }>> = {
@@ -183,8 +184,8 @@ export default function MobileWidgetMenu({
             <div className="mobile-widget-menu-content">
                 {permissionsLoading ? (
                     <div className="mobile-widget-menu-empty">
-                        <div className="loader-spinner mb-3" />
-                        <p className="text-ui-text-secondary">Loading permissions...</p>
+                        <Loader />
+                        <p className="text-ui-text-secondary mt-3">Loading permissions...</p>
                     </div>
                 ) : filteredWidgets.length === 0 ? (
                     <div className="mobile-widget-menu-empty">

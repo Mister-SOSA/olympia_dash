@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { authService } from '@/lib/auth';
 import { API_BASE_URL } from '@/config';
+import { Loader } from '@/components/ui/loader';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/utils/dateUtils';
 import {
@@ -932,7 +933,7 @@ export function AnalyticsPanel() {
     if (loading && !analytics) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px' }}>
-                <div className="loader-spinner" />
+                <Loader />
             </div>
         );
     }

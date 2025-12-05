@@ -13,6 +13,7 @@ import {
     groupWidgetsByCategory,
     getAvailableCategories,
 } from "@/components/widgets/registry";
+import { Loader } from "@/components/ui/loader";
 import {
     X,
     Search,
@@ -29,6 +30,7 @@ import {
     LayoutGrid,
     Minus,
     Plus,
+    Loader2,
     RotateCcw,
     CheckCheck,
     XCircle,
@@ -1083,10 +1085,8 @@ export default function WidgetPicker({
                     <div ref={listRef} className="flex-1 overflow-y-auto">
                         {permissionsLoading ? (
                             <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--ui-text-muted)' }}>
-                                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mb-3" style={{
-                                    borderColor: 'var(--ui-accent-primary)'
-                                }} />
-                                <p className="text-sm">Loading widgets...</p>
+                                <Loader />
+                                <p className="text-sm mt-3">Loading widgets...</p>
                             </div>
                         ) : filteredWidgets.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full px-8" style={{ color: 'var(--ui-text-muted)' }}>

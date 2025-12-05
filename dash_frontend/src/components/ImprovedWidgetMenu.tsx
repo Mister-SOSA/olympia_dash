@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Widget } from "@/types";
+import { Loader } from "@/components/ui/loader";
 import { WIDGETS, getWidgetsByCategory, CATEGORY_ICONS } from "@/constants/widgets";
 import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
@@ -290,8 +291,9 @@ function ImprovedWidgetMenu({
                 {/* Widget List */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {permissionsLoading ? (
-                        <div className="text-center py-12 text-ui-text-muted">
-                            <p>Loading permissions...</p>
+                        <div className="flex flex-col items-center justify-center py-12">
+                            <Loader />
+                            <p className="text-ui-text-muted mt-3">Loading permissions...</p>
                         </div>
                     ) : filteredWidgets.length === 0 ? (
                         <div className="text-center py-12 text-ui-text-muted">

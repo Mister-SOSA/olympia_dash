@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useMemo } from "react";
 import Widget from "./Widget";
+import { Loader } from "@/components/ui/loader";
 import { InventoryMove, InventoryMoveRaw } from "@/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -576,10 +577,7 @@ export default function InventoryMovesLog() {
                     return (
                         <div className="flex items-center justify-center h-full animate-in fade-in duration-200">
                             <div className="text-center space-y-3">
-                                <div className="relative w-10 h-10 mx-auto">
-                                    <div className="absolute inset-0 rounded-full border-2 border-ui-accent-primary/20 animate-ping" style={{ animationDuration: '1.5s' }} />
-                                    <div className="relative w-full h-full rounded-full border-2 border-ui-accent-primary border-t-transparent animate-spin" />
-                                </div>
+                                <Loader />
                                 <p className="text-sm text-ui-text-secondary animate-in fade-in slide-in-from-bottom-1 duration-300 delay-100">
                                     Loading inventory moves...
                                 </p>

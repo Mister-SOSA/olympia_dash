@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { Loader } from "@/components/ui/loader";
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: "default" | "circular" | "text" | "card";
@@ -180,13 +181,7 @@ export function LoadingOverlay({
                 className
             )}
         >
-            <div className="relative">
-                {/* Animated rings */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full border-2 border-ui-accent-primary/20 animate-ping" />
-                </div>
-                <div className="relative w-12 h-12 rounded-full border-2 border-ui-accent-primary border-t-transparent animate-spin" />
-            </div>
+            <Loader />
             {message && (
                 <p className="mt-4 text-sm text-ui-text-secondary animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
                     {message}
