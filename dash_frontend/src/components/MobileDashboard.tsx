@@ -36,6 +36,7 @@ import {
     MdSearch,
     MdCheck,
     MdAdd,
+    MdDelete,
 } from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { Loader } from "@/components/ui/loader";
@@ -55,12 +56,17 @@ import WidgetSettingsDialog from "@/components/WidgetSettingsDialog";
 import {
     DndContext,
     closestCenter,
+    pointerWithin,
     TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent,
     DragStartEvent,
+    DragOverEvent,
     DragOverlay,
+    useDroppable,
+    CollisionDetection,
+    rectIntersection,
 } from "@dnd-kit/core";
 import {
     arrayMove,
@@ -253,11 +259,67 @@ interface DraggableGridProps {
     widgetIds: string[];
     onReorder: (newOrder: string[]) => void;
     onWidgetClick: (widgetId: string) => void;
+    onRemoveWidget: (widgetId: string) => void;
 }
 
-const DraggableWidgetGrid = ({ widgetIds, onReorder, onWidgetClick }: DraggableGridProps) => {
+// Trash Drop Zone Component - always rendered for stable collision detection
+interface TrashDropZoneProps {
+    isOver: boolean;
+    isVisible: boolean;
+}
+
+const TrashDropZone = ({ isOver, isVisible }: TrashDropZoneProps) => {
+    const { setNodeRef, isOver: dndIsOver } = useDroppable({
+        id: 'trash-zone',
+    });
+
+    const showActive = isOver || dndIsOver;
+
+    return (
+        <div
+            ref={setNodeRef}
+            className="fixed top-0 inset-x-0 z-[200] flex justify-center transition-all duration-200"
+            style={{
+                paddingTop: 'calc(env(safe-area-inset-top) + 10px)',
+                paddingBottom: '10px',
+                opacity: isVisible ? 1 : 0,
+                transform: isVisible ? 'translateY(0)' : 'translateY(-60px)',
+                pointerEvents: isVisible ? 'auto' : 'none',
+            }}
+        >
+            <div
+                className={`flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium shadow-lg transition-all duration-200 ${showActive ? 'scale-110' : 'scale-100'
+                    }`}
+                style={{
+                    backgroundColor: showActive ? '#ef4444' : 'var(--ui-bg-tertiary)',
+                    color: showActive ? '#ffffff' : 'var(--ui-text-secondary)',
+                    border: showActive ? '2px solid #dc2626' : '2px dashed var(--ui-border-secondary)',
+                }}
+            >
+                <MdDelete className={`w-5 h-5 ${showActive ? 'animate-pulse' : ''}`} />
+                <span>{showActive ? 'Release to remove' : 'Drag here to remove'}</span>
+            </div>
+        </div>
+    );
+};
+
+// Custom collision detection that prioritizes the trash zone
+const customCollisionDetection: CollisionDetection = (args) => {
+    // First check if we're over the trash zone using pointer position
+    const pointerCollisions = pointerWithin(args);
+    const trashCollision = pointerCollisions.find(c => c.id === 'trash-zone');
+    if (trashCollision) {
+        return [trashCollision];
+    }
+
+    // Otherwise use standard closest center for sortable items
+    return closestCenter(args);
+};
+
+const DraggableWidgetGrid = ({ widgetIds, onReorder, onWidgetClick, onRemoveWidget }: DraggableGridProps) => {
     const [items, setItems] = useState(widgetIds);
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [isOverTrash, setIsOverTrash] = useState(false);
 
     // Configure touch sensor with delay for long press
     const sensors = useSensors(
@@ -282,9 +344,21 @@ const DraggableWidgetGrid = ({ widgetIds, onReorder, onWidgetClick }: DraggableG
         } catch { }
     };
 
+    const handleDragOver = (event: DragOverEvent) => {
+        const { over } = event;
+        setIsOverTrash(over?.id === 'trash-zone');
+    };
+
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveId(null);
+        setIsOverTrash(false);
+
+        // Check if dropped on trash zone
+        if (over?.id === 'trash-zone') {
+            onRemoveWidget(active.id as string);
+            return;
+        }
 
         if (over && active.id !== over.id) {
             setItems((currentItems) => {
@@ -300,16 +374,21 @@ const DraggableWidgetGrid = ({ widgetIds, onReorder, onWidgetClick }: DraggableG
 
     const handleDragCancel = () => {
         setActiveId(null);
+        setIsOverTrash(false);
     };
 
     return (
         <DndContext
             sensors={sensors}
-            collisionDetection={closestCenter}
+            collisionDetection={customCollisionDetection}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
         >
+            {/* Trash drop zone - always rendered inside DndContext for stable collision detection */}
+            <TrashDropZone isOver={isOverTrash} isVisible={!!activeId} />
+
             <SortableContext items={items} strategy={rectSortingStrategy}>
                 <div className="mobile-widget-grid">
                     {items.map((widgetId) => (
@@ -326,24 +405,6 @@ const DraggableWidgetGrid = ({ widgetIds, onReorder, onWidgetClick }: DraggableG
             <DragOverlay>
                 {activeId ? <DragOverlayCard widgetId={activeId} /> : null}
             </DragOverlay>
-
-            {/* Drag mode indicator */}
-            <AnimatePresence>
-                {activeId && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-[calc(env(safe-area-inset-top)+60px)] left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-full text-sm font-medium shadow-lg"
-                        style={{
-                            backgroundColor: 'var(--ui-accent-primary)',
-                            color: '#ffffff',
-                        }}
-                    >
-                        Drop to reorder
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </DndContext>
     );
 };
@@ -485,18 +546,24 @@ const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
 
                     {/* Swipe hint */}
                     <motion.div
-                        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full pointer-events-none"
+                        className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-none"
                         style={{
-                            backgroundColor: 'var(--ui-bg-tertiary)',
-                            color: 'var(--ui-text-muted)',
                             marginBottom: 'env(safe-area-inset-bottom)'
                         }}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 0.8, y: 0 }}
                         transition={{ delay: 1 }}
                     >
-                        <MdExpandMore className="w-4 h-4" />
-                        <span className="text-xs font-medium">Swipe down to close</span>
+                        <div
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                            style={{
+                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                color: 'var(--ui-text-muted)',
+                            }}
+                        >
+                            <MdExpandMore className="w-4 h-4" />
+                            <span className="text-xs font-medium">Swipe down to close</span>
+                        </div>
                     </motion.div>
                 </motion.div>
             </motion.div>
@@ -782,6 +849,19 @@ export default function MobileDashboard({
         });
     }, []);
 
+    const handleRemoveWidget = useCallback((widgetId: string) => {
+        const widgetDef = getWidgetById(widgetId);
+        const config = getWidgetConfig(widgetId);
+        const widgetName = widgetDef?.title || config?.title || widgetId;
+
+        setMobileLayout(prev => {
+            const newLayout = toggleWidgetInLayout(prev, widgetId);
+            saveMobileLayout(newLayout);
+            return newLayout;
+        });
+        toast.success(`Removed "${widgetName}"`);
+    }, []);
+
     const handleAddStarterWidgets = useCallback(() => {
         const starter = getStarterMobileLayout();
         setMobileLayout(starter);
@@ -902,6 +982,7 @@ export default function MobileDashboard({
                     widgetIds={enabledWidgetIds}
                     onReorder={handleReorder}
                     onWidgetClick={handleWidgetClick}
+                    onRemoveWidget={handleRemoveWidget}
                 />
             </div>
 
