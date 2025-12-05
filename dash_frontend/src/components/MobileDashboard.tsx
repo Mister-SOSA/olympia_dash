@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense, useMemo } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from "react";
+import { motion, AnimatePresence, PanInfo, Reorder, useDragControls } from "framer-motion";
 import { getWidgetById } from "@/constants/widgets";
 import {
     WIDGET_CONFIGS,
@@ -11,32 +11,33 @@ import {
     searchWidgets,
     WidgetConfig,
 } from "@/components/widgets/registry";
+// Use Material Design icons for consistency with desktop
 import {
-    Grid3x3,
-    Settings,
-    Menu,
-    X,
-    ChevronDown,
-    BarChart3,
-    DollarSign,
-    ShoppingCart,
-    Package,
-    Receipt,
-    FileText,
-    Settings2,
-    Wrench,
-    Clock,
-    TrendingUp,
-    Users,
-    Truck,
-    Table,
-    PieChart,
-    LineChart,
-    Activity,
-    Search,
-    Check,
-    Plus,
-} from "lucide-react";
+    MdWidgets,
+    MdSettings,
+    MdClose,
+    MdExpandMore,
+    MdBarChart,
+    MdAttachMoney,
+    MdShoppingCart,
+    MdInventory,
+    MdReceipt,
+    MdDescription,
+    MdTune,
+    MdBuild,
+    MdAccessTime,
+    MdTrendingUp,
+    MdPeople,
+    MdLocalShipping,
+    MdTableChart,
+    MdPieChart,
+    MdShowChart,
+    MdTimeline,
+    MdSearch,
+    MdCheck,
+    MdAdd,
+    MdDragIndicator,
+} from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { Loader } from "@/components/ui/loader";
 import { toast } from "sonner";
@@ -47,36 +48,39 @@ import {
     subscribeMobileLayout,
     toggleWidget as toggleWidgetInLayout,
     getStarterMobileLayout,
+    reorderWidgets,
 } from "@/utils/mobileLayoutUtils";
+import { getWidgetSettingsSchema } from "@/constants/widgetSettings";
+import WidgetSettingsDialog from "@/components/WidgetSettingsDialog";
 
 // ============================================
-// Category Icons
+// Category Icons (Material Design)
 // ============================================
 
 const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: string }>> = {
-    Sales: DollarSign,
-    Purchasing: ShoppingCart,
-    Inventory: Package,
-    AP: Receipt,
-    Analytics: BarChart3,
-    Reports: FileText,
-    Operations: Settings2,
-    Utilities: Wrench,
+    Sales: MdAttachMoney,
+    Purchasing: MdShoppingCart,
+    Inventory: MdInventory,
+    AP: MdReceipt,
+    Analytics: MdBarChart,
+    Reports: MdDescription,
+    Operations: MdTune,
+    Utilities: MdBuild,
 };
 
 // Widget type icons based on common patterns
 const getWidgetTypeIcon = (widgetId: string): React.ComponentType<{ className?: string }> => {
     const id = widgetId.toLowerCase();
-    if (id.includes('clock') || id.includes('date')) return Clock;
-    if (id.includes('pie')) return PieChart;
-    if (id.includes('line') || id.includes('cumulative')) return LineChart;
-    if (id.includes('bar') || id.includes('chart')) return BarChart3;
-    if (id.includes('table') || id.includes('log') || id.includes('orders')) return Table;
-    if (id.includes('customer') || id.includes('user')) return Users;
-    if (id.includes('due') || id.includes('delivery')) return Truck;
-    if (id.includes('overview') || id.includes('summary')) return TrendingUp;
-    if (id.includes('status') || id.includes('tracker')) return Activity;
-    return BarChart3; // Default
+    if (id.includes('clock') || id.includes('date')) return MdAccessTime;
+    if (id.includes('pie')) return MdPieChart;
+    if (id.includes('line') || id.includes('cumulative')) return MdShowChart;
+    if (id.includes('bar') || id.includes('chart')) return MdBarChart;
+    if (id.includes('table') || id.includes('log') || id.includes('orders')) return MdTableChart;
+    if (id.includes('customer') || id.includes('user')) return MdPeople;
+    if (id.includes('due') || id.includes('delivery')) return MdLocalShipping;
+    if (id.includes('overview') || id.includes('summary')) return MdTrendingUp;
+    if (id.includes('status') || id.includes('tracker')) return MdTimeline;
+    return MdBarChart; // Default
 };
 
 // ============================================
