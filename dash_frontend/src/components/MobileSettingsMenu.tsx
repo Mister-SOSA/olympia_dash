@@ -448,8 +448,8 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                         <button
                                             onClick={() => updateSetting('clockFormat', '12h')}
                                             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${settings.clockFormat === '12h'
-                                                    ? 'bg-ui-accent-primary text-white'
-                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                ? 'bg-ui-accent-primary text-white'
+                                                : 'bg-ui-bg-tertiary text-ui-text-secondary'
                                                 }`}
                                         >
                                             12h
@@ -457,8 +457,8 @@ export default function MobileSettingsMenu({ user, onLogout, onClose, onAdminCli
                                         <button
                                             onClick={() => updateSetting('clockFormat', '24h')}
                                             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${settings.clockFormat === '24h'
-                                                    ? 'bg-ui-accent-primary text-white'
-                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                                                ? 'bg-ui-accent-primary text-white'
+                                                : 'bg-ui-bg-tertiary text-ui-text-secondary'
                                                 }`}
                                         >
                                             24h

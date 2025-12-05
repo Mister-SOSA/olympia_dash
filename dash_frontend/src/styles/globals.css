@@ -2689,3 +2689,15 @@ body.privacy-mode-active .sensitive-data {
 .drag-handle-style-minimal .drag-handle-icon {
   display: none;
 }
+
+/* ============================================
+   MOBILE SAFE AREA UTILITIES
+   ============================================ */
+
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
