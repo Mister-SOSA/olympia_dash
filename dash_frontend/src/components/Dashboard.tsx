@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import MobileDashboard from "./MobileDashboard";
-import MobileWidgetMenu from "./MobileWidgetMenu";
 import DashboardDock from "./DashboardDock";
 import WidgetPicker from "./WidgetPicker";
 import PresetDialog from "./PresetDialog";
@@ -901,10 +900,10 @@ export default function Dashboard() {
                         }}
                     />
 
-                    {/* Widget Menu Modal - Mobile Version */}
+                    {/* Widget Menu Modal - Unified responsive component */}
                     <AnimatePresence>
                         {menuOpen && (
-                            <MobileWidgetMenu
+                            <WidgetPicker
                                 tempLayout={tempLayout}
                                 setTempLayout={setTempLayout}
                                 handleSave={handleSave}
