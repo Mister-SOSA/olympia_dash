@@ -372,8 +372,9 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                transition={{ type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
                 className="fixed inset-0 z-50 bg-ui-bg-primary flex flex-col"
+                style={{ willChange: 'transform' }}
             >
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-ui-border-primary bg-ui-bg-secondary/50 safe-top">
@@ -402,56 +403,47 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
 
                 {/* Mobile Content */}
                 <div ref={contentRef} className="flex-1 overflow-y-auto">
-                    <AnimatePresence mode="wait">
-                        {activeView === 'account' ? (
-                            <MobileMainMenu
-                                key="main"
+                    {activeView === 'account' ? (
+                        <MobileMainMenu
+                            key="main"
+                            user={user}
+                            onNavigate={setActiveView}
+                            onLogout={onLogout}
+                            onAdminClick={onAdminClick}
+                            privacyEnabled={privacySettings.enabled}
+                        />
+                    ) : (
+                        <div className="p-4 pb-8">
+                            <SettingsContent
+                                activeView={activeView}
                                 user={user}
-                                onNavigate={setActiveView}
                                 onLogout={onLogout}
                                 onAdminClick={onAdminClick}
-                                privacyEnabled={privacySettings.enabled}
+                                theme={theme}
+                                setTheme={setTheme}
+                                themeCategory={themeCategory}
+                                setThemeCategory={setThemeCategory}
+                                settings={settings}
+                                updateSetting={updateSetting}
+                                privacySettings={privacySettings}
+                                updatePrivacySetting={updatePrivacySetting}
+                                togglePrivacy={togglePrivacy}
+                                localGridColumns={localGridColumns}
+                                setLocalGridColumns={setLocalGridColumns}
+                                localGridCellHeight={localGridCellHeight}
+                                setLocalGridCellHeight={setLocalGridCellHeight}
+                                availablePresets={availablePresets}
+                                presets={presets}
+                                confirmModal={confirmModal}
+                                setConfirmModal={setConfirmModal}
+                                nuclearInput={nuclearInput}
+                                setNuclearInput={setNuclearInput}
+                                showNuclearModal={showNuclearModal}
+                                setShowNuclearModal={setShowNuclearModal}
+                                isMobile={true}
                             />
-                        ) : (
-                            <motion.div
-                                key={activeView}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.15 }}
-                                className="p-4 pb-8"
-                            >
-                                <SettingsContent
-                                    activeView={activeView}
-                                    user={user}
-                                    onLogout={onLogout}
-                                    onAdminClick={onAdminClick}
-                                    theme={theme}
-                                    setTheme={setTheme}
-                                    themeCategory={themeCategory}
-                                    setThemeCategory={setThemeCategory}
-                                    settings={settings}
-                                    updateSetting={updateSetting}
-                                    privacySettings={privacySettings}
-                                    updatePrivacySetting={updatePrivacySetting}
-                                    togglePrivacy={togglePrivacy}
-                                    localGridColumns={localGridColumns}
-                                    setLocalGridColumns={setLocalGridColumns}
-                                    localGridCellHeight={localGridCellHeight}
-                                    setLocalGridCellHeight={setLocalGridCellHeight}
-                                    availablePresets={availablePresets}
-                                    presets={presets}
-                                    confirmModal={confirmModal}
-                                    setConfirmModal={setConfirmModal}
-                                    nuclearInput={nuclearInput}
-                                    setNuclearInput={setNuclearInput}
-                                    showNuclearModal={showNuclearModal}
-                                    setShowNuclearModal={setShowNuclearModal}
-                                    isMobile={true}
-                                />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                        </div>
+                    )}
                 </div>
 
                 {/* Confirmation Modal */}

@@ -68,6 +68,7 @@ export default function WidgetSettingsDialog({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
                     className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     onClick={handleCancel}
                 >
@@ -75,9 +76,10 @@ export default function WidgetSettingsDialog({
                         initial={{ scale: 0.95, opacity: 0, y: 10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                        transition={{ type: 'tween', duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                         onClick={(e) => e.stopPropagation()}
                         className="w-full max-w-md bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden"
+                        style={{ willChange: 'transform, opacity' }}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-ui-border-primary bg-ui-bg-secondary/50">
@@ -223,7 +225,7 @@ function ToggleField({
                 <motion.div
                     className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm"
                     animate={{ x: isEnabled ? 20 : 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    transition={{ type: 'tween', duration: 0.15, ease: 'easeOut' }}
                 />
             </button>
         </div>
@@ -532,8 +534,8 @@ function ItemListField({
                     type="button"
                     onClick={() => setShowPasteMode(!showPasteMode)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${showPasteMode
-                            ? 'bg-ui-accent-primary text-white'
-                            : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                        ? 'bg-ui-accent-primary text-white'
+                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
                         }`}
                     title="Paste multiple items"
                 >

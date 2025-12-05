@@ -439,7 +439,7 @@ const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 className="fixed inset-0 z-50"
                 style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
                 onClick={onClose}
@@ -449,10 +449,9 @@ const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
                     transition={{
-                        type: "spring",
-                        damping: 30,
-                        stiffness: 300,
-                        mass: 0.8
+                        type: "tween",
+                        duration: 0.25,
+                        ease: [0.32, 0.72, 0, 1] // iOS-like easing
                     }}
                     drag="y"
                     dragConstraints={{ top: 0, bottom: 0 }}
@@ -463,6 +462,8 @@ const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
                         backgroundColor: 'var(--ui-bg-primary)',
                         borderTopLeftRadius: '1.5rem',
                         borderTopRightRadius: '1.5rem',
+                        willChange: 'transform',
+                        transform: 'translateZ(0)',
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -619,9 +620,13 @@ const MobileWidgetPicker = ({ layout, onToggleWidget, onClose }: MobileWidgetPic
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            transition={{ type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
             className="fixed inset-0 z-50 flex flex-col"
-            style={{ backgroundColor: 'var(--ui-bg-primary)' }}
+            style={{
+                backgroundColor: 'var(--ui-bg-primary)',
+                willChange: 'transform',
+                transform: 'translateZ(0)',
+            }}
         >
             {/* Header */}
             <div
