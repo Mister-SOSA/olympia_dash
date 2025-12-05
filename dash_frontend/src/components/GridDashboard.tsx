@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useCallback, useMemo } from "react";
 import { Responsive, WidthProvider, Layout } from "react-grid-layout";
+import { motion, AnimatePresence } from "framer-motion";
 import { Widget } from "@/types";
 
 // Type for resize handle axes
@@ -13,7 +14,7 @@ import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import DashboardContextMenu, { useDashboardContextMenu } from "./DashboardContextMenu";
 import WidgetSettingsDialog from "./WidgetSettingsDialog";
 import { ConfirmModal, InfoModal } from "./ui/modal";
-import { LayoutDashboard, ArrowDown } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { preferencesService } from "@/lib/preferences";
 import { DASHBOARD_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
@@ -72,6 +73,7 @@ export interface GridDashboardProps {
     onExternalLayoutChange?: (layout: Widget[], source?: LayoutUpdateSource) => void;
     onAddWidget?: () => void;
     onOpenSettings?: () => void;
+    isDockVisible?: boolean;
 }
 
 export interface GridDashboardHandle {
@@ -164,7 +166,7 @@ const compactLayout = (layout: Layout[], cols: number): Layout[] => {
 };
 
 const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
-    ({ layout, layoutKey, onExternalLayoutChange, onAddWidget, onOpenSettings }, ref) => {
+    ({ layout, layoutKey, onExternalLayoutChange, onAddWidget, onOpenSettings, isDockVisible }, ref) => {
         const { contextMenu, showContextMenu, hideContextMenu } = useWidgetContextMenu();
         const { contextMenu: dashboardContextMenu, showContextMenu: showDashboardContextMenu, hideContextMenu: hideDashboardContextMenu } = useDashboardContextMenu();
 
@@ -191,6 +193,7 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             dragHandleOpacity,
             dragHandleSize,
             dragHandleStyle,
+            dockShowEmptyDockHint,
         } = settings;
 
         // Grid settings - read directly from preferences for stability
@@ -525,32 +528,125 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
                 {/* Empty state overlay */}
                 {enabledWidgets.length === 0 && (
-                    <div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <div className="text-center space-y-6 p-8 max-w-md">
-                            <div className="flex justify-center">
-                                <div className="relative">
-                                    <LayoutDashboard
-                                        className="w-16 h-16 text-ui-text-tertiary opacity-40"
-                                        strokeWidth={1.5}
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-xl font-medium text-ui-text-secondary">
-                                    No widgets yet
-                                </h2>
-                                <p className="text-sm text-ui-text-tertiary">
-                                    Add widgets from the dock below to get started
-                                </p>
-                            </div>
-                            <div className="flex justify-center pt-4">
-                                <ArrowDown
-                                    className="w-6 h-6 text-ui-text-tertiary opacity-30 animate-bounce"
-                                    strokeWidth={1.5}
-                                />
-                            </div>
+                    <>
+                        {/* Centered empty state message */}
+                        <div className="fixed inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <LayoutDashboard
+                                className="w-12 h-12 mb-4"
+                                style={{ color: 'var(--ui-text-tertiary)', opacity: 0.5 }}
+                                strokeWidth={1.5}
+                            />
+                            <h2
+                                className="text-xl font-medium mb-1"
+                                style={{ color: 'var(--ui-text-secondary)' }}
+                            >
+                                No widgets yet
+                            </h2>
+                            <p
+                                className="text-sm"
+                                style={{ color: 'var(--ui-text-tertiary)' }}
+                            >
+                                Your dashboard is empty
+                            </p>
                         </div>
-                    </div>
+
+                        {/* Dock hint animation - hide when dock is visible or setting disabled */}
+                        <AnimatePresence>
+                            {dockShowEmptyDockHint && !isDockVisible && (
+                                <motion.div
+                                    className="fixed bottom-6 left-0 right-0 flex justify-center pointer-events-none"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    transition={{
+                                        duration: 0.3,
+                                        ease: [0.4, 0, 0.2, 1]
+                                    }}
+                                >
+                                    <div
+                                        className="w-44 h-28 rounded-xl relative overflow-hidden"
+                                        style={{
+                                            backgroundColor: 'var(--ui-bg-secondary)',
+                                            border: '1px solid var(--ui-border-primary)',
+                                            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                                        }}
+                                    >
+                                        {/* Mini dock that animates up */}
+                                        <div
+                                            className="absolute bottom-1.5 left-1/2 flex items-center gap-1 px-2 py-1.5 rounded-lg animate-[dockReveal_3s_ease-in-out_infinite]"
+                                            style={{
+                                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                                border: '1px solid var(--ui-border-primary)',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                            }}
+                                        >
+                                            <div
+                                                className="w-4 h-4 rounded-md flex items-center justify-center"
+                                                style={{ backgroundColor: 'var(--ui-accent-primary)' }}
+                                            >
+                                                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="white">
+                                                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                                                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                                                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                                                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                                                </svg>
+                                            </div>
+                                            <div
+                                                className="w-4 h-4 rounded-md"
+                                                style={{ backgroundColor: 'var(--ui-bg-secondary)', border: '1px solid var(--ui-border-primary)' }}
+                                            />
+                                            <div
+                                                className="w-4 h-4 rounded-md"
+                                                style={{ backgroundColor: 'var(--ui-bg-secondary)', border: '1px solid var(--ui-border-primary)' }}
+                                            />
+                                        </div>
+
+                                        {/* macOS-style cursor */}
+                                        <div
+                                            className="absolute animate-[cursorFloat_3s_ease-in-out_infinite]"
+                                            style={{ left: '50%', top: '20%' }}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                                <path
+                                                    d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87c.48 0 .72-.58.38-.92L6.35 2.85a.5.5 0 0 0-.85.36Z"
+                                                    fill="var(--ui-text-primary)"
+                                                    stroke="var(--ui-bg-primary)"
+                                                    strokeWidth="1.5"
+                                                />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <style jsx>{`
+                                        @keyframes dockReveal {
+                                            0%, 15% { 
+                                                transform: translateX(-50%) translateY(calc(100% + 12px));
+                                                opacity: 0;
+                                            }
+                                            30%, 85% { 
+                                                transform: translateX(-50%) translateY(0);
+                                                opacity: 1;
+                                            }
+                                            100% { 
+                                                transform: translateX(-50%) translateY(calc(100% + 12px));
+                                                opacity: 0;
+                                            }
+                                        }
+                                        @keyframes cursorFloat {
+                                            0%, 15% { 
+                                                transform: translate(-50%, 0);
+                                            }
+                                            30%, 85% { 
+                                                transform: translate(-50%, 50px);
+                                            }
+                                            100% { 
+                                                transform: translate(-50%, 0);
+                                            }
+                                        }
+                                    `}</style>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </>
                 )}
 
                 <WidgetContextMenu

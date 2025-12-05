@@ -869,6 +869,12 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             disabled={!settings.dockAutoHide}
                                                             unit="ms"
                                                         />
+                                                        <ToggleSetting
+                                                            label="Empty Dashboard Hint"
+                                                            description="Show dock tutorial when dashboard is empty"
+                                                            enabled={settings.dockShowEmptyDockHint}
+                                                            onChange={(val) => updateSetting('dockShowEmptyDockHint', val)}
+                                                        />
                                                     </div>
                                                 </Subsection>
 

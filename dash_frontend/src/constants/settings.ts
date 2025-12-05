@@ -249,6 +249,12 @@ export const DOCK_SETTINGS = {
         label: 'Auto-Cycle Toggle',
         description: 'Show preset auto-cycle toggle',
     },
+    showEmptyDockHint: {
+        key: 'dock.showEmptyDockHint',
+        default: true,
+        label: 'Empty Dashboard Hint',
+        description: 'Show dock tutorial animation when dashboard is empty',
+    },
 } as const;
 
 // ============================================

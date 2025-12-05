@@ -71,6 +71,7 @@ export interface UserSettings {
     dockShowSettingsToggle: boolean;
     dockShowCreatePreset: boolean;
     dockShowAutoCycleToggle: boolean;
+    dockShowEmptyDockHint: boolean;
 
     // Drag Handle
     dragHandleAlwaysShow: boolean;
@@ -148,6 +149,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     dockShowSettingsToggle: DOCK_SETTINGS.showSettingsToggle.default,
     dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.default,
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.default,
+    dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.default,
 
     // Drag Handle
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.default,
@@ -220,6 +222,7 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     dockShowSettingsToggle: DOCK_SETTINGS.showSettingsToggle.key,
     dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.key,
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.key,
+    dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.key,
 
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.key,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.key,

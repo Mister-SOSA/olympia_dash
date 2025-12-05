@@ -48,6 +48,7 @@ interface DashboardDockProps {
     onPresetClick: (index: number) => void;
     onPresetSave: (index: number) => void;
     onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'dock') => void;
+    onVisibilityChange?: (visible: boolean) => void;
 }
 
 export default function DashboardDock({
@@ -58,6 +59,7 @@ export default function DashboardDock({
     onPresetClick,
     onPresetSave,
     onSettingsClick,
+    onVisibilityChange,
 }: DashboardDockProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [mouseY, setMouseY] = useState(0);
@@ -146,6 +148,11 @@ export default function DashboardDock({
             }
         };
     }, [isVisible, dockAutoHide, dockTriggerDistance, dockHideDelay]);
+
+    // Notify parent of visibility changes
+    useEffect(() => {
+        onVisibilityChange?.(isVisible);
+    }, [isVisible, onVisibilityChange]);
 
     const handlePresetRightClick = (e: React.MouseEvent, index: number) => {
         e.preventDefault();

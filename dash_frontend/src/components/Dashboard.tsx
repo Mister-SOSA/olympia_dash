@@ -222,6 +222,7 @@ export default function Dashboard() {
     const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
+    const [isDockVisible, setIsDockVisible] = useState(false);
     const gridDashboardRef = useRef<GridDashboardHandle>(null);
 
     // ✅ FIX: Track if preferences have been initialized to prevent duplicate loads
@@ -963,6 +964,7 @@ export default function Dashboard() {
                         setSettingsView(view || 'account');
                         setSettingsOpen(true);
                     }}
+                    onVisibilityChange={setIsDockVisible}
                 />
 
                 {/* Preset Manager */}
@@ -1090,6 +1092,7 @@ export default function Dashboard() {
                             setSettingsView('account');
                             setSettingsOpen(true);
                         }}
+                        isDockVisible={isDockVisible}
                     />
 
                     {/* Fullscreen Widget Overlay */}
