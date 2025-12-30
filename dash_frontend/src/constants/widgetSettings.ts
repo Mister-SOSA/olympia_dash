@@ -1257,10 +1257,10 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         type: 'select',
                         label: 'Temperature Unit',
                         description: 'Display temperature in Celsius or Fahrenheit',
-                        default: 'C',
+                        default: 'F',
                         options: [
-                            { value: 'C', label: 'Celsius (°C)' },
                             { value: 'F', label: 'Fahrenheit (°F)' },
+                            { value: 'C', label: 'Celsius (°C)' },
                         ],
                     } as SelectSettingField,
                     {
