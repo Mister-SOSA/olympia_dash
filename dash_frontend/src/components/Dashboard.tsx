@@ -453,13 +453,29 @@ export default function Dashboard() {
     }, [isAuthenticated, layout]);
 
     // Prepare a temporary layout for the widget menu
+    // This needs to handle both singleton widgets and multi-instance widgets
     const updateTempLayout = useCallback(() => {
-        setTempLayout(
-            masterWidgetList.map((widget) => {
+        // Start with singleton widgets from master list (excluding multi-instance widget types)
+        const singletonWidgets = masterWidgetList
+            .filter((widget) => {
+                const config = getWidgetConfig(widget.id);
+                return !config?.allowMultiple;
+            })
+            .map((widget) => {
                 const existing = layout.find((w) => w.id === widget.id);
                 return existing || { ...widget, enabled: false };
-            })
-        );
+            });
+
+        // Add multi-instance widgets from the current layout
+        // These are widgets with instance IDs (e.g., "FanController:abc123")
+        const multiInstanceWidgets = layout.filter((w) => {
+            if (!isMultiInstanceWidget(w.id)) return false;
+            const widgetType = getWidgetType(w.id);
+            const config = getWidgetConfig(widgetType);
+            return config?.allowMultiple === true;
+        });
+
+        setTempLayout([...singletonWidgets, ...multiInstanceWidgets]);
     }, [layout]);
 
     const handleExternalLayoutChange = useCallback((activeLayout: Widget[], source: LayoutUpdateSource = 'local-interaction') => {
