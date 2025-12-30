@@ -45,6 +45,10 @@ function LoginContent() {
         setTimeout(() => setError(''), 200);
     };
 
+    // Track if API is unavailable to avoid repeated requests
+    const [apiUnavailable, setApiUnavailable] = useState(false);
+    const deviceCodeRequestedRef = useRef(false);
+
     useEffect(() => {
         // Detect PWA mode
         setIsPWAMode(isPWA());
@@ -62,8 +66,11 @@ function LoginContent() {
             return;
         }
 
-        // Auto-generate device code on mount (especially useful for PWA/iOS)
-        handleRequestDeviceCode();
+        // Auto-generate device code on mount (only once)
+        if (!deviceCodeRequestedRef.current) {
+            deviceCodeRequestedRef.current = true;
+            handleRequestDeviceCode();
+        }
 
         // Cleanup
         return () => {
@@ -219,13 +226,22 @@ function LoginContent() {
             window.location.href = authUrl;
         } catch (err: any) {
             console.error('Login error:', err);
-            showError(err.message || 'Failed to initiate login');
+            // Check if it's a network error (API unavailable)
+            if (err.message?.includes('fetch') || err.name === 'TypeError') {
+                setApiUnavailable(true);
+                showError('Unable to connect to server. Please check that the API is running.');
+            } else {
+                showError(err.message || 'Failed to initiate login');
+            }
             setLoading(false);
             setLoadingMessage('');
         }
     };
 
     const handleRequestDeviceCode = async () => {
+        // Don't retry if we already know API is unavailable
+        if (apiUnavailable) return;
+
         setDeviceLoading(true);
         clearError();
 
@@ -243,6 +259,7 @@ function LoginContent() {
             const data = await response.json();
 
             if (data.success) {
+                setApiUnavailable(false);
                 setDeviceCode(data.device_code);
                 setUserCode(data.user_code);
                 startPolling(data.device_code);
@@ -250,7 +267,8 @@ function LoginContent() {
                 showError(data.error || 'Failed to generate device code');
             }
         } catch (err) {
-            showError(`Failed to generate device code`);
+            setApiUnavailable(true);
+            showError('Unable to connect to server. Please check that the API is running.');
             console.error('Device code error:', err);
         } finally {
             setDeviceLoading(false);
@@ -260,6 +278,8 @@ function LoginContent() {
     const startPolling = async (deviceCode: string) => {
         let pollInterval: NodeJS.Timeout | null = null;
         let timeoutId: NodeJS.Timeout | null = null;
+        let consecutiveErrors = 0;
+        const MAX_CONSECUTIVE_ERRORS = 3;
 
         pollInterval = setInterval(async () => {
             try {
@@ -272,6 +292,7 @@ function LoginContent() {
                 });
 
                 const data = await response.json();
+                consecutiveErrors = 0; // Reset on successful response
 
                 if (data.status === 'authorized' && data.access_token && data.refresh_token && data.user) {
                     if (pollInterval) clearInterval(pollInterval);
@@ -289,7 +310,18 @@ function LoginContent() {
                     setUserCode('');
                 }
             } catch (err) {
+                consecutiveErrors++;
                 console.error('Polling error:', err);
+
+                // Stop polling after too many consecutive errors (API likely down)
+                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    if (pollInterval) clearInterval(pollInterval);
+                    if (timeoutId) clearTimeout(timeoutId);
+                    setApiUnavailable(true);
+                    showError('Lost connection to server. Click "Generate New Code" to retry.');
+                    setDeviceCode('');
+                    setUserCode('');
+                }
             }
         }, 5000); // Poll every 5 seconds
 
@@ -452,6 +484,8 @@ function LoginContent() {
                                         onClick={() => {
                                             setDeviceCode('');
                                             setUserCode('');
+                                            setApiUnavailable(false);
+                                            deviceCodeRequestedRef.current = false;
                                             handleRequestDeviceCode();
                                         }}
                                         variant="outline"
@@ -475,7 +509,11 @@ function LoginContent() {
                                         </p>
                                     </div>
                                     <Button
-                                        onClick={handleRequestDeviceCode}
+                                        onClick={() => {
+                                            setApiUnavailable(false);
+                                            deviceCodeRequestedRef.current = false;
+                                            handleRequestDeviceCode();
+                                        }}
                                         className="bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover h-10 sm:h-auto text-sm transition-all duration-200"
                                     >
                                         <MdRefresh className="mr-2 h-4 w-4" />

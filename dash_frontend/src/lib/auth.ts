@@ -37,7 +37,7 @@ class AuthService {
                     console.error('Failed to parse user from localStorage', e);
                 }
             }
-            
+
             // Load impersonation state
             const impersonatedStr = localStorage.getItem('impersonated_user');
             const adminStr = localStorage.getItem('admin_user');
@@ -144,13 +144,23 @@ class AuthService {
         }
     }
 
+    // Track if we've already redirected to avoid multiple redirects
+    private redirectingToLogin: boolean = false;
+
     async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
         const headers = {
             ...options.headers,
             'Authorization': `Bearer ${this.accessToken}`,
         };
 
-        let response = await fetch(url, { ...options, headers });
+        let response: Response;
+        try {
+            response = await fetch(url, { ...options, headers });
+        } catch (error) {
+            // Network error - API is likely down, don't redirect
+            console.error('[Auth] Network error fetching:', url, error);
+            throw error;
+        }
 
         // If token expired, try to refresh
         if (response.status === 401) {
@@ -159,9 +169,10 @@ class AuthService {
                 headers['Authorization'] = `Bearer ${this.accessToken}`;
                 response = await fetch(url, { ...options, headers });
             } else {
-                // Refresh failed, clear tokens and redirect to login
+                // Refresh failed, clear tokens and redirect to login (only once)
                 this.clearTokens();
-                if (typeof window !== 'undefined') {
+                if (typeof window !== 'undefined' && !this.redirectingToLogin) {
+                    this.redirectingToLogin = true;
                     window.location.href = '/login';
                 }
             }
@@ -254,7 +265,7 @@ class AuthService {
                 console.log(`✅ Impersonation approved by server`);
                 console.log(`   Admin: ${data.admin_user.email} (ID: ${data.admin_user.id})`);
                 console.log(`   Impersonating: ${data.impersonated_user.email} (ID: ${data.impersonated_user.id})`);
-                
+
                 // Store admin user and impersonated user
                 this.adminUser = data.admin_user;
                 this.impersonatedUser = data.impersonated_user;
@@ -263,13 +274,13 @@ class AuthService {
                     localStorage.setItem('admin_user', JSON.stringify(this.adminUser));
                     localStorage.setItem('impersonated_user', JSON.stringify(this.impersonatedUser));
                 }
-                
+
                 // Switch preferences service to impersonated user
                 console.log(`🔄 Switching preferences to user ${this.impersonatedUser.id}...`);
                 const { preferencesService } = await import('./preferences');
                 await preferencesService.switchUser();
                 console.log(`✅ Preferences switched to ${this.impersonatedUser.email}`);
-                
+
                 return true;
             }
 
@@ -307,7 +318,7 @@ class AuthService {
 
             if (data.success) {
                 console.log('✅ Server confirmed impersonation end');
-                
+
                 // Clear impersonation state
                 this.impersonatedUser = null;
                 this.adminUser = null;
@@ -316,13 +327,13 @@ class AuthService {
                     localStorage.removeItem('admin_user');
                     localStorage.removeItem('impersonated_user');
                 }
-                
+
                 // Switch back to admin's preferences
                 console.log(`🔄 Switching preferences back to admin (user ${this.user?.id})...`);
                 const { preferencesService } = await import('./preferences');
                 await preferencesService.switchUser();
                 console.log(`✅ Impersonation fully ended`);
-                
+
                 return true;
             }
 
