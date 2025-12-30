@@ -37,6 +37,11 @@ export interface CustomerData extends BaseData {
 }
 
 export interface Widget {
+    /** 
+     * Unique identifier for the widget instance.
+     * For singleton widgets: matches the widgetType (e.g., "ClockWidget")
+     * For multi-instance widgets: format is "widgetType:instanceId" (e.g., "FanController:fan1")
+     */
     id: string;
     x: number;
     y: number;
@@ -47,6 +52,11 @@ export interface Widget {
     category?: string;
     description?: string;
     icon?: ReactNode;
+    /** 
+     * Instance-specific configuration for multi-instance widgets.
+     * Stored alongside widget in layout for persistence.
+     */
+    instanceConfig?: Record<string, any>;
 }
 
 export type PresetType = "grid" | "fullscreen";

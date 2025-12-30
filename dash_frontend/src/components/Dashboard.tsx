@@ -38,6 +38,8 @@ import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
+import { isMultiInstanceWidget, getWidgetType } from "@/utils/widgetInstanceUtils";
+import { getWidgetConfig } from "@/components/widgets/registry";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -45,12 +47,30 @@ const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
 /**
  * Merges a preset layout (which might define only a subset of widgets)
  * with the master widget list.
+ * 
+ * Handles both singleton widgets (looked up by ID in masterWidgetList) and
+ * multi-instance widgets (preserved as-is from the preset).
  */
-const mergePreset = (preset: Widget[]): Widget[] =>
-    masterWidgetList.map((widget) => {
+const mergePreset = (preset: Widget[]): Widget[] => {
+    // Start with singleton widgets from master list
+    const singletonWidgets = masterWidgetList.map((widget) => {
         const presetItem = preset.find((p) => p.id === widget.id);
         return presetItem ? { ...widget, ...presetItem } : { ...widget, enabled: false };
     });
+
+    // Add multi-instance widgets from preset (they're not in masterWidgetList)
+    const multiInstanceWidgets = preset.filter((p) => {
+        // Check if this is a multi-instance widget (has instance ID in the format "Type:instanceId")
+        if (!isMultiInstanceWidget(p.id)) return false;
+
+        // Verify the base widget type allows multiple instances
+        const widgetType = getWidgetType(p.id);
+        const config = getWidgetConfig(widgetType);
+        return config?.allowMultiple === true;
+    });
+
+    return [...singletonWidgets, ...multiInstanceWidgets];
+};
 
 /**
  * Finds the next available preset index given a direction.

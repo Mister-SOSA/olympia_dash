@@ -3,14 +3,19 @@
  * 
  * A React hook for accessing and updating widget-specific settings.
  * Provides real-time synchronization when settings change.
+ * 
+ * For multi-instance widgets, pass the full widget ID (e.g., "FanController:abc123")
+ * The hook will use the widget type to look up the settings schema.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { widgetSettingsService } from '@/lib/widgetSettings';
 import { getWidgetDefaultSettings, getWidgetSettingsSchema } from '@/constants/widgetSettings';
+import { getWidgetType } from '@/utils/widgetInstanceUtils';
 
 /**
- * Hook to access and update settings for a specific widget
+ * Hook to access and update settings for a specific widget instance
+ * @param widgetId - The full widget ID (including instance ID for multi-instance widgets)
  */
 export function useWidgetSettings<T extends Record<string, any> = Record<string, any>>(
     widgetId: string
@@ -47,11 +52,14 @@ export function useWidgetSettings<T extends Record<string, any> = Record<string,
         widgetSettingsService.resetSetting(widgetId, key as string);
     }, [widgetId]);
 
-    // Get the schema for this widget
-    const schema = getWidgetSettingsSchema(widgetId);
+    // Get the widget type for schema lookup
+    const widgetType = getWidgetType(widgetId);
 
-    // Get the default settings for this widget
-    const defaults = getWidgetDefaultSettings(widgetId) as T;
+    // Get the schema for this widget type
+    const schema = getWidgetSettingsSchema(widgetType);
+
+    // Get the default settings for this widget type
+    const defaults = getWidgetDefaultSettings(widgetType) as T;
 
     return {
         settings,
@@ -62,11 +70,15 @@ export function useWidgetSettings<T extends Record<string, any> = Record<string,
         schema,
         defaults,
         hasCustomSettings: widgetSettingsService.hasCustomSettings(widgetId),
+        widgetType, // Expose for debugging/display
     };
 }
 
 /**
  * Hook to access a single widget setting
+ * @param widgetId - The full widget ID (including instance ID for multi-instance widgets)
+ * @param key - The setting key
+ * @param defaultValue - Optional default value
  */
 export function useWidgetSetting<T = any>(
     widgetId: string,

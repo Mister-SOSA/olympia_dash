@@ -8,7 +8,8 @@ import { Widget } from "@/types";
 // Type for resize handle axes
 type ResizeHandleAxis = 's' | 'w' | 'e' | 'n' | 'sw' | 'nw' | 'se' | 'ne';
 import { MIN_WIDGET_WIDTH, MIN_WIDGET_HEIGHT } from "@/constants/dashboard";
-import { getWidgetById } from "@/constants/widgets";
+import { getWidgetComponentById, getWidgetConfigById } from "@/components/widgets/registry";
+import { getWidgetType } from "@/utils/widgetInstanceUtils";
 import { Suspense } from "react";
 import WidgetContextMenu, { useWidgetContextMenu } from "./WidgetContextMenu";
 import DashboardContextMenu, { useDashboardContextMenu } from "./DashboardContextMenu";
@@ -265,9 +266,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             isInteracting.current = false;
             preferencesService.setInteractionLock(false);
 
-            // Track widget move
-            const widgetDef = getWidgetById(newItem.i);
-            trackWidgetInteraction(widgetDef?.title || newItem.i, newItem.i, 'move');
+            // Track widget move - use widget type for config lookup
+            const widgetConfig = getWidgetConfigById(newItem.i);
+            trackWidgetInteraction(widgetConfig?.title || newItem.i, newItem.i, 'move');
 
             // Trigger layout change
             handleLayoutChange(newLayout);
@@ -284,9 +285,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             isInteracting.current = false;
             preferencesService.setInteractionLock(false);
 
-            // Track widget resize
-            const widgetDef = getWidgetById(newItem.i);
-            trackWidgetInteraction(widgetDef?.title || newItem.i, newItem.i, 'resize', {
+            // Track widget resize - use widget type for config lookup
+            const widgetConfig = getWidgetConfigById(newItem.i);
+            trackWidgetInteraction(widgetConfig?.title || newItem.i, newItem.i, 'resize', {
                 w: newItem.w,
                 h: newItem.h
             });
@@ -297,9 +298,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         // Context menu actions
         const handleDeleteWidget = useCallback((widgetId: string) => {
-            // Track widget removal
-            const widgetDef = getWidgetById(widgetId);
-            trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'remove');
+            // Track widget removal - use widget type for config lookup
+            const widgetConfig = getWidgetConfigById(widgetId);
+            trackWidgetInteraction(widgetConfig?.title || widgetId, widgetId, 'remove');
 
             // Update layout by filtering out the widget
             const updatedLayout = layout.filter(w => w.id !== widgetId);
@@ -325,9 +326,9 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
             const newSize = sizeMap[size];
 
-            // Track widget resize
-            const widgetDef = getWidgetById(widgetId);
-            trackWidgetInteraction(widgetDef?.title || widgetId, widgetId, 'resize', { size, ...newSize });
+            // Track widget resize - use widget type for config lookup
+            const widgetConfig = getWidgetConfigById(widgetId);
+            trackWidgetInteraction(widgetConfig?.title || widgetId, widgetId, 'resize', { size, ...newSize });
 
             // Update the widget's size in the layout
             const updatedLayout = layout.map(w =>
@@ -339,33 +340,33 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         }, [layout, trackWidgetInteraction, hideContextMenu]);
 
         const handleWidgetInfo = useCallback((widgetId: string) => {
-            const widgetDef = getWidgetById(widgetId);
-            if (widgetDef) {
-                setSelectedWidget({ id: widgetId, title: widgetDef.title });
+            const widgetConfig = getWidgetConfigById(widgetId);
+            if (widgetConfig) {
+                setSelectedWidget({ id: widgetId, title: widgetConfig.title });
                 setShowInfoModal(true);
             }
             hideContextMenu();
         }, [hideContextMenu]);
 
         const handleWidgetSettings = useCallback((widgetId: string) => {
-            const widgetDef = getWidgetById(widgetId);
-            if (widgetDef) {
-                setSelectedWidget({ id: widgetId, title: widgetDef.title });
+            const widgetConfig = getWidgetConfigById(widgetId);
+            if (widgetConfig) {
+                setSelectedWidget({ id: widgetId, title: widgetConfig.title });
                 setShowSettingsDialog(true);
             }
             hideContextMenu();
         }, [hideContextMenu]);
 
         const handleDeleteRequest = useCallback((widgetId: string) => {
-            const widgetDef = getWidgetById(widgetId);
-            if (widgetDef) {
+            const widgetConfig = getWidgetConfigById(widgetId);
+            if (widgetConfig) {
                 const confirmDelete = preferencesService.get(
                     DASHBOARD_SETTINGS.confirmDelete.key,
                     DASHBOARD_SETTINGS.confirmDelete.default
                 );
 
                 if (confirmDelete) {
-                    setSelectedWidget({ id: widgetId, title: widgetDef.title });
+                    setSelectedWidget({ id: widgetId, title: widgetConfig.title });
                     setShowDeleteConfirm(true);
                 } else {
                     handleDeleteWidget(widgetId);
@@ -420,23 +421,32 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         }, []);
 
         // Render individual widget
+        // Supports both singleton widgets (widgetId = type) and multi-instance widgets (widgetId = type:instanceId)
         const renderWidget = useCallback((widgetId: string, refreshKey: number = 0) => {
-            if (!hasAccess(widgetId, 'view')) {
+            // Get the widget type for permission checking and component lookup
+            const widgetType = getWidgetType(widgetId);
+
+            if (!hasAccess(widgetType, 'view')) {
                 return <div className="widget-error">Access Denied</div>;
             }
 
-            const widgetDef = getWidgetById(widgetId);
-            if (!widgetDef) {
+            // Get widget config by type (works for both singleton and multi-instance)
+            const widgetConfig = getWidgetConfigById(widgetId);
+            if (!widgetConfig) {
                 return <div className="widget-error">Widget &quot;{widgetId}&quot; not found</div>;
             }
 
-            const WidgetComponent = widgetDef.component;
+            // Get the lazy-loaded component using the widget type
+            const WidgetComponent = getWidgetComponentById(widgetId);
+            if (!WidgetComponent) {
+                return <div className="widget-error">Widget component not found</div>;
+            }
 
             // Widget component already includes .widget wrapper and .widget-drag-handle
-            // Use empty fallback since widget code loads instantly and Widget handles its own loading state
+            // Pass widgetId as prop so multi-instance widgets can access their instance-specific settings
             return (
                 <Suspense fallback={<div className="widget-loading-container" />}>
-                    <WidgetComponent key={`${widgetId}-${refreshKey}`} />
+                    <WidgetComponent key={`${widgetId}-${refreshKey}`} widgetId={widgetId} />
                 </Suspense>
             );
         }, [hasAccess]);
@@ -504,17 +514,20 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         resizeHandle={(axis, ref) => <CustomResizeHandle handleAxis={axis} ref={ref} />}
                     >
                         {enabledWidgets.map(widget => {
-                            const widgetDef = getWidgetById(widget.id);
+                            // Use widget type for config lookup (supports multi-instance widgets)
+                            const widgetConfig = getWidgetConfigById(widget.id);
+                            // Use displayName for multi-instance widgets, fall back to config title
+                            const displayTitle = widget.displayName || widgetConfig?.title || widget.id;
                             return (
                                 <div
                                     key={widget.id}
                                     className="grid-stack-item"
                                     data-widget-id={widget.id}
-                                    data-widget-title={widgetDef?.title || widget.id}
+                                    data-widget-title={displayTitle}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        showContextMenu(e.clientX, e.clientY, widget.id, widgetDef?.title || widget.id);
+                                        showContextMenu(e.clientX, e.clientY, widget.id, displayTitle);
                                     }}
                                 >
                                     <div className="grid-stack-item-content">
@@ -700,12 +713,15 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                         setShowInfoModal(false);
                         setSelectedWidget(null);
                     }}
-                    widget={selectedWidget ? {
-                        title: selectedWidget.title,
-                        category: getWidgetById(selectedWidget.id)?.category || "Unknown",
-                        description: getWidgetById(selectedWidget.id)?.description,
-                        size: `${getWidgetById(selectedWidget.id)?.defaultSize.w || 4}×${getWidgetById(selectedWidget.id)?.defaultSize.h || 4}`
-                    } : { title: "", category: "", description: "", size: "" }}
+                    widget={selectedWidget ? (() => {
+                        const config = getWidgetConfigById(selectedWidget.id);
+                        return {
+                            title: selectedWidget.title,
+                            category: config?.category || "Unknown",
+                            description: config?.description,
+                            size: `${config?.defaultSize.w || 4}×${config?.defaultSize.h || 4}`
+                        };
+                    })() : { title: "", category: "", description: "", size: "" }}
                 />
 
                 <WidgetSettingsDialog

@@ -1170,6 +1170,74 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
             },
         ],
     },
+
+    // Fan Controller Widget (Multi-Instance)
+    // Note: This widget supports multiple instances - each instance can control a different fan
+    FanController: {
+        widgetId: 'FanController',
+        title: 'Fan Controller Settings',
+        description: 'Configure which fan this widget controls and how it displays',
+        sections: [
+            {
+                title: 'Fan Selection',
+                fields: [
+                    {
+                        key: 'selectedFan',
+                        type: 'select',
+                        label: 'Select Fan',
+                        description: 'Choose which AC Infinity fan controller this widget monitors',
+                        default: '',
+                        options: [
+                            { value: '', label: 'Select a fan...' },
+                            { value: 'fan-1', label: 'Grow Room Fan (CLOUDLINE T6)' },
+                            { value: 'fan-2', label: 'Drying Room Fan (CLOUDLINE S4)' },
+                            { value: 'fan-3', label: 'Ventilation Fan (CLOUDLINE T8)' },
+                            { value: 'fan-4', label: 'Server Room Fan (CLOUDLINE S6)' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'customName',
+                        type: 'text',
+                        label: 'Custom Name',
+                        description: 'Override the default fan name with a custom label',
+                        default: '',
+                        placeholder: 'e.g., Main Exhaust',
+                        maxLength: 30,
+                    } as TextSettingField,
+                ],
+            },
+            {
+                title: 'Display Options',
+                fields: [
+                    {
+                        key: 'displayMode',
+                        type: 'select',
+                        label: 'Display Mode',
+                        description: 'How much information to show',
+                        default: 'detailed',
+                        options: [
+                            { value: 'compact', label: 'Compact - Speed only' },
+                            { value: 'detailed', label: 'Detailed - All info' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'showTemperature',
+                        type: 'toggle',
+                        label: 'Show Temperature',
+                        description: 'Display the temperature reading from the fan\'s sensor',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showHumidity',
+                        type: 'toggle',
+                        label: 'Show Humidity',
+                        description: 'Display the humidity reading from the fan\'s sensor',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+        ],
+    },
 };
 
 // ============================================
@@ -1177,24 +1245,39 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
 // ============================================
 
 /**
+ * Extract the widget type from a widget ID.
+ * For multi-instance widgets, the ID format is "WidgetType:instanceId".
+ * For singleton widgets, the ID is just the widget type.
+ */
+function getWidgetTypeFromId(widgetId: string): string {
+    return widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
+}
+
+/**
  * Get settings schema for a widget
+ * Handles both singleton IDs ("ClockWidget") and instance IDs ("FanController:abc123")
  */
 export function getWidgetSettingsSchema(widgetId: string): WidgetSettingsSchema | null {
-    return WIDGET_SETTINGS_SCHEMAS[widgetId] || null;
+    const widgetType = getWidgetTypeFromId(widgetId);
+    return WIDGET_SETTINGS_SCHEMAS[widgetType] || null;
 }
 
 /**
  * Check if a widget has configurable settings
+ * Handles both singleton IDs ("ClockWidget") and instance IDs ("FanController:abc123")
  */
 export function widgetHasSettings(widgetId: string): boolean {
-    return widgetId in WIDGET_SETTINGS_SCHEMAS;
+    const widgetType = getWidgetTypeFromId(widgetId);
+    return widgetType in WIDGET_SETTINGS_SCHEMAS;
 }
 
 /**
  * Get default settings for a widget
+ * Handles both singleton IDs ("ClockWidget") and instance IDs ("FanController:abc123")
  */
 export function getWidgetDefaultSettings(widgetId: string): Record<string, any> {
-    const schema = WIDGET_SETTINGS_SCHEMAS[widgetId];
+    const widgetType = getWidgetTypeFromId(widgetId);
+    const schema = WIDGET_SETTINGS_SCHEMAS[widgetType];
     if (!schema) return {};
 
     const defaults: Record<string, any> = {};

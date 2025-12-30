@@ -16,7 +16,7 @@ import React from "react";
 // ============================================
 
 export interface WidgetConfig {
-    /** Unique identifier for the widget */
+    /** Unique identifier for the widget type */
     id: string;
     /** Display title shown in the picker */
     title: string;
@@ -53,6 +53,23 @@ export interface WidgetConfig {
     since?: string;
     /** Search keywords that aren't in title/description */
     searchKeywords?: string[];
+    /** 
+     * Whether multiple instances of this widget can be added.
+     * When true, users can add multiple copies, each with their own settings.
+     * @default false (singleton widget)
+     */
+    allowMultiple?: boolean;
+    /**
+     * Maximum number of instances allowed (only relevant if allowMultiple is true)
+     * @default undefined (unlimited)
+     */
+    maxInstances?: number;
+    /**
+     * Default display name template for multi-instance widgets.
+     * Use {n} as placeholder for instance number.
+     * @example "Fan Controller {n}"
+     */
+    instanceNameTemplate?: string;
 }
 
 // ============================================
@@ -383,6 +400,24 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
         minSize: { w: 4, h: 3 },
         searchKeywords: ["unifi", "badge", "nfc", "face", "building", "who entered"],
     },
+
+    // ─────────────────────────────────────────
+    // Multi-Instance Widgets (can add multiple)
+    // ─────────────────────────────────────────
+    {
+        id: "FanController",
+        title: "Fan Controller",
+        description: "Monitor and control AC Infinity fan controllers",
+        category: "Operations",
+        subcategory: "Environment",
+        tags: ["fan", "ac infinity", "hvac", "climate", "ventilation"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 2 },
+        maxSize: { w: 6, h: 6 },
+        allowMultiple: true,
+        instanceNameTemplate: "Fan Controller {n}",
+        searchKeywords: ["cloudline", "grow", "exhaust", "ventilation", "temperature", "humidity"],
+    },
 ];
 
 // ============================================
@@ -393,7 +428,7 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
  * Lazy-loaded widget components.
  * This keeps the initial bundle small by only loading widgets when needed.
  */
-export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
+export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
     Overview: React.lazy(() => import("./Overview")),
     SalesByDayBar: React.lazy(() => import("./SalesByDayBar")),
     SalesByMonthBar: React.lazy(() => import("./SalesByMonthBar")),
@@ -415,20 +450,44 @@ export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.C
     Humidity: React.lazy(() => import("./Humidity")),
     BeefPricesChart: React.lazy(() => import("./BeefPricesChart")),
     EntryLogsWidget: React.lazy(() => import("./EntryLogsWidget")),
+    FanController: React.lazy(() => import("./FanController")),
 };
 
 // ============================================
 // Registry Helper Functions
 // ============================================
 
-/** Get a widget config by ID */
+/** 
+ * Get a widget config by type ID 
+ * Note: Use this when you have a widget TYPE (e.g., "FanController")
+ */
 export const getWidgetConfig = (id: string): WidgetConfig | undefined => {
     return WIDGET_CONFIGS.find(w => w.id === id);
+};
+
+/**
+ * Get a widget config by widget ID (handles multi-instance widgets)
+ * This extracts the widget type from instance IDs like "FanController:abc123"
+ * @param widgetId - Either a simple ID ("ClockWidget") or an instance ID ("FanController:abc123")
+ */
+export const getWidgetConfigById = (widgetId: string): WidgetConfig | undefined => {
+    // Extract the widget type from the ID (handles "Type:instanceId" format)
+    const widgetType = widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
+    return WIDGET_CONFIGS.find(w => w.id === widgetType);
 };
 
 /** Get a widget component by ID */
 export const getWidgetComponent = (id: string): React.LazyExoticComponent<React.ComponentType> | undefined => {
     return WIDGET_COMPONENTS[id];
+};
+
+/**
+ * Get a widget component by widget ID (handles multi-instance widgets)
+ * This extracts the widget type from instance IDs like "FanController:abc123"
+ */
+export const getWidgetComponentById = (widgetId: string): React.LazyExoticComponent<React.ComponentType<any>> | undefined => {
+    const widgetType = widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
+    return WIDGET_COMPONENTS[widgetType];
 };
 
 /** Get all widgets in a category */

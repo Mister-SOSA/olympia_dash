@@ -41,6 +41,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Grid3x3,
+    Copy,
+    Trash2,
 } from "lucide-react";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { useIsMobile } from "@/hooks/useMediaQuery";
@@ -50,6 +52,15 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    getWidgetType,
+    countEnabledWidgetInstances,
+    canAddInstance,
+    createWidgetInstance,
+    getWidgetInstances,
+    isMultiInstanceWidget,
+} from "@/utils/widgetInstanceUtils";
+import { widgetSettingsService } from "@/lib/widgetSettings";
 
 // ============================================
 // Category Icons
@@ -180,6 +191,175 @@ const WidgetRow = React.memo(({ widget, isEnabled, onToggle, showCategory }: Wid
 });
 
 WidgetRow.displayName = "WidgetRow";
+
+// ============================================
+// Multi-Instance Widget Row
+// ============================================
+
+interface MultiInstanceWidgetRowProps {
+    widget: WidgetConfig;
+    instances: Widget[];
+    onAddInstance: () => void;
+    onRemoveInstance: (widgetId: string) => void;
+    canAddMore: boolean;
+    showCategory?: boolean;
+}
+
+const MultiInstanceWidgetRow = React.memo(({
+    widget,
+    instances,
+    onAddInstance,
+    onRemoveInstance,
+    canAddMore,
+    showCategory,
+}: MultiInstanceWidgetRowProps) => {
+    const enabledInstances = instances.filter(i => i.enabled);
+    const hasInstances = enabledInstances.length > 0;
+
+    return (
+        <div className="mb-2">
+            {/* Main row for the widget type */}
+            <div
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all"
+                style={hasInstances ? {
+                    backgroundColor: 'var(--ui-accent-primary-bg)',
+                } : undefined}
+            >
+                {/* Instance count badge */}
+                <div
+                    className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold"
+                    style={hasInstances ? {
+                        backgroundColor: 'var(--ui-accent-primary)',
+                        color: '#ffffff'
+                    } : {
+                        backgroundColor: 'var(--ui-bg-tertiary)',
+                        color: 'var(--ui-text-muted)'
+                    }}
+                >
+                    {enabledInstances.length}
+                </div>
+
+                {/* Title and badges */}
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                    <span
+                        className="text-sm font-medium truncate"
+                        style={{ color: hasInstances ? 'var(--ui-accent-primary)' : 'var(--ui-text-primary)' }}
+                    >
+                        {widget.title}
+                    </span>
+                    <span
+                        className="px-1.5 py-0.5 text-[9px] font-semibold rounded uppercase"
+                        style={{
+                            backgroundColor: 'var(--ui-accent-secondary-bg)',
+                            color: 'var(--ui-accent-secondary)'
+                        }}
+                    >
+                        Multi
+                    </span>
+                    {widget.beta && (
+                        <span
+                            className="px-1.5 py-0.5 text-[9px] font-semibold rounded uppercase border"
+                            style={{
+                                backgroundColor: 'var(--ui-warning-bg)',
+                                color: 'var(--ui-warning-text)',
+                                borderColor: 'var(--ui-warning-border)'
+                            }}
+                        >
+                            Beta
+                        </span>
+                    )}
+                    {showCategory && (
+                        <span
+                            className="px-1.5 py-0.5 text-[10px] rounded border"
+                            style={{
+                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                color: 'var(--ui-text-muted)',
+                                borderColor: 'var(--ui-border-primary)'
+                            }}
+                        >
+                            {widget.category}
+                        </span>
+                    )}
+                </div>
+
+                {/* Add instance button */}
+                <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={onAddInstance}
+                                disabled={!canAddMore}
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    backgroundColor: 'var(--ui-accent-primary)',
+                                    color: '#ffffff'
+                                }}
+                            >
+                                <Plus className="w-4 h-4" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {canAddMore
+                                ? `Add ${widget.title}`
+                                : widget.maxInstances
+                                    ? `Maximum ${widget.maxInstances} instances`
+                                    : 'Cannot add more'
+                            }
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+
+            {/* List of instances */}
+            {enabledInstances.length > 0 && (
+                <div className="ml-6 mt-1 space-y-1">
+                    {enabledInstances.map((instance, index) => (
+                        <div
+                            key={instance.id}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-md"
+                            style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                        >
+                            <span
+                                className="text-xs font-medium flex-1 truncate"
+                                style={{ color: 'var(--ui-text-secondary)' }}
+                            >
+                                {instance.displayName || `${widget.title} ${index + 1}`}
+                            </span>
+                            <span
+                                className="text-[10px] font-mono"
+                                style={{ color: 'var(--ui-text-muted)' }}
+                            >
+                                {instance.w}×{instance.h}
+                            </span>
+                            <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={() => onRemoveInstance(instance.id)}
+                                            className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center transition-colors hover:bg-[var(--ui-danger-bg)]"
+                                            style={{ color: 'var(--ui-text-muted)' }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = 'var(--ui-danger)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                            }}
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Remove instance</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+MultiInstanceWidgetRow.displayName = "MultiInstanceWidgetRow";
 
 // ============================================
 // Widget Card (Visual card view)
@@ -671,10 +851,15 @@ export default function WidgetPicker({
         accessibleWidgets.forEach((w) => {
             if (!stats[w.category]) stats[w.category] = { total: 0, enabled: 0 };
             stats[w.category].total++;
-            if (enabledWidgets.has(w.id)) stats[w.category].enabled++;
+            // For multi-instance widgets, count number of enabled instances
+            if (w.allowMultiple) {
+                stats[w.category].enabled += countEnabledWidgetInstances(tempLayout, w.id);
+            } else if (enabledWidgets.has(w.id)) {
+                stats[w.category].enabled++;
+            }
         });
         return stats;
-    }, [accessibleWidgets, enabledWidgets]);
+    }, [accessibleWidgets, tempLayout, enabledWidgets]);
 
     // Check for unsaved changes
     const hasChanges = useMemo(() => {
@@ -686,10 +871,27 @@ export default function WidgetPicker({
         return false;
     }, [initialLayout, enabledWidgets]);
 
-    // Toggle widget
+    // Toggle widget (for singleton widgets)
     const toggleWidget = useCallback((widgetId: string) => {
         const widgetDef = WIDGET_CONFIGS.find((w) => w.id === widgetId);
         if (!widgetDef) return;
+
+        // For multi-instance widgets, toggle should add first instance
+        if (widgetDef.allowMultiple) {
+            const existingInstances = getWidgetInstances(tempLayout, widgetId);
+            const enabledInstances = existingInstances.filter(w => w.enabled);
+
+            if (enabledInstances.length === 0) {
+                // No enabled instances - add one
+                addWidgetInstance(widgetId);
+            } else {
+                // Has instances - disable all
+                setTempLayout(prev => prev.map(w =>
+                    getWidgetType(w.id) === widgetId ? { ...w, enabled: false } : w
+                ));
+            }
+            return;
+        }
 
         const existingWidget = tempLayout.find((w) => w.id === widgetId);
         const isCurrentlyEnabled = existingWidget?.enabled || false;
@@ -721,6 +923,35 @@ export default function WidgetPicker({
             setTempLayout((prev) => [...prev, newWidget]);
         }
     }, [tempLayout, setTempLayout]);
+
+    // Add a new instance of a multi-instance widget
+    const addWidgetInstance = useCallback((widgetType: string) => {
+        if (!canAddInstance(tempLayout, widgetType)) {
+            console.warn(`Cannot add more instances of ${widgetType}`);
+            return;
+        }
+
+        const newWidget = createWidgetInstance(widgetType, tempLayout);
+        if (newWidget) {
+            setSessionChanges(prev => new Set(prev).add(newWidget.id));
+            setTempLayout(prev => [...prev, newWidget]);
+        }
+    }, [tempLayout, setTempLayout]);
+
+    // Remove a specific widget instance
+    const removeWidgetInstance = useCallback((widgetId: string) => {
+        setSessionChanges(prev => new Set(prev).add(widgetId));
+        // Clean up settings for this instance
+        if (isMultiInstanceWidget(widgetId)) {
+            widgetSettingsService.deleteInstanceSettings(widgetId);
+        }
+        setTempLayout(prev => prev.filter(w => w.id !== widgetId));
+    }, [setTempLayout]);
+
+    // Get instance count for a multi-instance widget type
+    const getInstanceCount = useCallback((widgetType: string) => {
+        return countEnabledWidgetInstances(tempLayout, widgetType);
+    }, [tempLayout]);
 
     // Bulk toggle category
     const toggleAllInCategory = useCallback((category: WidgetCategory, enable: boolean) => {
@@ -1689,14 +1920,25 @@ export default function WidgetPicker({
 
                                             {/* Widgets */}
                                             <div className="mt-1">
-                                                {widgets.map((widget) => (
-                                                    <WidgetRow
-                                                        key={widget.id}
-                                                        widget={widget}
-                                                        isEnabled={enabledWidgets.has(widget.id)}
-                                                        onToggle={() => toggleWidget(widget.id)}
-                                                    />
-                                                ))}
+                                                {widgets.map((widget) =>
+                                                    widget.allowMultiple ? (
+                                                        <MultiInstanceWidgetRow
+                                                            key={widget.id}
+                                                            widget={widget}
+                                                            instances={getWidgetInstances(tempLayout, widget.id)}
+                                                            onAddInstance={() => addWidgetInstance(widget.id)}
+                                                            onRemoveInstance={removeWidgetInstance}
+                                                            canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                        />
+                                                    ) : (
+                                                        <WidgetRow
+                                                            key={widget.id}
+                                                            widget={widget}
+                                                            isEnabled={enabledWidgets.has(widget.id)}
+                                                            onToggle={() => toggleWidget(widget.id)}
+                                                        />
+                                                    )
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1709,14 +1951,27 @@ export default function WidgetPicker({
                                     <span>{filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""}</span>
                                     <span>{visibleEnabledCount} selected</span>
                                 </div>
-                                {filteredWidgets.map((widget) => (
-                                    <WidgetRow
-                                        key={widget.id}
-                                        widget={widget}
-                                        isEnabled={enabledWidgets.has(widget.id)}
-                                        onToggle={() => toggleWidget(widget.id)}
-                                        showCategory={selectedCategory === "all"}
-                                    />
+                                {filteredWidgets.map((widget) =>
+                                    widget.allowMultiple ? (
+                                        <MultiInstanceWidgetRow
+                                            key={widget.id}
+                                            widget={widget}
+                                            instances={getWidgetInstances(tempLayout, widget.id)}
+                                            onAddInstance={() => addWidgetInstance(widget.id)}
+                                            onRemoveInstance={removeWidgetInstance}
+                                            canAddMore={canAddInstance(tempLayout, widget.id)}
+                                            showCategory={selectedCategory === "all"}
+                                        />
+                                    ) : (
+                                        <WidgetRow
+                                            key={widget.id}
+                                            widget={widget}
+                                            isEnabled={enabledWidgets.has(widget.id)}
+                                            onToggle={() => toggleWidget(widget.id)}
+                                            showCategory={selectedCategory === "all"}
+                                        />
+                                    )
+                                )}
                                 ))}
                             </div>
                         )}

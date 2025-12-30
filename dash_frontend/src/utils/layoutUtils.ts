@@ -9,6 +9,14 @@ import {
     detectStructuralChanges,
     describeSource
 } from "@/types/layout";
+import {
+    getWidgetType,
+    isMultiInstanceWidget,
+    validateWidgetInstances,
+    deduplicateSingletonWidgets,
+    normalizeWidgetIds,
+} from "@/utils/widgetInstanceUtils";
+import { getWidgetConfig } from "@/components/widgets/registry";
 
 // Re-export for convenience
 export type { LayoutUpdateSource, SaveLayoutOptions, LayoutUpdate } from "@/types/layout";
@@ -52,39 +60,69 @@ export const generatePresetName = (layout: Widget[]): string => {
 };
 
 /**
- * Normalize a layout so that it always includes every widget in the master list,
- * preserving any saved metadata and ensuring consistent ordering.
+ * Normalize a layout to ensure consistency.
+ * 
+ * For SINGLETON widgets: Ensures all defined singleton widgets exist (disabled if not present).
+ * For MULTI-INSTANCE widgets: Preserves all instances as-is (they're stored by full ID).
+ * 
+ * This function:
+ * 1. Validates widget instances (removes invalid/orphaned)
+ * 2. Ensures singleton widgets don't have duplicate instances
+ * 3. Normalizes widget IDs
+ * 4. Ensures all singleton widget types are present (even if disabled)
  */
 export const normalizeLayout = (layout: Widget[]): Widget[] => {
-    const layoutMap = new Map(layout.map(widget => [widget.id, widget]));
+    // Step 1: Validate and clean up instances
+    let normalized = validateWidgetInstances(layout);
+    normalized = deduplicateSingletonWidgets(normalized);
+    normalized = normalizeWidgetIds(normalized);
 
-    return masterWidgetList.map((widgetDef) => {
-        const existing = layoutMap.get(widgetDef.id);
+    // Step 2: Create a map of existing widgets by ID
+    const layoutMap = new Map(normalized.map(widget => [widget.id, widget]));
 
-        if (existing) {
+    // Step 3: Collect all multi-instance widgets (these are preserved as-is)
+    const multiInstanceWidgets = normalized.filter(w => isMultiInstanceWidget(w.id));
+
+    // Step 4: Process singleton widgets from master list
+    const singletonWidgets = masterWidgetList
+        .filter(widgetDef => {
+            const config = getWidgetConfig(widgetDef.id);
+            return !config?.allowMultiple;
+        })
+        .map((widgetDef) => {
+            const existing = layoutMap.get(widgetDef.id);
+
+            if (existing) {
+                return {
+                    ...widgetDef,
+                    ...existing,
+                    enabled: existing.enabled ?? true,
+                };
+            }
+
             return {
                 ...widgetDef,
-                ...existing,
-                enabled: existing.enabled ?? true,
+                enabled: false,
             };
-        }
+        });
 
-        return {
-            ...widgetDef,
-            enabled: false,
-        };
-    });
+    // Step 5: Combine singleton and multi-instance widgets
+    // Singletons come first (for consistent ordering), then multi-instance
+    return [...singletonWidgets, ...multiInstanceWidgets];
 };
 
 /**
  * Merge an active layout (containing only enabled widgets) into the current
  * canonical layout, preserving disabled widgets and metadata.
+ * 
+ * Handles both singleton and multi-instance widgets properly.
  */
 export const mergeLayoutWithActive = (currentLayout: Widget[], activeLayout: Widget[]): Widget[] => {
     const normalizedCurrent = normalizeLayout(currentLayout);
     const activeMap = new Map(activeLayout.map(widget => [widget.id, widget]));
 
-    return normalizedCurrent.map((widget) => {
+    // Start with normalized current layout
+    const result = normalizedCurrent.map((widget) => {
         const active = activeMap.get(widget.id);
 
         if (!active) {
@@ -100,10 +138,21 @@ export const mergeLayoutWithActive = (currentLayout: Widget[], activeLayout: Wid
             enabled: true,
         };
     });
+
+    // Add any new multi-instance widgets from activeLayout that weren't in current
+    const resultIdSet = new Set(result.map(w => w.id));
+    for (const activeWidget of activeLayout) {
+        if (!resultIdSet.has(activeWidget.id) && isMultiInstanceWidget(activeWidget.id)) {
+            result.push({ ...activeWidget, enabled: true });
+        }
+    }
+
+    return result;
 };
 
 /**
- * Deep comparison between two layouts using their normalized representations.
+ * Deep comparison between two layouts.
+ * Handles both singleton and multi-instance widgets.
  */
 export const areLayoutsEqual = (layoutA: Widget[], layoutB: Widget[]): boolean => {
     const normalizedA = normalizeLayout(layoutA);
