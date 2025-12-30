@@ -451,6 +451,161 @@ const WidgetCard = React.memo(({ widget, isEnabled, onToggle }: WidgetRowProps) 
 WidgetCard.displayName = "WidgetCard";
 
 // ============================================
+// Multi-Instance Widget Card (for Card view)
+// ============================================
+
+interface MultiInstanceWidgetCardProps {
+    widget: WidgetConfig;
+    instances: Widget[];
+    onAddInstance: () => void;
+    onRemoveInstance: (widgetId: string) => void;
+    canAddMore: boolean;
+}
+
+const MultiInstanceWidgetCard = React.memo(({
+    widget,
+    instances,
+    onAddInstance,
+    onRemoveInstance,
+    canAddMore,
+}: MultiInstanceWidgetCardProps) => {
+    const IconComponent = CATEGORY_ICONS[widget.category];
+    const enabledInstances = instances.filter(i => i.enabled);
+    const hasInstances = enabledInstances.length > 0;
+
+    return (
+        <div
+            className="relative flex flex-col p-4 rounded-xl border transition-all"
+            style={hasInstances ? {
+                backgroundColor: 'var(--ui-accent-primary-bg)',
+                borderColor: 'var(--ui-accent-primary-border)'
+            } : {
+                backgroundColor: 'var(--ui-bg-secondary)',
+                borderColor: 'var(--ui-border-primary)'
+            }}
+        >
+            {/* Instance count badge top right */}
+            <div className="absolute top-3 right-3 flex items-center gap-1">
+                {hasInstances && (
+                    <span
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold"
+                        style={{
+                            backgroundColor: 'var(--ui-accent-primary)',
+                            color: '#ffffff'
+                        }}
+                    >
+                        {enabledInstances.length}
+                    </span>
+                )}
+                <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={onAddInstance}
+                                disabled={!canAddMore}
+                                className="w-6 h-6 rounded-md flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                style={{
+                                    backgroundColor: 'var(--ui-accent-primary)',
+                                    color: '#ffffff'
+                                }}
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {canAddMore ? `Add ${widget.title}` : `Maximum instances reached`}
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+
+            {/* Category icon */}
+            <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                style={{ backgroundColor: hasInstances ? 'var(--ui-accent-primary-bg)' : 'var(--ui-bg-tertiary)' }}
+            >
+                {IconComponent && (
+                    <div style={{ color: hasInstances ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)' }}>
+                        <IconComponent className="w-5 h-5" />
+                    </div>
+                )}
+            </div>
+
+            {/* Title */}
+            <div className="flex items-center gap-2 mb-1 pr-16">
+                <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--ui-text-primary)' }}>
+                    {widget.title}
+                </h3>
+                <span
+                    className="px-1.5 py-0.5 text-[9px] font-semibold rounded uppercase flex-shrink-0"
+                    style={{
+                        backgroundColor: 'var(--ui-accent-secondary-bg)',
+                        color: 'var(--ui-accent-secondary)'
+                    }}
+                >
+                    Multi
+                </span>
+            </div>
+
+            {/* Description */}
+            <p className="text-xs line-clamp-2 mb-3 flex-1" style={{ color: 'var(--ui-text-muted)' }}>
+                {widget.description}
+            </p>
+
+            {/* Instances list */}
+            {enabledInstances.length > 0 && (
+                <div className="space-y-1 mb-3">
+                    {enabledInstances.map((instance, index) => (
+                        <div
+                            key={instance.id}
+                            className="flex items-center gap-2 px-2 py-1 rounded-md text-xs"
+                            style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                        >
+                            <span className="flex-1 truncate" style={{ color: 'var(--ui-text-secondary)' }}>
+                                {instance.displayName || `${widget.title} ${index + 1}`}
+                            </span>
+                            <button
+                                onClick={() => onRemoveInstance(instance.id)}
+                                className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center transition-colors"
+                                style={{ color: 'var(--ui-text-muted)' }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.color = 'var(--ui-danger)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.color = 'var(--ui-text-muted)';
+                                }}
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Footer: size + badges */}
+            <div className="flex items-center gap-2 mt-auto">
+                <span className="text-[10px] font-mono tabular-nums px-1.5 py-0.5 rounded" style={{
+                    color: 'var(--ui-text-muted)',
+                    backgroundColor: 'var(--ui-bg-tertiary)'
+                }}>
+                    {widget.defaultSize.w}×{widget.defaultSize.h}
+                </span>
+                {widget.beta && (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase" style={{
+                        backgroundColor: 'var(--ui-warning-bg)',
+                        color: 'var(--ui-warning-text)'
+                    }}>
+                        Beta
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+});
+
+MultiInstanceWidgetCard.displayName = "MultiInstanceWidgetCard";
+
+// ============================================
 // Mobile Widget Card (Touch-friendly)
 // ============================================
 
@@ -597,6 +752,102 @@ const WidgetCompact = React.memo(({ widget, isEnabled, onToggle }: WidgetRowProp
 });
 
 WidgetCompact.displayName = "WidgetCompact";
+
+// ============================================
+// Multi-Instance Widget Compact
+// ============================================
+
+interface MultiInstanceWidgetCompactProps {
+    widget: WidgetConfig;
+    instances: Widget[];
+    onAddInstance: () => void;
+    onRemoveInstance: (widgetId: string) => void;
+    canAddMore: boolean;
+}
+
+const MultiInstanceWidgetCompact = React.memo(({
+    widget,
+    instances,
+    onAddInstance,
+    onRemoveInstance,
+    canAddMore,
+}: MultiInstanceWidgetCompactProps) => {
+    const enabledInstances = instances.filter(i => i.enabled);
+    const hasInstances = enabledInstances.length > 0;
+
+    return (
+        <TooltipProvider delayDuration={200}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-all"
+                        style={hasInstances ? {
+                            backgroundColor: 'var(--ui-accent-primary-bg)',
+                            borderColor: 'var(--ui-accent-primary-border)',
+                        } : {
+                            backgroundColor: 'var(--ui-bg-secondary)',
+                            borderColor: 'var(--ui-border-primary)',
+                        }}
+                    >
+                        {/* Instance count */}
+                        <span
+                            className="w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                            style={hasInstances ? {
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                color: '#ffffff'
+                            } : {
+                                backgroundColor: 'var(--ui-bg-tertiary)',
+                                color: 'var(--ui-text-muted)'
+                            }}
+                        >
+                            {enabledInstances.length}
+                        </span>
+                        <span
+                            className="text-xs font-medium truncate"
+                            style={{ color: hasInstances ? 'var(--ui-text-primary)' : 'var(--ui-text-secondary)' }}
+                        >
+                            {widget.title}
+                        </span>
+                        <button
+                            onClick={onAddInstance}
+                            disabled={!canAddMore}
+                            className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{
+                                backgroundColor: 'var(--ui-accent-primary)',
+                                color: '#ffffff'
+                            }}
+                        >
+                            <Plus className="w-3 h-3" />
+                        </button>
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[250px]">
+                    <p className="font-medium text-sm">{widget.title}</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--ui-text-muted)' }}>{widget.description}</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'var(--ui-text-muted)' }}>Size: {widget.defaultSize.w}×{widget.defaultSize.h}</p>
+                    {enabledInstances.length > 0 && (
+                        <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--ui-border-primary)' }}>
+                            <p className="text-[10px] font-medium mb-1">{enabledInstances.length} instance{enabledInstances.length !== 1 ? 's' : ''}:</p>
+                            {enabledInstances.map((instance, i) => (
+                                <div key={instance.id} className="flex items-center gap-1 text-[10px]">
+                                    <span className="flex-1 truncate">{instance.displayName || `${widget.title} ${i + 1}`}</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onRemoveInstance(instance.id); }}
+                                        className="text-[var(--ui-danger)] hover:underline"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+});
+
+MultiInstanceWidgetCompact.displayName = "MultiInstanceWidgetCompact";
 
 // ============================================
 // Category Sidebar Item
@@ -840,10 +1091,26 @@ export default function WidgetPicker({
     // Group widgets by category
     const groupedWidgets = useMemo(() => groupWidgetsByCategory(filteredWidgets), [filteredWidgets]);
 
-    // Enabled widget IDs
+    // Enabled widget IDs (for singleton widgets)
     const enabledWidgets = useMemo(() => {
         return new Set(tempLayout.filter((w) => w.enabled).map((w) => w.id));
     }, [tempLayout]);
+
+    // Enabled widget types (includes multi-instance widgets by their base type)
+    const enabledWidgetTypes = useMemo(() => {
+        return new Set(tempLayout.filter((w) => w.enabled).map((w) => getWidgetType(w.id)));
+    }, [tempLayout]);
+
+    // Check if a widget is enabled (works for both singleton and multi-instance widgets)
+    const isWidgetEnabled = useCallback((widgetId: string) => {
+        const config = WIDGET_CONFIGS.find(w => w.id === widgetId);
+        if (config?.allowMultiple) {
+            // For multi-instance widgets, check if any instance of this type is enabled
+            return countEnabledWidgetInstances(tempLayout, widgetId) > 0;
+        }
+        // For singleton widgets, check exact ID match
+        return enabledWidgets.has(widgetId);
+    }, [tempLayout, enabledWidgets]);
 
     // Category stats
     const categoryStats = useMemo(() => {
@@ -1047,7 +1314,7 @@ export default function WidgetPicker({
     // Stats
     const enabledCount = tempLayout.filter((w) => w.enabled).length;
     const totalCount = accessibleWidgets.length;
-    const visibleEnabledCount = filteredWidgets.filter((w) => enabledWidgets.has(w.id)).length;
+    const visibleEnabledCount = filteredWidgets.filter((w) => isWidgetEnabled(w.id)).length;
     const categories = getAvailableCategories();
 
     // Keyboard shortcuts
@@ -1308,7 +1575,7 @@ export default function WidgetPicker({
                                                 <MobileWidgetCard
                                                     key={widget.id}
                                                     widget={widget}
-                                                    isEnabled={enabledWidgets.has(widget.id)}
+                                                    isEnabled={isWidgetEnabled(widget.id)}
                                                     onToggle={() => toggleWidget(widget.id)}
                                                 />
                                             ))}
@@ -1330,7 +1597,7 @@ export default function WidgetPicker({
                                 <MobileWidgetCard
                                     key={widget.id}
                                     widget={widget}
-                                    isEnabled={enabledWidgets.has(widget.id)}
+                                    isEnabled={isWidgetEnabled(widget.id)}
                                     onToggle={() => toggleWidget(widget.id)}
                                     showCategory={selectedCategory === "all"}
                                 />
@@ -1761,14 +2028,25 @@ export default function WidgetPicker({
                                                     </span>
                                                 </div>
                                                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                                    {widgets.map((widget) => (
-                                                        <WidgetCard
-                                                            key={widget.id}
-                                                            widget={widget}
-                                                            isEnabled={enabledWidgets.has(widget.id)}
-                                                            onToggle={() => toggleWidget(widget.id)}
-                                                        />
-                                                    ))}
+                                                    {widgets.map((widget) =>
+                                                        widget.allowMultiple ? (
+                                                            <MultiInstanceWidgetCard
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                instances={getWidgetInstances(tempLayout, widget.id)}
+                                                                onAddInstance={() => addWidgetInstance(widget.id)}
+                                                                onRemoveInstance={removeWidgetInstance}
+                                                                canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                            />
+                                                        ) : (
+                                                            <WidgetCard
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                isEnabled={isWidgetEnabled(widget.id)}
+                                                                onToggle={() => toggleWidget(widget.id)}
+                                                            />
+                                                        )
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -1776,14 +2054,25 @@ export default function WidgetPicker({
                                 ) : (
                                     // Flat card grid
                                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                        {filteredWidgets.map((widget) => (
-                                            <WidgetCard
-                                                key={widget.id}
-                                                widget={widget}
-                                                isEnabled={enabledWidgets.has(widget.id)}
-                                                onToggle={() => toggleWidget(widget.id)}
-                                            />
-                                        ))}
+                                        {filteredWidgets.map((widget) =>
+                                            widget.allowMultiple ? (
+                                                <MultiInstanceWidgetCard
+                                                    key={widget.id}
+                                                    widget={widget}
+                                                    instances={getWidgetInstances(tempLayout, widget.id)}
+                                                    onAddInstance={() => addWidgetInstance(widget.id)}
+                                                    onRemoveInstance={removeWidgetInstance}
+                                                    canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                />
+                                            ) : (
+                                                <WidgetCard
+                                                    key={widget.id}
+                                                    widget={widget}
+                                                    isEnabled={isWidgetEnabled(widget.id)}
+                                                    onToggle={() => toggleWidget(widget.id)}
+                                                />
+                                            )
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1810,14 +2099,25 @@ export default function WidgetPicker({
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {widgets.map((widget) => (
-                                                        <WidgetCompact
-                                                            key={widget.id}
-                                                            widget={widget}
-                                                            isEnabled={enabledWidgets.has(widget.id)}
-                                                            onToggle={() => toggleWidget(widget.id)}
-                                                        />
-                                                    ))}
+                                                    {widgets.map((widget) =>
+                                                        widget.allowMultiple ? (
+                                                            <MultiInstanceWidgetCompact
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                instances={getWidgetInstances(tempLayout, widget.id)}
+                                                                onAddInstance={() => addWidgetInstance(widget.id)}
+                                                                onRemoveInstance={removeWidgetInstance}
+                                                                canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                            />
+                                                        ) : (
+                                                            <WidgetCompact
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                isEnabled={isWidgetEnabled(widget.id)}
+                                                                onToggle={() => toggleWidget(widget.id)}
+                                                            />
+                                                        )
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -1825,14 +2125,25 @@ export default function WidgetPicker({
                                 ) : (
                                     // Flat compact
                                     <div className="flex flex-wrap gap-1.5">
-                                        {filteredWidgets.map((widget) => (
-                                            <WidgetCompact
-                                                key={widget.id}
-                                                widget={widget}
-                                                isEnabled={enabledWidgets.has(widget.id)}
-                                                onToggle={() => toggleWidget(widget.id)}
-                                            />
-                                        ))}
+                                        {filteredWidgets.map((widget) =>
+                                            widget.allowMultiple ? (
+                                                <MultiInstanceWidgetCompact
+                                                    key={widget.id}
+                                                    widget={widget}
+                                                    instances={getWidgetInstances(tempLayout, widget.id)}
+                                                    onAddInstance={() => addWidgetInstance(widget.id)}
+                                                    onRemoveInstance={removeWidgetInstance}
+                                                    canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                />
+                                            ) : (
+                                                <WidgetCompact
+                                                    key={widget.id}
+                                                    widget={widget}
+                                                    isEnabled={isWidgetEnabled(widget.id)}
+                                                    onToggle={() => toggleWidget(widget.id)}
+                                                />
+                                            )
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1934,7 +2245,7 @@ export default function WidgetPicker({
                                                         <WidgetRow
                                                             key={widget.id}
                                                             widget={widget}
-                                                            isEnabled={enabledWidgets.has(widget.id)}
+                                                            isEnabled={isWidgetEnabled(widget.id)}
                                                             onToggle={() => toggleWidget(widget.id)}
                                                         />
                                                     )
@@ -1966,7 +2277,7 @@ export default function WidgetPicker({
                                         <WidgetRow
                                             key={widget.id}
                                             widget={widget}
-                                            isEnabled={enabledWidgets.has(widget.id)}
+                                            isEnabled={isWidgetEnabled(widget.id)}
                                             onToggle={() => toggleWidget(widget.id)}
                                             showCategory={selectedCategory === "all"}
                                         />
