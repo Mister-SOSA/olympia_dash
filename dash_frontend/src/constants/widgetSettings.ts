@@ -1286,6 +1286,18 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                 ],
             },
             {
+                title: 'Display Mode',
+                fields: [
+                    {
+                        key: 'monitoringMode',
+                        type: 'toggle',
+                        label: 'Monitoring Mode',
+                        description: 'Display large, readable metrics only - no controls',
+                        default: false,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
                 title: 'Ports',
                 fields: [
                     {

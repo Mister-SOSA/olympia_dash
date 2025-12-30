@@ -157,6 +157,182 @@ const SmallView: React.FC<SmallViewProps> = ({
 };
 
 // =============================================================================
+// MONITORING VIEW - Large readable metrics, no controls
+// =============================================================================
+
+interface MonitoringViewProps {
+    controller: ACInfinityController;
+    ports: ACInfinityPort[];
+    portSettings: Record<number, PortSettings>;
+    name: string;
+    tempUnit: TempUnit;
+    showTemperature: boolean;
+    showHumidity: boolean;
+    showVPD: boolean;
+    enableAnimations: boolean;
+    size: { w: number; h: number };
+}
+
+const MonitoringView: React.FC<MonitoringViewProps> = ({
+    controller, ports, portSettings, name, tempUnit,
+    showTemperature, showHumidity, showVPD, enableAnimations, size
+}) => {
+    const vpdColor = getVpdColor(controller.vpd);
+
+    // Calculate overall fan status
+    const activePorts = ports.filter(p => {
+        const ps = portSettings[p.portIndex];
+        const mode = ps?.mode ?? p.currentMode ?? 2;
+        return mode !== 1 && (p.currentPower ?? 0) > 0;
+    });
+    const avgSpeed = activePorts.length > 0
+        ? Math.round(activePorts.reduce((sum, p) => sum + (p.currentPower ?? 0), 0) / activePorts.length)
+        : 0;
+    const isRunning = avgSpeed > 0;
+
+    // Responsive sizing based on widget dimensions
+    const isCompact = size.h < 250 || size.w < 350;
+    const isLarge = size.h >= 400 && size.w >= 450;
+
+    // Scale metrics based on available space
+    const fanIconSize = isCompact ? 'w-12 h-12' : isLarge ? 'w-24 h-24' : 'w-16 h-16';
+    const speedTextSize = isCompact ? 'text-4xl' : isLarge ? 'text-7xl' : 'text-5xl';
+    const metricIconSize = isCompact ? 'w-6 h-6' : isLarge ? 'w-10 h-10' : 'w-8 h-8';
+    const metricTextSize = isCompact ? 'text-2xl' : isLarge ? 'text-5xl' : 'text-3xl';
+    const labelSize = isCompact ? 'text-[9px]' : isLarge ? 'text-sm' : 'text-xs';
+    const padding = isCompact ? 'p-2' : isLarge ? 'p-6' : 'p-4';
+    const gap = isCompact ? 'gap-2' : isLarge ? 'gap-6' : 'gap-4';
+
+    // Count visible metrics for layout
+    const visibleMetrics = [showTemperature, showHumidity, showVPD && controller.vpd > 0].filter(Boolean).length;
+    const showPortSpeeds = ports.length > 1 && size.h >= 300;
+
+    return (
+        <div className={`flex flex-col h-full w-full ${padding} ${gap}`}>
+            {/* Header - Name and status */}
+            {!isCompact && (
+                <div className="flex items-center justify-between flex-shrink-0">
+                    <span className={`font-semibold ${isLarge ? 'text-lg' : 'text-sm'}`} style={{ color: 'var(--ui-text-primary)' }}>
+                        {name}
+                    </span>
+                    <span
+                        className={`${labelSize} px-2 py-0.5 rounded-full font-medium`}
+                        style={{ backgroundColor: 'var(--ui-success-bg)', color: 'var(--ui-success)' }}
+                    >
+                        Online
+                    </span>
+                </div>
+            )}
+
+            {/* Main Content - Fan speed large and centered */}
+            <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+                <div className="flex items-center justify-center gap-4">
+                    <Fan
+                        className={`${fanIconSize} ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
+                        style={{
+                            color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
+                            animationDuration: '1s'
+                        }}
+                    />
+                    <span className={`${speedTextSize} font-black tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
+                        {isRunning ? `${avgSpeed * 10}%` : 'OFF'}
+                    </span>
+                </div>
+
+                {/* Individual port speeds - shown if multiple ports and enough space */}
+                {showPortSpeeds && (
+                    <div className="flex items-center justify-center gap-3 mt-3">
+                        {ports.map(port => {
+                            const ps = portSettings[port.portIndex];
+                            const mode = ps?.mode ?? port.currentMode ?? 2;
+                            const speed = port.currentPower ?? 0;
+                            const portRunning = mode !== 1 && speed > 0;
+                            return (
+                                <div
+                                    key={port.portIndex}
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+                                    style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+                                >
+                                    <Fan
+                                        className={`w-4 h-4 ${enableAnimations && portRunning ? 'animate-spin' : ''}`}
+                                        style={{
+                                            color: portRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
+                                            animationDuration: '1s'
+                                        }}
+                                    />
+                                    <span className="text-xs font-medium" style={{ color: 'var(--ui-text-muted)' }}>
+                                        {port.portName.length > 8 ? port.portName.substring(0, 8) + '…' : port.portName}
+                                    </span>
+                                    <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                                        {portRunning ? `${speed * 10}%` : 'OFF'}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Sensor Readings - Large and prominent */}
+            {visibleMetrics > 0 && (
+                <div
+                    className={`flex items-center justify-around ${isCompact ? 'py-2 px-2' : isLarge ? 'py-5 px-6' : 'py-3 px-4'} rounded-xl flex-shrink-0`}
+                    style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+                >
+                    {showTemperature && (
+                        <div className="flex flex-col items-center gap-1">
+                            <Thermometer className={metricIconSize} style={{ color: 'var(--ui-warning)' }} />
+                            <span className={`${metricTextSize} font-bold tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
+                                {formatTemp(controller.temperatureF, tempUnit)}°
+                            </span>
+                            {!isCompact && (
+                                <span className={`${labelSize} font-medium uppercase tracking-wide`} style={{ color: 'var(--ui-text-muted)' }}>
+                                    Temp
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {showTemperature && showHumidity && !isCompact && (
+                        <div className={`w-px ${isLarge ? 'h-16' : 'h-12'}`} style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                    )}
+                    {showHumidity && (
+                        <div className="flex flex-col items-center gap-1">
+                            <Droplets className={metricIconSize} style={{ color: 'var(--ui-info)' }} />
+                            <span className={`${metricTextSize} font-bold tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
+                                {controller.humidity.toFixed(0)}%
+                            </span>
+                            {!isCompact && (
+                                <span className={`${labelSize} font-medium uppercase tracking-wide`} style={{ color: 'var(--ui-text-muted)' }}>
+                                    Humidity
+                                </span>
+                            )}
+                        </div>
+                    )}
+                    {showVPD && controller.vpd > 0 && (
+                        <>
+                            {(showTemperature || showHumidity) && !isCompact && (
+                                <div className={`w-px ${isLarge ? 'h-16' : 'h-12'}`} style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                            )}
+                            <div className="flex flex-col items-center gap-1">
+                                <Leaf className={metricIconSize} style={{ color: vpdColor }} />
+                                <span className={`${metricTextSize} font-bold tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
+                                    {controller.vpd.toFixed(2)}
+                                </span>
+                                {!isCompact && (
+                                    <span className={`${labelSize} font-medium uppercase tracking-wide`} style={{ color: 'var(--ui-text-muted)' }}>
+                                        VPD
+                                    </span>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// =============================================================================
 // SPEED SLIDER - Touch-friendly
 // =============================================================================
 
@@ -1061,6 +1237,7 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
     const customName = settings.customName as string;
     const showInactivePorts = settings.showInactivePorts === true; // default false
     const defaultExpandedPort = (settings.defaultExpandedPort as string) || 'none';
+    const monitoringMode = settings.monitoringMode === true; // default false
 
     // Global settings from context (shared across all instances)
     const tempUnit = globalSettings.temperatureUnit;
@@ -1218,6 +1395,27 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
     // ==========================================================================
     // RENDER APPROPRIATE VIEW
     // ==========================================================================
+
+    // Monitoring mode - show large readable metrics without controls
+    if (monitoringMode) {
+        return (
+            <div ref={ref} className="h-full w-full overflow-hidden">
+                <MonitoringView
+                    controller={controller}
+                    ports={allPorts}
+                    portSettings={portSettings}
+                    name={name}
+                    tempUnit={tempUnit}
+                    showTemperature={showTemperature}
+                    showHumidity={showHumidity}
+                    showVPD={showVPD}
+                    enableAnimations={enableAnimations}
+                    size={size}
+                />
+            </div>
+        );
+    }
+
     return (
         <div ref={ref} className="h-full w-full overflow-hidden">
             {viewSize === 'small' && (
