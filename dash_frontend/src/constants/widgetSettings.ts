@@ -38,6 +38,23 @@ export interface SelectSettingField extends BaseSettingField {
     options: { value: string; label: string }[];
 }
 
+export interface AsyncSelectSettingField extends BaseSettingField {
+    type: 'asyncSelect';
+    default: string;
+    /** API endpoint to fetch options from */
+    optionsEndpoint: string;
+    /** Path to the array of options in the response (e.g., "data") */
+    optionsPath: string;
+    /** Field name for the option value */
+    valueField: string;
+    /** Field name for the option label */
+    labelField: string;
+    /** Optional field to check if option is disabled (e.g., offline controllers) */
+    disabledField?: string;
+    /** Placeholder when nothing is selected */
+    placeholder?: string;
+}
+
 export interface NumberSettingField extends BaseSettingField {
     type: 'number';
     default: number;
@@ -80,6 +97,7 @@ export interface ItemListSettingField extends BaseSettingField {
 export type SettingField =
     | ToggleSettingField
     | SelectSettingField
+    | AsyncSelectSettingField
     | NumberSettingField
     | TextSettingField
     | ColorSettingField
@@ -1173,35 +1191,35 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
 
     // Fan Controller Widget (Multi-Instance)
     // Note: This widget supports multiple instances - each instance can control a different fan
+    // Controller selection is done via the dropdown in the widget itself
     FanController: {
         widgetId: 'FanController',
         title: 'Fan Controller Settings',
-        description: 'Configure which fan this widget controls and how it displays',
+        description: 'Configure which AC Infinity controller this widget monitors',
         sections: [
             {
-                title: 'Fan Selection',
+                title: 'Controller',
                 fields: [
                     {
                         key: 'selectedFan',
-                        type: 'select',
-                        label: 'Select Fan',
-                        description: 'Choose which AC Infinity fan controller this widget monitors',
+                        type: 'asyncSelect',
+                        label: 'Select Controller',
+                        description: 'Choose which AC Infinity controller this widget monitors',
                         default: '',
-                        options: [
-                            { value: '', label: 'Select a fan...' },
-                            { value: 'fan-1', label: 'Grow Room Fan (CLOUDLINE T6)' },
-                            { value: 'fan-2', label: 'Drying Room Fan (CLOUDLINE S4)' },
-                            { value: 'fan-3', label: 'Ventilation Fan (CLOUDLINE T8)' },
-                            { value: 'fan-4', label: 'Server Room Fan (CLOUDLINE S6)' },
-                        ],
-                    } as SelectSettingField,
+                        optionsEndpoint: '/api/ac-infinity/controllers',
+                        optionsPath: 'data',
+                        valueField: 'deviceId',
+                        labelField: 'deviceName',
+                        disabledField: 'isOnline',
+                        placeholder: 'Select a controller...',
+                    } as AsyncSelectSettingField,
                     {
                         key: 'customName',
                         type: 'text',
                         label: 'Custom Name',
-                        description: 'Override the default fan name with a custom label',
+                        description: 'Override the default controller name with a custom label',
                         default: '',
-                        placeholder: 'e.g., Main Exhaust',
+                        placeholder: 'e.g., Grow Room Controller',
                         maxLength: 30,
                     } as TextSettingField,
                 ],
@@ -1216,22 +1234,22 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         description: 'How much information to show',
                         default: 'detailed',
                         options: [
-                            { value: 'compact', label: 'Compact - Speed only' },
-                            { value: 'detailed', label: 'Detailed - All info' },
+                            { value: 'compact', label: 'Compact - Basic info' },
+                            { value: 'detailed', label: 'Detailed - All info with ports' },
                         ],
                     } as SelectSettingField,
                     {
                         key: 'showTemperature',
                         type: 'toggle',
                         label: 'Show Temperature',
-                        description: 'Display the temperature reading from the fan\'s sensor',
+                        description: 'Display the temperature reading from the controller\'s sensor',
                         default: true,
                     } as ToggleSettingField,
                     {
                         key: 'showHumidity',
                         type: 'toggle',
                         label: 'Show Humidity',
-                        description: 'Display the humidity reading from the fan\'s sensor',
+                        description: 'Display the humidity reading from the controller\'s sensor',
                         default: true,
                     } as ToggleSettingField,
                 ],

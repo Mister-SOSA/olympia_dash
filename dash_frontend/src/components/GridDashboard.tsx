@@ -21,6 +21,7 @@ import { preferencesService } from "@/lib/preferences";
 import { DASHBOARD_SETTINGS, GRID_SETTINGS } from "@/constants/settings";
 import { useSettings } from "@/hooks/useSettings";
 import { useAnalytics } from "@/contexts/AnalyticsContext";
+import { useWidgetSettingsDialog } from "@/contexts/WidgetSettingsDialogContext";
 import { type LayoutUpdateSource } from "@/utils/layoutUtils";
 import { Loader } from "@/components/ui/loader";
 
@@ -209,8 +210,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
 
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const [showInfoModal, setShowInfoModal] = useState(false);
-        const [showSettingsDialog, setShowSettingsDialog] = useState(false);
         const [selectedWidget, setSelectedWidget] = useState<{ id: string; title: string } | null>(null);
+
+        // Widget settings dialog from context (allows widgets to open their own settings)
+        const widgetSettingsDialog = useWidgetSettingsDialog();
 
         // For forcing widget refresh
         const [refreshKeys, setRefreshKeys] = useState<Record<string, number>>({});
@@ -351,11 +354,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         const handleWidgetSettings = useCallback((widgetId: string) => {
             const widgetConfig = getWidgetConfigById(widgetId);
             if (widgetConfig) {
-                setSelectedWidget({ id: widgetId, title: widgetConfig.title });
-                setShowSettingsDialog(true);
+                widgetSettingsDialog.openSettings(widgetId, widgetConfig.title);
             }
             hideContextMenu();
-        }, [hideContextMenu]);
+        }, [hideContextMenu, widgetSettingsDialog]);
 
         const handleDeleteRequest = useCallback((widgetId: string) => {
             const widgetConfig = getWidgetConfigById(widgetId);
@@ -725,13 +727,10 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
                 />
 
                 <WidgetSettingsDialog
-                    widgetId={selectedWidget?.id || ''}
-                    widgetTitle={selectedWidget?.title || ''}
-                    isOpen={showSettingsDialog}
-                    onClose={() => {
-                        setShowSettingsDialog(false);
-                        setSelectedWidget(null);
-                    }}
+                    widgetId={widgetSettingsDialog.selectedWidget?.id || ''}
+                    widgetTitle={widgetSettingsDialog.selectedWidget?.title || ''}
+                    isOpen={widgetSettingsDialog.isOpen}
+                    onClose={widgetSettingsDialog.closeSettings}
                 />
             </>
         );

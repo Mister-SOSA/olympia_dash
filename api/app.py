@@ -27,6 +27,7 @@ from auth.analytics_routes import analytics_bp
 from auth.middleware import require_auth
 from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 from services.unifi_access import get_entry_logs as fetch_entry_logs
+from services.ac_infinity import get_all_controllers, get_controller_by_id, set_fan_speed
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -455,6 +456,128 @@ def get_access_logs():
         return jsonify({"success": False, "error": "Invalid parameter value"}), 200
     except Exception as e:
         logger.error('Endpoint: /api/access-logs | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+# ============================================
+# AC Infinity Fan Controller Routes
+# ============================================
+
+@app.route('/api/ac-infinity/controllers', methods=['GET'])
+@require_auth
+def get_ac_infinity_controllers():
+    """
+    Get all AC Infinity controllers and their status.
+    
+    Query Parameters:
+        refresh: Set to 'true' to force refresh (bypass cache)
+    
+    Returns:
+        List of controllers with:
+        - deviceId, deviceName, deviceType
+        - temperature, humidity, vpd
+        - ports (connected fans) with current power levels
+    """
+    try:
+        result = get_all_controllers()
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Unknown error')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "data": result['data'],
+            "timestamp": result.get('timestamp')
+        }), 200
+        
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/controllers | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/controllers/<device_id>', methods=['GET'])
+@require_auth
+def get_ac_infinity_controller(device_id):
+    """
+    Get a specific AC Infinity controller by device ID.
+    
+    Path Parameters:
+        device_id: The controller's device ID
+    
+    Returns:
+        Controller details including temperature, humidity, and port status
+    """
+    try:
+        result = get_controller_by_id(device_id)
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Controller not found')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "data": result['data']
+        }), 200
+        
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/controllers/%s | Error: %s', device_id, e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/controllers/<device_id>/ports/<int:port>/speed', methods=['POST'])
+@require_auth
+def set_ac_infinity_fan_speed(device_id, port):
+    """
+    Set the fan speed for a specific port on a controller.
+    
+    Path Parameters:
+        device_id: The controller's device ID
+        port: Port number (1-4)
+    
+    Body (JSON):
+        speed: Speed level 0-10
+    
+    Returns:
+        Success status
+    """
+    try:
+        data = request.get_json()
+        if not data or 'speed' not in data:
+            return jsonify({
+                "success": False,
+                "error": "Missing 'speed' in request body"
+            }), 400
+        
+        speed = int(data['speed'])
+        if not 0 <= speed <= 10:
+            return jsonify({
+                "success": False,
+                "error": "Speed must be between 0 and 10"
+            }), 400
+        
+        result = set_fan_speed(device_id, port, speed)
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to set speed')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "message": result.get('message', f'Speed set to {speed}')
+        }), 200
+        
+    except ValueError as e:
+        logger.warning('Endpoint: /api/ac-infinity/.../speed | Invalid parameter: %s', e)
+        return jsonify({"success": False, "error": "Invalid speed value"}), 400
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/.../speed | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
 
 

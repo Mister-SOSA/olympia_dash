@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MdClose, MdRefresh, MdSettings, MdAdd, MdDelete, MdContentPaste } from "react-icons/md";
 import {
     getWidgetSettingsSchema,
     SettingField,
-    WidgetSettingsSchema
+    WidgetSettingsSchema,
+    AsyncSelectSettingField,
 } from "@/constants/widgetSettings";
 import { widgetSettingsService } from "@/lib/widgetSettings";
+import { authService } from "@/lib/auth";
 
 interface WidgetSettingsDialogProps {
     widgetId: string;
@@ -184,6 +186,8 @@ function SettingFieldRenderer({
             return <ToggleField field={field} value={value} onChange={onChange} />;
         case 'select':
             return <SelectField field={field} value={value} onChange={onChange} />;
+        case 'asyncSelect':
+            return <AsyncSelectField field={field as AsyncSelectSettingField} value={value} onChange={onChange} />;
         case 'number':
             return <NumberField field={field} value={value} onChange={onChange} />;
         case 'text':
@@ -263,6 +267,106 @@ function SelectField({
                     </option>
                 ))}
             </select>
+        </div>
+    );
+}
+
+function AsyncSelectField({
+    field,
+    value,
+    onChange,
+}: {
+    field: AsyncSelectSettingField;
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const [options, setOptions] = useState<{ value: string; label: string; disabled?: boolean }[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchOptions = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await authService.fetchWithAuth(field.optionsEndpoint);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+
+            // Navigate to the options array using optionsPath
+            let optionsData = data;
+            if (field.optionsPath) {
+                for (const key of field.optionsPath.split('.')) {
+                    optionsData = optionsData?.[key];
+                }
+            }
+
+            if (!Array.isArray(optionsData)) {
+                throw new Error('Invalid options data');
+            }
+
+            const mappedOptions = optionsData.map((item: any) => ({
+                value: String(item[field.valueField] || ''),
+                label: String(item[field.labelField] || ''),
+                disabled: field.disabledField ? !item[field.disabledField] : false,
+            }));
+
+            setOptions(mappedOptions);
+        } catch (err) {
+            console.error('Error fetching options:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load options');
+        } finally {
+            setLoading(false);
+        }
+    }, [field.optionsEndpoint, field.optionsPath, field.valueField, field.labelField, field.disabledField]);
+
+    useEffect(() => {
+        fetchOptions();
+    }, [fetchOptions]);
+
+    const currentValue = value ?? field.default;
+
+    return (
+        <div className="py-2">
+            <div className="flex items-center justify-between mb-2">
+                <div>
+                    <div className="text-sm font-medium text-ui-text-primary">{field.label}</div>
+                    {field.description && (
+                        <div className="text-xs text-ui-text-secondary">{field.description}</div>
+                    )}
+                </div>
+            </div>
+            {loading ? (
+                <div className="w-full px-3 py-2 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-secondary text-sm">
+                    Loading options...
+                </div>
+            ) : error ? (
+                <div className="flex items-center gap-2">
+                    <div className="flex-1 px-3 py-2 bg-ui-bg-secondary border border-ui-danger/50 rounded-lg text-ui-danger text-sm">
+                        {error}
+                    </div>
+                    <button
+                        onClick={fetchOptions}
+                        className="px-3 py-2 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-secondary text-sm hover:bg-ui-bg-tertiary"
+                    >
+                        Retry
+                    </button>
+                </div>
+            ) : (
+                <select
+                    value={currentValue}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all cursor-pointer"
+                >
+                    <option value="">{field.placeholder || 'Select an option...'}</option>
+                    {options.map((opt) => (
+                        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                            {opt.label}{opt.disabled ? ' (Offline)' : ''}
+                        </option>
+                    ))}
+                </select>
+            )}
         </div>
     );
 }
