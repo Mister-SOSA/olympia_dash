@@ -14,6 +14,7 @@ import { TIMEZONE_OPTIONS, DATE_FORMAT_OPTIONS } from './settings';
 export type SettingFieldType =
     | 'toggle'      // Boolean on/off
     | 'select'      // Dropdown selection
+    | 'asyncSelect' // Dropdown with async options from API
     | 'number'      // Numeric input
     | 'text'        // Text input
     | 'color'       // Color picker
@@ -1225,38 +1226,13 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                 ],
             },
             {
-                title: 'Display Options',
+                title: 'Display',
                 fields: [
-                    {
-                        key: 'displayMode',
-                        type: 'select',
-                        label: 'Display Mode',
-                        description: 'How much information to show',
-                        default: 'detailed',
-                        options: [
-                            { value: 'compact', label: 'Compact - Basic info' },
-                            { value: 'detailed', label: 'Detailed - All info with ports' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showTemperature',
-                        type: 'toggle',
-                        label: 'Show Temperature',
-                        description: 'Display the temperature reading from the controller\'s sensor',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'showHumidity',
-                        type: 'toggle',
-                        label: 'Show Humidity',
-                        description: 'Display the humidity reading from the controller\'s sensor',
-                        default: true,
-                    } as ToggleSettingField,
                     {
                         key: 'temperatureUnit',
                         type: 'select',
                         label: 'Temperature Unit',
-                        description: 'Display temperature in Celsius or Fahrenheit',
+                        description: 'Display and set temperatures in Celsius or Fahrenheit',
                         default: 'F',
                         options: [
                             { value: 'F', label: 'Fahrenheit (°F)' },
@@ -1264,12 +1240,82 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         ],
                     } as SelectSettingField,
                     {
+                        key: 'showVPD',
+                        type: 'toggle',
+                        label: 'Show VPD',
+                        description: 'Display Vapor Pressure Deficit reading',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showHumidity',
+                        type: 'toggle',
+                        label: 'Show Humidity',
+                        description: 'Display humidity reading from the controller sensor',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'showTemperature',
+                        type: 'toggle',
+                        label: 'Show Temperature',
+                        description: 'Display temperature reading from the controller sensor',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Behavior',
+                fields: [
+                    {
+                        key: 'refreshInterval',
+                        type: 'select',
+                        label: 'Refresh Rate',
+                        description: 'How often to fetch updated data from the controller',
+                        default: '30',
+                        options: [
+                            { value: '10', label: 'Fast (10 seconds)' },
+                            { value: '30', label: 'Normal (30 seconds)' },
+                            { value: '60', label: 'Slow (1 minute)' },
+                            { value: '120', label: 'Very Slow (2 minutes)' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'enableAnimations',
+                        type: 'toggle',
+                        label: 'Fan Animation',
+                        description: 'Animate fan icon when running (disable for lower CPU usage)',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'confirmModeChanges',
+                        type: 'toggle',
+                        label: 'Confirm Mode Changes',
+                        description: 'Show confirmation dialog before changing fan modes',
+                        default: false,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Ports',
+                fields: [
+                    {
                         key: 'showInactivePorts',
                         type: 'toggle',
-                        label: 'Show Inactive Ports',
+                        label: 'Show All Ports',
                         description: 'Display all ports including those with no connected devices',
                         default: false,
                     } as ToggleSettingField,
+                    {
+                        key: 'defaultExpandedPort',
+                        type: 'select',
+                        label: 'Default Expanded Port',
+                        description: 'Which port to show expanded by default in medium view',
+                        default: 'none',
+                        options: [
+                            { value: 'none', label: 'None (collapsed)' },
+                            { value: 'first', label: 'First port' },
+                            { value: 'last', label: 'Last port' },
+                        ],
+                    } as SelectSettingField,
                 ],
             },
         ],

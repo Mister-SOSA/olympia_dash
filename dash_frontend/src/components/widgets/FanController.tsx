@@ -118,9 +118,16 @@ interface SmallViewProps {
     portSettings: Record<number, PortSettings>;
     name: string;
     tempUnit: TempUnit;
+    showTemperature: boolean;
+    showHumidity: boolean;
+    showVPD: boolean;
+    enableAnimations: boolean;
 }
 
-const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, name, tempUnit }) => {
+const SmallView: React.FC<SmallViewProps> = ({
+    controller, ports, portSettings, name, tempUnit,
+    showTemperature, showHumidity, showVPD, enableAnimations
+}) => {
     const vpdColor = getVpdColor(controller.vpd);
 
     return (
@@ -135,21 +142,25 @@ const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, 
                 </div>
             </div>
 
-            {/* Environmental Readings - Always visible */}
+            {/* Environmental Readings - Conditional */}
             <div className="flex items-center justify-between gap-2 px-1">
-                <div className="flex items-center gap-1">
-                    <Thermometer className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-warning)' }} />
-                    <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
-                        {formatTemp(controller.temperatureF, tempUnit)}{getTempUnit(tempUnit)}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <Droplets className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-info)' }} />
-                    <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
-                        {controller.humidity.toFixed(0)}%
-                    </span>
-                </div>
-                {controller.vpd > 0 && (
+                {showTemperature && (
+                    <div className="flex items-center gap-1">
+                        <Thermometer className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-warning)' }} />
+                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                            {formatTemp(controller.temperatureF, tempUnit)}{getTempUnit(tempUnit)}
+                        </span>
+                    </div>
+                )}
+                {showHumidity && (
+                    <div className="flex items-center gap-1">
+                        <Droplets className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-info)' }} />
+                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                            {controller.humidity.toFixed(0)}%
+                        </span>
+                    </div>
+                )}
+                {showVPD && controller.vpd > 0 && (
                     <div className="flex items-center gap-1">
                         <Leaf className="w-3 h-3 flex-shrink-0" style={{ color: vpdColor }} />
                         <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
@@ -174,7 +185,7 @@ const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, 
                             style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
                         >
                             <Fan
-                                className={`w-3 h-3 flex-shrink-0 ${isRunning ? 'animate-spin' : ''}`}
+                                className={`w-3 h-3 flex-shrink-0 ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
                                 style={{
                                     color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
                                     animationDuration: '1s'
@@ -519,10 +530,11 @@ interface PortControlPanelProps {
     onClose: () => void;
     isLargeView?: boolean;
     tempUnit: TempUnit;
+    enableAnimations?: boolean;
 }
 
 const PortControlPanel: React.FC<PortControlPanelProps> = ({
-    port, settings, onModeChange, onSpeedChange, onSettingsChange, onClose, isLargeView, tempUnit
+    port, settings, onModeChange, onSpeedChange, onSettingsChange, onClose, isLargeView, tempUnit, enableAnimations = true
 }) => {
     const mode = settings?.mode ?? port.currentMode ?? 2;
     const actualSpeed = port.currentPower ?? 0; // Actual running speed for display
@@ -535,7 +547,7 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Fan
-                        className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`}
+                        className={`w-4 h-4 ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
                         style={{
                             color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
                             animationDuration: '1s'
@@ -706,7 +718,7 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
 };
 
 // =============================================================================
-// PORT TILE - Clickable tile for medium view
+// PORT TILE - Clickable tile for medium view with speed meter
 // =============================================================================
 
 interface PortTileProps {
@@ -714,45 +726,60 @@ interface PortTileProps {
     settings: PortSettings | undefined;
     onClick: () => void;
     compact?: boolean;
+    enableAnimations?: boolean;
 }
 
-const PortTile: React.FC<PortTileProps> = ({ port, settings, onClick, compact }) => {
+const PortTile: React.FC<PortTileProps> = ({ port, settings, onClick, compact, enableAnimations = true }) => {
     const mode = settings?.mode ?? port.currentMode ?? 2;
     const actualSpeed = port.currentPower ?? 0; // Always show actual running speed
     const isRunning = mode !== 1 && actualSpeed > 0;
     const modeInfo = getModeInfo(mode);
+    const speedPercent = (actualSpeed / 10) * 100;
 
     return (
         <button
             onClick={onClick}
-            className={`flex items-center gap-2 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'} rounded-xl transition-all active:scale-[0.98] w-full text-left`}
+            className={`relative overflow-hidden rounded-xl transition-all active:scale-[0.98] w-full text-left`}
             style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
         >
-            <Fan
-                className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} flex-shrink-0 ${isRunning ? 'animate-spin' : ''}`}
+            {/* Speed meter background fill */}
+            <div
+                className="absolute inset-0 transition-all duration-300"
                 style={{
-                    color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
-                    animationDuration: '1s'
+                    width: `${speedPercent}%`,
+                    backgroundColor: isRunning ? 'var(--ui-accent-primary)' : 'transparent',
+                    opacity: 0.15
                 }}
             />
-            <div className="flex-1 min-w-0">
-                <div className={`font-medium truncate ${compact ? 'text-xs' : 'text-sm'}`} style={{ color: 'var(--ui-text-primary)' }}>
-                    {port.portName}
+
+            {/* Content */}
+            <div className={`relative flex items-center gap-2 ${compact ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+                <Fan
+                    className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} flex-shrink-0 ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
+                    style={{
+                        color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
+                        animationDuration: '1s'
+                    }}
+                />
+                <div className="flex-1 min-w-0">
+                    <div className={`font-medium truncate ${compact ? 'text-xs' : 'text-sm'}`} style={{ color: 'var(--ui-text-primary)' }}>
+                        {port.portName}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span
+                            className={`${compact ? 'text-[9px]' : 'text-[10px]'} px-1.5 py-0.5 rounded font-semibold`}
+                            style={{ backgroundColor: getModeColor(mode), color: mode === 1 ? 'var(--ui-text-primary)' : 'white' }}
+                        >
+                            {modeInfo.shortName}
+                        </span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span
-                        className={`${compact ? 'text-[9px]' : 'text-[10px]'} px-1.5 py-0.5 rounded font-semibold`}
-                        style={{ backgroundColor: getModeColor(mode), color: mode === 1 ? 'var(--ui-text-primary)' : 'white' }}
-                    >
-                        {modeInfo.shortName}
+                <div className="flex items-center gap-2">
+                    <span className={`font-bold tabular-nums ${compact ? 'text-sm' : 'text-lg'}`} style={{ color: 'var(--ui-text-primary)' }}>
+                        {mode === 1 ? 'OFF' : `${actualSpeed * 10}%`}
                     </span>
+                    <ChevronRight className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} style={{ color: 'var(--ui-text-muted)' }} />
                 </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <span className={`font-bold tabular-nums ${compact ? 'text-sm' : 'text-lg'}`} style={{ color: 'var(--ui-text-primary)' }}>
-                    {mode === 1 ? 'OFF' : `${actualSpeed * 10}%`}
-                </span>
-                <ChevronRight className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} style={{ color: 'var(--ui-text-muted)' }} />
             </div>
         </button>
     );
@@ -821,17 +848,27 @@ interface MediumViewProps {
     onModeChange: (portIndex: number, mode: number) => void;
     onSpeedChange: (portIndex: number, speed: number) => void;
     onSettingsChange: (portIndex: number, settings: Partial<PortSettings>) => void;
+    enableAnimations: boolean;
+    defaultExpandedPort: string;
 }
 
 const MediumView: React.FC<MediumViewProps> = ({
-    controller, ports, portSettings, name, tempUnit, onModeChange, onSpeedChange, onSettingsChange
+    controller, ports, portSettings, name, tempUnit, onModeChange, onSpeedChange, onSettingsChange,
+    enableAnimations, defaultExpandedPort
 }) => {
-    const [selectedPort, setSelectedPort] = useState<number | null>(null);
+    // Initialize selected port based on setting
+    const getInitialPort = (): number | null => {
+        if (defaultExpandedPort === 'first' && ports.length > 0) return ports[0].portIndex;
+        if (defaultExpandedPort === 'last' && ports.length > 0) return ports[ports.length - 1].portIndex;
+        return null;
+    };
+    const [selectedPort, setSelectedPort] = useState<number | null>(getInitialPort);
     const selectedPortData = ports.find(p => p.portIndex === selectedPort);
+    const vpdColor = getVpdColor(controller.vpd);
 
     return (
         <div className="relative flex flex-col h-full p-3 gap-3 overflow-hidden">
-            {/* Header */}
+            {/* Header with name */}
             <div className="flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <span className="font-semibold" style={{ color: 'var(--ui-text-primary)' }}>{name}</span>
@@ -843,14 +880,45 @@ const MediumView: React.FC<MediumViewProps> = ({
                 </div>
             </div>
 
-            {/* Sensors */}
-            <SensorDisplay
-                temperature={controller.temperatureF}
-                humidity={controller.humidity}
-                vpd={controller.vpd}
-                size="medium"
-                tempUnit={tempUnit}
-            />
+            {/* Prominent Sensor Display */}
+            <div
+                className="flex items-center justify-around py-3 px-4 rounded-xl flex-shrink-0"
+                style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+            >
+                <div className="flex flex-col items-center gap-1">
+                    <Thermometer className="w-5 h-5" style={{ color: 'var(--ui-warning)' }} />
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                        {formatTemp(controller.temperatureF, tempUnit)}°
+                    </span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                        Temp
+                    </span>
+                </div>
+                <div className="w-px h-10" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                <div className="flex flex-col items-center gap-1">
+                    <Droplets className="w-5 h-5" style={{ color: 'var(--ui-info)' }} />
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                        {controller.humidity.toFixed(0)}%
+                    </span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                        Humidity
+                    </span>
+                </div>
+                {controller.vpd > 0 && (
+                    <>
+                        <div className="w-px h-10" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                        <div className="flex flex-col items-center gap-1">
+                            <Leaf className="w-5 h-5" style={{ color: vpdColor }} />
+                            <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                                {controller.vpd.toFixed(2)}
+                            </span>
+                            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                                VPD
+                            </span>
+                        </div>
+                    </>
+                )}
+            </div>
 
             {/* Port List */}
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto min-h-0">
@@ -860,6 +928,7 @@ const MediumView: React.FC<MediumViewProps> = ({
                         port={port}
                         settings={portSettings[port.portIndex]}
                         onClick={() => setSelectedPort(port.portIndex)}
+                        enableAnimations={enableAnimations}
                     />
                 )) : (
                     <div
@@ -902,30 +971,65 @@ interface LargeViewProps {
     onModeChange: (portIndex: number, mode: number) => void;
     onSpeedChange: (portIndex: number, speed: number) => void;
     onSettingsChange: (portIndex: number, settings: Partial<PortSettings>) => void;
+    enableAnimations: boolean;
 }
 
 const LargeView: React.FC<LargeViewProps> = ({
-    controller, ports, portSettings, name, tempUnit, onModeChange, onSpeedChange, onSettingsChange
+    controller, ports, portSettings, name, tempUnit, onModeChange, onSpeedChange, onSettingsChange,
+    enableAnimations
 }) => {
+    const vpdColor = getVpdColor(controller.vpd);
+
     return (
-        <div className="flex flex-col h-full p-3 gap-2 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-2">
-                    <span className="font-bold" style={{ color: 'var(--ui-text-primary)' }}>{name}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{
-                        backgroundColor: 'var(--ui-success-bg)', color: 'var(--ui-success)'
-                    }}>
-                        Online
+        <div className="flex flex-col h-full p-3 gap-3 overflow-hidden">
+            {/* Header with name */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="font-bold text-lg" style={{ color: 'var(--ui-text-primary)' }}>{name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{
+                    backgroundColor: 'var(--ui-success-bg)', color: 'var(--ui-success)'
+                }}>
+                    Online
+                </span>
+            </div>
+
+            {/* Prominent Sensor Display */}
+            <div
+                className="flex items-center justify-around py-3 px-4 rounded-xl flex-shrink-0"
+                style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+            >
+                <div className="flex flex-col items-center gap-1">
+                    <Thermometer className="w-5 h-5" style={{ color: 'var(--ui-warning)' }} />
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                        {formatTemp(controller.temperatureF, tempUnit)}°
+                    </span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                        Temp
                     </span>
                 </div>
-                <SensorDisplay
-                    temperature={controller.temperatureF}
-                    humidity={controller.humidity}
-                    vpd={controller.vpd}
-                    size="medium"
-                    tempUnit={tempUnit}
-                />
+                <div className="w-px h-10" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                <div className="flex flex-col items-center gap-1">
+                    <Droplets className="w-5 h-5" style={{ color: 'var(--ui-info)' }} />
+                    <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                        {controller.humidity.toFixed(0)}%
+                    </span>
+                    <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                        Humidity
+                    </span>
+                </div>
+                {controller.vpd > 0 && (
+                    <>
+                        <div className="w-px h-10" style={{ backgroundColor: 'var(--ui-bg-tertiary)' }} />
+                        <div className="flex flex-col items-center gap-1">
+                            <Leaf className="w-5 h-5" style={{ color: vpdColor }} />
+                            <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                                {controller.vpd.toFixed(2)}
+                            </span>
+                            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
+                                VPD
+                            </span>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Port Grid */}
@@ -947,6 +1051,7 @@ const LargeView: React.FC<LargeViewProps> = ({
                             onClose={() => { }}
                             isLargeView
                             tempUnit={tempUnit}
+                            enableAnimations={enableAnimations}
                         />
                     </div>
                 )) : (
@@ -980,9 +1085,19 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
     const ref = useRef<HTMLDivElement>(null);
 
     const { settings } = useWidgetSettings(widgetId);
+
+    // Extract all settings with defaults
     const controllerId = settings.selectedFan as string;
     const customName = settings.customName as string;
     const tempUnit: TempUnit = (settings.temperatureUnit as TempUnit) || 'F';
+    const showVPD = settings.showVPD !== false; // default true
+    const showHumidity = settings.showHumidity !== false; // default true
+    const showTemperature = settings.showTemperature !== false; // default true
+    const refreshInterval = parseInt(settings.refreshInterval as string) || 30;
+    const enableAnimations = settings.enableAnimations !== false; // default true
+    const confirmModeChanges = settings.confirmModeChanges === true; // default false
+    const showInactivePorts = settings.showInactivePorts === true; // default false
+    const defaultExpandedPort = (settings.defaultExpandedPort as string) || 'none';
 
     const { openSettings } = useWidgetSettingsDialog();
 
@@ -1080,9 +1195,10 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
 
     useEffect(() => {
         fetchControllers();
-        const id = setInterval(fetchControllers, 30000);
+        const intervalMs = refreshInterval * 1000;
+        const id = setInterval(fetchControllers, intervalMs);
         return () => clearInterval(id);
-    }, [fetchControllers]);
+    }, [fetchControllers, refreshInterval]);
 
     const controller = useMemo(() =>
         controllers.find(c => c.deviceId === controllerId),
@@ -1209,7 +1325,18 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
 
     // Derived values
     const name = customName || controller?.deviceName || "AC Infinity";
-    const allPorts = controller?.ports || [];
+
+    // Filter ports based on showInactivePorts setting
+    // A port is considered "active" if it has a custom name (not just "Port X") or is online
+    const allPorts = useMemo(() => {
+        const ports = controller?.ports || [];
+        if (showInactivePorts) return ports;
+        // Keep ports that have a custom name or are marked as online
+        return ports.filter(p => {
+            const isDefaultName = /^Port \d+$/.test(p.portName);
+            return !isDefaultName || p.isOnline;
+        });
+    }, [controller?.ports, showInactivePorts]);
 
     // ==========================================================================
     // LOADING STATE
@@ -1299,6 +1426,10 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     portSettings={portSettings}
                     name={name}
                     tempUnit={tempUnit}
+                    showTemperature={showTemperature}
+                    showHumidity={showHumidity}
+                    showVPD={showVPD}
+                    enableAnimations={enableAnimations}
                 />
             )}
             {viewSize === 'medium' && (
@@ -1311,6 +1442,8 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     onModeChange={setMode}
                     onSpeedChange={setSpeed}
                     onSettingsChange={updatePortSettings}
+                    enableAnimations={enableAnimations}
+                    defaultExpandedPort={defaultExpandedPort}
                 />
             )}
             {viewSize === 'large' && (
@@ -1323,6 +1456,7 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     onModeChange={setMode}
                     onSpeedChange={setSpeed}
                     onSettingsChange={updatePortSettings}
+                    enableAnimations={enableAnimations}
                 />
             )}
         </div>
