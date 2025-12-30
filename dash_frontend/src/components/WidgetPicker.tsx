@@ -775,6 +775,235 @@ const MobileWidgetCard = React.memo(({ widget, isEnabled, onToggle, showCategory
 MobileWidgetCard.displayName = "MobileWidgetCard";
 
 // ============================================
+// Mobile Multi-Instance Widget Card (Touch-friendly)
+// ============================================
+
+interface MobileMultiInstanceWidgetCardProps {
+    widget: WidgetConfig;
+    instances: Widget[];
+    onAddInstance: () => void;
+    onRemoveInstance: (widgetId: string) => void;
+    canAddMore: boolean;
+    showCategory?: boolean;
+}
+
+const MobileMultiInstanceWidgetCard = React.memo(({
+    widget,
+    instances,
+    onAddInstance,
+    onRemoveInstance,
+    canAddMore,
+    showCategory,
+}: MobileMultiInstanceWidgetCardProps) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const enabledInstances = instances.filter(i => i.enabled);
+    const hasInstances = enabledInstances.length > 0;
+    const maxInstances = widget.maxInstances;
+    const remainingSlots = maxInstances ? maxInstances - enabledInstances.length : undefined;
+
+    return (
+        <div
+            className="w-full rounded-xl border transition-all"
+            style={hasInstances ? {
+                backgroundColor: 'var(--ui-accent-primary-bg)',
+                borderColor: 'var(--ui-accent-primary-border)'
+            } : {
+                backgroundColor: 'var(--ui-bg-secondary)',
+                borderColor: 'var(--ui-border-primary)'
+            }}
+        >
+            {/* Main card area */}
+            <div className="p-4">
+                <div className="flex items-start gap-3">
+                    {/* Multi-instance icon indicator */}
+                    <div
+                        className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center relative mt-0.5"
+                        style={{
+                            backgroundColor: hasInstances ? 'var(--ui-accent-primary)' : 'var(--ui-bg-tertiary)'
+                        }}
+                    >
+                        <Copy
+                            className="w-5 h-5"
+                            style={{ color: hasInstances ? '#ffffff' : 'var(--ui-text-muted)' }}
+                        />
+                        {hasInstances && (
+                            <span
+                                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold"
+                                style={{
+                                    backgroundColor: 'var(--ui-bg-primary)',
+                                    color: 'var(--ui-accent-primary)',
+                                    border: '2px solid var(--ui-accent-primary)'
+                                }}
+                            >
+                                {enabledInstances.length}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3
+                                className="font-semibold truncate"
+                                style={{ color: hasInstances ? 'var(--ui-accent-primary)' : 'var(--ui-text-primary)' }}
+                            >
+                                {widget.title}
+                            </h3>
+                            {widget.beta && (
+                                <span
+                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase flex-shrink-0"
+                                    style={{
+                                        backgroundColor: 'var(--ui-warning-bg)',
+                                        color: 'var(--ui-warning-text)'
+                                    }}
+                                >
+                                    Beta
+                                </span>
+                            )}
+                        </div>
+                        <p
+                            className="text-sm line-clamp-2 mb-2"
+                            style={{ color: 'var(--ui-text-muted)' }}
+                        >
+                            {widget.description || "No description"}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                                className="text-xs font-mono px-2 py-0.5 rounded"
+                                style={{
+                                    backgroundColor: 'var(--ui-bg-tertiary)',
+                                    color: 'var(--ui-text-muted)'
+                                }}
+                            >
+                                {widget.defaultSize.w}×{widget.defaultSize.h}
+                            </span>
+                            {showCategory && (
+                                <span
+                                    className="text-xs px-2 py-0.5 rounded capitalize"
+                                    style={{
+                                        backgroundColor: 'var(--ui-bg-tertiary)',
+                                        color: 'var(--ui-text-muted)'
+                                    }}
+                                >
+                                    {widget.category}
+                                </span>
+                            )}
+                            <span
+                                className="text-xs px-2 py-0.5 rounded"
+                                style={{
+                                    backgroundColor: hasInstances ? 'var(--ui-accent-primary-bg)' : 'var(--ui-bg-tertiary)',
+                                    color: hasInstances ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)'
+                                }}
+                            >
+                                {hasInstances
+                                    ? `${enabledInstances.length} active${remainingSlots !== undefined && remainingSlots > 0 ? ` • ${remainingSlots} left` : ''}`
+                                    : `Multi${maxInstances ? ` (max ${maxInstances})` : ''}`
+                                }
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Add button */}
+                    <button
+                        onClick={onAddInstance}
+                        disabled={!canAddMore}
+                        className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:active:scale-100"
+                        style={{
+                            backgroundColor: canAddMore ? 'var(--ui-accent-primary)' : 'var(--ui-bg-tertiary)',
+                            color: canAddMore ? '#ffffff' : 'var(--ui-text-muted)'
+                        }}
+                    >
+                        <Plus className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Instance list - expandable */}
+            {enabledInstances.length > 0 && (
+                <>
+                    {/* Toggle button */}
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="w-full px-4 py-2 flex items-center justify-between border-t transition-colors"
+                        style={{
+                            borderColor: 'var(--ui-accent-primary-border)',
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <span className="text-xs font-medium" style={{ color: 'var(--ui-accent-primary)' }}>
+                            {enabledInstances.length} instance{enabledInstances.length !== 1 ? 's' : ''}
+                        </span>
+                        <ChevronRight
+                            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            style={{ color: 'var(--ui-accent-primary)' }}
+                        />
+                    </button>
+
+                    {/* Expanded instance list */}
+                    <AnimatePresence>
+                        {isExpanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="px-4 pb-3 space-y-2">
+                                    {enabledInstances.map((instance, index) => (
+                                        <div
+                                            key={instance.id}
+                                            className="flex items-center gap-3 p-3 rounded-lg"
+                                            style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                                        >
+                                            <span
+                                                className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                                style={{
+                                                    backgroundColor: 'var(--ui-accent-primary-bg)',
+                                                    color: 'var(--ui-accent-primary)'
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <span
+                                                    className="text-sm font-medium truncate block"
+                                                    style={{ color: 'var(--ui-text-primary)' }}
+                                                >
+                                                    {instance.displayName || `${widget.title} ${index + 1}`}
+                                                </span>
+                                                <span
+                                                    className="text-[11px] font-mono"
+                                                    style={{ color: 'var(--ui-text-muted)' }}
+                                                >
+                                                    {instance.w}×{instance.h}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => onRemoveInstance(instance.id)}
+                                                className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors active:scale-95"
+                                                style={{
+                                                    backgroundColor: 'var(--ui-danger-bg)',
+                                                    color: 'var(--ui-danger)'
+                                                }}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </>
+            )}
+        </div>
+    );
+});
+
+MobileMultiInstanceWidgetCard.displayName = "MobileMultiInstanceWidgetCard";
+
+// ============================================
 // Widget Compact (Dense grid for power users)
 // ============================================
 
@@ -1704,14 +1933,25 @@ export default function WidgetPicker({
                                             </span>
                                         </div>
                                         <div className="space-y-2">
-                                            {widgets.map((widget) => (
-                                                <MobileWidgetCard
-                                                    key={widget.id}
-                                                    widget={widget}
-                                                    isEnabled={isWidgetEnabled(widget.id)}
-                                                    onToggle={() => toggleWidget(widget.id)}
-                                                />
-                                            ))}
+                                            {widgets.map((widget) =>
+                                                widget.allowMultiple ? (
+                                                    <MobileMultiInstanceWidgetCard
+                                                        key={widget.id}
+                                                        widget={widget}
+                                                        instances={getWidgetInstances(tempLayout, widget.id)}
+                                                        onAddInstance={() => addWidgetInstance(widget.id)}
+                                                        onRemoveInstance={removeWidgetInstance}
+                                                        canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                    />
+                                                ) : (
+                                                    <MobileWidgetCard
+                                                        key={widget.id}
+                                                        widget={widget}
+                                                        isEnabled={isWidgetEnabled(widget.id)}
+                                                        onToggle={() => toggleWidget(widget.id)}
+                                                    />
+                                                )
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -1726,15 +1966,27 @@ export default function WidgetPicker({
                             >
                                 {filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""} • {visibleEnabledCount} selected
                             </div>
-                            {filteredWidgets.map((widget) => (
-                                <MobileWidgetCard
-                                    key={widget.id}
-                                    widget={widget}
-                                    isEnabled={isWidgetEnabled(widget.id)}
-                                    onToggle={() => toggleWidget(widget.id)}
-                                    showCategory={selectedCategory === "all"}
-                                />
-                            ))}
+                            {filteredWidgets.map((widget) =>
+                                widget.allowMultiple ? (
+                                    <MobileMultiInstanceWidgetCard
+                                        key={widget.id}
+                                        widget={widget}
+                                        instances={getWidgetInstances(tempLayout, widget.id)}
+                                        onAddInstance={() => addWidgetInstance(widget.id)}
+                                        onRemoveInstance={removeWidgetInstance}
+                                        canAddMore={canAddInstance(tempLayout, widget.id)}
+                                        showCategory={selectedCategory === "all"}
+                                    />
+                                ) : (
+                                    <MobileWidgetCard
+                                        key={widget.id}
+                                        widget={widget}
+                                        isEnabled={isWidgetEnabled(widget.id)}
+                                        onToggle={() => toggleWidget(widget.id)}
+                                        showCategory={selectedCategory === "all"}
+                                    />
+                                )
+                            )}
                         </div>
                     )}
                 </div>

@@ -223,6 +223,12 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
 
     // Full refresh - fetch controllers and all settings
     const refresh = useCallback(async () => {
+        // Don't fetch if user is not authenticated
+        if (!authService.isAuthenticated()) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
             const controllerList = await fetchControllers();
@@ -249,8 +255,16 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
     }, [fetchControllers, fetchControllerSettings]);
 
     // Initial fetch and polling - uses global refresh interval
+    // Only poll when user is authenticated
     useEffect(() => {
+        // Initial fetch
         refresh();
+
+        // Only set up polling interval if authenticated
+        if (!authService.isAuthenticated()) {
+            return;
+        }
+
         const intervalMs = globalSettings.refreshInterval * 1000;
         const id = setInterval(refresh, intervalMs);
         return () => clearInterval(id);
