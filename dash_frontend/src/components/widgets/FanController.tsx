@@ -209,20 +209,20 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
 
     return (
         <div className={`flex flex-col h-full w-full ${padding} ${gap}`}>
-            {/* Header - Name and status */}
-            {!isCompact && (
-                <div className="flex items-center justify-between flex-shrink-0">
-                    <span className={`font-semibold ${isLarge ? 'text-lg' : 'text-sm'}`} style={{ color: 'var(--ui-text-primary)' }}>
-                        {name}
-                    </span>
+            {/* Header - Name and status (always visible in monitoring mode) */}
+            <div className="flex items-center justify-between flex-shrink-0">
+                <span className={`font-semibold ${isCompact ? 'text-xs' : isLarge ? 'text-lg' : 'text-sm'} truncate`} style={{ color: 'var(--ui-text-primary)' }}>
+                    {name}
+                </span>
+                {!isCompact && (
                     <span
-                        className={`${labelSize} px-2 py-0.5 rounded-full font-medium`}
+                        className={`${labelSize} px-2 py-0.5 rounded-full font-medium flex-shrink-0`}
                         style={{ backgroundColor: 'var(--ui-success-bg)', color: 'var(--ui-success)' }}
                     >
                         Online
                     </span>
-                </div>
-            )}
+                )}
+            </div>
 
             {/* Main Content - Fan speed large and centered */}
             <div className="flex-1 flex flex-col items-center justify-center min-h-0">
