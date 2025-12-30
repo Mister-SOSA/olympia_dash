@@ -111,6 +111,7 @@ export interface WidgetSettingsSchema {
     description?: string;
     sections: {
         title: string;
+        description?: string;
         fields: SettingField[];
     }[];
 }
@@ -1193,11 +1194,70 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
     // Fan Controller Widget (Multi-Instance)
     // Note: This widget supports multiple instances - each instance can control a different fan
     // Controller selection is done via the dropdown in the widget itself
+    // Global settings affect ALL instances and are stored separately
     FanController: {
         widgetId: 'FanController',
         title: 'Fan Controller Settings',
         description: 'Configure which AC Infinity controller this widget monitors',
         sections: [
+            {
+                title: 'Global Settings',
+                description: 'These settings apply to ALL Fan Controller widgets',
+                fields: [
+                    {
+                        key: 'global:refreshInterval',
+                        type: 'select',
+                        label: 'Refresh Rate',
+                        description: 'How often to fetch updated data (shared across all widgets)',
+                        default: '30',
+                        options: [
+                            { value: '10', label: 'Fast (10 seconds)' },
+                            { value: '30', label: 'Normal (30 seconds)' },
+                            { value: '60', label: 'Slow (1 minute)' },
+                            { value: '120', label: 'Very Slow (2 minutes)' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'global:temperatureUnit',
+                        type: 'select',
+                        label: 'Temperature Unit',
+                        description: 'Display and set temperatures in Celsius or Fahrenheit',
+                        default: 'F',
+                        options: [
+                            { value: 'F', label: 'Fahrenheit (°F)' },
+                            { value: 'C', label: 'Celsius (°C)' },
+                        ],
+                    } as SelectSettingField,
+                    {
+                        key: 'global:enableAnimations',
+                        type: 'toggle',
+                        label: 'Fan Animations',
+                        description: 'Animate fan icons when running (disable for lower CPU usage)',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'global:showTemperature',
+                        type: 'toggle',
+                        label: 'Show Temperature',
+                        description: 'Display temperature reading from controller sensors',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'global:showHumidity',
+                        type: 'toggle',
+                        label: 'Show Humidity',
+                        description: 'Display humidity reading from controller sensors',
+                        default: true,
+                    } as ToggleSettingField,
+                    {
+                        key: 'global:showVPD',
+                        type: 'toggle',
+                        label: 'Show VPD',
+                        description: 'Display Vapor Pressure Deficit reading',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
             {
                 title: 'Controller',
                 fields: [
@@ -1223,75 +1283,6 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                         placeholder: 'e.g., Grow Room Controller',
                         maxLength: 30,
                     } as TextSettingField,
-                ],
-            },
-            {
-                title: 'Display',
-                fields: [
-                    {
-                        key: 'temperatureUnit',
-                        type: 'select',
-                        label: 'Temperature Unit',
-                        description: 'Display and set temperatures in Celsius or Fahrenheit',
-                        default: 'F',
-                        options: [
-                            { value: 'F', label: 'Fahrenheit (°F)' },
-                            { value: 'C', label: 'Celsius (°C)' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'showVPD',
-                        type: 'toggle',
-                        label: 'Show VPD',
-                        description: 'Display Vapor Pressure Deficit reading',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'showHumidity',
-                        type: 'toggle',
-                        label: 'Show Humidity',
-                        description: 'Display humidity reading from the controller sensor',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'showTemperature',
-                        type: 'toggle',
-                        label: 'Show Temperature',
-                        description: 'Display temperature reading from the controller sensor',
-                        default: true,
-                    } as ToggleSettingField,
-                ],
-            },
-            {
-                title: 'Behavior',
-                fields: [
-                    {
-                        key: 'refreshInterval',
-                        type: 'select',
-                        label: 'Refresh Rate',
-                        description: 'How often to fetch updated data from the controller',
-                        default: '30',
-                        options: [
-                            { value: '10', label: 'Fast (10 seconds)' },
-                            { value: '30', label: 'Normal (30 seconds)' },
-                            { value: '60', label: 'Slow (1 minute)' },
-                            { value: '120', label: 'Very Slow (2 minutes)' },
-                        ],
-                    } as SelectSettingField,
-                    {
-                        key: 'enableAnimations',
-                        type: 'toggle',
-                        label: 'Fan Animation',
-                        description: 'Animate fan icon when running (disable for lower CPU usage)',
-                        default: true,
-                    } as ToggleSettingField,
-                    {
-                        key: 'confirmModeChanges',
-                        type: 'toggle',
-                        label: 'Confirm Mode Changes',
-                        description: 'Show confirmation dialog before changing fan modes',
-                        default: false,
-                    } as ToggleSettingField,
                 ],
             },
             {

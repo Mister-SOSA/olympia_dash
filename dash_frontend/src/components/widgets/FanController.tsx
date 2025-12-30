@@ -5,65 +5,25 @@
  * - Small: Compact monitoring (temp, humidity, VPD, fan speeds)
  * - Medium: Expandable ports with touch-friendly control panels
  * - Large: Full dashboard with all ports and controls visible
+ * 
+ * Uses shared ACInfinityContext to avoid duplicate API calls across widget instances.
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Widget from "./Widget";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 import { useWidgetSettingsDialog } from "@/contexts/WidgetSettingsDialogContext";
+import { useACInfinity, ACInfinityController, ACInfinityPort, PortSettings, TempUnit } from "@/contexts/ACInfinityContext";
 import {
     Fan, Thermometer, Droplets, Leaf, AlertCircle, RefreshCw, Settings,
     Power, Activity, Wind, Minus, Plus, X, ChevronRight, Check
 } from "lucide-react";
-import { authService } from "@/lib/auth";
 
 const WIDGET_TYPE = "FanController";
-const AC_INFINITY_API = `/api/ac-infinity/controllers`;
 
 // =============================================================================
-// TYPES
+// TYPES (Types imported from ACInfinityContext, local types below)
 // =============================================================================
-
-interface ACInfinityPort {
-    portIndex: number;
-    portName: string;
-    deviceType: number;
-    isOnline: boolean;
-    currentPower: number;
-    currentMode: number;
-    currentModeName: string;
-}
-
-interface ACInfinityController {
-    deviceId: string;
-    deviceName: string;
-    isOnline: boolean;
-    temperature: number;
-    temperatureF: number;
-    humidity: number;
-    vpd: number;
-    ports: ACInfinityPort[];
-}
-
-interface PortSettings {
-    mode: number;
-    modeName: string;
-    onSpeed: number;
-    offSpeed: number;
-    tempHigh: number;       // Celsius
-    tempLow: number;        // Celsius
-    tempHighF: number;      // Fahrenheit (from API directly)
-    tempLowF: number;       // Fahrenheit (from API directly)
-    tempHighEnabled: boolean;
-    tempLowEnabled: boolean;
-    humidityHigh: number;
-    humidityLow: number;
-    humidityHighEnabled: boolean;
-    humidityLowEnabled: boolean;
-    targetVpd: number;
-    vpdHigh: number;
-    vpdLow: number;
-}
 
 type ViewSize = 'small' | 'medium' | 'large';
 
@@ -77,8 +37,6 @@ const MODES = [
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
-
-type TempUnit = 'C' | 'F';
 
 const getModeColor = (mode: number): string => {
     return MODES.find(m => m.id === mode)?.color || 'var(--ui-text-muted)';
@@ -601,7 +559,7 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
             </div>
 
             {/* Auto/VPD Thresholds - Full takeover editing */}
-            {(mode === 3 || mode === 8) && settings && (
+            {(mode === 3 || mode === 8) && (
                 <div className="pt-2 border-t" style={{ borderColor: 'var(--ui-bg-tertiary)' }}>
                     <div className="mb-2">
                         <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--ui-text-muted)' }}>
@@ -609,83 +567,89 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
                         </span>
                     </div>
 
-                    <TriggersSection
-                        triggers={[
-                            {
-                                key: 'temp',
-                                // Use native C or F values from API - no conversion needed
-                                low: tempUnit === 'F' ? settings.tempLowF : settings.tempLow,
-                                high: tempUnit === 'F' ? settings.tempHighF : settings.tempHigh,
-                                // When saving, send both C and F values to avoid rounding issues
-                                onLowChange: (v) => {
-                                    if (tempUnit === 'F') {
-                                        // User entered F, calculate C
-                                        onSettingsChange({
-                                            tempLowF: v,
-                                            tempLow: Math.round((v - 32) * 5 / 9)
-                                        });
-                                    } else {
-                                        // User entered C, calculate F
-                                        onSettingsChange({
-                                            tempLow: v,
-                                            tempLowF: Math.round(v * 9 / 5 + 32)
-                                        });
-                                    }
+                    {!settings ? (
+                        <div className="flex items-center justify-center py-4">
+                            <span className="text-xs" style={{ color: 'var(--ui-text-muted)' }}>Loading triggers...</span>
+                        </div>
+                    ) : (
+                        <TriggersSection
+                            triggers={[
+                                {
+                                    key: 'temp',
+                                    // Use native C or F values from API - no conversion needed
+                                    low: tempUnit === 'F' ? settings.tempLowF : settings.tempLow,
+                                    high: tempUnit === 'F' ? settings.tempHighF : settings.tempHigh,
+                                    // When saving, send both C and F values to avoid rounding issues
+                                    onLowChange: (v) => {
+                                        if (tempUnit === 'F') {
+                                            // User entered F, calculate C
+                                            onSettingsChange({
+                                                tempLowF: v,
+                                                tempLow: Math.round((v - 32) * 5 / 9)
+                                            });
+                                        } else {
+                                            // User entered C, calculate F
+                                            onSettingsChange({
+                                                tempLow: v,
+                                                tempLowF: Math.round(v * 9 / 5 + 32)
+                                            });
+                                        }
+                                    },
+                                    onHighChange: (v) => {
+                                        if (tempUnit === 'F') {
+                                            onSettingsChange({
+                                                tempHighF: v,
+                                                tempHigh: Math.round((v - 32) * 5 / 9)
+                                            });
+                                        } else {
+                                            onSettingsChange({
+                                                tempHigh: v,
+                                                tempHighF: Math.round(v * 9 / 5 + 32)
+                                            });
+                                        }
+                                    },
+                                    min: tempUnit === 'C' ? 0 : 32,
+                                    max: tempUnit === 'C' ? 50 : 120,
+                                    step: 1,
+                                    unit: getTempUnit(tempUnit),
+                                    icon: <Thermometer className="w-3.5 h-3.5" />,
+                                    label: 'Temp',
+                                    lowColor: 'var(--ui-info)',      // Blue for lower
+                                    highColor: 'var(--ui-danger)',   // Red for upper
                                 },
-                                onHighChange: (v) => {
-                                    if (tempUnit === 'F') {
-                                        onSettingsChange({
-                                            tempHighF: v,
-                                            tempHigh: Math.round((v - 32) * 5 / 9)
-                                        });
-                                    } else {
-                                        onSettingsChange({
-                                            tempHigh: v,
-                                            tempHighF: Math.round(v * 9 / 5 + 32)
-                                        });
-                                    }
+                                {
+                                    key: 'humidity',
+                                    low: settings.humidityLow,
+                                    high: settings.humidityHigh,
+                                    onLowChange: (v) => onSettingsChange({ humidityLow: v }),
+                                    onHighChange: (v) => onSettingsChange({ humidityHigh: v }),
+                                    min: 0,
+                                    max: 100,
+                                    step: 1,
+                                    unit: '%',
+                                    icon: <Droplets className="w-3.5 h-3.5" />,
+                                    label: 'Humidity',
+                                    lowColor: 'var(--ui-info)',      // Blue for lower
+                                    highColor: 'var(--ui-danger)',   // Red for upper
                                 },
-                                min: tempUnit === 'C' ? 0 : 32,
-                                max: tempUnit === 'C' ? 50 : 120,
-                                step: 1,
-                                unit: getTempUnit(tempUnit),
-                                icon: <Thermometer className="w-3.5 h-3.5" />,
-                                label: 'Temp',
-                                lowColor: 'var(--ui-info)',      // Blue for lower
-                                highColor: 'var(--ui-danger)',   // Red for upper
-                            },
-                            {
-                                key: 'humidity',
-                                low: settings.humidityLow,
-                                high: settings.humidityHigh,
-                                onLowChange: (v) => onSettingsChange({ humidityLow: v }),
-                                onHighChange: (v) => onSettingsChange({ humidityHigh: v }),
-                                min: 0,
-                                max: 100,
-                                step: 1,
-                                unit: '%',
-                                icon: <Droplets className="w-3.5 h-3.5" />,
-                                label: 'Humidity',
-                                lowColor: 'var(--ui-info)',      // Blue for lower
-                                highColor: 'var(--ui-danger)',   // Red for upper
-                            },
-                            ...(mode === 8 ? [{
-                                key: 'vpd',
-                                low: settings.vpdLow,
-                                high: settings.vpdHigh,
-                                onLowChange: (v: number) => onSettingsChange({ vpdLow: v }),
-                                onHighChange: (v: number) => onSettingsChange({ vpdHigh: v }),
-                                min: 0,
-                                max: 3.0,
-                                step: 0.1,
-                                unit: ' kPa',
-                                icon: <Leaf className="w-3.5 h-3.5" />,
-                                label: 'VPD',
-                                lowColor: 'var(--ui-info)',      // Blue for lower
-                                highColor: 'var(--ui-danger)',   // Red for upper
-                            }] : []),
-                        ]}
-                    />
+                                ...(mode === 8 ? [{
+                                    key: 'vpd',
+                                    low: settings.vpdLow,
+                                    high: settings.vpdHigh,
+                                    onLowChange: (v: number) => onSettingsChange({ vpdLow: v }),
+                                    onHighChange: (v: number) => onSettingsChange({ vpdHigh: v }),
+                                    min: 0,
+                                    max: 3.0,
+                                    step: 0.1,
+                                    unit: ' kPa',
+                                    icon: <Leaf className="w-3.5 h-3.5" />,
+                                    label: 'VPD',
+                                    lowColor: 'var(--ui-info)',      // Blue for lower
+                                    highColor: 'var(--ui-danger)',   // Red for upper
+                                }] : []),
+                            ]}
+                        />
+                    )}
                 </div>
             )}
         </div>
@@ -1074,61 +1038,62 @@ interface FanControllerProps {
 }
 
 const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
-    const [controllers, setControllers] = useState<ACInfinityController[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Use shared AC Infinity context - data is fetched once and shared across all widgets
+    const {
+        globalSettings,
+        controllers,
+        loading,
+        error,
+        refresh,
+        updatePortMode,
+        updatePortSpeed,
+        updatePortSettings,
+        getEffectiveSettings,
+    } = useACInfinity();
+
     const [size, setSize] = useState({ w: 300, h: 200 });
     const ref = useRef<HTMLDivElement>(null);
 
     const { settings } = useWidgetSettings(widgetId);
 
-    // Extract all settings with defaults
+    // Instance-specific settings (per widget)
     const controllerId = settings.selectedFan as string;
     const customName = settings.customName as string;
-    const tempUnit: TempUnit = (settings.temperatureUnit as TempUnit) || 'F';
-    const showVPD = settings.showVPD !== false; // default true
-    const showHumidity = settings.showHumidity !== false; // default true
-    const showTemperature = settings.showTemperature !== false; // default true
-    const refreshInterval = parseInt(settings.refreshInterval as string) || 30;
-    const enableAnimations = settings.enableAnimations !== false; // default true
-    const confirmModeChanges = settings.confirmModeChanges === true; // default false
     const showInactivePorts = settings.showInactivePorts === true; // default false
     const defaultExpandedPort = (settings.defaultExpandedPort as string) || 'none';
 
+    // Global settings from context (shared across all instances)
+    const tempUnit = globalSettings.temperatureUnit;
+    const showVPD = globalSettings.showVPD;
+    const showHumidity = globalSettings.showHumidity;
+    const showTemperature = globalSettings.showTemperature;
+    const enableAnimations = globalSettings.enableAnimations;
+
     const { openSettings } = useWidgetSettingsDialog();
 
-    // ==========================================================================
-    // OPTIMISTIC STATE MANAGEMENT
-    // ==========================================================================
-    // We maintain two layers:
-    // 1. serverSettings - What the API last told us (source of truth for unmodified values)
-    // 2. localOverrides - User changes that take precedence until cleared
+    // Find the controller for this widget instance
+    const controller = useMemo(() =>
+        controllers.find(c => c.deviceId === controllerId),
+        [controllers, controllerId]
+    );
 
-    const [serverSettings, setServerSettings] = useState<Record<number, PortSettings>>({});
-    const localOverridesRef = useRef<Record<number, Partial<PortSettings>>>({});
-    const overrideTimestampsRef = useRef<Record<number, number>>({});
-
-    // Version counter to trigger useMemo recomputation when overrides change
-    const [overrideVersion, setOverrideVersion] = useState(0);
-
-    // Merge server settings with local overrides for display
+    // Build port settings from shared context
     const portSettings = useMemo(() => {
-        const merged: Record<number, PortSettings> = {};
-        for (const [portStr, settings] of Object.entries(serverSettings)) {
-            const port = parseInt(portStr);
-            const overrides = localOverridesRef.current[port];
-            merged[port] = overrides ? { ...settings, ...overrides } : settings;
-        }
-        return merged;
-    }, [serverSettings, overrideVersion]);
+        if (!controllerId) return {};
+        const result: Record<number, PortSettings> = {};
+        controller?.ports.forEach(port => {
+            const settings = getEffectiveSettings(controllerId, port.portIndex);
+            if (settings) {
+                result[port.portIndex] = settings;
+            }
+        });
+        return result;
+    }, [controllerId, controller?.ports, getEffectiveSettings]);
 
     // Determine view size based on dimensions
     const viewSize: ViewSize = useMemo(() => {
-        // Small: compact monitoring only (1x1 or small 2x1)
         if (size.h < 250 || size.w < 300) return 'small';
-        // Large: full dashboard (needs enough space for grid of controls)
         if (size.h >= 450 && size.w >= 500) return 'large';
-        // Medium: expandable ports with slide-out panels
         return 'medium';
     }, [size.w, size.h]);
 
@@ -1142,192 +1107,32 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
         return () => obs.disconnect();
     }, []);
 
-    // Fetch controllers
-    const fetchControllers = useCallback(async () => {
-        try {
-            const res = await authService.fetchWithAuth(AC_INFINITY_API);
-            if (!res.ok) throw new Error("Failed to fetch");
-            const json = await res.json();
-            if (!json.success) throw new Error(json.error || "Error");
-            setControllers(json.data || []);
-            setError(null);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Error");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Fetch port settings - updates server state, doesn't touch local overrides
-    const fetchPortSettings = useCallback(async (deviceId: string, ports: ACInfinityPort[]) => {
-        const newSettings: Record<number, PortSettings> = {};
-        const now = Date.now();
-
-        for (const port of ports) {
-            try {
-                const res = await authService.fetchWithAuth(
-                    `${AC_INFINITY_API}/${deviceId}/ports/${port.portIndex}/settings`
-                );
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        newSettings[port.portIndex] = json.data;
-
-                        // Clear local overrides if they're older than 5 seconds
-                        // This means the API has had time to reflect our changes
-                        const overrideTime = overrideTimestampsRef.current[port.portIndex];
-                        if (overrideTime && now - overrideTime > 5000) {
-                            delete localOverridesRef.current[port.portIndex];
-                            delete overrideTimestampsRef.current[port.portIndex];
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error(`Failed to fetch settings for port ${port.portIndex}:`, e);
-            }
-        }
-        setServerSettings(newSettings);
-    }, []);
-
-    useEffect(() => {
-        fetchControllers();
-        const intervalMs = refreshInterval * 1000;
-        const id = setInterval(fetchControllers, intervalMs);
-        return () => clearInterval(id);
-    }, [fetchControllers, refreshInterval]);
-
-    const controller = useMemo(() =>
-        controllers.find(c => c.deviceId === controllerId),
-        [controllers, controllerId]
-    );
-
-    useEffect(() => {
-        if (controller && controller.ports.length > 0) {
-            fetchPortSettings(controller.deviceId, controller.ports);
-        }
-    }, [controller, fetchPortSettings]);
-
     // ==========================================================================
-    // API ACTIONS WITH OPTIMISTIC UPDATES
+    // ACTION HANDLERS - delegate to shared context
     // ==========================================================================
 
-    // Track debounce timers for settings
-    const debounceTimerRef = useRef<Record<number, NodeJS.Timeout>>({});
-    const pendingSettingsRef = useRef<Record<number, Partial<PortSettings>>>({});
+    const setMode = useCallback((portIndex: number, mode: number) => {
+        if (!controllerId) return;
+        updatePortMode(controllerId, portIndex, mode);
+    }, [controllerId, updatePortMode]);
 
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            Object.values(debounceTimerRef.current).forEach(clearTimeout);
-        };
-    }, []);
+    const setSpeed = useCallback((portIndex: number, speed: number) => {
+        if (!controllerId) return;
+        updatePortSpeed(controllerId, portIndex, speed);
+    }, [controllerId, updatePortSpeed]);
 
-    // Apply local override and trigger re-render
-    const applyLocalOverride = useCallback((portIndex: number, changes: Partial<PortSettings>) => {
-        localOverridesRef.current[portIndex] = {
-            ...localOverridesRef.current[portIndex],
-            ...changes
-        };
-        overrideTimestampsRef.current[portIndex] = Date.now();
-        setOverrideVersion(v => v + 1); // Trigger useMemo recomputation
-    }, []);
-
-    // Settings update with debouncing - for thresholds
-    const updatePortSettings = useCallback((portIndex: number, newSettings: Partial<PortSettings>) => {
-        if (!controller) return;
-
-        // Immediately apply as local override
-        applyLocalOverride(portIndex, newSettings);
-
-        // Accumulate pending changes
-        pendingSettingsRef.current[portIndex] = {
-            ...pendingSettingsRef.current[portIndex],
-            ...newSettings
-        };
-
-        // Clear existing debounce timer
-        if (debounceTimerRef.current[portIndex]) {
-            clearTimeout(debounceTimerRef.current[portIndex]);
-        }
-
-        // Debounce the API call
-        debounceTimerRef.current[portIndex] = setTimeout(async () => {
-            const settingsToSend = pendingSettingsRef.current[portIndex];
-            if (!settingsToSend || Object.keys(settingsToSend).length === 0) return;
-
-            // Clear pending
-            delete pendingSettingsRef.current[portIndex];
-
-            try {
-                await authService.fetchWithAuth(
-                    `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/settings`,
-                    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settingsToSend) }
-                );
-                // Success - override will be cleared after 5s by fetchPortSettings
-            } catch (e) {
-                console.error("Failed to update settings:", e);
-                // On error, clear the override to show server state
-                delete localOverridesRef.current[portIndex];
-                delete overrideTimestampsRef.current[portIndex];
-                setOverrideVersion(v => v + 1);
-            }
-        }, 500);
-    }, [controller, applyLocalOverride]);
-
-    // Speed changes - immediate with optimistic update
-    const setSpeed = useCallback(async (portIndex: number, speed: number) => {
-        if (!controller) return;
-
-        // Apply optimistic update
-        applyLocalOverride(portIndex, { onSpeed: speed });
-
-        try {
-            await authService.fetchWithAuth(
-                `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/speed`,
-                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ speed }) }
-            );
-        } catch (e) {
-            console.error("Failed to set speed:", e);
-            // Revert on error
-            delete localOverridesRef.current[portIndex];
-            delete overrideTimestampsRef.current[portIndex];
-            setOverrideVersion(v => v + 1);
-        }
-    }, [controller, applyLocalOverride]);
-
-    // Mode changes - immediate with optimistic update
-    const setMode = useCallback(async (portIndex: number, mode: number) => {
-        if (!controller) return;
-
-        // Apply optimistic update
-        applyLocalOverride(portIndex, { mode });
-
-        try {
-            await authService.fetchWithAuth(
-                `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/mode`,
-                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }) }
-            );
-            // Refresh after mode change to get new thresholds
-            setTimeout(() => {
-                if (controller) fetchPortSettings(controller.deviceId, controller.ports);
-            }, 2000);
-        } catch (e) {
-            console.error("Failed to set mode:", e);
-            delete localOverridesRef.current[portIndex];
-            delete overrideTimestampsRef.current[portIndex];
-            setOverrideVersion(v => v + 1);
-        }
-    }, [controller, applyLocalOverride, fetchPortSettings]);
+    const handleSettingsChange = useCallback((portIndex: number, newSettings: Partial<PortSettings>) => {
+        if (!controllerId) return;
+        updatePortSettings(controllerId, portIndex, newSettings);
+    }, [controllerId, updatePortSettings]);
 
     // Derived values
     const name = customName || controller?.deviceName || "AC Infinity";
 
     // Filter ports based on showInactivePorts setting
-    // A port is considered "active" if it has a custom name (not just "Port X") or is online
     const allPorts = useMemo(() => {
         const ports = controller?.ports || [];
         if (showInactivePorts) return ports;
-        // Keep ports that have a custom name or are marked as online
         return ports.filter(p => {
             const isDefaultName = /^Port \d+$/.test(p.portName);
             return !isDefaultName || p.isOnline;
@@ -1356,7 +1161,7 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     Connection failed
                 </span>
                 <button
-                    onClick={fetchControllers}
+                    onClick={refresh}
                     className="text-xs px-3 py-1.5 rounded-lg transition-all active:scale-95"
                     style={{ backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-primary)" }}
                 >
@@ -1437,7 +1242,7 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     tempUnit={tempUnit}
                     onModeChange={setMode}
                     onSpeedChange={setSpeed}
-                    onSettingsChange={updatePortSettings}
+                    onSettingsChange={handleSettingsChange}
                     enableAnimations={enableAnimations}
                     defaultExpandedPort={defaultExpandedPort}
                 />
@@ -1451,7 +1256,7 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     tempUnit={tempUnit}
                     onModeChange={setMode}
                     onSpeedChange={setSpeed}
-                    onSettingsChange={updatePortSettings}
+                    onSettingsChange={handleSettingsChange}
                     enableAnimations={enableAnimations}
                 />
             )}

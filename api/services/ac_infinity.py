@@ -19,9 +19,13 @@ import time
 import logging
 import asyncio
 import aiohttp
+import nest_asyncio
 from typing import Optional, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+
+# Allow nested event loops (needed for Flask threading)
+nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
 

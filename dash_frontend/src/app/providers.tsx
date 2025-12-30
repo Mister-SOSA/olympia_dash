@@ -6,6 +6,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { PrivacyProvider } from "@/contexts/PrivacyContext";
 import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
 import { WidgetSettingsDialogProvider } from "@/contexts/WidgetSettingsDialogContext";
+import { ACInfinityProvider } from "@/contexts/ACInfinityContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -14,9 +15,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <PrivacyProvider>
                     <WidgetPermissionsProvider>
                         <AnalyticsProvider>
-                            <WidgetSettingsDialogProvider>
-                                {children}
-                            </WidgetSettingsDialogProvider>
+                            <ACInfinityProvider>
+                                <WidgetSettingsDialogProvider>
+                                    {children}
+                                </WidgetSettingsDialogProvider>
+                            </ACInfinityProvider>
                         </AnalyticsProvider>
                     </WidgetPermissionsProvider>
                 </PrivacyProvider>

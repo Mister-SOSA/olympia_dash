@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MdClose, MdRefresh, MdSettings, MdAdd, MdDelete, MdContentPaste } from "react-icons/md";
+import { MdClose, MdRefresh, MdSettings, MdAdd, MdDelete, MdContentPaste, MdPublic } from "react-icons/md";
 import {
     getWidgetSettingsSchema,
     SettingField,
@@ -11,6 +11,7 @@ import {
 } from "@/constants/widgetSettings";
 import { widgetSettingsService } from "@/lib/widgetSettings";
 import { authService } from "@/lib/auth";
+import { useACInfinityOptional, ACInfinityGlobalSettings } from "@/contexts/ACInfinityContext";
 
 interface WidgetSettingsDialogProps {
     widgetId: string;
@@ -29,13 +30,31 @@ export default function WidgetSettingsDialog({
     const [settings, setSettings] = useState<Record<string, any>>({});
     const [hasChanges, setHasChanges] = useState(false);
 
+    // Get AC Infinity context for global settings (if available)
+    const acInfinity = useACInfinityOptional();
+
     // Load current settings when dialog opens
     useEffect(() => {
         if (isOpen && schema) {
-            setSettings(widgetSettingsService.getSettings(widgetId));
+            // Load widget-specific settings
+            const widgetSettings = widgetSettingsService.getSettings(widgetId);
+
+            // Merge in global settings from AC Infinity context (if applicable)
+            const mergedSettings = { ...widgetSettings };
+            if (acInfinity) {
+                // Map global settings with "global:" prefix
+                mergedSettings['global:refreshInterval'] = String(acInfinity.globalSettings.refreshInterval);
+                mergedSettings['global:temperatureUnit'] = acInfinity.globalSettings.temperatureUnit;
+                mergedSettings['global:enableAnimations'] = acInfinity.globalSettings.enableAnimations;
+                mergedSettings['global:showVPD'] = acInfinity.globalSettings.showVPD;
+                mergedSettings['global:showHumidity'] = acInfinity.globalSettings.showHumidity;
+                mergedSettings['global:showTemperature'] = acInfinity.globalSettings.showTemperature;
+            }
+
+            setSettings(mergedSettings);
             setHasChanges(false);
         }
-    }, [isOpen, widgetId, schema]);
+    }, [isOpen, widgetId, schema, acInfinity]);
 
     if (!schema) {
         return null;
@@ -47,15 +66,57 @@ export default function WidgetSettingsDialog({
     };
 
     const handleSave = () => {
-        widgetSettingsService.setSettings(widgetId, settings);
+        // Separate global settings from widget-specific settings
+        const globalSettingsUpdate: Partial<ACInfinityGlobalSettings> = {};
+        const widgetSettings: Record<string, any> = {};
+
+        for (const [key, value] of Object.entries(settings)) {
+            if (key.startsWith('global:')) {
+                // Handle global settings
+                const globalKey = key.replace('global:', '') as keyof ACInfinityGlobalSettings;
+                if (globalKey === 'refreshInterval') {
+                    globalSettingsUpdate.refreshInterval = parseInt(value as string) || 30;
+                } else if (globalKey === 'temperatureUnit') {
+                    globalSettingsUpdate.temperatureUnit = value as 'C' | 'F';
+                } else {
+                    (globalSettingsUpdate as any)[globalKey] = value;
+                }
+            } else {
+                widgetSettings[key] = value;
+            }
+        }
+
+        // Save global settings to AC Infinity context
+        if (acInfinity && Object.keys(globalSettingsUpdate).length > 0) {
+            acInfinity.updateGlobalSettings(globalSettingsUpdate);
+        }
+
+        // Save widget-specific settings
+        widgetSettingsService.setSettings(widgetId, widgetSettings);
         setHasChanges(false);
         onClose();
     };
 
     const handleReset = () => {
+        // Reset widget settings
         widgetSettingsService.resetSettings(widgetId);
-        setSettings(widgetSettingsService.getSettings(widgetId));
-        setHasChanges(false);
+
+        // Get fresh widget settings
+        const widgetSettings = widgetSettingsService.getSettings(widgetId);
+
+        // If we have AC Infinity context, also reset global settings to defaults
+        // (but don't save yet - just show defaults in the form)
+        const mergedSettings = { ...widgetSettings };
+        // Use default values from schema for global settings
+        mergedSettings['global:refreshInterval'] = '30';
+        mergedSettings['global:temperatureUnit'] = 'F';
+        mergedSettings['global:enableAnimations'] = true;
+        mergedSettings['global:showVPD'] = true;
+        mergedSettings['global:showHumidity'] = true;
+        mergedSettings['global:showTemperature'] = true;
+
+        setSettings(mergedSettings);
+        setHasChanges(true); // Mark as changed so user can save the reset
     };
 
     const handleCancel = () => {
@@ -113,23 +174,36 @@ export default function WidgetSettingsDialog({
                             )}
 
                             <div className="space-y-6">
-                                {schema.sections.map((section, sectionIndex) => (
-                                    <div key={sectionIndex}>
-                                        <h3 className="text-xs font-semibold text-ui-text-secondary uppercase tracking-wider mb-3">
-                                            {section.title}
-                                        </h3>
-                                        <div className="space-y-3">
-                                            {section.fields.map((field) => (
-                                                <SettingFieldRenderer
-                                                    key={field.key}
-                                                    field={field}
-                                                    value={settings[field.key]}
-                                                    onChange={(value) => handleSettingChange(field.key, value)}
-                                                />
-                                            ))}
+                                {schema.sections.map((section, sectionIndex) => {
+                                    const isGlobalSection = section.title.toLowerCase().includes('global');
+                                    return (
+                                        <div
+                                            key={sectionIndex}
+                                            className={isGlobalSection ? 'p-3 -mx-2 rounded-xl bg-ui-accent-primary/5 border border-ui-accent-primary/20' : ''}
+                                        >
+                                            <h3 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-1 ${isGlobalSection ? 'text-ui-accent-primary' : 'text-ui-text-secondary'
+                                                }`}>
+                                                {isGlobalSection && <MdPublic className="w-3.5 h-3.5" />}
+                                                {section.title}
+                                            </h3>
+                                            {section.description && (
+                                                <p className="text-xs text-ui-text-muted mb-3">
+                                                    {section.description}
+                                                </p>
+                                            )}
+                                            <div className="space-y-3">
+                                                {section.fields.map((field) => (
+                                                    <SettingFieldRenderer
+                                                        key={field.key}
+                                                        field={field}
+                                                        value={settings[field.key]}
+                                                        onChange={(value) => handleSettingChange(field.key, value)}
+                                                    />
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
