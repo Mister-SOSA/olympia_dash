@@ -50,8 +50,10 @@ interface PortSettings {
     modeName: string;
     onSpeed: number;
     offSpeed: number;
-    tempHigh: number;
-    tempLow: number;
+    tempHigh: number;       // Celsius
+    tempLow: number;        // Celsius
+    tempHighF: number;      // Fahrenheit (from API directly)
+    tempLowF: number;       // Fahrenheit (from API directly)
     tempHighEnabled: boolean;
     tempLowEnabled: boolean;
     humidityHigh: number;
@@ -105,15 +107,6 @@ const formatTemp = (tempF: number, unit: TempUnit): string => {
 };
 
 const getTempUnit = (unit: TempUnit): string => unit === 'C' ? '°C' : '°F';
-
-// Convert threshold temps based on unit (API uses Fahrenheit)
-const displayTemp = (tempF: number, unit: TempUnit): number => {
-    return unit === 'C' ? Math.round(fahrenheitToCelsius(tempF)) : tempF;
-};
-
-const toApiTemp = (temp: number, unit: TempUnit): number => {
-    return unit === 'C' ? Math.round(celsiusToFahrenheit(temp)) : temp;
-};
 
 // =============================================================================
 // SMALL VIEW - Compact Monitoring Only
@@ -171,8 +164,8 @@ const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, 
                 {ports.map(port => {
                     const ps = portSettings[port.portIndex];
                     const mode = ps?.mode ?? port.currentMode ?? 2;
-                    const speed = ps?.onSpeed ?? port.currentPower ?? 0;
-                    const isRunning = mode !== 1 && speed > 0;
+                    const actualSpeed = port.currentPower ?? 0; // Always show actual running speed
+                    const isRunning = mode !== 1 && actualSpeed > 0;
 
                     return (
                         <div
@@ -188,7 +181,7 @@ const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, 
                                 }}
                             />
                             <span className="text-[10px] font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
-                                {mode === 1 ? 'OFF' : `${speed * 10}%`}
+                                {mode === 1 ? 'OFF' : `${actualSpeed * 10}%`}
                             </span>
                         </div>
                     );
@@ -203,17 +196,21 @@ const SmallView: React.FC<SmallViewProps> = ({ controller, ports, portSettings, 
 // =============================================================================
 
 interface SpeedSliderProps {
-    speed: number;
+    speed: number;           // Configured speed (for control)
+    displaySpeed?: number;   // Actual running speed (for display) - if provided, shows this in meter
     onChange: (speed: number) => void;
     disabled?: boolean;
     size?: 'sm' | 'md' | 'lg';
 }
 
-const SpeedSlider: React.FC<SpeedSliderProps> = ({ speed, onChange, disabled, size = 'md' }) => {
+const SpeedSlider: React.FC<SpeedSliderProps> = ({ speed, displaySpeed, onChange, disabled, size = 'md' }) => {
     const barRef = useRef<HTMLDivElement>(null);
     const heights = { sm: 'h-8', md: 'h-10', lg: 'h-12' };
     const btnSizes = { sm: 'w-7 h-7', md: 'w-9 h-9', lg: 'w-11 h-11' };
     const textSizes = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+
+    // Use displaySpeed for meter visualization if provided, otherwise use configured speed
+    const meterSpeed = displaySpeed ?? speed;
 
     const handleInteraction = useCallback((clientX: number) => {
         if (disabled || !barRef.current) return;
@@ -225,14 +222,16 @@ const SpeedSlider: React.FC<SpeedSliderProps> = ({ speed, onChange, disabled, si
 
     return (
         <div className="flex items-center gap-2 w-full">
-            <button
-                onClick={() => onChange(Math.max(0, speed - 1))}
-                disabled={disabled || speed <= 0}
-                className={`${btnSizes[size]} rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-30 flex-shrink-0`}
-                style={{ backgroundColor: 'var(--ui-bg-tertiary)', color: 'var(--ui-text-primary)' }}
-            >
-                <Minus className={size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} />
-            </button>
+            {!disabled && (
+                <button
+                    onClick={() => onChange(Math.max(0, speed - 1))}
+                    disabled={speed <= 0}
+                    className={`${btnSizes[size]} rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-30 flex-shrink-0`}
+                    style={{ backgroundColor: 'var(--ui-bg-tertiary)', color: 'var(--ui-text-primary)' }}
+                >
+                    <Minus className={size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} />
+                </button>
+            )}
             <div
                 ref={barRef}
                 onPointerDown={(e) => {
@@ -244,33 +243,36 @@ const SpeedSlider: React.FC<SpeedSliderProps> = ({ speed, onChange, disabled, si
                     if (e.buttons !== 1 || disabled) return;
                     handleInteraction(e.clientX);
                 }}
-                className={`relative flex-1 ${heights[size]} rounded-lg overflow-hidden ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`relative flex-1 ${heights[size]} rounded-lg overflow-hidden ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
                 style={{ backgroundColor: 'var(--ui-bg-tertiary)', touchAction: 'none' }}
             >
                 <div
                     className="absolute inset-y-0 left-0 transition-all duration-100 rounded-lg"
                     style={{
-                        width: `${(speed / 10) * 100}%`,
-                        backgroundColor: speed > 0 ? 'var(--ui-accent-primary)' : 'transparent',
+                        width: `${(meterSpeed / 10) * 100}%`,
+                        backgroundColor: meterSpeed > 0 ? 'var(--ui-accent-primary)' : 'transparent',
+                        opacity: disabled ? 0.6 : 1,
                     }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span className={`${textSizes[size]} font-bold tabular-nums`} style={{
-                        color: speed > 0 ? 'white' : 'var(--ui-text-muted)',
-                        textShadow: speed > 0 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+                        color: meterSpeed > 0 ? 'white' : 'var(--ui-text-muted)',
+                        textShadow: meterSpeed > 0 ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
                     }}>
-                        {speed === 0 ? 'OFF' : `${speed * 10}%`}
+                        {meterSpeed === 0 ? 'OFF' : `${meterSpeed * 10}%`}
                     </span>
                 </div>
             </div>
-            <button
-                onClick={() => onChange(Math.min(10, speed + 1))}
-                disabled={disabled || speed >= 10}
-                className={`${btnSizes[size]} rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-30 flex-shrink-0`}
-                style={{ backgroundColor: 'var(--ui-bg-tertiary)', color: 'var(--ui-text-primary)' }}
-            >
-                <Plus className={size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} />
-            </button>
+            {!disabled && (
+                <button
+                    onClick={() => onChange(Math.min(10, speed + 1))}
+                    disabled={speed >= 10}
+                    className={`${btnSizes[size]} rounded-lg flex items-center justify-center transition-all active:scale-90 disabled:opacity-30 flex-shrink-0`}
+                    style={{ backgroundColor: 'var(--ui-bg-tertiary)', color: 'var(--ui-text-primary)' }}
+                >
+                    <Plus className={size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} />
+                </button>
+            )}
         </div>
     );
 };
@@ -281,19 +283,22 @@ const SpeedSlider: React.FC<SpeedSliderProps> = ({ speed, onChange, disabled, si
 
 interface ThresholdEditorProps {
     value: number;
-    onChange: (v: number) => void;
+    onConfirm: (v: number) => void;  // Only called when user confirms
+    onCancel: () => void;
     min: number;
     max: number;
     step: number;
     unit: string;
     label: string;  // e.g., "Set Lower Temp"
     color: string;
-    onConfirm: () => void;
 }
 
 const ThresholdEditor: React.FC<ThresholdEditorProps> = ({
-    value, onChange, min, max, step, unit, label, color, onConfirm
+    value: initialValue, onConfirm, onCancel, min, max, step, unit, label, color
 }) => {
+    // Local state - only sent to API on confirm
+    const [localValue, setLocalValue] = useState(initialValue);
+
     const formatValue = (v: number) => {
         if (step < 1) return v.toFixed(1);
         return Math.round(v).toString();
@@ -318,26 +323,38 @@ const ThresholdEditor: React.FC<ThresholdEditorProps> = ({
         return () => stopRepeat();
     }, []);
 
+    const handleConfirm = () => {
+        onConfirm(localValue);
+    };
+
     return (
         <div
             className="flex flex-col gap-3 p-3 rounded-xl"
             style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
         >
-            {/* Label */}
-            <div className="text-center">
+            {/* Label with Cancel */}
+            <div className="flex items-center justify-between">
+                <button
+                    onClick={onCancel}
+                    className="text-xs px-2 py-1 rounded-lg transition-all active:scale-95"
+                    style={{ backgroundColor: 'var(--ui-bg-secondary)', color: 'var(--ui-text-muted)' }}
+                >
+                    Cancel
+                </button>
                 <span className="text-xs font-semibold uppercase tracking-wide" style={{ color }}>
                     {label}
                 </span>
+                <div className="w-12" /> {/* Spacer for centering */}
             </div>
 
             {/* Big Controls Row */}
             <div className="flex items-center justify-center gap-4">
                 {/* Minus Button */}
                 <button
-                    onMouseDown={() => startRepeat(() => onChange(Math.max(min, value - step)))}
+                    onMouseDown={() => startRepeat(() => setLocalValue(v => Math.max(min, v - step)))}
                     onMouseUp={stopRepeat}
                     onMouseLeave={stopRepeat}
-                    onTouchStart={() => startRepeat(() => onChange(Math.max(min, value - step)))}
+                    onTouchStart={() => startRepeat(() => setLocalValue(v => Math.max(min, v - step)))}
                     onTouchEnd={stopRepeat}
                     className="w-12 h-12 rounded-xl flex items-center justify-center active:scale-90 transition-all"
                     style={{ backgroundColor: 'var(--ui-bg-secondary)', color: 'var(--ui-text-primary)' }}
@@ -350,15 +367,15 @@ const ThresholdEditor: React.FC<ThresholdEditorProps> = ({
                     className="min-w-[80px] text-center py-2 px-4 rounded-xl font-bold text-2xl tabular-nums"
                     style={{ backgroundColor: color, color: 'white' }}
                 >
-                    {formatValue(value)}{unit}
+                    {formatValue(localValue)}{unit}
                 </div>
 
                 {/* Plus Button */}
                 <button
-                    onMouseDown={() => startRepeat(() => onChange(Math.min(max, value + step)))}
+                    onMouseDown={() => startRepeat(() => setLocalValue(v => Math.min(max, v + step)))}
                     onMouseUp={stopRepeat}
                     onMouseLeave={stopRepeat}
-                    onTouchStart={() => startRepeat(() => onChange(Math.min(max, value + step)))}
+                    onTouchStart={() => startRepeat(() => setLocalValue(v => Math.min(max, v + step)))}
                     onTouchEnd={stopRepeat}
                     className="w-12 h-12 rounded-xl flex items-center justify-center active:scale-90 transition-all"
                     style={{ backgroundColor: 'var(--ui-bg-secondary)', color: 'var(--ui-text-primary)' }}
@@ -369,7 +386,7 @@ const ThresholdEditor: React.FC<ThresholdEditorProps> = ({
 
             {/* Confirm Button */}
             <button
-                onClick={onConfirm}
+                onClick={handleConfirm}
                 className="w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:scale-98 transition-all"
                 style={{ backgroundColor: color, color: 'white' }}
             >
@@ -427,14 +444,17 @@ const TriggersSection: React.FC<TriggersSectionProps> = ({ triggers }) => {
         return (
             <ThresholdEditor
                 value={value}
-                onChange={onChange}
+                onConfirm={(newValue) => {
+                    onChange(newValue);  // Only sends to API when confirmed
+                    setEditing(null);
+                }}
+                onCancel={() => setEditing(null)}
                 min={boundMin}
                 max={boundMax}
                 step={trigger.step}
                 unit={trigger.unit}
                 label={`Set ${isLow ? 'Lower' : 'Upper'} ${trigger.label}`}
                 color={editColor}
-                onConfirm={() => setEditing(null)}
             />
         );
     }
@@ -505,8 +525,9 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
     port, settings, onModeChange, onSpeedChange, onSettingsChange, onClose, isLargeView, tempUnit
 }) => {
     const mode = settings?.mode ?? port.currentMode ?? 2;
-    const speed = settings?.onSpeed ?? port.currentPower ?? 0;
-    const isRunning = mode !== 1 && speed > 0;
+    const actualSpeed = port.currentPower ?? 0; // Actual running speed for display
+    const configuredSpeed = settings?.onSpeed ?? port.currentPower ?? 0; // For slider control
+    const isRunning = mode !== 1 && actualSpeed > 0;
 
     const content = (
         <div className="flex flex-col gap-3">
@@ -557,20 +578,14 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
                 })}
             </div>
 
-            {/* Speed Control - Integrated label */}
+            {/* Speed Control - Shows actual speed, editable only in "On" mode */}
             <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium" style={{ color: 'var(--ui-text-muted)' }}>Speed</span>
-                    {mode !== 2 && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded" style={{
-                            backgroundColor: 'var(--ui-warning-bg)', color: 'var(--ui-warning)'
-                        }}>
-                            Use ON mode
-                        </span>
-                    )}
-                </div>
+                <span className="text-xs font-medium" style={{ color: 'var(--ui-text-muted)' }}>
+                    {mode === 2 ? 'Speed' : 'Current Speed'}
+                </span>
                 <SpeedSlider
-                    speed={speed}
+                    speed={configuredSpeed}
+                    displaySpeed={actualSpeed}
                     onChange={onSpeedChange}
                     disabled={mode !== 2}
                     size={isLargeView ? 'sm' : 'md'}
@@ -590,10 +605,38 @@ const PortControlPanel: React.FC<PortControlPanelProps> = ({
                         triggers={[
                             {
                                 key: 'temp',
-                                low: displayTemp(settings.tempLow, tempUnit),
-                                high: displayTemp(settings.tempHigh, tempUnit),
-                                onLowChange: (v) => onSettingsChange({ tempLow: toApiTemp(v, tempUnit) }),
-                                onHighChange: (v) => onSettingsChange({ tempHigh: toApiTemp(v, tempUnit) }),
+                                // Use native C or F values from API - no conversion needed
+                                low: tempUnit === 'F' ? settings.tempLowF : settings.tempLow,
+                                high: tempUnit === 'F' ? settings.tempHighF : settings.tempHigh,
+                                // When saving, send both C and F values to avoid rounding issues
+                                onLowChange: (v) => {
+                                    if (tempUnit === 'F') {
+                                        // User entered F, calculate C
+                                        onSettingsChange({
+                                            tempLowF: v,
+                                            tempLow: Math.round((v - 32) * 5 / 9)
+                                        });
+                                    } else {
+                                        // User entered C, calculate F
+                                        onSettingsChange({
+                                            tempLow: v,
+                                            tempLowF: Math.round(v * 9 / 5 + 32)
+                                        });
+                                    }
+                                },
+                                onHighChange: (v) => {
+                                    if (tempUnit === 'F') {
+                                        onSettingsChange({
+                                            tempHighF: v,
+                                            tempHigh: Math.round((v - 32) * 5 / 9)
+                                        });
+                                    } else {
+                                        onSettingsChange({
+                                            tempHigh: v,
+                                            tempHighF: Math.round(v * 9 / 5 + 32)
+                                        });
+                                    }
+                                },
                                 min: tempUnit === 'C' ? 0 : 32,
                                 max: tempUnit === 'C' ? 50 : 120,
                                 step: 1,
@@ -675,8 +718,8 @@ interface PortTileProps {
 
 const PortTile: React.FC<PortTileProps> = ({ port, settings, onClick, compact }) => {
     const mode = settings?.mode ?? port.currentMode ?? 2;
-    const speed = settings?.onSpeed ?? port.currentPower ?? 0;
-    const isRunning = mode !== 1 && speed > 0;
+    const actualSpeed = port.currentPower ?? 0; // Always show actual running speed
+    const isRunning = mode !== 1 && actualSpeed > 0;
     const modeInfo = getModeInfo(mode);
 
     return (
@@ -707,7 +750,7 @@ const PortTile: React.FC<PortTileProps> = ({ port, settings, onClick, compact })
             </div>
             <div className="flex items-center gap-2">
                 <span className={`font-bold tabular-nums ${compact ? 'text-sm' : 'text-lg'}`} style={{ color: 'var(--ui-text-primary)' }}>
-                    {mode === 1 ? 'OFF' : `${speed * 10}%`}
+                    {mode === 1 ? 'OFF' : `${actualSpeed * 10}%`}
                 </span>
                 <ChevronRight className={`${compact ? 'w-3 h-3' : 'w-4 h-4'}`} style={{ color: 'var(--ui-text-muted)' }} />
             </div>
@@ -931,7 +974,6 @@ interface FanControllerProps {
 
 const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
     const [controllers, setControllers] = useState<ACInfinityController[]>([]);
-    const [portSettings, setPortSettings] = useState<Record<number, PortSettings>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [size, setSize] = useState({ w: 300, h: 200 });
@@ -943,6 +985,31 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
     const tempUnit: TempUnit = (settings.temperatureUnit as TempUnit) || 'F';
 
     const { openSettings } = useWidgetSettingsDialog();
+
+    // ==========================================================================
+    // OPTIMISTIC STATE MANAGEMENT
+    // ==========================================================================
+    // We maintain two layers:
+    // 1. serverSettings - What the API last told us (source of truth for unmodified values)
+    // 2. localOverrides - User changes that take precedence until cleared
+
+    const [serverSettings, setServerSettings] = useState<Record<number, PortSettings>>({});
+    const localOverridesRef = useRef<Record<number, Partial<PortSettings>>>({});
+    const overrideTimestampsRef = useRef<Record<number, number>>({});
+
+    // Version counter to trigger useMemo recomputation when overrides change
+    const [overrideVersion, setOverrideVersion] = useState(0);
+
+    // Merge server settings with local overrides for display
+    const portSettings = useMemo(() => {
+        const merged: Record<number, PortSettings> = {};
+        for (const [portStr, settings] of Object.entries(serverSettings)) {
+            const port = parseInt(portStr);
+            const overrides = localOverridesRef.current[port];
+            merged[port] = overrides ? { ...settings, ...overrides } : settings;
+        }
+        return merged;
+    }, [serverSettings, overrideVersion]);
 
     // Determine view size based on dimensions
     const viewSize: ViewSize = useMemo(() => {
@@ -980,9 +1047,11 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
         }
     }, []);
 
-    // Fetch port settings
+    // Fetch port settings - updates server state, doesn't touch local overrides
     const fetchPortSettings = useCallback(async (deviceId: string, ports: ACInfinityPort[]) => {
         const newSettings: Record<number, PortSettings> = {};
+        const now = Date.now();
+
         for (const port of ports) {
             try {
                 const res = await authService.fetchWithAuth(
@@ -992,13 +1061,21 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
                     const json = await res.json();
                     if (json.success && json.data) {
                         newSettings[port.portIndex] = json.data;
+
+                        // Clear local overrides if they're older than 5 seconds
+                        // This means the API has had time to reflect our changes
+                        const overrideTime = overrideTimestampsRef.current[port.portIndex];
+                        if (overrideTime && now - overrideTime > 5000) {
+                            delete localOverridesRef.current[port.portIndex];
+                            delete overrideTimestampsRef.current[port.portIndex];
+                        }
                     }
                 }
             } catch (e) {
                 console.error(`Failed to fetch settings for port ${port.portIndex}:`, e);
             }
         }
-        setPortSettings(newSettings);
+        setServerSettings(newSettings);
     }, []);
 
     useEffect(() => {
@@ -1018,57 +1095,117 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
         }
     }, [controller, fetchPortSettings]);
 
-    // API actions
+    // ==========================================================================
+    // API ACTIONS WITH OPTIMISTIC UPDATES
+    // ==========================================================================
+
+    // Track debounce timers for settings
+    const debounceTimerRef = useRef<Record<number, NodeJS.Timeout>>({});
+    const pendingSettingsRef = useRef<Record<number, Partial<PortSettings>>>({});
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(debounceTimerRef.current).forEach(clearTimeout);
+        };
+    }, []);
+
+    // Apply local override and trigger re-render
+    const applyLocalOverride = useCallback((portIndex: number, changes: Partial<PortSettings>) => {
+        localOverridesRef.current[portIndex] = {
+            ...localOverridesRef.current[portIndex],
+            ...changes
+        };
+        overrideTimestampsRef.current[portIndex] = Date.now();
+        setOverrideVersion(v => v + 1); // Trigger useMemo recomputation
+    }, []);
+
+    // Settings update with debouncing - for thresholds
+    const updatePortSettings = useCallback((portIndex: number, newSettings: Partial<PortSettings>) => {
+        if (!controller) return;
+
+        // Immediately apply as local override
+        applyLocalOverride(portIndex, newSettings);
+
+        // Accumulate pending changes
+        pendingSettingsRef.current[portIndex] = {
+            ...pendingSettingsRef.current[portIndex],
+            ...newSettings
+        };
+
+        // Clear existing debounce timer
+        if (debounceTimerRef.current[portIndex]) {
+            clearTimeout(debounceTimerRef.current[portIndex]);
+        }
+
+        // Debounce the API call
+        debounceTimerRef.current[portIndex] = setTimeout(async () => {
+            const settingsToSend = pendingSettingsRef.current[portIndex];
+            if (!settingsToSend || Object.keys(settingsToSend).length === 0) return;
+
+            // Clear pending
+            delete pendingSettingsRef.current[portIndex];
+
+            try {
+                await authService.fetchWithAuth(
+                    `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/settings`,
+                    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settingsToSend) }
+                );
+                // Success - override will be cleared after 5s by fetchPortSettings
+            } catch (e) {
+                console.error("Failed to update settings:", e);
+                // On error, clear the override to show server state
+                delete localOverridesRef.current[portIndex];
+                delete overrideTimestampsRef.current[portIndex];
+                setOverrideVersion(v => v + 1);
+            }
+        }, 500);
+    }, [controller, applyLocalOverride]);
+
+    // Speed changes - immediate with optimistic update
     const setSpeed = useCallback(async (portIndex: number, speed: number) => {
         if (!controller) return;
-        setPortSettings(prev => ({
-            ...prev,
-            [portIndex]: { ...prev[portIndex], onSpeed: speed }
-        }));
+
+        // Apply optimistic update
+        applyLocalOverride(portIndex, { onSpeed: speed });
+
         try {
             await authService.fetchWithAuth(
                 `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/speed`,
                 { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ speed }) }
             );
-            setTimeout(fetchControllers, 2000);
         } catch (e) {
             console.error("Failed to set speed:", e);
+            // Revert on error
+            delete localOverridesRef.current[portIndex];
+            delete overrideTimestampsRef.current[portIndex];
+            setOverrideVersion(v => v + 1);
         }
-    }, [controller, fetchControllers]);
+    }, [controller, applyLocalOverride]);
 
+    // Mode changes - immediate with optimistic update
     const setMode = useCallback(async (portIndex: number, mode: number) => {
         if (!controller) return;
-        setPortSettings(prev => ({
-            ...prev,
-            [portIndex]: { ...prev[portIndex], mode }
-        }));
+
+        // Apply optimistic update
+        applyLocalOverride(portIndex, { mode });
+
         try {
             await authService.fetchWithAuth(
                 `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/mode`,
                 { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode }) }
             );
-            setTimeout(fetchControllers, 2000);
+            // Refresh after mode change to get new thresholds
+            setTimeout(() => {
+                if (controller) fetchPortSettings(controller.deviceId, controller.ports);
+            }, 2000);
         } catch (e) {
             console.error("Failed to set mode:", e);
+            delete localOverridesRef.current[portIndex];
+            delete overrideTimestampsRef.current[portIndex];
+            setOverrideVersion(v => v + 1);
         }
-    }, [controller, fetchControllers]);
-
-    const updatePortSettings = useCallback(async (portIndex: number, newSettings: Partial<PortSettings>) => {
-        if (!controller) return;
-        setPortSettings(prev => ({
-            ...prev,
-            [portIndex]: { ...prev[portIndex], ...newSettings }
-        }));
-        try {
-            await authService.fetchWithAuth(
-                `${AC_INFINITY_API}/${controller.deviceId}/ports/${portIndex}/settings`,
-                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) }
-            );
-            setTimeout(() => fetchPortSettings(controller.deviceId, controller.ports), 2000);
-        } catch (e) {
-            console.error("Failed to update settings:", e);
-        }
-    }, [controller, fetchPortSettings]);
+    }, [controller, applyLocalOverride, fetchPortSettings]);
 
     // Derived values
     const name = customName || controller?.deviceName || "AC Infinity";

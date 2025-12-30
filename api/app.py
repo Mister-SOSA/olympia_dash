@@ -712,8 +712,12 @@ def update_ac_infinity_port_settings(device_id, port):
             settings['offSpead'] = int(data['offSpeed'])
         if 'tempHigh' in data:
             settings['devHt'] = int(data['tempHigh'])
+        if 'tempHighF' in data:
+            settings['devHtf'] = int(data['tempHighF'])
         if 'tempLow' in data:
             settings['devLt'] = int(data['tempLow'])
+        if 'tempLowF' in data:
+            settings['devLtf'] = int(data['tempLowF'])
         if 'humidityHigh' in data:
             settings['devHh'] = int(data['humidityHigh'])
         if 'humidityLow' in data:

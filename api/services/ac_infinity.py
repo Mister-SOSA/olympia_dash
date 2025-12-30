@@ -523,13 +523,21 @@ class ACInfinityClient:
         for key, value in settings.items():
             payload[key] = value
             
-            # Also convert C to F for temperature settings
-            if key == "devHt":
+            # Handle temperature settings - accept both C and F
+            # If only C provided, calculate F. If both provided, use both directly.
+            if key == "devHt" and "devHtf" not in settings:
                 payload["devHtf"] = int(round((value * 1.8) + 32, 0))
-            elif key == "devLt":
+            elif key == "devLt" and "devLtf" not in settings:
                 payload["devLtf"] = int(round((value * 1.8) + 32, 0))
-            elif key == "targetTemp":
+            elif key == "targetTemp" and "targetTempF" not in settings:
                 payload["targetTempF"] = int(round((value * 1.8) + 32, 0))
+            # Also handle when F is provided and C needs to be calculated
+            elif key == "devHtf" and "devHt" not in settings:
+                payload["devHt"] = int(round((value - 32) * 5 / 9, 0))
+            elif key == "devLtf" and "devLt" not in settings:
+                payload["devLt"] = int(round((value - 32) * 5 / 9, 0))
+            elif key == "targetTempF" and "targetTemp" not in settings:
+                payload["targetTemp"] = int(round((value - 32) * 5 / 9, 0))
         
         # URL-encode and send
         from urllib.parse import urlencode
