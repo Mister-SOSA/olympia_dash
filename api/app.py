@@ -27,7 +27,10 @@ from auth.analytics_routes import analytics_bp
 from auth.middleware import require_auth
 from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 from services.unifi_access import get_entry_logs as fetch_entry_logs
-from services.ac_infinity import get_all_controllers, get_controller_by_id, set_fan_speed
+from services.ac_infinity import (
+    get_all_controllers, get_controller_by_id, set_fan_speed,
+    get_port_settings, set_port_mode, update_port_settings, MODE_NAMES
+)
 
 # Configure colorized logging with uniform format
 logger = colorlog.getLogger()
@@ -579,6 +582,192 @@ def set_ac_infinity_fan_speed(device_id, port):
     except Exception as e:
         logger.error('Endpoint: /api/ac-infinity/.../speed | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/controllers/<device_id>/ports/<int:port>/settings', methods=['GET'])
+@require_auth
+def get_ac_infinity_port_settings(device_id, port):
+    """
+    Get detailed settings for a specific port on a controller.
+    
+    Path Parameters:
+        device_id: The controller's device ID
+        port: Port number (1-4)
+    
+    Returns:
+        Port settings including mode, triggers, etc.
+    """
+    try:
+        result = get_port_settings(device_id, port)
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to get settings')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "data": result['data']
+        }), 200
+        
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/.../settings | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/controllers/<device_id>/ports/<int:port>/mode', methods=['POST'])
+@require_auth
+def set_ac_infinity_port_mode(device_id, port):
+    """
+    Set the operating mode for a specific port on a controller.
+    
+    Path Parameters:
+        device_id: The controller's device ID
+        port: Port number (1-4)
+    
+    Body (JSON):
+        mode: Mode number (1=Off, 2=On, 3=Auto, 4=Timer to On, 5=Timer to Off, 6=Cycle, 7=Schedule, 8=VPD)
+    
+    Returns:
+        Success status
+    """
+    try:
+        data = request.get_json()
+        if not data or 'mode' not in data:
+            return jsonify({
+                "success": False,
+                "error": "Missing 'mode' in request body"
+            }), 400
+        
+        mode = int(data['mode'])
+        if mode not in MODE_NAMES:
+            return jsonify({
+                "success": False,
+                "error": f"Invalid mode: {mode}. Must be 1-8."
+            }), 400
+        
+        result = set_port_mode(device_id, port, mode)
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to set mode')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "message": result.get('message', f'Mode set to {MODE_NAMES[mode]}')
+        }), 200
+        
+    except ValueError as e:
+        logger.warning('Endpoint: /api/ac-infinity/.../mode | Invalid parameter: %s', e)
+        return jsonify({"success": False, "error": "Invalid mode value"}), 400
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/.../mode | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/controllers/<device_id>/ports/<int:port>/settings', methods=['POST'])
+@require_auth
+def update_ac_infinity_port_settings(device_id, port):
+    """
+    Update multiple settings for a specific port on a controller.
+    
+    Path Parameters:
+        device_id: The controller's device ID
+        port: Port number (1-4)
+    
+    Body (JSON):
+        Any combination of:
+        - mode: Mode number (1-8)
+        - onSpeed: On speed (0-10)
+        - offSpeed: Off speed (0-10)
+        - tempHigh: Temperature high trigger (Auto mode, Celsius)
+        - tempLow: Temperature low trigger (Auto mode, Celsius)
+        - humidityHigh: Humidity high trigger (Auto mode, %)
+        - humidityLow: Humidity low trigger (Auto mode, %)
+        - targetVpd: Target VPD (VPD mode)
+        - vpdHigh: VPD high trigger
+        - vpdLow: VPD low trigger
+    
+    Returns:
+        Success status
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Missing request body"
+            }), 400
+        
+        # Map frontend keys to API keys
+        settings = {}
+        if 'mode' in data:
+            settings['atType'] = int(data['mode'])
+        if 'onSpeed' in data:
+            settings['onSpead'] = int(data['onSpeed'])
+        if 'offSpeed' in data:
+            settings['offSpead'] = int(data['offSpeed'])
+        if 'tempHigh' in data:
+            settings['devHt'] = int(data['tempHigh'])
+        if 'tempLow' in data:
+            settings['devLt'] = int(data['tempLow'])
+        if 'humidityHigh' in data:
+            settings['devHh'] = int(data['humidityHigh'])
+        if 'humidityLow' in data:
+            settings['devLh'] = int(data['humidityLow'])
+        if 'targetVpd' in data:
+            settings['targetVpd'] = int(float(data['targetVpd']) * 10)
+        if 'vpdHigh' in data:
+            settings['activeHtVpdNums'] = int(float(data['vpdHigh']) * 10)
+        if 'vpdLow' in data:
+            settings['activeLtVpdNums'] = int(float(data['vpdLow']) * 10)
+        
+        if not settings:
+            return jsonify({
+                "success": False,
+                "error": "No valid settings provided"
+            }), 400
+        
+        result = update_port_settings(device_id, port, settings)
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to update settings')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "message": result.get('message', 'Settings updated')
+        }), 200
+        
+    except ValueError as e:
+        logger.warning('Endpoint: /api/ac-infinity/.../settings | Invalid parameter: %s', e)
+        return jsonify({"success": False, "error": "Invalid parameter value"}), 400
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/.../settings | Error: %s', e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/modes', methods=['GET'])
+@require_auth
+def get_ac_infinity_modes():
+    """
+    Get available operating modes for AC Infinity controllers.
+    
+    Returns:
+        List of available modes with their IDs and names
+    """
+    return jsonify({
+        "success": True,
+        "data": [
+            {"id": k, "name": v}
+            for k, v in MODE_NAMES.items()
+        ]
+    }), 200
 
 
 if __name__ == "__main__":
