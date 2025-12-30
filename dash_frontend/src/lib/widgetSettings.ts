@@ -20,12 +20,41 @@ const WIDGET_SETTINGS_PREFIX = 'widgetSettings';
 
 class WidgetSettingsService {
     private changeCallbacks: Map<string, Set<() => void>> = new Map();
+    private initialized = false;
+
+    /**
+     * Initialize the service - subscribe to remote preference changes
+     * This ensures widget settings are synced in real-time during impersonation
+     */
+    private initialize(): void {
+        if (this.initialized || typeof window === 'undefined') return;
+        this.initialized = true;
+
+        // Subscribe to preferences changes to detect remote widget settings updates
+        preferencesService.subscribe((isRemote: boolean, changedKeys?: string[]) => {
+            if (!isRemote) return; // Only handle remote changes
+
+            // Check if any widget settings changed
+            const widgetSettingsChanged = changedKeys?.some(key =>
+                key === WIDGET_SETTINGS_PREFIX || key.startsWith(`${WIDGET_SETTINGS_PREFIX}.`)
+            );
+
+            if (widgetSettingsChanged || !changedKeys) {
+                // Notify all widget subscribers about the remote change
+                this.notifyAllSubscribers();
+            }
+        });
+
+        console.log('[WidgetSettings] Initialized with remote sync support');
+    }
 
     /**
      * Get the storage key for a widget's settings
      * Uses the full widget ID (including instance ID for multi-instance widgets)
      */
     private getStorageKey(widgetId: string): string {
+        // Initialize on first use
+        this.initialize();
         return `${WIDGET_SETTINGS_PREFIX}.${widgetId}`;
     }
 
@@ -213,6 +242,17 @@ class WidgetSettingsService {
         if (globalCallbacks) {
             globalCallbacks.forEach(cb => cb());
         }
+    }
+
+    /**
+     * Notify ALL subscribers (used for remote preference sync)
+     * This is called when widget settings change from another session
+     */
+    private notifyAllSubscribers(): void {
+        console.log('[WidgetSettings] Remote settings change detected, notifying all subscribers');
+        this.changeCallbacks.forEach((callbacks, key) => {
+            callbacks.forEach(cb => cb());
+        });
     }
 }
 

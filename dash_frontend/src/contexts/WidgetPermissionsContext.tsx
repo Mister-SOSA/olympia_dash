@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { adminService } from '@/lib/admin';
 import { authService } from '@/lib/auth';
 import { preferencesService } from '@/lib/preferences';
+import { getWidgetType } from '@/utils/widgetInstanceUtils';
 import type { WidgetAccessControl } from '@/types';
 
 // How often to poll for permission changes (in milliseconds)
@@ -136,7 +137,12 @@ export function WidgetPermissionsProvider({ children }: { children: React.ReactN
                 return true;
             }
 
-            const userLevel = widgetAccess.permissions[widgetId];
+            // Extract widget type from instance ID for multi-instance widgets
+            // e.g., "FanController:abc123" -> "FanController"
+            const widgetType = getWidgetType(widgetId);
+
+            // Check permission using widget type (not full instance ID)
+            const userLevel = widgetAccess.permissions[widgetType];
             if (!userLevel) {
                 return false;
             }
@@ -158,6 +164,7 @@ export function WidgetPermissionsProvider({ children }: { children: React.ReactN
                 return widgets;
             }
 
+            // Filter widgets using hasAccess which handles multi-instance widget IDs
             return widgets.filter(widget => hasAccess(widget.id, requiredLevel));
         },
         [widgetAccess.all_access, hasAccess]
@@ -168,7 +175,9 @@ export function WidgetPermissionsProvider({ children }: { children: React.ReactN
             if (widgetAccess.all_access) {
                 return 'admin';
             }
-            return widgetAccess.permissions[widgetId] || null;
+            // Extract widget type from instance ID for multi-instance widgets
+            const widgetType = getWidgetType(widgetId);
+            return widgetAccess.permissions[widgetType] || null;
         },
         [widgetAccess]
     );
