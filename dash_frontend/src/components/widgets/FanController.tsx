@@ -130,73 +130,69 @@ const SmallView: React.FC<SmallViewProps> = ({
 }) => {
     const vpdColor = getVpdColor(controller.vpd);
 
+    // Calculate overall fan status
+    const activePorts = ports.filter(p => {
+        const ps = portSettings[p.portIndex];
+        const mode = ps?.mode ?? p.currentMode ?? 2;
+        return mode !== 1 && (p.currentPower ?? 0) > 0;
+    });
+    const avgSpeed = activePorts.length > 0
+        ? Math.round(activePorts.reduce((sum, p) => sum + (p.currentPower ?? 0), 0) / activePorts.length)
+        : 0;
+    const isRunning = avgSpeed > 0;
+
+    // Count how many readings we're showing
+    const readings = [
+        showTemperature,
+        showHumidity,
+        showVPD && controller.vpd > 0
+    ].filter(Boolean).length;
+
     return (
-        <div className="flex flex-col h-full p-2 gap-1.5">
-            {/* Header Row */}
-            <div className="flex items-center justify-between gap-2 min-w-0">
-                <span className="text-xs font-semibold truncate" style={{ color: 'var(--ui-text-primary)' }}>
-                    {name}
+        <div className="flex flex-col h-full w-full p-3">
+            {/* Top: Fan speed - large and prominent */}
+            <div className="flex-1 flex items-center justify-center gap-4">
+                <Fan
+                    className={`w-16 h-16 ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
+                    style={{
+                        color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
+                        animationDuration: '1s'
+                    }}
+                />
+                <span className="text-5xl font-black tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                    {isRunning ? `${avgSpeed * 10}%` : 'OFF'}
                 </span>
-                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--ui-success-bg)' }}>
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--ui-success)' }} />
-                </div>
             </div>
 
-            {/* Environmental Readings - Conditional */}
-            <div className="flex items-center justify-between gap-2 px-1">
+            {/* Bottom: Sensor readings row */}
+            <div
+                className="flex items-center justify-around py-2 rounded-xl"
+                style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+            >
                 {showTemperature && (
-                    <div className="flex items-center gap-1">
-                        <Thermometer className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-warning)' }} />
-                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
-                            {formatTemp(controller.temperatureF, tempUnit)}{getTempUnit(tempUnit)}
+                    <div className="flex flex-col items-center">
+                        <Thermometer className="w-6 h-6 mb-1" style={{ color: 'var(--ui-warning)' }} />
+                        <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                            {formatTemp(controller.temperatureF, tempUnit)}°
                         </span>
                     </div>
                 )}
                 {showHumidity && (
-                    <div className="flex items-center gap-1">
-                        <Droplets className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--ui-info)' }} />
-                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                    <div className="flex flex-col items-center">
+                        <Droplets className="w-6 h-6 mb-1" style={{ color: 'var(--ui-info)' }} />
+                        <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
                             {controller.humidity.toFixed(0)}%
                         </span>
                     </div>
                 )}
                 {showVPD && controller.vpd > 0 && (
-                    <div className="flex items-center gap-1">
-                        <Leaf className="w-3 h-3 flex-shrink-0" style={{ color: vpdColor }} />
-                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                    <div className="flex flex-col items-center">
+                        <Leaf className="w-6 h-6 mb-1" style={{ color: vpdColor }} />
+                        <span className="text-2xl font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
                             {controller.vpd.toFixed(2)}
                         </span>
                     </div>
                 )}
-            </div>
-
-            {/* Fan Speeds Row */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-                {ports.map(port => {
-                    const ps = portSettings[port.portIndex];
-                    const mode = ps?.mode ?? port.currentMode ?? 2;
-                    const actualSpeed = port.currentPower ?? 0; // Always show actual running speed
-                    const isRunning = mode !== 1 && actualSpeed > 0;
-
-                    return (
-                        <div
-                            key={port.portIndex}
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded"
-                            style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
-                        >
-                            <Fan
-                                className={`w-3 h-3 flex-shrink-0 ${enableAnimations && isRunning ? 'animate-spin' : ''}`}
-                                style={{
-                                    color: isRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
-                                    animationDuration: '1s'
-                                }}
-                            />
-                            <span className="text-[10px] font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
-                                {mode === 1 ? 'OFF' : `${actualSpeed * 10}%`}
-                            </span>
-                        </div>
-                    );
-                })}
             </div>
         </div>
     );
