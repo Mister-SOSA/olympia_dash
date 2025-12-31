@@ -241,7 +241,7 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
 
                 {/* Individual port speeds - shown if multiple ports and enough space */}
                 {showPortSpeeds && (
-                    <div className={`flex items-center justify-center ${isLarge ? 'gap-4 mt-4' : 'gap-3 mt-3'}`}>
+                    <div className={`flex items-center justify-center ${size.w >= 350 ? 'flex-row gap-4 mt-4' : 'flex-col gap-3 mt-3'}`}>
                         {ports.map(port => {
                             const ps = portSettings[port.portIndex];
                             const mode = ps?.mode ?? port.currentMode ?? 2;
