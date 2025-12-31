@@ -228,6 +228,20 @@ app.register_blueprint(groups_bp, url_prefix='/api/auth/admin/groups')
 app.register_blueprint(widget_bp, url_prefix='/api/auth/widgets')
 app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
 
+# App version - updated on each deployment to trigger client reloads
+# You can also use BUILD_VERSION env var set during docker build
+APP_VERSION = os.environ.get('BUILD_VERSION', None)
+
+@app.route('/api/version', methods=['GET'])
+def get_version():
+    """
+    Return current app version. Used by frontend to detect new deployments
+    and automatically reload all connected clients (TVs, displays, etc.)
+    """
+    return jsonify({
+        'version': APP_VERSION or app.config.get('START_TIME', 'unknown')
+    })
+
 @app.route('/api/widgets', methods=['POST'])
 @require_auth
 def get_widgets_post():
@@ -775,6 +789,10 @@ def get_ac_infinity_modes():
 
 
 if __name__ == "__main__":
+    import time
+    # Store startup time as version if BUILD_VERSION not set
+    app.config['START_TIME'] = str(int(time.time()))
+    
     # Get configuration from environment variables
     debug_mode = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     port = int(os.getenv('FLASK_PORT', '5001'))
