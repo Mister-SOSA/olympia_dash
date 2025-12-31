@@ -267,7 +267,7 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
                                         }}
                                     />
                                     {/* Content */}
-                                    <div className={`relative flex items-center ${isLarge ? 'gap-2.5' : 'gap-2'}`}>
+                                    <div className={`relative flex items-center ${isLarge ? 'gap-2.5' : 'gap-1'}`}>
                                         <Fan
                                             className={`${isLarge ? 'w-6 h-6' : 'w-5 h-5'} ${enableAnimations && portRunning ? 'animate-spin' : ''} drop-shadow-sm`}
                                             style={{
