@@ -247,25 +247,41 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
                             const mode = ps?.mode ?? port.currentMode ?? 2;
                             const speed = port.currentPower ?? 0;
                             const portRunning = mode !== 1 && speed > 0;
+                            const fillPercent = speed * 10; // speed is 0-10, convert to 0-100%
                             return (
                                 <div
                                     key={port.portIndex}
-                                    className={`flex items-center ${isLarge ? 'gap-2.5 px-4 py-2.5' : 'gap-2 px-3 py-1.5'} rounded-xl`}
-                                    style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
+                                    className={`relative overflow-hidden ${isLarge ? 'px-4 py-2.5' : 'px-3 py-1.5'} rounded-xl border`}
+                                    style={{
+                                        backgroundColor: 'var(--ui-bg-primary)',
+                                        borderColor: portRunning ? 'var(--ui-accent-primary)' : 'var(--ui-border-primary)'
+                                    }}
                                 >
-                                    <Fan
-                                        className={`${isLarge ? 'w-6 h-6' : 'w-5 h-5'} ${enableAnimations && portRunning ? 'animate-spin' : ''}`}
+                                    {/* Fill meter background */}
+                                    <div
+                                        className="absolute inset-0 transition-all duration-300 ease-out"
                                         style={{
-                                            color: portRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
-                                            animationDuration: '1s'
+                                            width: `${fillPercent}%`,
+                                            backgroundColor: portRunning ? 'var(--ui-accent-primary)' : 'transparent',
+                                            opacity: 0.35,
                                         }}
                                     />
-                                    <span className={`${isLarge ? 'text-base' : 'text-sm'} font-medium`} style={{ color: 'var(--ui-text-muted)' }}>
-                                        {port.portName.length > 10 ? port.portName.substring(0, 10) + '…' : port.portName}
-                                    </span>
-                                    <span className={`${isLarge ? 'text-xl' : 'text-base'} font-bold tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
-                                        {portRunning ? `${speed * 10}%` : 'OFF'}
-                                    </span>
+                                    {/* Content */}
+                                    <div className={`relative flex items-center ${isLarge ? 'gap-2.5' : 'gap-2'}`}>
+                                        <Fan
+                                            className={`${isLarge ? 'w-6 h-6' : 'w-5 h-5'} ${enableAnimations && portRunning ? 'animate-spin' : ''} drop-shadow-sm`}
+                                            style={{
+                                                color: portRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
+                                                animationDuration: '1s'
+                                            }}
+                                        />
+                                        <span className={`${isLarge ? 'text-base' : 'text-sm'} font-semibold drop-shadow-sm`} style={{ color: 'var(--ui-text-primary)' }}>
+                                            {port.portName.length > 10 ? port.portName.substring(0, 10) + '…' : port.portName}
+                                        </span>
+                                        <span className={`${isLarge ? 'text-xl' : 'text-base'} font-black tabular-nums drop-shadow-sm`} style={{ color: 'var(--ui-text-primary)' }}>
+                                            {portRunning ? `${fillPercent}%` : 'OFF'}
+                                        </span>
+                                    </div>
                                 </div>
                             );
                         })}
