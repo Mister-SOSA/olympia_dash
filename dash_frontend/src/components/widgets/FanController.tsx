@@ -211,7 +211,7 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
         <div className={`flex flex-col h-full w-full ${padding} ${gap}`}>
             {/* Header - Name and status (always visible in monitoring mode) */}
             <div className="flex items-center justify-between flex-shrink-0">
-                <span className={`font-semibold ${isCompact ? 'text-xs' : isLarge ? 'text-lg' : 'text-sm'} truncate`} style={{ color: 'var(--ui-text-primary)' }}>
+                <span className={`font-bold ${isCompact ? 'text-lg' : isLarge ? 'text-2xl' : 'text-xl'} truncate`} style={{ color: 'var(--ui-text-primary)' }}>
                     {name}
                 </span>
                 {!isCompact && (
@@ -241,7 +241,7 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
 
                 {/* Individual port speeds - shown if multiple ports and enough space */}
                 {showPortSpeeds && (
-                    <div className="flex items-center justify-center gap-3 mt-3">
+                    <div className={`flex items-center justify-center ${isLarge ? 'gap-4 mt-4' : 'gap-3 mt-3'}`}>
                         {ports.map(port => {
                             const ps = portSettings[port.portIndex];
                             const mode = ps?.mode ?? port.currentMode ?? 2;
@@ -250,20 +250,20 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
                             return (
                                 <div
                                     key={port.portIndex}
-                                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg"
+                                    className={`flex items-center ${isLarge ? 'gap-2.5 px-4 py-2.5' : 'gap-2 px-3 py-1.5'} rounded-xl`}
                                     style={{ backgroundColor: 'var(--ui-bg-secondary)' }}
                                 >
                                     <Fan
-                                        className={`w-4 h-4 ${enableAnimations && portRunning ? 'animate-spin' : ''}`}
+                                        className={`${isLarge ? 'w-6 h-6' : 'w-5 h-5'} ${enableAnimations && portRunning ? 'animate-spin' : ''}`}
                                         style={{
                                             color: portRunning ? 'var(--ui-accent-primary)' : 'var(--ui-text-muted)',
                                             animationDuration: '1s'
                                         }}
                                     />
-                                    <span className="text-xs font-medium" style={{ color: 'var(--ui-text-muted)' }}>
-                                        {port.portName.length > 8 ? port.portName.substring(0, 8) + '…' : port.portName}
+                                    <span className={`${isLarge ? 'text-base' : 'text-sm'} font-medium`} style={{ color: 'var(--ui-text-muted)' }}>
+                                        {port.portName.length > 10 ? port.portName.substring(0, 10) + '…' : port.portName}
                                     </span>
-                                    <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--ui-text-primary)' }}>
+                                    <span className={`${isLarge ? 'text-xl' : 'text-base'} font-bold tabular-nums`} style={{ color: 'var(--ui-text-primary)' }}>
                                         {portRunning ? `${speed * 10}%` : 'OFF'}
                                     </span>
                                 </div>
