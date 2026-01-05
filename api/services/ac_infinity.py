@@ -122,7 +122,7 @@ class ACInfinityClient:
         self._session: Optional[aiohttp.ClientSession] = None
         self._last_fetch: Optional[datetime] = None
         self._cached_controllers: list[ACInfinityController] = []
-        self._lock = asyncio.Lock()
+        self._lock = threading.Lock()  # Use threading.Lock for Flask multi-threaded environment
         self._bound_loop: Optional[asyncio.AbstractEventLoop] = None  # Track which loop the session is bound to
     
     def is_configured(self) -> bool:
@@ -227,7 +227,7 @@ class ACInfinityClient:
         Returns:
             List of ACInfinityController objects
         """
-        async with self._lock:
+        with self._lock:
             # Check cache
             if not force_refresh and self._cached_controllers and self._last_fetch:
                 cache_age = datetime.now() - self._last_fetch
@@ -236,31 +236,37 @@ class ACInfinityClient:
             
             # Ensure we're logged in
             if not self.is_logged_in():
-                await self.login()
+                # Release lock before async login to avoid blocking
+                pass
+        
+        # Login outside lock if needed
+        if not self.is_logged_in():
+            await self.login()
+        
+        try:
+            response = await self._post(
+                API_URL_GET_DEVICE_INFO_LIST_ALL,
+                data={"userId": self._user_id},
+                use_auth=True
+            )
             
-            try:
-                response = await self._post(
-                    API_URL_GET_DEVICE_INFO_LIST_ALL,
-                    data={"userId": self._user_id},
-                    use_auth=True
-                )
-                
-                controllers = []
-                for device_data in response.get("data", []):
-                    controller = self._parse_controller(device_data)
-                    if controller:
-                        controllers.append(controller)
-                
+            controllers = []
+            for device_data in response.get("data", []):
+                controller = self._parse_controller(device_data)
+                if controller:
+                    controllers.append(controller)
+            
+            with self._lock:
                 self._cached_controllers = controllers
                 self._last_fetch = datetime.now()
-                
-                return controllers
-                
-            except ACInfinityAuthError:
-                # Token might have expired, try re-login
-                self._user_id = None
-                await self.login()
-                return await self.get_controllers(force_refresh=True)
+            
+            return controllers
+            
+        except ACInfinityAuthError:
+            # Token might have expired, try re-login
+            self._user_id = None
+            await self.login()
+            return await self.get_controllers(force_refresh=True)
     
     def _parse_controller(self, data: dict) -> Optional[ACInfinityController]:
         """Parse raw API data into an ACInfinityController object"""

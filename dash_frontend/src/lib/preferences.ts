@@ -53,6 +53,9 @@ class PreferencesService {
     // Track if a save is currently in flight
     private isSaving: boolean = false;
 
+    // Track if preferences have been loaded from server at least once
+    private hasLoadedFromServer: boolean = false;
+
     // Interaction lock - when true, ignore remote updates
     private interactionLock: boolean = false;
     private interactionLockTimer: NodeJS.Timeout | null = null;
@@ -162,6 +165,8 @@ class PreferencesService {
                 this.version = data.version;
                 this.dirtyKeys.clear();
                 this.saveToCache();
+                this.hasLoadedFromServer = true;
+                console.log('[Prefs] Successfully loaded from server');
                 return true;
             }
 
@@ -170,6 +175,20 @@ class PreferencesService {
             console.error('[Prefs] Failed to fetch from server', error);
             return false;
         }
+    }
+
+    /**
+     * Check if preferences have been loaded from server
+     */
+    isLoaded(): boolean {
+        return this.hasLoadedFromServer;
+    }
+
+    /**
+     * Reset loaded state (for logout)
+     */
+    resetLoadedState(): void {
+        this.hasLoadedFromServer = false;
     }
 
     /**
@@ -472,6 +491,7 @@ class PreferencesService {
         this.clearAllTimers();
         this.syncInProgress = false;
         this.interactionLock = false;
+        this.hasLoadedFromServer = false;
 
         // Update user ID before loading cache
         this.currentUserId = newUserId;

@@ -214,6 +214,7 @@ export default function Dashboard() {
     const isMobile = useIsMobile();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [checkingAuth, setCheckingAuth] = useState(true);
+    const [preferencesReady, setPreferencesReady] = useState(false); // Track if preferences are fully loaded
     const [user, setUser] = useState(authService.getUser());
     const [isImpersonating, setIsImpersonating] = useState(authService.isImpersonating());
     const [layout, setLayout] = useState<Widget[]>([]);
@@ -341,8 +342,30 @@ export default function Dashboard() {
             // Migrate old localStorage preferences to new system (await to ensure it completes)
             await migrateFromLocalStorage();
 
-            // Sync preferences from server
-            await preferencesService.syncOnLogin();
+            // Sync preferences from server - retry up to 3 times if it fails
+            let syncSuccess = false;
+            for (let attempt = 1; attempt <= 3 && !syncSuccess; attempt++) {
+                try {
+                    await preferencesService.syncOnLogin();
+                    // Verify data was actually loaded
+                    syncSuccess = preferencesService.isLoaded();
+                    if (!syncSuccess && attempt < 3) {
+                        console.warn(`[Dashboard] Sync attempt ${attempt} completed but data not loaded, retrying...`);
+                    }
+                } catch (error) {
+                    console.error(`[Dashboard] Preferences sync attempt ${attempt} failed:`, error);
+                }
+                if (!syncSuccess && attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 500 * attempt)); // Exponential backoff
+                }
+            }
+
+            if (!syncSuccess) {
+                console.warn('[Dashboard] All sync attempts failed, using cached/default preferences');
+                // Even if sync failed, continue with whatever data we have (cache or defaults)
+            } else {
+                console.log('[Dashboard] Preferences synced successfully');
+            }
 
             // Check if user has completed onboarding
             const onboardingCompleted = preferencesService.get<boolean>('onboarding.completed', false);
@@ -378,6 +401,8 @@ export default function Dashboard() {
             const storedActiveIndex = readActivePresetIndex();
             setActivePresetIndex(storedActiveIndex);
 
+            // ✅ Mark preferences as ready AFTER all data is loaded
+            setPreferencesReady(true);
             console.log('✅ Dashboard initialization complete');
         };
 
@@ -885,7 +910,7 @@ export default function Dashboard() {
         toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
     }, [presets, generatePresetName]);
 
-    if (checkingAuth) {
+    if (checkingAuth || !preferencesReady) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-ui-bg-primary to-ui-bg-secondary animate-in fade-in duration-300">
                 <div className="relative mb-6">
@@ -897,7 +922,7 @@ export default function Dashboard() {
                     <Loader />
                 </div>
                 <p className="text-ui-text-secondary text-sm animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200">
-                    Loading your dashboard...
+                    {checkingAuth ? 'Checking authentication...' : 'Loading your preferences...'}
                 </p>
             </div>
         );
