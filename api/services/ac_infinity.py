@@ -123,6 +123,7 @@ class ACInfinityClient:
         self._last_fetch: Optional[datetime] = None
         self._cached_controllers: list[ACInfinityController] = []
         self._lock = asyncio.Lock()
+        self._bound_loop: Optional[asyncio.AbstractEventLoop] = None  # Track which loop the session is bound to
     
     def is_configured(self) -> bool:
         """Check if credentials are configured"""
@@ -133,9 +134,21 @@ class ACInfinityClient:
         return self._user_id is not None
     
     async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create HTTP session"""
-        if self._session is None or self._session.closed:
+        """Get or create HTTP session bound to the current event loop"""
+        current_loop = asyncio.get_event_loop()
+        # If session exists but is bound to a different/closed loop, close it
+        if self._session is not None:
+            if self._session.closed or self._bound_loop != current_loop or (self._bound_loop and self._bound_loop.is_closed()):
+                try:
+                    if not self._session.closed:
+                        await self._session.close()
+                except:
+                    pass
+                self._session = None
+        
+        if self._session is None:
             self._session = aiohttp.ClientSession()
+            self._bound_loop = current_loop
         return self._session
     
     async def close(self):
@@ -143,6 +156,7 @@ class ACInfinityClient:
         if self._session and not self._session.closed:
             await self._session.close()
         self._session = None
+        self._bound_loop = None
     
     def _create_headers(self, use_auth: bool = False) -> dict:
         """Create headers for API requests"""
@@ -586,21 +600,27 @@ class ACInfinityRequestError(ACInfinityError):
 # Singleton client instance
 _client: Optional[ACInfinityClient] = None
 _lock = threading.Lock()  # Thread lock for client access
+_thread_loops: dict = {}  # Store event loop per thread
 
 
 def _run_async(coro):
     """
     Run an async coroutine in a thread-safe manner.
     
-    Creates a new event loop for each call to avoid the "cannot enter context" 
-    error that occurs when multiple Flask threads try to use the same event loop.
+    Each thread gets its own persistent event loop to avoid session binding issues.
     """
-    loop = asyncio.new_event_loop()
-    try:
+    thread_id = threading.current_thread().ident
+    
+    # Get or create event loop for this thread
+    if thread_id not in _thread_loops or _thread_loops[thread_id].is_closed():
+        loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+        _thread_loops[thread_id] = loop
+    else:
+        loop = _thread_loops[thread_id]
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(coro)
 
 
 def get_client() -> ACInfinityClient:
