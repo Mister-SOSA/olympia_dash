@@ -5,6 +5,8 @@ import { Loader } from "@/components/ui/loader";
 import { WIDGETS, getWidgetsByCategory, CATEGORY_ICONS } from "@/constants/widgets";
 import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { isMultiInstanceWidget } from "@/utils/widgetInstanceUtils";
+import { widgetSettingsService } from "@/lib/widgetSettings";
 
 interface ImprovedWidgetMenuProps {
     tempLayout: Widget[];
@@ -131,7 +133,18 @@ function ImprovedWidgetMenu({
     };
 
     const clearAll = () => {
-        setTempLayout((prev) => prev.map((w) => ({ ...w, enabled: false })));
+        setTempLayout((prev) => {
+            // Clean up settings for instance widgets being removed
+            prev.forEach((w) => {
+                if (isMultiInstanceWidget(w.id)) {
+                    widgetSettingsService.deleteInstanceSettings(w.id);
+                }
+            });
+            // Remove instance widgets entirely, disable singleton widgets
+            return prev
+                .filter((w) => !isMultiInstanceWidget(w.id))
+                .map((w) => ({ ...w, enabled: false }));
+        });
     };
 
     const invertSelection = () => {

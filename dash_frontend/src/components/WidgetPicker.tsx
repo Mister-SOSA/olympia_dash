@@ -1640,7 +1640,28 @@ export default function WidgetPicker({
 
     const deselectAllVisible = useCallback(() => {
         const visibleIds = new Set(filteredWidgets.map((w) => w.id));
-        setTempLayout((prev) => prev.map((w) => visibleIds.has(w.id) ? { ...w, enabled: false } : w));
+        setTempLayout((prev) => {
+            // Clean up settings for instance widgets being removed
+            prev.forEach((w) => {
+                if (isMultiInstanceWidget(w.id)) {
+                    const baseType = getWidgetType(w.id);
+                    if (visibleIds.has(baseType)) {
+                        widgetSettingsService.deleteInstanceSettings(w.id);
+                    }
+                }
+            });
+            // Filter out instance widgets of visible types, disable singleton widgets
+            return prev
+                .filter((w) => {
+                    if (isMultiInstanceWidget(w.id)) {
+                        const baseType = getWidgetType(w.id);
+                        // Remove instance widgets whose base type is visible
+                        return !visibleIds.has(baseType);
+                    }
+                    return true; // Keep singleton widgets
+                })
+                .map((w) => visibleIds.has(w.id) ? { ...w, enabled: false } : w);
+        });
     }, [filteredWidgets, setTempLayout]);
 
     const invertSelection = useCallback(() => {
