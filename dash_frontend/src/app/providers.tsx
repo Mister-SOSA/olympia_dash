@@ -8,24 +8,29 @@ import { AnalyticsProvider } from "@/contexts/AnalyticsContext";
 import { WidgetSettingsDialogProvider } from "@/contexts/WidgetSettingsDialogContext";
 import { ACInfinityProvider } from "@/contexts/ACInfinityContext";
 import { VersionChecker } from "@/components/VersionChecker";
+import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <ThemeProvider>
-            <SettingsProvider>
-                <PrivacyProvider>
-                    <WidgetPermissionsProvider>
-                        <AnalyticsProvider>
-                            <ACInfinityProvider>
-                                <WidgetSettingsDialogProvider>
-                                    {children}
-                                    <VersionChecker />
-                                </WidgetSettingsDialogProvider>
-                            </ACInfinityProvider>
-                        </AnalyticsProvider>
-                    </WidgetPermissionsProvider>
-                </PrivacyProvider>
-            </SettingsProvider>
+            <ServiceWorkerProvider>
+                <SettingsProvider>
+                    <PrivacyProvider>
+                        <WidgetPermissionsProvider>
+                            <AnalyticsProvider>
+                                <ACInfinityProvider>
+                                    <WidgetSettingsDialogProvider>
+                                        {children}
+                                        <VersionChecker />
+                                        <InstallPrompt delay={60000} />
+                                    </WidgetSettingsDialogProvider>
+                                </ACInfinityProvider>
+                            </AnalyticsProvider>
+                        </WidgetPermissionsProvider>
+                    </PrivacyProvider>
+                </SettingsProvider>
+            </ServiceWorkerProvider>
         </ThemeProvider>
     );
 }

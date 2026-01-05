@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { ToasterProvider } from "@/components/ToasterProvider";
 import { SnowOverlay } from "@/components/SnowOverlay";
+import { Viewport } from "next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -10,10 +11,18 @@ const inter = Inter({
   display: "swap", // Optimizes font loading
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
 
 export const metadata = {
   title: "OlyDash",
-  description: "Customizable Dashboard",
+  description: "A customizable business intelligence dashboard with real-time widgets, preset management, and IoT integrations.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -29,6 +38,9 @@ export const metadata = {
     apple: [
       { url: "/apple-icon-180.png", sizes: "180x180", type: "image/png" },
     ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
