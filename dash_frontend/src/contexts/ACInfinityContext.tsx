@@ -185,43 +185,43 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
         }
     }, []);
 
-    // Fetch settings for all ports on a controller
-    const fetchControllerSettings = useCallback(async (controller: ACInfinityController) => {
-        const settings: Record<number, PortSettings> = {};
-        const now = Date.now();
+    // Fetch all settings in a single batch request (much more efficient!)
+    const fetchAllSettings = useCallback(async () => {
+        try {
+            const res = await authService.fetchWithAuth('/api/ac-infinity/settings');
+            if (!res.ok) throw new Error("Failed to fetch settings");
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || "Error fetching settings");
 
-        for (const port of controller.ports) {
-            try {
-                const res = await authService.fetchWithAuth(
-                    `${AC_INFINITY_API}/${controller.deviceId}/ports/${port.portIndex}/settings`
-                );
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        settings[port.portIndex] = json.data;
+            const now = Date.now();
+            const allSettings = json.data || {};
 
-                        // Clear local overrides if they're older than 5 seconds
-                        const deviceOverrides = overrideTimestampsRef.current[controller.deviceId];
-                        const overrideTime = deviceOverrides?.[port.portIndex];
-                        if (overrideTime && now - overrideTime > 5000) {
-                            if (localOverridesRef.current[controller.deviceId]) {
-                                delete localOverridesRef.current[controller.deviceId][port.portIndex];
-                            }
-                            if (overrideTimestampsRef.current[controller.deviceId]) {
-                                delete overrideTimestampsRef.current[controller.deviceId][port.portIndex];
-                            }
+            // Clear old local overrides
+            for (const deviceId of Object.keys(allSettings)) {
+                const deviceSettings = allSettings[deviceId];
+                for (const portIndexStr of Object.keys(deviceSettings)) {
+                    const portIndex = parseInt(portIndexStr);
+                    const deviceOverrides = overrideTimestampsRef.current[deviceId];
+                    const overrideTime = deviceOverrides?.[portIndex];
+                    if (overrideTime && now - overrideTime > 5000) {
+                        if (localOverridesRef.current[deviceId]) {
+                            delete localOverridesRef.current[deviceId][portIndex];
+                        }
+                        if (overrideTimestampsRef.current[deviceId]) {
+                            delete overrideTimestampsRef.current[deviceId][portIndex];
                         }
                     }
                 }
-            } catch (e) {
-                console.error(`Failed to fetch settings for ${controller.deviceId}:${port.portIndex}:`, e);
             }
-        }
 
-        return settings;
+            return allSettings;
+        } catch (e) {
+            console.error('Failed to fetch all settings:', e);
+            return {};
+        }
     }, []);
 
-    // Full refresh - fetch controllers and all settings
+    // Full refresh - fetch controllers and all settings in just 2 API calls
     const refresh = useCallback(async () => {
         // Don't fetch if user is not authenticated
         if (!authService.isAuthenticated()) {
@@ -231,19 +231,21 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
 
         setLoading(true);
         try {
-            const controllerList = await fetchControllers();
+            // Fetch controllers and settings in parallel (just 2 API calls!)
+            const [controllerList, allSettings] = await Promise.all([
+                fetchControllers(),
+                fetchAllSettings()
+            ]);
 
-            // Fetch settings for all controllers in parallel
-            const settingsPromises = controllerList.map(async (controller: ACInfinityController) => {
-                const settings = await fetchControllerSettings(controller);
-                return { deviceId: controller.deviceId, settings };
-            });
-
-            const results = await Promise.all(settingsPromises);
-
+            // Convert settings format: API returns {deviceId: {portIndex: settings}}
+            // We need {deviceId: {portIndex: PortSettings}}
             const newSettings: Record<string, Record<number, PortSettings>> = {};
-            for (const { deviceId, settings } of results) {
-                newSettings[deviceId] = settings;
+            for (const [deviceId, portSettingsMap] of Object.entries(allSettings)) {
+                newSettings[deviceId] = {};
+                for (const [portIndexStr, settings] of Object.entries(portSettingsMap as Record<string, PortSettings>)) {
+                    const portIndex = parseInt(portIndexStr);
+                    newSettings[deviceId][portIndex] = settings;
+                }
             }
 
             setServerSettings(newSettings);
@@ -252,7 +254,7 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
         } finally {
             setLoading(false);
         }
-    }, [fetchControllers, fetchControllerSettings]);
+    }, [fetchControllers, fetchAllSettings]);
 
     // Initial fetch and polling - uses global refresh interval
     // Only poll when user is authenticated

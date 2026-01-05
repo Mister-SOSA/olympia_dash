@@ -18,6 +18,7 @@ import os
 import time
 import logging
 import asyncio
+import threading
 import aiohttp
 import nest_asyncio
 from typing import Optional, Any
@@ -584,36 +585,43 @@ class ACInfinityRequestError(ACInfinityError):
 
 # Singleton client instance
 _client: Optional[ACInfinityClient] = None
-_loop: Optional[asyncio.AbstractEventLoop] = None
+_lock = threading.Lock()  # Thread lock for client access
 
 
-def get_event_loop() -> asyncio.AbstractEventLoop:
-    """Get or create a dedicated event loop for AC Infinity operations"""
-    global _loop
-    if _loop is None or _loop.is_closed():
-        _loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_loop)
-    return _loop
+def _run_async(coro):
+    """
+    Run an async coroutine in a thread-safe manner.
+    
+    Creates a new event loop for each call to avoid the "cannot enter context" 
+    error that occurs when multiple Flask threads try to use the same event loop.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def get_client() -> ACInfinityClient:
-    """Get the singleton AC Infinity client"""
+    """Get the singleton AC Infinity client (thread-safe)"""
     global _client
-    if _client is None:
-        _client = ACInfinityClient()
-    return _client
+    with _lock:
+        if _client is None:
+            _client = ACInfinityClient()
+        return _client
 
 
 def reset_client():
     """Reset the client (useful if credentials change)"""
-    global _client, _loop
-    if _client is not None:
-        try:
-            loop = get_event_loop()
-            loop.run_until_complete(_client.close())
-        except:
-            pass
-        _client = None
+    global _client
+    with _lock:
+        if _client is not None:
+            try:
+                _run_async(_client.close())
+            except:
+                pass
+            _client = None
 
 
 # Synchronous wrapper functions for Flask routes
@@ -634,8 +642,7 @@ def get_all_controllers() -> dict:
         }
     
     try:
-        loop = get_event_loop()
-        controllers = loop.run_until_complete(client.get_controllers())
+        controllers = _run_async(client.get_controllers())
         
         return {
             "success": True,
@@ -723,6 +730,77 @@ def get_controller_by_id(device_id: str) -> dict:
     }
 
 
+def get_all_port_settings() -> dict:
+    """
+    Get port settings for all controllers and all ports in a single call.
+    This is more efficient than making individual calls per port.
+    
+    Returns:
+        Dict with success status and settings data organized by deviceId -> portIndex
+    """
+    client = get_client()
+    
+    if not client.is_configured():
+        return {
+            "success": False,
+            "error": "AC Infinity credentials not configured"
+        }
+    
+    try:
+        # First get all controllers
+        controllers = _run_async(client.get_controllers())
+        
+        all_settings: dict = {}
+        
+        for controller in controllers:
+            device_id = controller.device_id
+            all_settings[device_id] = {}
+            
+            for port in controller.ports:
+                try:
+                    settings = _run_async(client.get_port_settings(device_id, port.port_index))
+                    
+                    all_settings[device_id][port.port_index] = {
+                        "mode": settings.get("atType", 2),
+                        "modeName": MODE_NAMES.get(settings.get("atType", 2), "Unknown"),
+                        "onSpeed": settings.get("onSpead", 0),
+                        "offSpeed": settings.get("offSpead", 0),
+                        # Auto mode settings
+                        "tempHigh": settings.get("devHt", 0),
+                        "tempLow": settings.get("devLt", 0),
+                        "tempHighF": settings.get("devHtf", 32),
+                        "tempLowF": settings.get("devLtf", 32),
+                        "humidityHigh": settings.get("devHh", 0),
+                        "humidityLow": settings.get("devLh", 0),
+                        "tempHighEnabled": settings.get("activeHt", 0) == 1,
+                        "tempLowEnabled": settings.get("activeLt", 0) == 1,
+                        "humidityHighEnabled": settings.get("activeHh", 0) == 1,
+                        "humidityLowEnabled": settings.get("activeLh", 0) == 1,
+                        # VPD mode settings
+                        "targetVpd": settings.get("targetVpd", 0) / 10 if settings.get("targetVpd") else 0,
+                        "vpdHigh": settings.get("activeHtVpdNums", 0) / 10 if settings.get("activeHtVpdNums") else 0,
+                        "vpdLow": settings.get("activeLtVpdNums", 0) / 10 if settings.get("activeLtVpdNums") else 0,
+                        "vpdHighEnabled": settings.get("activeHtVpd", 0) == 1,
+                        "vpdLowEnabled": settings.get("activeLtVpd", 0) == 1,
+                    }
+                except Exception as e:
+                    logger.error(f"Error getting settings for {device_id}:{port.port_index}: {e}")
+                    continue
+        
+        return {
+            "success": True,
+            "data": all_settings,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"AC Infinity error getting all port settings: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 def set_fan_speed(device_id: str, port: int, speed: int) -> dict:
     """
     Set fan speed for a port (synchronous wrapper).
@@ -751,8 +829,7 @@ def set_fan_speed(device_id: str, port: int, speed: int) -> dict:
         }
     
     try:
-        loop = get_event_loop()
-        loop.run_until_complete(client.set_port_power(device_id, port, speed))
+        _run_async(client.set_port_power(device_id, port, speed))
         return {
             "success": True,
             "message": f"Set port {port} speed to {speed}"
@@ -786,8 +863,7 @@ def get_port_settings(device_id: str, port: int) -> dict:
         }
     
     try:
-        loop = get_event_loop()
-        settings = loop.run_until_complete(client.get_port_settings(device_id, port))
+        settings = _run_async(client.get_port_settings(device_id, port))
         
         # Parse settings into a cleaner structure
         return {
@@ -860,8 +936,7 @@ def set_port_mode(device_id: str, port: int, mode: int) -> dict:
         }
     
     try:
-        loop = get_event_loop()
-        loop.run_until_complete(client.set_port_mode(device_id, port, mode))
+        _run_async(client.set_port_mode(device_id, port, mode))
         return {
             "success": True,
             "message": f"Set port {port} mode to {MODE_NAMES[mode]}"
@@ -896,8 +971,7 @@ def update_port_settings(device_id: str, port: int, settings: dict) -> dict:
         }
     
     try:
-        loop = get_event_loop()
-        loop.run_until_complete(client.update_port_settings(device_id, port, settings))
+        _run_async(client.update_port_settings(device_id, port, settings))
         return {
             "success": True,
             "message": f"Updated port {port} settings"

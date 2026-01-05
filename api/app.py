@@ -29,7 +29,8 @@ from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 from services.unifi_access import get_entry_logs as fetch_entry_logs
 from services.ac_infinity import (
     get_all_controllers, get_controller_by_id, set_fan_speed,
-    get_port_settings, set_port_mode, update_port_settings, MODE_NAMES
+    get_port_settings, set_port_mode, update_port_settings, MODE_NAMES,
+    get_all_port_settings
 )
 
 # Configure colorized logging with uniform format
@@ -543,6 +544,36 @@ def get_ac_infinity_controller(device_id):
         
     except Exception as e:
         logger.error('Endpoint: /api/ac-infinity/controllers/%s | Error: %s', device_id, e)
+        return jsonify({"success": False, "error": str(e)}), 200
+
+
+@app.route('/api/ac-infinity/settings', methods=['GET'])
+@require_auth
+def get_ac_infinity_all_settings():
+    """
+    Get port settings for all controllers and ports in a single batch request.
+    This is more efficient than making individual calls per port.
+    
+    Returns:
+        Dict of settings organized by deviceId -> portIndex -> settings
+    """
+    try:
+        result = get_all_port_settings()
+        
+        if not result['success']:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to get settings')
+            }), 200
+        
+        return jsonify({
+            "success": True,
+            "data": result['data'],
+            "timestamp": result.get('timestamp')
+        }), 200
+        
+    except Exception as e:
+        logger.error('Endpoint: /api/ac-infinity/settings | Error: %s', e)
         return jsonify({"success": False, "error": str(e)}), 200
 
 
