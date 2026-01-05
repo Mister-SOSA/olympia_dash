@@ -9,7 +9,6 @@ import { WidgetSettingsDialogProvider } from "@/contexts/WidgetSettingsDialogCon
 import { ACInfinityProvider } from "@/contexts/ACInfinityContext";
 import { VersionChecker } from "@/components/VersionChecker";
 import { ServiceWorkerProvider } from "@/components/ServiceWorkerProvider";
-import { InstallPrompt } from "@/components/InstallPrompt";
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -23,7 +22,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                                     <WidgetSettingsDialogProvider>
                                         {children}
                                         <VersionChecker />
-                                        <InstallPrompt delay={60000} />
                                     </WidgetSettingsDialogProvider>
                                 </ACInfinityProvider>
                             </AnalyticsProvider>
