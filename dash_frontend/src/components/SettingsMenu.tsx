@@ -21,6 +21,7 @@ import {
     REFRESH_INTERVAL_OPTIONS,
     WIDGET_SETTINGS,
 } from "@/constants/settings";
+import { isHolidaySeason } from "@/components/SnowOverlay";
 import {
     MdCheck,
     MdPalette,
@@ -709,12 +710,14 @@ export default function SettingsMenu({ user, onLogout, onClose, onAdminClick, pr
                                                             enabled={settings.compactMode}
                                                             onChange={(val) => updateSetting('compactMode', val)}
                                                         />
-                                                        <ToggleSetting
-                                                            label="Christmas Mode 🎄"
-                                                            description="Snow and twinkling lights"
-                                                            enabled={settings.snowEffect}
-                                                            onChange={(val) => updateSetting('snowEffect', val)}
-                                                        />
+                                                        {isHolidaySeason() && (
+                                                            <ToggleSetting
+                                                                label="Christmas Mode 🎄"
+                                                                description="Snow and twinkling lights"
+                                                                enabled={settings.snowEffect}
+                                                                onChange={(val) => updateSetting('snowEffect', val)}
+                                                            />
+                                                        )}
                                                     </div>
                                                 </Subsection>
 
@@ -2778,12 +2781,14 @@ function SettingsContent({
                                 enabled={settings.compactMode}
                                 onChange={(val) => updateSetting('compactMode', val)}
                             />
-                            <ToggleSetting
-                                label="Christmas Mode 🎄"
-                                description="Snow and twinkling lights"
-                                enabled={settings.snowEffect}
-                                onChange={(val) => updateSetting('snowEffect', val)}
-                            />
+                            {isHolidaySeason() && (
+                                <ToggleSetting
+                                    label="Christmas Mode 🎄"
+                                    description="Snow and twinkling lights"
+                                    enabled={settings.snowEffect}
+                                    onChange={(val) => updateSetting('snowEffect', val)}
+                                />
+                            )}
                         </div>
                     </Subsection>
 

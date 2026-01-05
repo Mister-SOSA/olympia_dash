@@ -5,10 +5,30 @@ import { useAppSettings } from '@/contexts/SettingsContext';
 import { useEffect, useState } from 'react';
 
 /**
+ * Check if the current date is within the holiday season (December 14 - January 5)
+ */
+export function isHolidaySeason(): boolean {
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed (0 = January, 11 = December)
+    const day = now.getDate();
+
+    // December 14-31 (month 11, day >= 14)
+    if (month === 11 && day >= 14) {
+        return true;
+    }
+    // January 1-5 (month 0, day <= 5)
+    if (month === 0 && day <= 5) {
+        return true;
+    }
+    return false;
+}
+
+/**
  * ChristmasOverlay Component
  * 
  * A festive snow overlay for the dashboard.
  * Can be toggled in Settings > Appearance > Christmas Mode
+ * Only available during the holiday season (December 14 - January 5)
  * 
  * Features:
  * - Gentle falling snow animation
@@ -65,7 +85,8 @@ function ChristmasLights() {
 export function SnowOverlay() {
     const { snowEffect } = useAppSettings();
 
-    if (!snowEffect) {
+    // Only show during holiday season (December 14 - January 5)
+    if (!isHolidaySeason() || !snowEffect) {
         return null;
     }
 
