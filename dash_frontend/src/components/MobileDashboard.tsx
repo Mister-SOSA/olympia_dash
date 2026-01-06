@@ -167,45 +167,46 @@ const vibrate = (pattern: number | number[] = 10) => {
 
 interface WidgetComplicationProps {
     widgetId: string;
+    isVisible?: boolean;
 }
 
-const WidgetComplication = memo(function WidgetComplication({ widgetId }: WidgetComplicationProps) {
+const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisible = true }: WidgetComplicationProps) {
     const { data, loading } = useWidgetPreview(widgetId);
-    const [showData, setShowData] = useState(false);
-    const [hasLoaded, setHasLoaded] = useState(false);
+    const [dataReady, setDataReady] = useState(false);
 
     useEffect(() => {
         if (!loading && data?.value) {
-            setHasLoaded(true);
-            const timer = setTimeout(() => setShowData(true), 50);
-            return () => clearTimeout(timer);
+            setDataReady(true);
         }
     }, [loading, data?.value]);
 
-    if (!loading && !data?.value && !hasLoaded) {
+    // Show content when data is ready AND this preset is visible
+    const showContent = dataReady && isVisible;
+
+    if (!loading && !data?.value && !dataReady) {
         return null;
     }
 
     return (
         <div className="widget-complication-container">
-            {/* Skeleton loader */}
+            {/* Skeleton loader - shows while loading or when not visible */}
             <div
                 className="widget-complication-loading"
                 style={{
-                    opacity: showData ? 0 : 1,
-                    transition: "opacity 0.25s ease-out",
+                    opacity: showContent ? 0 : 1,
+                    transition: "opacity 0.2s ease-out",
                 }}
             >
                 <div className="widget-complication-skeleton" />
             </div>
 
-            {/* Actual data */}
-            {hasLoaded && data?.value && (
+            {/* Actual data - fades in when visible */}
+            {dataReady && data?.value && (
                 <div
                     className="widget-complication"
                     style={{
-                        opacity: showData ? 1 : 0,
-                        transition: "opacity 0.25s ease-in 0.1s",
+                        opacity: showContent ? 1 : 0,
+                        transition: "opacity 0.3s ease-in",
                     }}
                 >
                     {data.status && data.status !== "neutral" && (
@@ -236,12 +237,14 @@ interface SortableWidgetCardProps {
     widgetId: string;
     onClick: () => void;
     isEditing: boolean;
+    isVisible?: boolean;
 }
 
 const SortableWidgetCard = memo(function SortableWidgetCard({
     widgetId,
     onClick,
     isEditing,
+    isVisible = true,
 }: SortableWidgetCardProps) {
     const {
         attributes,
@@ -300,7 +303,7 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
                     <MdEdit className="w-4 h-4 text-ui-accent-primary ml-auto flex-shrink-0" />
                 )}
             </div>
-            {!isEditing && <WidgetComplication widgetId={widgetId} />}
+            {!isEditing && <WidgetComplication widgetId={widgetId} isVisible={isVisible} />}
         </div>
     );
 });
@@ -382,14 +385,15 @@ const TrashDropZone = memo(function TrashDropZone({ isOver, isVisible }: TrashDr
 });
 
 // ============================================
-// Preset Tabs - Memoized
+// Preset Tabs - Clean iOS-style with spring animation
 // ============================================
 
 interface PresetTabsProps {
     presets: MobilePresetsState;
     onPresetChange: (index: number) => void;
     onAddPreset: () => void;
-    swipeOffset?: number;
+    onRenamePreset: (index: number) => void;
+    onDeletePreset: (index: number) => void;
     currentSwiperIndex: number;
     nonNullPresetsCount: number;
 }
@@ -398,127 +402,261 @@ const PresetTabs = memo(function PresetTabs({
     presets,
     onPresetChange,
     onAddPreset,
-    swipeOffset = 0,
+    onRenamePreset,
+    onDeletePreset,
     currentSwiperIndex,
+    nonNullPresetsCount,
 }: PresetTabsProps) {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const tabRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+    const containerRef = useRef<HTMLDivElement>(null);
+    const tabsRef = useRef<HTMLDivElement>(null);
+    const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+    const [contextMenu, setContextMenu] = useState<{ index: number; x: number; y: number } | null>(null);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-    // Get indices of non-null presets
-    const nonNullIndices = useMemo(
-        () => presets.presets.map((p, i) => (p !== null ? i : -1)).filter((i) => i !== -1),
+    // Get non-null presets for rendering
+    const nonNullPresets = useMemo(
+        () => presets.presets
+            .map((p, i) => ({ preset: p, originalIndex: i }))
+            .filter((item): item is { preset: NonNullable<typeof item.preset>; originalIndex: number } =>
+                item.preset !== null
+            ),
         [presets.presets]
     );
 
-    // Scroll to active tab when it changes
+    // Close context menu when clicking outside
     useEffect(() => {
-        if (!scrollRef.current) return;
+        if (!contextMenu) return;
+        const handleClick = () => setContextMenu(null);
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, [contextMenu]);
 
-        const activeTab = tabRefs.current.get(presets.activePresetIndex);
-        if (activeTab) {
-            const container = scrollRef.current;
-            const containerWidth = container.clientWidth;
-            const tabCenter = activeTab.offsetLeft + activeTab.offsetWidth / 2;
-            const targetScroll = tabCenter - containerWidth / 2;
-            container.scrollLeft = targetScroll;
+    const handleLongPressStart = useCallback((index: number, e: React.TouchEvent | React.MouseEvent) => {
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        longPressTimer.current = setTimeout(() => {
+            vibrate(20);
+            setContextMenu({ index, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+        }, 500);
+    }, []);
+
+    const handleLongPressEnd = useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
         }
-    }, [presets.activePresetIndex]);
+    }, []);
 
-    const absOffset = Math.abs(swipeOffset);
-    const isAnimating = absOffset > 0.01;
+    const handleRename = useCallback(() => {
+        if (contextMenu) {
+            onRenamePreset(contextMenu.index);
+            setContextMenu(null);
+        }
+    }, [contextMenu, onRenamePreset]);
+
+    const handleDelete = useCallback(() => {
+        if (contextMenu) {
+            onDeletePreset(contextMenu.index);
+            setContextMenu(null);
+        }
+    }, [contextMenu, onDeletePreset]);
+
+    // Update indicator position when active tab changes
+    useEffect(() => {
+        if (!tabsRef.current) return;
+
+        const updateIndicator = () => {
+            const tabs = tabsRef.current?.querySelectorAll<HTMLElement>('[data-tab]');
+            if (!tabs || !tabs[currentSwiperIndex]) return;
+
+            const tab = tabs[currentSwiperIndex];
+            setIndicatorStyle({
+                left: tab.offsetLeft,
+                width: tab.offsetWidth,
+            });
+        };
+
+        // Update immediately and after a short delay (for initial render)
+        updateIndicator();
+        const timer = setTimeout(updateIndicator, 50);
+        return () => clearTimeout(timer);
+    }, [currentSwiperIndex, nonNullPresets.length]);
+
+    // Smooth scroll to active tab using requestAnimationFrame
+    useEffect(() => {
+        if (!containerRef.current || !tabsRef.current) return;
+        const tabs = tabsRef.current.querySelectorAll<HTMLElement>('[data-tab]');
+        const tab = tabs[currentSwiperIndex];
+        if (!tab) return;
+
+        const container = containerRef.current;
+        const tabRect = tab.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Calculate where we want the tab centered
+        const tabCenterInContainer = tab.offsetLeft + tab.offsetWidth / 2;
+        const targetScroll = tabCenterInContainer - container.clientWidth / 2;
+        const clampedTarget = Math.max(0, Math.min(targetScroll, container.scrollWidth - container.clientWidth));
+
+        const startScroll = container.scrollLeft;
+        const distance = clampedTarget - startScroll;
+
+        // Skip if already close enough
+        if (Math.abs(distance) < 2) return;
+
+        const duration = 250;
+        let startTime: number | null = null;
+
+        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+        const animateScroll = (currentTime: number) => {
+            if (startTime === null) startTime = currentTime;
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeOutCubic(progress);
+
+            container.scrollLeft = startScroll + distance * easedProgress;
+
+            if (progress < 1) {
+                requestAnimationFrame(animateScroll);
+            }
+        };
+
+        requestAnimationFrame(animateScroll);
+    }, [currentSwiperIndex]);
 
     return (
-        <div
-            ref={scrollRef}
-            className="preset-tabs-container flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide"
-            style={{ scrollBehavior: "smooth" }}
-            role="tablist"
-            aria-label="Preset tabs"
-        >
-            {presets.presets.map((preset, index) => {
-                if (preset === null) return null;
+        <div className="preset-tabs-wrapper px-4 py-2">
+            <div
+                ref={containerRef}
+                className="overflow-x-auto scrollbar-hide"
+            >
+                <div className="inline-flex items-center gap-2">
+                    {/* Tab container */}
+                    <div
+                        ref={tabsRef}
+                        className="relative flex items-center rounded-xl p-1"
+                        style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                        role="tablist"
+                        aria-label="Preset tabs"
+                    >
+                        {/* Animated indicator */}
+                        <motion.div
+                            className="absolute top-1 bottom-1 rounded-lg"
+                            style={{ backgroundColor: 'var(--ui-accent-primary)' }}
+                            initial={false}
+                            animate={{
+                                left: indicatorStyle.left,
+                                width: indicatorStyle.width,
+                            }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 30,
+                            }}
+                        />
 
-                const positionInSwiper = nonNullIndices.indexOf(index);
-                const isActive = presets.activePresetIndex === index;
-                const isPrev = positionInSwiper === currentSwiperIndex - 1;
-                const isNext = positionInSwiper === currentSwiperIndex + 1;
+                        {/* Tab buttons */}
+                        {nonNullPresets.map(({ preset, originalIndex }, swiperIndex) => {
+                            const isActive = swiperIndex === currentSwiperIndex;
 
-                // Calculate interpolated scale/opacity based on swipe progress
-                let scale = 1;
-                let bgOpacity = isActive ? 1 : 0;
+                            return (
+                                <button
+                                    key={originalIndex}
+                                    data-tab
+                                    onClick={() => onPresetChange(originalIndex)}
+                                    onTouchStart={(e) => handleLongPressStart(originalIndex, e)}
+                                    onTouchEnd={handleLongPressEnd}
+                                    onTouchCancel={handleLongPressEnd}
+                                    onMouseDown={(e) => handleLongPressStart(originalIndex, e)}
+                                    onMouseUp={handleLongPressEnd}
+                                    onMouseLeave={handleLongPressEnd}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        const rect = (e.target as HTMLElement).getBoundingClientRect();
+                                        vibrate(20);
+                                        setContextMenu({ index: originalIndex, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+                                    }}
+                                    role="tab"
+                                    aria-selected={isActive}
+                                    className="relative z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap select-none"
+                                    style={{
+                                        color: isActive ? 'white' : 'var(--ui-text-secondary)',
+                                        transition: 'color 0.2s ease',
+                                    }}
+                                >
+                                    <span
+                                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold"
+                                        style={{
+                                            backgroundColor: isActive
+                                                ? 'rgba(255,255,255,0.25)'
+                                                : 'var(--ui-bg-secondary)',
+                                            transition: 'background-color 0.2s ease',
+                                        }}
+                                    >
+                                        {swiperIndex + 1}
+                                    </span>
+                                    <span className="max-w-20 truncate">{preset.name}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                if (isAnimating) {
-                    if (isActive) {
-                        scale = 1 - absOffset * 0.08;
-                        bgOpacity = 1 - absOffset;
-                    } else if ((swipeOffset > 0 && isNext) || (swipeOffset < 0 && isPrev)) {
-                        scale = 0.92 + absOffset * 0.08;
-                        bgOpacity = absOffset;
-                    }
-                }
-
-                const transitionStyle = isAnimating ? "none" : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
-
-                return (
+                    {/* Add preset button */}
                     <button
-                        key={index}
-                        ref={(el) => {
-                            if (el) tabRefs.current.set(index, el);
-                            else tabRefs.current.delete(index);
-                        }}
-                        data-preset-index={index}
-                        onClick={() => onPresetChange(index)}
-                        role="tab"
-                        aria-selected={isActive}
-                        aria-controls={`preset-panel-${index}`}
-                        className="preset-tab flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium relative overflow-hidden"
+                        onClick={onAddPreset}
+                        className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-ui-text-muted active:scale-90 transition-transform"
+                        style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                        aria-label="Create new preset"
+                    >
+                        <MdAdd className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+
+            {/* Context Menu */}
+            <AnimatePresence>
+                {contextMenu && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.15 }}
+                        className="fixed z-[100] bg-ui-bg-primary border border-ui-border-primary rounded-lg shadow-2xl overflow-hidden"
                         style={{
-                            transform: `scale(${scale})`,
-                            transition: transitionStyle,
+                            left: contextMenu.x,
+                            top: contextMenu.y,
+                            transform: 'translateX(-50%)',
+                            minWidth: '160px',
                         }}
                     >
-                        {/* Active background */}
-                        <div
-                            className="absolute inset-0 rounded-full bg-ui-accent-primary"
-                            style={{ opacity: bgOpacity, transition: transitionStyle }}
-                        />
-                        {/* Inactive background */}
-                        <div
-                            className="absolute inset-0 rounded-full bg-ui-bg-tertiary"
-                            style={{ opacity: 1 - bgOpacity, transition: transitionStyle }}
-                        />
-                        {/* Content */}
-                        <span
-                            className="relative z-10 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold"
-                            style={{
-                                backgroundColor: bgOpacity > 0.5 ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)",
-                                transition: transitionStyle,
-                            }}
-                        >
-                            {positionInSwiper + 1}
-                        </span>
-                        <span
-                            className="relative z-10 max-w-20 truncate"
-                            style={{
-                                color: bgOpacity > 0.5 ? "white" : "var(--ui-text-secondary)",
-                                transition: transitionStyle,
-                            }}
-                        >
-                            {preset.name}
-                        </span>
-                    </button>
-                );
-            })}
-
-            {/* Add new preset button */}
-            <button
-                onClick={onAddPreset}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-ui-bg-tertiary/50 text-ui-text-muted border border-dashed border-ui-border-secondary active:scale-95 transition-transform"
-                aria-label="Create new preset"
-            >
-                <MdAdd className="w-4 h-4" />
-                <span>New</span>
-            </button>
+                        {/* Header */}
+                        <div className="px-3 py-2 border-b border-ui-border-primary bg-ui-bg-secondary">
+                            <p className="text-xs font-medium text-ui-text-secondary truncate">
+                                {presets.presets[contextMenu.index]?.name}
+                            </p>
+                        </div>
+                        {/* Menu Items */}
+                        <div className="py-1">
+                            <button
+                                onClick={handleRename}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-sm text-ui-text-primary hover:bg-ui-bg-tertiary transition-colors"
+                            >
+                                <MdEdit className="w-4 h-4" />
+                                Rename
+                            </button>
+                            {nonNullPresetsCount > 1 && (
+                                <button
+                                    onClick={handleDelete}
+                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                                >
+                                    <MdDelete className="w-4 h-4" />
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 });
@@ -626,6 +764,7 @@ interface DraggableGridProps {
     onWidgetClick: (widgetId: string) => void;
     onRemoveWidget: (widgetId: string) => void;
     isEditing: boolean;
+    isVisible?: boolean;
 }
 
 const customCollisionDetection: CollisionDetection = (args) => {
@@ -641,6 +780,7 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
     onWidgetClick,
     onRemoveWidget,
     isEditing,
+    isVisible = true,
 }: DraggableGridProps) {
     const [items, setItems] = useState(widgetIds);
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -718,6 +858,7 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
                             widgetId={widgetId}
                             onClick={() => onWidgetClick(widgetId)}
                             isEditing={isEditing}
+                            isVisible={isVisible}
                         />
                     ))}
                 </div>
@@ -1284,9 +1425,10 @@ const PresetNameDialog = memo(function PresetNameDialog({
 
 interface StaticWidgetCardProps {
     widgetId: string;
+    isVisible?: boolean;
 }
 
-const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId }: StaticWidgetCardProps) {
+const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId, isVisible = true }: StaticWidgetCardProps) {
     const { title, TypeIcon } = useMemo(() => {
         const config = getWidgetConfig(widgetId);
         const def = getWidgetById(widgetId);
@@ -1304,7 +1446,7 @@ const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId }: StaticWidg
                 </div>
                 <span className="mobile-widget-card-title">{title}</span>
             </div>
-            <WidgetComplication widgetId={widgetId} />
+            <WidgetComplication widgetId={widgetId} isVisible={isVisible} />
         </div>
     );
 });
@@ -1324,7 +1466,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const [isEditing, setIsEditing] = useState(false);
     const [presetNameDialogOpen, setPresetNameDialogOpen] = useState(false);
     const [pendingPresetSlot, setPendingPresetSlot] = useState<number | null>(null);
-    const [swipeOffset, setSwipeOffset] = useState(0);
+    const [visiblePresetIndex, setVisiblePresetIndex] = useState<number>(() => readMobilePresets().activePresetIndex);
 
     // Refs
     const swiperRef = useRef<SwiperType | null>(null);
@@ -1431,17 +1573,63 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
         (name: string) => {
             if (pendingPresetSlot === null) return;
 
+            const existingPreset = presetsState.presets[pendingPresetSlot];
+
             setPresetsState((prev) => {
-                const newState = savePreset(prev, pendingPresetSlot, name, []);
-                const withActiveChange = { ...newState, activePresetIndex: pendingPresetSlot };
-                saveMobilePresets(withActiveChange);
-                return withActiveChange;
+                if (existingPreset) {
+                    // Renaming existing preset - keep widgets
+                    const newPresets = [...prev.presets];
+                    newPresets[pendingPresetSlot] = { ...existingPreset, name };
+                    const newState = { ...prev, presets: newPresets };
+                    saveMobilePresets(newState);
+                    return newState;
+                } else {
+                    // Creating new preset
+                    const newState = savePreset(prev, pendingPresetSlot, name, []);
+                    const withActiveChange = { ...newState, activePresetIndex: pendingPresetSlot };
+                    saveMobilePresets(withActiveChange);
+                    return withActiveChange;
+                }
             });
-            toast.success(`Created "${name}"`);
+            toast.success(existingPreset ? `Renamed to "${name}"` : `Created "${name}"`);
             setPendingPresetSlot(null);
         },
-        [pendingPresetSlot]
+        [pendingPresetSlot, presetsState.presets]
     );
+
+    const handleRenamePreset = useCallback((index: number) => {
+        setPendingPresetSlot(index);
+        setPresetNameDialogOpen(true);
+    }, []);
+
+    const handleDeletePreset = useCallback((index: number) => {
+        const preset = presetsState.presets[index];
+        if (!preset) return;
+
+        // Count non-null presets
+        const nonNullCount = presetsState.presets.filter(p => p !== null).length;
+        if (nonNullCount <= 1) {
+            toast.error("Cannot delete the last preset");
+            return;
+        }
+
+        setPresetsState((prev) => {
+            const newPresets = [...prev.presets];
+            newPresets[index] = null;
+
+            // If deleting active preset, switch to first available
+            let newActiveIndex = prev.activePresetIndex;
+            if (index === prev.activePresetIndex) {
+                newActiveIndex = newPresets.findIndex(p => p !== null);
+            }
+
+            const newState = { ...prev, presets: newPresets, activePresetIndex: newActiveIndex };
+            saveMobilePresets(newState);
+            return newState;
+        });
+        toast.success(`Deleted "${preset.name}"`);
+        vibrate(20);
+    }, [presetsState.presets]);
 
     const handleUseStarter = useCallback(() => {
         const starterPresets = getStarterPresets();
@@ -1459,6 +1647,11 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const handleCloseWidgetPicker = useCallback(() => setWidgetPickerOpen(false), []);
     const handleOpenWidgetPicker = useCallback(() => setWidgetPickerOpen(true), []);
     const handleToggleEditing = useCallback(() => setIsEditing((prev) => !prev), []);
+
+    // Computed values for preset dialog
+    const pendingPresetName = pendingPresetSlot !== null ? presetsState.presets[pendingPresetSlot]?.name ?? "" : "";
+    const isRenamingPreset = pendingPresetSlot !== null && presetsState.presets[pendingPresetSlot] !== null;
+    const presetDialogTitle = isRenamingPreset ? "Rename Preset" : "New Preset";
 
     // ============================================
     // Swiper Handlers
@@ -1487,23 +1680,14 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 });
                 vibrate(10);
             }
-            setSwipeOffset(0);
         },
         [nonNullPresets, presetsState.activePresetIndex]
     );
 
-    const handleSetTranslate = useCallback((swiper: SwiperType, translate: number) => {
-        if (!swiper.width || swiper.animating) return;
-        const slideWidth = swiper.width;
-        const baseOffset = swiper.activeIndex * slideWidth;
-        const currentOffset = -translate;
-        const progress = (currentOffset - baseOffset) / slideWidth;
-        setSwipeOffset(Math.max(-1, Math.min(1, progress)));
-    }, []);
-
     const handleTransitionEnd = useCallback(() => {
-        setSwipeOffset(0);
-    }, []);
+        // Set visible preset index to trigger fade-in on the new active preset
+        setVisiblePresetIndex(presetsState.activePresetIndex);
+    }, [presetsState.activePresetIndex]);
 
     const handleSwiperInit = useCallback((swiper: SwiperType) => {
         swiperRef.current = swiper;
@@ -1548,7 +1732,8 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     isOpen={presetNameDialogOpen}
                     onClose={handleClosePresetDialog}
                     onSave={handleSaveNewPreset}
-                    title="New Preset"
+                    initialName={pendingPresetName}
+                    title={presetDialogTitle}
                 />
             </div>
         );
@@ -1594,7 +1779,8 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                         presets={presetsState}
                         onPresetChange={handlePresetChange}
                         onAddPreset={handleAddPreset}
-                        swipeOffset={0}
+                        onRenamePreset={handleRenamePreset}
+                        onDeletePreset={handleDeletePreset}
                         currentSwiperIndex={currentSwiperIndex}
                         nonNullPresetsCount={nonNullPresets.length}
                     />
@@ -1638,7 +1824,8 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     isOpen={presetNameDialogOpen}
                     onClose={handleClosePresetDialog}
                     onSave={handleSaveNewPreset}
-                    title="New Preset"
+                    initialName={pendingPresetName}
+                    title={presetDialogTitle}
                 />
             </>
         );
@@ -1700,7 +1887,8 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 presets={presetsState}
                 onPresetChange={handlePresetChange}
                 onAddPreset={handleAddPreset}
-                swipeOffset={swipeOffset}
+                onRenamePreset={handleRenamePreset}
+                onDeletePreset={handleDeletePreset}
                 currentSwiperIndex={currentSwiperIndex}
                 nonNullPresetsCount={nonNullPresets.length}
             />
@@ -1710,7 +1898,6 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 <Swiper
                     onSwiper={handleSwiperInit}
                     onSlideChange={handleSlideChange}
-                    onSetTranslate={handleSetTranslate}
                     onTransitionEnd={handleTransitionEnd}
                     initialSlide={currentSwiperIndex >= 0 ? currentSwiperIndex : 0}
                     spaceBetween={0}
@@ -1738,6 +1925,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     {nonNullPresets.map(({ preset, index: presetIndex }) => {
                         const presetWidgetIds = preset.widgetIds.filter((id) => hasAccess(id, "view"));
                         const isActivePreset = presetIndex === presetsState.activePresetIndex;
+                        const isPresetVisible = presetIndex === visiblePresetIndex;
 
                         return (
                             <SwiperSlide key={presetIndex} style={{ height: "100%", overflow: "hidden" }}>
@@ -1780,12 +1968,17 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                                         onWidgetClick={handleWidgetClick}
                                                         onRemoveWidget={handleRemoveWidget}
                                                         isEditing={isEditing}
+                                                        isVisible={isPresetVisible}
                                                     />
                                                 ) : (
                                                     /* Non-active presets show static grid to reduce re-renders */
                                                     <div className="mobile-widget-grid">
                                                         {presetWidgetIds.map((widgetId) => (
-                                                            <StaticWidgetCard key={widgetId} widgetId={widgetId} />
+                                                            <StaticWidgetCard
+                                                                key={widgetId}
+                                                                widgetId={widgetId}
+                                                                isVisible={isPresetVisible}
+                                                            />
                                                         ))}
                                                     </div>
                                                 )}
@@ -1852,7 +2045,8 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 isOpen={presetNameDialogOpen}
                 onClose={handleClosePresetDialog}
                 onSave={handleSaveNewPreset}
-                title="New Preset"
+                initialName={pendingPresetName}
+                title={presetDialogTitle}
             />
         </div>
     );
