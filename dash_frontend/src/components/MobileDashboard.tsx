@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, Suspense, useMemo, useRef } from "react";
-import { motion, AnimatePresence, PanInfo, useAnimation } from "framer-motion";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { getWidgetById } from "@/constants/widgets";
 import {
     WIDGET_CONFIGS,
@@ -131,7 +131,7 @@ export interface MobileDashboardProps {
 // Widget Complication (Mini Preview)
 // ============================================
 
-import { useWidgetPreview, WidgetPreviewData } from "@/hooks/useWidgetPreview";
+import { useWidgetPreview } from "@/hooks/useWidgetPreview";
 
 const WidgetComplication = ({ widgetId }: { widgetId: string }) => {
     const { data, loading } = useWidgetPreview(widgetId);
@@ -139,7 +139,7 @@ const WidgetComplication = ({ widgetId }: { widgetId: string }) => {
     if (loading) {
         return (
             <div className="widget-complication-loading">
-                <div className="h-5 w-10 rounded bg-ui-bg-tertiary animate-pulse" />
+                <div className="widget-complication-skeleton" />
             </div>
         );
     }
@@ -148,22 +148,19 @@ const WidgetComplication = ({ widgetId }: { widgetId: string }) => {
         return null;
     }
 
-    const getStatusColor = () => {
-        if (data.status === 'good') return 'var(--ui-success, #22c55e)';
-        if (data.status === 'warning') return 'var(--ui-warning, #f59e0b)';
-        if (data.status === 'error') return 'var(--ui-error, #ef4444)';
-        return 'var(--ui-accent-primary)';
-    };
-
     return (
         <div className="widget-complication">
-            <div className="widget-complication-value" style={{ color: getStatusColor() }}>
-                {data.value}
-                {data.trend && (
-                    <MdTrendingUp 
-                        className={`w-3.5 h-3.5 ml-0.5 ${data.trend === 'down' ? 'rotate-180' : ''}`}
-                        style={{ color: data.trend === 'up' ? '#22c55e' : data.trend === 'down' ? '#ef4444' : undefined }}
-                    />
+            {/* Status indicator dot */}
+            {data.status && data.status !== 'neutral' && (
+                <div className={`widget-complication-status ${data.status}`} />
+            )}
+
+            <div className="widget-complication-value">
+                <span>{data.value}</span>
+                {data.trendValue && data.trend && (
+                    <span className={`widget-complication-trend ${data.trend}`}>
+                        {data.trendValue}
+                    </span>
                 )}
             </div>
             {data.label && (
@@ -231,7 +228,7 @@ const SortableWidgetCard = ({ widgetId, onClick, isEditing }: SortableWidgetCard
                     <MdEdit className="w-4 h-4 text-ui-accent-primary ml-auto flex-shrink-0" />
                 )}
             </div>
-            
+
             {/* Data Display */}
             {!isEditing && <WidgetComplication widgetId={widgetId} />}
         </div>
@@ -340,10 +337,10 @@ const PresetTabs = ({ presets, onPresetChange, onAddPreset }: PresetTabsProps) =
                         key={index}
                         onClick={() => isEmpty ? onAddPreset() : onPresetChange(index)}
                         className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${isActive
-                                ? 'bg-ui-accent-primary text-white shadow-md'
-                                : isEmpty
-                                    ? 'bg-ui-bg-tertiary/50 text-ui-text-muted border border-dashed border-ui-border-secondary'
-                                    : 'bg-ui-bg-tertiary text-ui-text-secondary'
+                            ? 'bg-ui-accent-primary text-white shadow-md'
+                            : isEmpty
+                                ? 'bg-ui-bg-tertiary/50 text-ui-text-muted border border-dashed border-ui-border-secondary'
+                                : 'bg-ui-bg-tertiary text-ui-text-secondary'
                             }`}
                     >
                         {isEmpty ? (
@@ -419,7 +416,8 @@ const PullToRefresh = ({ onRefresh, children }: PullToRefreshProps) => {
     return (
         <div
             ref={containerRef}
-            className="flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
+            style={{ WebkitOverflowScrolling: 'touch' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -1059,44 +1057,41 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
         toast.success("Loaded starter presets!");
     }, []);
 
-    // Swipe handling for preset navigation
-    const swipeControls = useAnimation();
-    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+    // Swipe handling for preset navigation using touch events
     const containerRef = useRef<HTMLDivElement>(null);
+    const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
-    const handleDragEnd = async (_: any, info: PanInfo) => {
-        const threshold = 50;
-        const velocity = 300;
-        const containerWidth = containerRef.current?.offsetWidth || 300;
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        touchStartRef.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            time: Date.now()
+        };
+    }, []);
 
-        if (Math.abs(info.offset.x) > threshold || Math.abs(info.velocity.x) > velocity) {
-            const direction = info.offset.x > 0 ? 'left' : 'right';
-            setSwipeDirection(direction);
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (!touchStartRef.current || isEditing) return;
 
-            // Animate off-screen
-            await swipeControls.start({
-                x: direction === 'left' ? containerWidth : -containerWidth,
-                opacity: 0,
-                transition: { duration: 0.15, ease: 'easeOut' }
-            });
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartRef.current.x;
+        const deltaY = touch.clientY - touchStartRef.current.y;
+        const deltaTime = Date.now() - touchStartRef.current.time;
 
-            // Change preset
+        // Only trigger swipe if:
+        // 1. Horizontal movement > 80px
+        // 2. Horizontal movement is greater than vertical (to not interfere with scroll)
+        // 3. Swipe was fast enough (< 300ms) or traveled far enough
+        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY) * 1.5;
+        const isFastEnough = deltaTime < 300;
+        const isFarEnough = Math.abs(deltaX) > 80;
+
+        if (isHorizontalSwipe && (isFastEnough || isFarEnough) && Math.abs(deltaX) > 50) {
+            const direction = deltaX > 0 ? 'left' : 'right';
             handleSwipePreset(direction);
-
-            // Reset position instantly on opposite side then animate in
-            swipeControls.set({ x: direction === 'left' ? -containerWidth : containerWidth });
-            await swipeControls.start({
-                x: 0,
-                opacity: 1,
-                transition: { duration: 0.2, ease: 'easeOut' }
-            });
-
-            setSwipeDirection(null);
-        } else {
-            // Snap back
-            swipeControls.start({ x: 0, transition: { type: 'spring', stiffness: 500, damping: 30 } });
         }
-    };
+
+        touchStartRef.current = null;
+    }, [isEditing, handleSwipePreset]);
 
     // Empty state - no presets at all
     if (presetsState.presets.every(p => p === null)) {
@@ -1252,41 +1247,36 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             {/* Preset Tabs */}
             <PresetTabs presets={presetsState} onPresetChange={handlePresetChange} onAddPreset={handleAddPreset} />
 
-            {/* Main Content with swipe and pull-to-refresh */}
-            <motion.div
+            {/* Main Content - scrollable area */}
+            <div
                 ref={containerRef}
-                className="flex-1 overflow-hidden"
-                drag={isEditing ? false : "x"}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.5}
-                onDragEnd={handleDragEnd}
-                animate={swipeControls}
-                style={{ x: 0 }}
+                className="flex-1 overflow-y-auto overflow-x-hidden"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
             >
-                <PullToRefresh onRefresh={handleRefresh}>
-                    <div className="mobile-grid-content">
-                        <DraggableWidgetGrid
-                            widgetIds={enabledWidgetIds}
-                            onReorder={handleReorder}
-                            onWidgetClick={handleWidgetClick}
-                            onRemoveWidget={handleRemoveWidget}
-                            isEditing={isEditing}
-                        />
+                <div className="mobile-grid-content">
+                    <DraggableWidgetGrid
+                        widgetIds={enabledWidgetIds}
+                        onReorder={handleReorder}
+                        onWidgetClick={handleWidgetClick}
+                        onRemoveWidget={handleRemoveWidget}
+                        isEditing={isEditing}
+                    />
 
-                        {/* Add Widget Button (when editing) */}
-                        {isEditing && (
-                            <button
-                                onClick={() => setWidgetPickerOpen(true)}
-                                className="w-full mt-4 p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-colors"
-                                style={{ borderColor: 'var(--ui-border-secondary)', color: 'var(--ui-text-muted)' }}
-                            >
-                                <MdAdd className="w-5 h-5" />
-                                <span className="font-medium">Add Widget</span>
-                            </button>
-                        )}
-                    </div>
-                </PullToRefresh>
-            </motion.div>
+                    {/* Add Widget Button (when editing) */}
+                    {isEditing && (
+                        <button
+                            onClick={() => setWidgetPickerOpen(true)}
+                            className="w-full mt-4 p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-colors"
+                            style={{ borderColor: 'var(--ui-border-secondary)', color: 'var(--ui-text-muted)' }}
+                        >
+                            <MdAdd className="w-5 h-5" />
+                            <span className="font-medium">Add Widget</span>
+                        </button>
+                    )}
+                </div>
+            </div>
 
             {/* Swipe hint indicator */}
             {!isEditing && presetsState.presets.filter(p => p !== null).length > 1 && (

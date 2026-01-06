@@ -1366,12 +1366,8 @@ main {
 
 /* Grid Content Area */
 .mobile-grid-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   padding: 1rem;
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
 
 /* Widget Grid - 2 columns */
@@ -1386,16 +1382,17 @@ main {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 0.875rem;
   border-radius: 1rem;
   border: 1px solid var(--ui-border-primary);
   background: var(--ui-bg-secondary);
-  min-height: 120px;
+  min-height: 110px;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
   overflow: hidden;
+  transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .mobile-widget-card:active {
@@ -1420,9 +1417,9 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.625rem;
-  height: 1.625rem;
-  border-radius: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
   background: var(--ui-accent-primary);
   color: white;
   flex-shrink: 0;
@@ -1430,12 +1427,15 @@ main {
 
 /* Card Title - inline with icon */
 .mobile-widget-card-title {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--ui-text-primary);
+  color: var(--ui-text-secondary);
   line-height: 1.2;
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Complication Display */
@@ -1444,25 +1444,64 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
 }
 
 .widget-complication-value {
   display: flex;
-  align-items: center;
-  font-size: 1.5rem;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-size: 1.625rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: var(--ui-text-primary);
+}
+
+.widget-complication-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.widget-complication-trend.up {
+  color: var(--ui-success);
+}
+
+.widget-complication-trend.down {
+  color: var(--ui-danger);
 }
 
 .widget-complication-label {
   font-size: 0.6875rem;
   font-weight: 500;
   color: var(--ui-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  line-height: 1.2;
   margin-top: 0.25rem;
+}
+
+/* Status indicator dot */
+.widget-complication-status {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.widget-complication-status.good {
+  background: var(--ui-success);
+  box-shadow: 0 0 6px var(--ui-success);
+}
+
+.widget-complication-status.warning {
+  background: var(--ui-warning);
+  box-shadow: 0 0 6px var(--ui-warning);
+}
+
+.widget-complication-status.error {
+  background: var(--ui-danger);
+  box-shadow: 0 0 6px var(--ui-danger);
 }
 
 .widget-complication-loading {
@@ -1470,12 +1509,35 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+/* Skeleton loading animation */
+.widget-complication-skeleton {
+  height: 1.625rem;
+  width: 60%;
+  background: linear-gradient(90deg,
+      var(--ui-bg-tertiary) 25%,
+      var(--ui-bg-secondary) 50%,
+      var(--ui-bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.25rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Drop placeholder */
 .mobile-widget-card-placeholder {
-  min-height: 120px;
+  min-height: 110px;
   border-radius: 1rem;
   background: rgba(59, 130, 246, 0.15);
   border: 2px dashed rgba(59, 130, 246, 0.5);
@@ -1487,14 +1549,19 @@ main {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
-  
+
   .mobile-widget-card {
-    min-height: 130px;
-    padding: 1.125rem;
+    min-height: 120px;
+    padding: 1rem;
   }
-  
+
   .widget-complication-value {
-    font-size: 1.75rem;
+    font-size: 1.875rem;
+  }
+
+  .mobile-widget-card-icon {
+    width: 1.625rem;
+    height: 1.625rem;
   }
 }
 
@@ -1520,9 +1587,12 @@ main {
   }
 
   .mobile-widget-card-icon {
-    width: 2rem;
-    height: 2rem;
-    margin-bottom: 0.5rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .widget-complication-value {
+    font-size: 1.25rem;
   }
 }
 
