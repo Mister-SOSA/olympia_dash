@@ -1543,7 +1543,7 @@ main {
   align-items: end;
 }
 
-.widget-complication-container > * {
+.widget-complication-container>* {
   grid-area: content;
 }
 
