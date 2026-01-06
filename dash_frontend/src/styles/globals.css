@@ -1334,6 +1334,38 @@ main {
   overflow: hidden;
 }
 
+/* Swiper overrides for mobile dashboard */
+.mobile-dashboard-grid .swiper {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mobile-dashboard-grid .swiper-wrapper {
+  /* Smooth spring-like transition for native feel */
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+.mobile-dashboard-grid .swiper-slide {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Preset tabs styling */
+.preset-tabs-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+.preset-tab {
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Grid Header */
 .mobile-grid-header {
   flex-shrink: 0;
@@ -1504,8 +1536,18 @@ main {
   box-shadow: 0 0 6px var(--ui-danger);
 }
 
-.widget-complication-loading {
+.widget-complication-container {
   flex: 1;
+  display: grid;
+  grid-template-areas: "content";
+  align-items: end;
+}
+
+.widget-complication-container > * {
+  grid-area: content;
+}
+
+.widget-complication-loading {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

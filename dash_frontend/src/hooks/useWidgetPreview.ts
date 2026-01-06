@@ -388,9 +388,11 @@ const STATIC_WIDGETS: Record<string, () => WidgetPreviewData> = {
 const FAN_CONTROLLER_CONFIG = {
     endpoint: '/api/ac-infinity/controllers',
     method: 'GET' as const,
-    transform: (data: any): WidgetPreviewData => {
-        if (!data?.controllers?.length) return { value: '--', label: 'No Data' };
-        const controller = data.controllers[0];
+    transform: (result: any): WidgetPreviewData => {
+        // API returns { success: true, data: [...controllers...] }
+        const controllers = result?.data;
+        if (!Array.isArray(controllers) || !controllers.length) return { value: '--', label: 'No Data' };
+        const controller = controllers[0];
         // Show temp and humidity
         const temp = controller.temperatureF ? `${Math.round(controller.temperatureF)}°` : null;
         const humidity = controller.humidity ? `${Math.round(controller.humidity)}%` : null;
