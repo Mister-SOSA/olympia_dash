@@ -94,12 +94,12 @@ import {
     closestCenter,
     pointerWithin,
     TouchSensor,
+    PointerSensor,
     useSensor,
     useSensors,
     type DragEndEvent,
     type DragStartEvent,
     type DragOverEvent,
-    DragOverlay,
     useDroppable,
     type CollisionDetection,
 } from "@dnd-kit/core";
@@ -236,14 +236,12 @@ const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisibl
 interface SortableWidgetCardProps {
     widgetId: string;
     onClick: () => void;
-    isEditing: boolean;
     isVisible?: boolean;
 }
 
 const SortableWidgetCard = memo(function SortableWidgetCard({
     widgetId,
     onClick,
-    isEditing,
     isVisible = true,
 }: SortableWidgetCardProps) {
     const {
@@ -253,82 +251,38 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: widgetId, disabled: !isEditing });
+    } = useSortable({ id: widgetId });
 
-    const { config, title, TypeIcon } = useMemo(() => {
+    const { title, TypeIcon } = useMemo(() => {
         const cfg = getWidgetConfig(widgetId);
         const def = getWidgetById(widgetId);
         return {
-            config: cfg,
             title: def?.title || cfg?.title || widgetId,
             TypeIcon: getWidgetTypeIcon(widgetId),
         };
     }, [widgetId]);
 
-    const style = useMemo(
-        () => ({
-            transform: CSS.Transform.toString(transform),
-            transition,
-        }),
-        [transform, transition]
-    );
-
-    if (isDragging) {
-        return (
-            <div
-                ref={setNodeRef}
-                style={style}
-                className="mobile-widget-card-placeholder"
-            />
-        );
-    }
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : 'transform 200ms ease',
+        touchAction: 'none',
+        zIndex: isDragging ? 999 : 'auto',
+        position: 'relative',
+    };
 
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`mobile-widget-card ${isEditing ? "mobile-widget-card-editing" : ""}`}
-            onClick={isEditing ? undefined : onClick}
-            role={isEditing ? "listitem" : "button"}
-            tabIndex={isEditing ? -1 : 0}
-            aria-label={`${title} widget${isEditing ? ", drag to reorder" : ", tap to expand"}`}
-            {...(isEditing ? { ...attributes, ...listeners } : {})}
-        >
-            <div className="mobile-widget-card-header">
-                <div className="mobile-widget-card-icon">
-                    <TypeIcon className="w-4 h-4" />
-                </div>
-                <span className="mobile-widget-card-title">{title}</span>
-                {isEditing && (
-                    <MdEdit className="w-4 h-4 text-ui-accent-primary ml-auto flex-shrink-0" />
-                )}
-            </div>
-            {!isEditing && <WidgetComplication widgetId={widgetId} isVisible={isVisible} />}
-        </div>
-    );
-});
-
-// ============================================
-// Drag Overlay Card - Memoized
-// ============================================
-
-const DragOverlayCard = memo(function DragOverlayCard({ widgetId }: { widgetId: string }) {
-    const { title, TypeIcon } = useMemo(() => {
-        const config = getWidgetConfig(widgetId);
-        const def = getWidgetById(widgetId);
-        return {
-            title: def?.title || config?.title || widgetId,
-            TypeIcon: getWidgetTypeIcon(widgetId),
-        };
-    }, [widgetId]);
-
-    return (
-        <div
-            className="mobile-widget-card"
-            style={{
-                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-                transform: "scale(1.05)",
+            className={`mobile-widget-card ${isDragging ? 'mobile-widget-card-dragging' : ''}`}
+            onClick={() => {
+                if (!isDragging) {
+                    vibrate(10);
+                    onClick();
+                }
             }}
+            {...attributes}
+            {...listeners}
         >
             <div className="mobile-widget-card-header">
                 <div className="mobile-widget-card-icon">
@@ -336,6 +290,7 @@ const DragOverlayCard = memo(function DragOverlayCard({ widgetId }: { widgetId: 
                 </div>
                 <span className="mobile-widget-card-title">{title}</span>
             </div>
+            <WidgetComplication widgetId={widgetId} isVisible={isVisible} />
         </div>
     );
 });
@@ -354,33 +309,38 @@ const TrashDropZone = memo(function TrashDropZone({ isOver, isVisible }: TrashDr
     const showActive = isOver || dndIsOver;
 
     return (
-        <div
-            ref={setNodeRef}
-            className="fixed top-0 inset-x-0 z-[200] flex justify-center pointer-events-none"
-            style={{
-                paddingTop: "calc(env(safe-area-inset-top) + 10px)",
-                paddingBottom: "10px",
-                opacity: isVisible ? 1 : 0,
-                transform: isVisible ? "translateY(0)" : "translateY(-60px)",
-                transition: "opacity 0.2s ease, transform 0.2s ease",
-            }}
-        >
-            <div
-                className={`flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium shadow-lg pointer-events-auto ${showActive ? "scale-110" : "scale-100"
-                    }`}
-                style={{
-                    backgroundColor: showActive ? "#ef4444" : "var(--ui-bg-tertiary)",
-                    color: showActive ? "#ffffff" : "var(--ui-text-secondary)",
-                    border: showActive
-                        ? "2px solid #dc2626"
-                        : "2px dashed var(--ui-border-secondary)",
-                    transition: "all 0.2s ease",
-                }}
-            >
-                <MdDelete className={`w-5 h-5 ${showActive ? "animate-pulse" : ""}`} />
-                <span>{showActive ? "Release to remove" : "Drag here to remove"}</span>
-            </div>
-        </div>
+        <AnimatePresence>
+            {isVisible && (
+                <motion.div
+                    ref={setNodeRef}
+                    className="fixed bottom-0 inset-x-0 z-[200] flex justify-center"
+                    style={{
+                        paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
+                        paddingTop: "16px",
+                    }}
+                    initial={{ opacity: 0, y: 60 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 60 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                >
+                    <motion.div
+                        className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold shadow-2xl"
+                        animate={{
+                            scale: showActive ? 1.1 : 1,
+                            backgroundColor: showActive ? "#ef4444" : "rgba(239, 68, 68, 0.9)",
+                        }}
+                        style={{
+                            color: "#ffffff",
+                            backdropFilter: "blur(12px)",
+                        }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    >
+                        <MdDelete className={`w-6 h-6 ${showActive ? "animate-bounce" : ""}`} />
+                        <span>{showActive ? "Release to remove" : "Drop here to remove"}</span>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 });
 
@@ -763,14 +723,19 @@ interface DraggableGridProps {
     onReorder: (newOrder: string[]) => void;
     onWidgetClick: (widgetId: string) => void;
     onRemoveWidget: (widgetId: string) => void;
-    isEditing: boolean;
     isVisible?: boolean;
 }
 
+// Custom collision detection: prioritize sortable items, only use trash when pointer is directly over it
 const customCollisionDetection: CollisionDetection = (args) => {
+    // First check if pointer is over the trash zone
     const pointerCollisions = pointerWithin(args);
     const trashCollision = pointerCollisions.find((c) => c.id === "trash-zone");
-    if (trashCollision) return [trashCollision];
+    if (trashCollision) {
+        return [trashCollision];
+    }
+
+    // Otherwise use closestCenter for the sortable items
     return closestCenter(args);
 };
 
@@ -779,18 +744,24 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
     onReorder,
     onWidgetClick,
     onRemoveWidget,
-    isEditing,
     isVisible = true,
 }: DraggableGridProps) {
     const [items, setItems] = useState(widgetIds);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [isOverTrash, setIsOverTrash] = useState(false);
 
+    // Hold to drag: 200ms delay, 5px tolerance during delay
     const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                delay: 200,
+                tolerance: 5,
+            },
+        }),
         useSensor(TouchSensor, {
             activationConstraint: {
                 delay: 200,
-                tolerance: 8,
+                tolerance: 5,
             },
         })
     );
@@ -857,15 +828,11 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
                             key={widgetId}
                             widgetId={widgetId}
                             onClick={() => onWidgetClick(widgetId)}
-                            isEditing={isEditing}
                             isVisible={isVisible}
                         />
                     ))}
                 </div>
             </SortableContext>
-            <DragOverlay dropAnimation={{ duration: 200, easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)" }}>
-                {activeId ? <DragOverlayCard widgetId={activeId} /> : null}
-            </DragOverlay>
         </DndContext>
     );
 });
@@ -1226,10 +1193,10 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
                             const TypeIcon = getWidgetTypeIcon(widget.id);
 
                             return (
-                                <button
+                                <motion.button
                                     key={widget.id}
                                     onClick={() => handleToggle(widget.id)}
-                                    className="w-full flex items-start gap-3 p-4 rounded-xl border transition-all text-left active:scale-[0.98]"
+                                    className="w-full flex items-start gap-3 p-4 rounded-xl border text-left"
                                     style={
                                         isEnabled
                                             ? {
@@ -1242,6 +1209,8 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
                                             }
                                     }
                                     aria-pressed={isEnabled}
+                                    whileTap={{ scale: 0.98 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                 >
                                     <div
                                         className="flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center mt-0.5 transition-all"
@@ -1276,7 +1245,7 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
                                             {widget.description}
                                         </p>
                                     </div>
-                                </button>
+                                </motion.button>
                             );
                         })}
                     </div>
@@ -1288,13 +1257,15 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
                 className="flex-shrink-0 border-t p-4 safe-bottom"
                 style={{ borderColor: "var(--ui-border-primary)" }}
             >
-                <button
+                <motion.button
                     onClick={onClose}
-                    className="w-full py-3 rounded-xl font-semibold transition-all active:scale-[0.98]"
+                    className="w-full py-3 rounded-xl font-semibold"
                     style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
                     Done
-                </button>
+                </motion.button>
             </div>
         </motion.div>
     );
@@ -1369,6 +1340,7 @@ const PresetNameDialog = memo(function PresetNameDialog({
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 className="w-full max-w-sm rounded-2xl p-6"
                 style={{ backgroundColor: "var(--ui-bg-primary)" }}
                 onClick={(e) => e.stopPropagation()}
@@ -1395,24 +1367,28 @@ const PresetNameDialog = memo(function PresetNameDialog({
                     maxLength={32}
                 />
                 <div className="flex gap-3">
-                    <button
+                    <motion.button
                         onClick={onClose}
-                        className="flex-1 py-3 rounded-lg font-medium active:scale-95 transition-transform"
+                        className="flex-1 py-3 rounded-lg font-medium"
                         style={{
                             backgroundColor: "var(--ui-bg-tertiary)",
                             color: "var(--ui-text-secondary)",
                         }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
                         Cancel
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                         onClick={handleSave}
                         disabled={!name.trim()}
-                        className="flex-1 py-3 rounded-lg font-medium disabled:opacity-50 active:scale-95 transition-transform"
+                        className="flex-1 py-3 rounded-lg font-medium disabled:opacity-50"
                         style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
                         Save
-                    </button>
+                    </motion.button>
                 </div>
             </motion.div>
         </motion.div>
@@ -1439,7 +1415,11 @@ const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId, isVisible = 
     }, [widgetId]);
 
     return (
-        <div className="mobile-widget-card">
+        <motion.div
+            className="mobile-widget-card"
+            whileTap={{ scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        >
             <div className="mobile-widget-card-header">
                 <div className="mobile-widget-card-icon">
                     <TypeIcon className="w-4 h-4" />
@@ -1447,7 +1427,7 @@ const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId, isVisible = 
                 <span className="mobile-widget-card-title">{title}</span>
             </div>
             <WidgetComplication widgetId={widgetId} isVisible={isVisible} />
-        </div>
+        </motion.div>
     );
 });
 
@@ -1463,7 +1443,6 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const [presetsState, setPresetsState] = useState<MobilePresetsState>(() => readMobilePresets());
     const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
     const [widgetPickerOpen, setWidgetPickerOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
     const [presetNameDialogOpen, setPresetNameDialogOpen] = useState(false);
     const [pendingPresetSlot, setPendingPresetSlot] = useState<number | null>(null);
     const [visiblePresetIndex, setVisiblePresetIndex] = useState<number>(() => readMobilePresets().activePresetIndex);
@@ -1517,12 +1496,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
 
     const handleWidgetClick = useCallback(
         (widgetId: string) => {
-            if (!isEditing) {
-                vibrate(10);
-                setSelectedWidgetId(widgetId);
-            }
+            setSelectedWidgetId(widgetId);
         },
-        [isEditing]
+        []
     );
 
     const handleToggleWidget = useCallback((widgetId: string) => {
@@ -1646,7 +1622,6 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const handleCloseDetailView = useCallback(() => setSelectedWidgetId(null), []);
     const handleCloseWidgetPicker = useCallback(() => setWidgetPickerOpen(false), []);
     const handleOpenWidgetPicker = useCallback(() => setWidgetPickerOpen(true), []);
-    const handleToggleEditing = useCallback(() => setIsEditing((prev) => !prev), []);
 
     // Computed values for preset dialog
     const pendingPresetName = pendingPresetSlot !== null ? presetsState.presets[pendingPresetSlot]?.name ?? "" : "";
@@ -1709,22 +1684,26 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                         Create presets to organize your widgets into different views
                     </p>
                     <div className="flex flex-col gap-3 w-full max-w-xs">
-                        <button
+                        <motion.button
                             onClick={handleUseStarter}
-                            className="mobile-nav-button justify-center active:scale-95 transition-transform"
+                            className="mobile-nav-button justify-center"
                             style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         >
                             <MdBookmarks className="w-5 h-5" />
                             <span>Use Starter Presets</span>
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
                             onClick={handleAddPreset}
-                            className="mobile-nav-button justify-center active:scale-95 transition-transform"
+                            className="mobile-nav-button justify-center"
                             style={{ backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         >
                             <MdAdd className="w-5 h-5" />
                             <span>Create Empty Preset</span>
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
 
@@ -1764,13 +1743,15 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
+                            <motion.button
                                 onClick={onSettingsClick}
                                 className="mobile-header-button"
                                 aria-label="Settings"
+                                whileTap={{ scale: 0.9 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                             >
                                 <MdSettings className="w-5 h-5" />
-                            </button>
+                            </motion.button>
                         </div>
                     </div>
 
@@ -1796,14 +1777,16 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                 {activePreset ? "Add widgets to this preset" : "Choose a preset or create a new one"}
                             </p>
                             {activePreset && (
-                                <button
+                                <motion.button
                                     onClick={handleOpenWidgetPicker}
-                                    className="px-6 py-3 rounded-xl font-medium active:scale-95 transition-transform"
+                                    className="px-6 py-3 rounded-xl font-medium"
                                     style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                                    whileTap={{ scale: 0.95 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                 >
                                     <MdAdd className="w-5 h-5 inline mr-2" />
                                     Add Widgets
-                                </button>
+                                </motion.button>
                             )}
                         </div>
                     </div>
@@ -1847,38 +1830,46 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                         </h1>
                         <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
                             {enabledWidgetIds.length} widget{enabledWidgetIds.length !== 1 ? "s" : ""}
-                            {isEditing && " • Editing"}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {/* Privacy Toggle */}
-                    <button
+                    <motion.button
                         onClick={togglePrivacy}
                         className={`mobile-header-button ${privacySettings.enabled ? "bg-ui-accent-secondary text-white" : ""
                             }`}
                         aria-label={privacySettings.enabled ? "Disable privacy mode" : "Enable privacy mode"}
                         aria-pressed={privacySettings.enabled}
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
                         {privacySettings.enabled ? (
                             <MdVisibilityOff className="w-5 h-5" />
                         ) : (
                             <MdVisibility className="w-5 h-5" />
                         )}
-                    </button>
-                    {/* Edit Toggle */}
-                    <button
-                        onClick={handleToggleEditing}
-                        className={`mobile-header-button ${isEditing ? "bg-ui-accent-primary text-white" : ""}`}
-                        aria-label={isEditing ? "Done editing" : "Edit layout"}
-                        aria-pressed={isEditing}
+                    </motion.button>
+                    {/* Add Widget */}
+                    <motion.button
+                        onClick={handleOpenWidgetPicker}
+                        className="mobile-header-button"
+                        aria-label="Add widgets"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     >
-                        {isEditing ? <MdCheck className="w-5 h-5" /> : <MdEdit className="w-5 h-5" />}
-                    </button>
+                        <MdAdd className="w-5 h-5" />
+                    </motion.button>
                     {/* Settings */}
-                    <button onClick={onSettingsClick} className="mobile-header-button" aria-label="Settings">
+                    <motion.button
+                        onClick={onSettingsClick}
+                        className="mobile-header-button"
+                        aria-label="Settings"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                    >
                         <MdSettings className="w-5 h-5" />
-                    </button>
+                    </motion.button>
                 </div>
             </div>
 
@@ -1916,7 +1907,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     touchStartPreventDefault={false}
                     touchMoveStopPropagation={false}
                     passiveListeners={true}
-                    allowTouchMove={!isEditing}
+                    allowTouchMove={true}
                     edgeSwipeDetection={true}
                     edgeSwipeThreshold={20}
                     modules={[Pagination]}
@@ -1945,17 +1936,19 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                                         Add widgets to this preset
                                                     </p>
                                                     {isActivePreset && (
-                                                        <button
+                                                        <motion.button
                                                             onClick={handleOpenWidgetPicker}
-                                                            className="px-6 py-3 rounded-xl font-medium active:scale-95 transition-transform"
+                                                            className="px-6 py-3 rounded-xl font-medium"
                                                             style={{
                                                                 backgroundColor: "var(--ui-accent-primary)",
                                                                 color: "#ffffff",
                                                             }}
+                                                            whileTap={{ scale: 0.95 }}
+                                                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                                         >
                                                             <MdAdd className="w-5 h-5 inline mr-2" />
                                                             Add Widgets
-                                                        </button>
+                                                        </motion.button>
                                                     )}
                                                 </div>
                                             </div>
@@ -1967,7 +1960,6 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                                         onReorder={handleReorder}
                                                         onWidgetClick={handleWidgetClick}
                                                         onRemoveWidget={handleRemoveWidget}
-                                                        isEditing={isEditing}
                                                         isVisible={isPresetVisible}
                                                     />
                                                 ) : (
@@ -1983,19 +1975,21 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                                     </div>
                                                 )}
 
-                                                {/* Add Widget Button (when editing active preset) */}
-                                                {isEditing && isActivePreset && (
-                                                    <button
+                                                {/* Add Widget hint - shown at bottom */}
+                                                {isActivePreset && presetWidgetIds.length < 8 && (
+                                                    <motion.button
                                                         onClick={handleOpenWidgetPicker}
-                                                        className="w-full mt-4 p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-colors active:scale-[0.98]"
+                                                        className="w-full mt-4 p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2"
                                                         style={{
                                                             borderColor: "var(--ui-border-secondary)",
                                                             color: "var(--ui-text-muted)",
                                                         }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                                     >
                                                         <MdAdd className="w-5 h-5" />
                                                         <span className="font-medium">Add Widget</span>
-                                                    </button>
+                                                    </motion.button>
                                                 )}
                                             </>
                                         )}
@@ -2008,7 +2002,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             </div>
 
             {/* Pagination dots indicator */}
-            {!isEditing && nonNullPresets.length > 1 && (
+            {nonNullPresets.length > 1 && (
                 <div className="flex justify-center gap-1.5 py-2" role="tablist" aria-label="Preset pages">
                     {nonNullPresets.map((_, idx) => (
                         <div

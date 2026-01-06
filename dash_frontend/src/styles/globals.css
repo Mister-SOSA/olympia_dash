@@ -1422,20 +1422,19 @@ main {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
   overflow: hidden;
-  transition: transform 0.15s ease, background 0.15s ease;
 }
 
-.mobile-widget-card:active {
+.mobile-widget-card:active:not(.mobile-widget-card-dragging) {
   transform: scale(0.97);
-  background: var(--ui-bg-tertiary);
 }
 
-.mobile-widget-card-editing {
-  border-color: var(--ui-accent-primary);
-  border-width: 2px;
-  border-style: dashed;
+.mobile-widget-card-dragging {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  opacity: 1;
+  transform: scale(1.05);
+  cursor: grabbing;
 }
 
 /* Card Header - Icon + Title inline */
@@ -1577,12 +1576,27 @@ main {
   }
 }
 
-/* Drop placeholder */
+/* Drop placeholder - dashed outline where the dragged item will land */
 .mobile-widget-card-placeholder {
   min-height: 110px;
   border-radius: 1rem;
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.08);
   border: 2px dashed rgba(59, 130, 246, 0.5);
+  animation: placeholder-pulse 1s ease-in-out infinite;
+}
+
+@keyframes placeholder-pulse {
+
+  0%,
+  100% {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+
+  50% {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
 }
 
 /* Larger screens - still 2 columns but more spacious */
