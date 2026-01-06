@@ -128,6 +128,52 @@ export interface MobileDashboardProps {
 }
 
 // ============================================
+// Widget Complication (Mini Preview)
+// ============================================
+
+import { useWidgetPreview, WidgetPreviewData } from "@/hooks/useWidgetPreview";
+
+const WidgetComplication = ({ widgetId }: { widgetId: string }) => {
+    const { data, loading } = useWidgetPreview(widgetId);
+
+    if (loading) {
+        return (
+            <div className="widget-complication-loading">
+                <div className="h-5 w-10 rounded bg-ui-bg-tertiary animate-pulse" />
+            </div>
+        );
+    }
+
+    if (!data || !data.value) {
+        return null;
+    }
+
+    const getStatusColor = () => {
+        if (data.status === 'good') return 'var(--ui-success, #22c55e)';
+        if (data.status === 'warning') return 'var(--ui-warning, #f59e0b)';
+        if (data.status === 'error') return 'var(--ui-error, #ef4444)';
+        return 'var(--ui-accent-primary)';
+    };
+
+    return (
+        <div className="widget-complication">
+            <div className="widget-complication-value" style={{ color: getStatusColor() }}>
+                {data.value}
+                {data.trend && (
+                    <MdTrendingUp 
+                        className={`w-3.5 h-3.5 ml-0.5 ${data.trend === 'down' ? 'rotate-180' : ''}`}
+                        style={{ color: data.trend === 'up' ? '#22c55e' : data.trend === 'down' ? '#ef4444' : undefined }}
+                    />
+                )}
+            </div>
+            {data.label && (
+                <div className="widget-complication-label">{data.label}</div>
+            )}
+        </div>
+    );
+};
+
+// ============================================
 // Sortable Widget Card
 // ============================================
 
@@ -149,8 +195,8 @@ const SortableWidgetCard = ({ widgetId, onClick, isEditing }: SortableWidgetCard
 
     const config = getWidgetConfig(widgetId);
     const widgetDef = getWidgetById(widgetId);
-    const CategoryIcon = config ? CATEGORY_ICONS[config.category] : MdBarChart;
     const TypeIcon = getWidgetTypeIcon(widgetId);
+    const title = widgetDef?.title || config?.title || widgetId;
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -171,51 +217,23 @@ const SortableWidgetCard = ({ widgetId, onClick, isEditing }: SortableWidgetCard
         <div
             ref={setNodeRef}
             style={style}
-            className={`mobile-widget-card group ${isEditing ? 'mobile-widget-card-editing' : ''}`}
+            className={`mobile-widget-card ${isEditing ? 'mobile-widget-card-editing' : ''}`}
             onClick={() => !isEditing && onClick()}
             {...(isEditing ? { ...attributes, ...listeners } : {})}
         >
-            {/* Icon */}
-            <div className="mobile-widget-card-icon">
-                <TypeIcon className="w-6 h-6 text-[var(--ui-accent-primary)]" />
-            </div>
-
-            {/* Content */}
-            <div className="mobile-widget-card-content">
-                <h3
-                    className="text-sm font-semibold line-clamp-1"
-                    style={{ color: 'var(--ui-text-primary)' }}
-                >
-                    {widgetDef?.title || config?.title || widgetId}
-                </h3>
-                {config?.category && (
-                    <div className="flex items-center gap-1 mt-1">
-                        <CategoryIcon className="w-3 h-3 text-[var(--ui-text-muted)]" />
-                        <span className="text-xs" style={{ color: 'var(--ui-text-muted)' }}>
-                            {config.category}
-                        </span>
-                    </div>
+            {/* Header: Icon + Title */}
+            <div className="mobile-widget-card-header">
+                <div className="mobile-widget-card-icon">
+                    <TypeIcon className="w-4 h-4" />
+                </div>
+                <span className="mobile-widget-card-title">{title}</span>
+                {isEditing && (
+                    <MdEdit className="w-4 h-4 text-ui-accent-primary ml-auto flex-shrink-0" />
                 )}
             </div>
-
-            {/* Edit mode indicator */}
-            {isEditing && (
-                <div className="absolute top-2 right-2">
-                    <div className="w-5 h-5 rounded-full bg-ui-accent-primary/20 flex items-center justify-center">
-                        <MdEdit className="w-3 h-3 text-ui-accent-primary" />
-                    </div>
-                </div>
-            )}
-
-            {/* Tap indicator */}
-            {!isEditing && (
-                <div
-                    className="absolute bottom-2 right-2 opacity-0 group-active:opacity-100 transition-opacity"
-                    style={{ color: 'var(--ui-text-muted)' }}
-                >
-                    <MdExpandMore className="w-4 h-4 rotate-[-90deg]" />
-                </div>
-            )}
+            
+            {/* Data Display */}
+            {!isEditing && <WidgetComplication widgetId={widgetId} />}
         </div>
     );
 };
@@ -227,8 +245,8 @@ const SortableWidgetCard = ({ widgetId, onClick, isEditing }: SortableWidgetCard
 const DragOverlayCard = ({ widgetId }: { widgetId: string }) => {
     const config = getWidgetConfig(widgetId);
     const widgetDef = getWidgetById(widgetId);
-    const CategoryIcon = config ? CATEGORY_ICONS[config.category] : MdBarChart;
     const TypeIcon = getWidgetTypeIcon(widgetId);
+    const title = widgetDef?.title || config?.title || widgetId;
 
     return (
         <div
@@ -238,21 +256,11 @@ const DragOverlayCard = ({ widgetId }: { widgetId: string }) => {
                 transform: 'scale(1.05)',
             }}
         >
-            <div className="mobile-widget-card-icon">
-                <TypeIcon className="w-6 h-6 text-[var(--ui-accent-primary)]" />
-            </div>
-            <div className="mobile-widget-card-content">
-                <h3 className="text-sm font-semibold line-clamp-1" style={{ color: 'var(--ui-text-primary)' }}>
-                    {widgetDef?.title || config?.title || widgetId}
-                </h3>
-                {config?.category && (
-                    <div className="flex items-center gap-1 mt-1">
-                        <CategoryIcon className="w-3 h-3 text-[var(--ui-text-muted)]" />
-                        <span className="text-xs" style={{ color: 'var(--ui-text-muted)' }}>
-                            {config.category}
-                        </span>
-                    </div>
-                )}
+            <div className="mobile-widget-card-header">
+                <div className="mobile-widget-card-icon">
+                    <TypeIcon className="w-4 h-4" />
+                </div>
+                <span className="mobile-widget-card-title">{title}</span>
             </div>
         </div>
     );
