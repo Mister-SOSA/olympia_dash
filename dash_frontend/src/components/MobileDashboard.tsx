@@ -40,6 +40,7 @@ import {
 } from "react-icons/md";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
 import { Loader } from "@/components/ui/loader";
+import { WidgetErrorBoundary } from "@/components/ErrorBoundary";
 import { toast } from "sonner";
 import {
     MobileLayout,
@@ -531,17 +532,19 @@ const DetailView = ({ widgetId, onClose }: DetailViewProps) => {
                         style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
                     >
                         {widgetDef && (
-                            <Suspense
-                                fallback={
-                                    <div className="flex items-center justify-center h-64">
-                                        <Loader />
+                            <WidgetErrorBoundary widgetName={widgetDef.displayName || widgetDef.id}>
+                                <Suspense
+                                    fallback={
+                                        <div className="flex items-center justify-center h-64">
+                                            <Loader />
+                                        </div>
+                                    }
+                                >
+                                    <div className="h-full min-h-[300px]">
+                                        <widgetDef.component />
                                     </div>
-                                }
-                            >
-                                <div className="h-full min-h-[300px]">
-                                    <widgetDef.component />
-                                </div>
-                            </Suspense>
+                                </Suspense>
+                            </WidgetErrorBoundary>
                         )}
                     </div>
 

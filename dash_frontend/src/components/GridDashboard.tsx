@@ -24,6 +24,7 @@ import { useAnalytics } from "@/contexts/AnalyticsContext";
 import { useWidgetSettingsDialog } from "@/contexts/WidgetSettingsDialogContext";
 import { type LayoutUpdateSource } from "@/utils/layoutUtils";
 import { Loader } from "@/components/ui/loader";
+import { WidgetErrorBoundary } from "@/components/ErrorBoundary";
 
 // Custom resize handle component - replaces the library's default diagonal handles
 const CustomResizeHandle = React.forwardRef<HTMLElement, {
@@ -447,9 +448,11 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
             // Widget component already includes .widget wrapper and .widget-drag-handle
             // Pass widgetId as prop so multi-instance widgets can access their instance-specific settings
             return (
-                <Suspense fallback={<div className="widget-loading-container" />}>
-                    <WidgetComponent key={`${widgetId}-${refreshKey}`} widgetId={widgetId} />
-                </Suspense>
+                <WidgetErrorBoundary widgetName={widgetConfig.title}>
+                    <Suspense fallback={<div className="widget-loading-container" />}>
+                        <WidgetComponent key={`${widgetId}-${refreshKey}`} widgetId={widgetId} />
+                    </Suspense>
+                </WidgetErrorBoundary>
             );
         }, [hasAccess]);
 

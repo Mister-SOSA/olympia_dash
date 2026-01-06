@@ -40,6 +40,7 @@ import { usePrivacy } from "@/contexts/PrivacyContext";
 import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
 import { isMultiInstanceWidget, getWidgetType } from "@/utils/widgetInstanceUtils";
 import { getWidgetConfig } from "@/components/widgets/registry";
+import { WidgetErrorBoundary } from "@/components/ErrorBoundary";
 
 // Utility: deep clone an object
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
@@ -203,7 +204,9 @@ function FullscreenWidget({ layout }: { layout: Widget[] }) {
     return (
         <div ref={containerRef} className="fixed inset-0 z-40 bg-ui-bg-primary">
             <div className="w-full h-full overflow-auto">
-                <WidgetComponent />
+                <WidgetErrorBoundary widgetName={widgetDef.displayName || enabledWidget.id}>
+                    <WidgetComponent />
+                </WidgetErrorBoundary>
             </div>
         </div>
     );
