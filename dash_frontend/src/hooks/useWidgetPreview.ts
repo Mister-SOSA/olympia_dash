@@ -72,7 +72,7 @@ const DIRECT_ENDPOINT_CONFIGS: Record<string, DirectEndpointConfig> = {
     },
     // Entry logs from UniFi Access
     EntryLogsWidget: {
-        endpoint: '/api/unifi-access/logs',
+        endpoint: '/api/access-logs',
         method: 'GET',
         transform: (data: any[]) => {
             if (!Array.isArray(data)) return {};
