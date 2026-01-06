@@ -528,7 +528,6 @@ export default function EntryLogsWidget() {
             payload={undefined}
             title="Entry Logs"
             refreshInterval={5000}
-            skeletonType="table"
         >
             {(data: AccessLogEntry[] | null, loading: boolean) => {
                 if (loading && (!data || data.length === 0)) {

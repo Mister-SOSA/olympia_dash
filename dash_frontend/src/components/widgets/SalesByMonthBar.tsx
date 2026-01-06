@@ -390,7 +390,6 @@ export default function SalesByMonthBar() {
                 payload={widgetPayload}
                 title="Sales by Month"
                 refreshInterval={300000}
-                skeletonType="chart"
             >
                 {(data, loading) => {
                     if (!data || data.length === 0) {

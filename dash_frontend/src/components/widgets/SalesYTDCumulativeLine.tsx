@@ -867,7 +867,6 @@ export default function SalesYTDCumulativeLine() {
                 payload={widgetPayload}
                 title="YTD Sales (Cumulative)"
                 refreshInterval={300000}
-                skeletonType="chart"
             >
                 {(rawData: YTDSalesData[]) => {
                     if (!rawData || rawData.length === 0) {

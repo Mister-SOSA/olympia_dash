@@ -228,7 +228,6 @@ export default function SalesByDayBar() {
                 payload={widgetPayload}
                 title="Sales by Day"
                 refreshInterval={60000}
-                skeletonType="chart"
             >
                 {(data: SalesData[], loading) => {
                     if (!data || data.length === 0) {

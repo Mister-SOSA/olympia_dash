@@ -509,7 +509,6 @@ export default function InventoryTracker() {
                 title="Inventory Tracker"
                 refreshInterval={30000}
                 widgetId={WIDGET_ID}
-                skeletonType="table"
             >
                 {(data: InventoryItem[] | null) => {
                     // Check if no items are configured

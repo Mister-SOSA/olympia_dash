@@ -605,7 +605,6 @@ export default function TopCustomersThisYearPie() {
             payload={widgetPayload}
             title={`Top Customers - ${currentYear}`}
             refreshInterval={300000}
-            skeletonType="chart"
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {

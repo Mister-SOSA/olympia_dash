@@ -266,7 +266,6 @@ export default function TopProductUnitSalesTable() {
             payload={widgetPayload}
             title="Top Product Unit Sales"
             refreshInterval={30000}
-            skeletonType="table"
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {

@@ -416,7 +416,6 @@ export default function DailyProductionPutawaysBar() {
                 payload={widgetPayload}
                 title="Daily Production Putaways"
                 refreshInterval={15000}
-                skeletonType="chart"
             >
                 {(data: PutawayData[], loading) => {
                     if (!data || data.length === 0) {

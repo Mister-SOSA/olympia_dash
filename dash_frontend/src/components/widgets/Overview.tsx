@@ -285,7 +285,6 @@ export default function Overview() {
             payload={widgetPayload}
             title=""
             refreshInterval={300000}
-            skeletonType="metric"
         >
             {(data: SalesData[], loading) => {
                 if (!data || data.length === 0) {

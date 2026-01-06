@@ -1,20 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MdError, MdRefresh } from "react-icons/md";
 import { Loader } from "@/components/ui/loader";
-import {
-    WidgetSkeleton,
-    TableSkeleton,
-    ChartSkeleton,
-    MetricSkeleton
-} from "@/components/ui/skeleton";
 import config from "@/config";
 import { authService } from "@/lib/auth";
 import { preferencesService } from "@/lib/preferences";
 import { WIDGET_SETTINGS } from "@/constants/settings";
 import { trackWidgetInteraction } from "@/lib/analytics";
-
-/** Skeleton type for different widget layouts */
-type SkeletonType = "spinner" | "widget" | "table" | "chart" | "metric";
 
 interface WidgetProps {
     title?: string;
@@ -22,8 +13,6 @@ interface WidgetProps {
     payload?: object;
     refreshInterval?: number;
     widgetId?: string;  // Widget identifier for tracking
-    /** Type of loading skeleton to show (default: "spinner") */
-    skeletonType?: SkeletonType;
     children: (data: any, loading: boolean, error?: string) => React.ReactNode;
 }
 
@@ -33,7 +22,6 @@ export default function Widget({
     payload,
     refreshInterval = 30000,
     widgetId,
-    skeletonType = "spinner",
     children
 }: WidgetProps) {
     // Read settings directly from preferences service (not via hook to avoid re-render loops)
@@ -173,14 +161,6 @@ export default function Widget({
         // Set up interval for periodic refresh
         if (refreshInterval && refreshInterval > 0) {
             intervalRef.current = setInterval(fetchData, refreshInterval);
-
-            // Update progress smoothly
-            const progressUpdateInterval = 200; // Update every 200ms
-            progressIntervalRef.current = setInterval(() => {
-                const elapsed = Date.now() - lastFetchTimeRef.current;
-                const progress = Math.min((elapsed / refreshInterval) * 100, 100);
-                setRefreshProgress(progress);
-            }, progressUpdateInterval);
         }
 
         return () => {
@@ -190,6 +170,28 @@ export default function Widget({
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
     }, [endpoint, refreshInterval]);
+
+    // Progress indicator effect - only runs after initial load completes
+    useEffect(() => {
+        // Don't run progress updates while loading or if no refresh interval
+        if (loading || !refreshInterval || refreshInterval <= 0) {
+            return;
+        }
+
+        const progressUpdateInterval = 200;
+        progressIntervalRef.current = setInterval(() => {
+            const elapsed = Date.now() - lastFetchTimeRef.current;
+            const progress = Math.min((elapsed / refreshInterval) * 100, 100);
+            setRefreshProgress(progress);
+        }, progressUpdateInterval);
+
+        return () => {
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+            }
+        };
+    }, [loading, refreshInterval]);
 
     const handleRetry = () => {
         isInitialLoadRef.current = true; // Treat manual retry as initial load
@@ -272,11 +274,7 @@ export default function Widget({
                             animation: isTransitioning ? 'fadeOut 0.25s ease-out forwards' : undefined,
                         }}
                     >
-                        {skeletonType === "spinner" && <Loader />}
-                        {skeletonType === "widget" && <WidgetSkeleton />}
-                        {skeletonType === "table" && <TableSkeleton rows={5} />}
-                        {skeletonType === "chart" && <ChartSkeleton />}
-                        {skeletonType === "metric" && <MetricSkeleton />}
+                        <Loader />
                     </div>
                 ) : (
                     <div className="widget-data-container">
