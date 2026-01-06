@@ -56,21 +56,23 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
 
     // Show toast when going offline/online
     useEffect(() => {
-        // Skip initial render
-        const isInitialRender = typeof window !== "undefined" && !window.__swInitialized;
-        if (isInitialRender) {
-            (window as any).__swInitialized = true;
+        // Skip initial render - only show toasts after actual connectivity changes
+        if (typeof window !== "undefined" && !window.__swOnlineInitialized) {
+            (window as any).__swOnlineInitialized = true;
+            (window as any).__wasOffline = !sw.isOnline;
             return;
         }
 
         if (!sw.isOnline) {
+            (window as any).__wasOffline = true;
             toast.warning("You're offline", {
                 description: "Some features may be limited. Cached data will be used when available.",
                 duration: 5000,
                 id: "offline-status",
             });
-        } else {
-            // Only show "back online" if we previously showed offline
+        } else if ((window as any).__wasOffline) {
+            // Only show "back online" if we were actually offline before
+            (window as any).__wasOffline = false;
             toast.success("Back online", {
                 description: "Your connection has been restored.",
                 duration: 3000,
@@ -96,9 +98,11 @@ export function ServiceWorkerProvider({ children }: ServiceWorkerProviderProps) 
     );
 }
 
-// Extend Window interface for our flag
+// Extend Window interface for our flags
 declare global {
     interface Window {
         __swInitialized?: boolean;
+        __swOnlineInitialized?: boolean;
+        __wasOffline?: boolean;
     }
 }
