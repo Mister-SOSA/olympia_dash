@@ -453,6 +453,7 @@ export default function MachineStockStatus() {
             payload={widgetPayload}
             title="Machine Stock Status"
             refreshInterval={10000}
+            skeletonType="table"
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {

@@ -529,6 +529,7 @@ export default function DailyDueInHiddenVendTable() {
             payload={widgetPayload}
             title="Daily Due In (Maintenance Only)"
             refreshInterval={15000}
+            skeletonType="table"
         >
             {renderTable}
         </Widget>

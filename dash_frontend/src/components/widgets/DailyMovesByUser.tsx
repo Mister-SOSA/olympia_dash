@@ -419,6 +419,7 @@ export default function DailyMovesByUser() {
                 payload={widgetPayload}
                 title="Daily Moves By User"
                 refreshInterval={5000}
+                skeletonType="chart"
             >
                 {(data: MovesByUserData[], loading) => {
                     if (!data || data.length === 0) {

@@ -347,6 +347,7 @@ export default function OutstandingOrdersTable() {
             payload={widgetPayload}
             title="Outstanding Due In"
             refreshInterval={30000}
+            skeletonType="table"
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {

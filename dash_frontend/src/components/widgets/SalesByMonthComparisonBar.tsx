@@ -649,6 +649,7 @@ export default function SalesByMonthComparisonBar() {
                 payload={widgetPayload}
                 title="Sales by Month (Comparison)"
                 refreshInterval={300000}
+                skeletonType="chart"
             >
                 {(data, loading) => {
                     if (!data || data.length === 0) {

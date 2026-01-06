@@ -271,7 +271,7 @@ const LineChart: React.FC<LineChartProps> = ({
             // Find the nearest point by X position
             let nearestIndex = 0;
             let nearestDistance = Infinity;
-            
+
             currentPoints.forEach((point, index) => {
                 const distance = Math.abs(point.x - mouseX);
                 if (distance < nearestDistance) {
@@ -279,7 +279,7 @@ const LineChart: React.FC<LineChartProps> = ({
                     nearestIndex = index;
                 }
             });
-            
+
             setHoveredIndex(nearestIndex);
         } else {
             setHoveredIndex(null);
@@ -348,15 +348,15 @@ const LineChart: React.FC<LineChartProps> = ({
                 {/* X-axis month markers - evenly spaced based on full year range */}
                 {(() => {
                     if (currentData.length < 2 || totalDays <= 0) return null;
-                    
+
                     // Generate all months from Jan to current month
                     const months = eachMonthOfInterval({ start: yearStart, end: today });
-                    
+
                     return months.map((monthDate, i) => {
                         // Calculate X position based on days from Jan 1
                         const daysFromStart = (monthDate.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24);
                         const x = padding.left + (daysFromStart / totalDays) * chartWidth;
-                        
+
                         return (
                             <g key={`month-${i}`}>
                                 {/* Vertical dashed line through chart area */}
@@ -867,6 +867,7 @@ export default function SalesYTDCumulativeLine() {
                 payload={widgetPayload}
                 title="YTD Sales (Cumulative)"
                 refreshInterval={300000}
+                skeletonType="chart"
             >
                 {(rawData: YTDSalesData[]) => {
                     if (!rawData || rawData.length === 0) {

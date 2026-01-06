@@ -555,6 +555,7 @@ export default function Top5PayablesYTD() {
             payload={widgetPayload}
             title="Top 5 Payables YTD"
             refreshInterval={300000}
+            skeletonType="chart"
         >
             {(data, loading) => {
                 if (!data || data.length === 0) {

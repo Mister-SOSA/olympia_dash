@@ -297,6 +297,7 @@ const HumidityWidget: React.FC = () => {
             payload={undefined}
             title="Humidity"
             refreshInterval={60000}
+            skeletonType="metric"
         >
             {(data: HumidityData | null, loading) => {
                 return <HumidityContent data={data} />;

@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MdError, MdRefresh } from "react-icons/md";
 import { Loader } from "@/components/ui/loader";
+import {
+    WidgetSkeleton,
+    TableSkeleton,
+    ChartSkeleton,
+    MetricSkeleton
+} from "@/components/ui/skeleton";
 import config from "@/config";
 import { authService } from "@/lib/auth";
 import { preferencesService } from "@/lib/preferences";
 import { WIDGET_SETTINGS } from "@/constants/settings";
 import { trackWidgetInteraction } from "@/lib/analytics";
+
+/** Skeleton type for different widget layouts */
+type SkeletonType = "spinner" | "widget" | "table" | "chart" | "metric";
 
 interface WidgetProps {
     title?: string;
@@ -13,6 +22,8 @@ interface WidgetProps {
     payload?: object;
     refreshInterval?: number;
     widgetId?: string;  // Widget identifier for tracking
+    /** Type of loading skeleton to show (default: "spinner") */
+    skeletonType?: SkeletonType;
     children: (data: any, loading: boolean, error?: string) => React.ReactNode;
 }
 
@@ -22,6 +33,7 @@ export default function Widget({
     payload,
     refreshInterval = 30000,
     widgetId,
+    skeletonType = "spinner",
     children
 }: WidgetProps) {
     // Read settings directly from preferences service (not via hook to avoid re-render loops)
@@ -260,7 +272,11 @@ export default function Widget({
                             animation: isTransitioning ? 'fadeOut 0.25s ease-out forwards' : undefined,
                         }}
                     >
-                        <Loader />
+                        {skeletonType === "spinner" && <Loader />}
+                        {skeletonType === "widget" && <WidgetSkeleton />}
+                        {skeletonType === "table" && <TableSkeleton rows={5} />}
+                        {skeletonType === "chart" && <ChartSkeleton />}
+                        {skeletonType === "metric" && <MetricSkeleton />}
                     </div>
                 ) : (
                     <div className="widget-data-container">

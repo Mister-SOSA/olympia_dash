@@ -571,6 +571,7 @@ export default function InventoryMovesLog() {
             payload={widgetPayload}
             title="📦 Inventory Moves Log"
             refreshInterval={3000} // Refresh every 3 seconds
+            skeletonType="table"
         >
             {(data, loading) => {
                 if (loading && (!data || data.length === 0)) {

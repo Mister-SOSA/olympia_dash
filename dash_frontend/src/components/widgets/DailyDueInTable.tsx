@@ -513,6 +513,7 @@ export default function DailyDueInTable() {
             payload={widgetPayload}
             title="Daily Due In"
             refreshInterval={8000}
+            skeletonType="table"
         >
             {(data: POItemData[] | null, loading: boolean) => (
                 <DailyDueInTableContent data={data} loading={loading} />
