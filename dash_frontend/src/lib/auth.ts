@@ -157,6 +157,10 @@ class AuthService {
         try {
             response = await fetch(url, { ...options, headers });
         } catch (error) {
+            // Don't log AbortError - these are expected when components unmount
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                throw error;
+            }
             // Network error - API is likely down, don't redirect
             console.error('[Auth] Network error fetching:', url, error);
             throw error;
