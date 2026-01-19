@@ -11,10 +11,12 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 import { SensitiveCurrency, SensitiveName } from "@/components/ui/SensitiveValue";
+import { STATUS_COLORS, BADGE_STYLES } from "@/components/ui/MobileTableCard";
 
 const WIDGET_ID = 'DailyDueInTable';
 
@@ -266,6 +268,86 @@ const MemoizedTableRow = memo(({
     );
 });
 
+// Helper to get status badge style
+const getStatusBadgeStyle = (status: string) => {
+    if (status === 'X') return BADGE_STYLES.error;
+    if (RECEIVED_STATUSES.has(status)) return BADGE_STYLES.success;
+    return BADGE_STYLES.primary;
+};
+
+// Helper to get status indicator color
+const getStatusIndicatorColor = (status: string) => {
+    if (status === 'X') return STATUS_COLORS.cancelled;
+    if (RECEIVED_STATUSES.has(status)) return STATUS_COLORS.received;
+    if (status === 'R') return STATUS_COLORS.released;
+    if (status === 'E') return STATUS_COLORS.entered;
+    return STATUS_COLORS.default;
+};
+
+// Memoized mobile card component for compact view
+const MobileCardRow = memo(({
+    row,
+    isHighlighted
+}: {
+    row: TableRowData;
+    isHighlighted: boolean;
+}) => {
+    const isReceived = RECEIVED_STATUSES.has(row.poStatusLabel);
+    const isCancelled = row.poStatusLabel === 'X';
+
+    return (
+        <div
+            className={`
+                mobile-table-card
+                ${isHighlighted ? "new-status-v-row" : ""}
+                ${isCancelled ? "cancelled" : ""}
+                ${isReceived ? "received" : ""}
+            `}
+        >
+            {/* Status indicator */}
+            <div
+                className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md"
+                style={{ backgroundColor: getStatusIndicatorColor(row.poStatusLabel) }}
+            />
+
+            <div className="pl-3 pr-3 py-2">
+                {/* Row 1: Vendor + Status */}
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        <SensitiveName value={row.vendName} />
+                    </span>
+                    <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                        style={getStatusBadgeStyle(row.poStatusLabel)}
+                    >
+                        {row.poStatusLabel}
+                    </span>
+                </div>
+
+                {/* Row 2: Part + Qty + Price */}
+                <div className="flex items-center justify-between gap-2 mt-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono" style={{ color: 'var(--text-muted)' }}>{row.partCode}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                            {row.qtyOrdered}{row.qtyRecvd !== '-' && <span style={{ color: 'var(--value-positive)' }}> → {row.qtyRecvd}</span>}
+                        </span>
+                    </div>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                        <SensitiveCurrency value={`$${row.recentUnitPrice}`} />
+                    </span>
+                </div>
+
+                {/* Row 3: PO + Date */}
+                <div className="flex items-center justify-between gap-2 mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span className="font-mono">PO {row.poNumber}</span>
+                    <span>{row.dateOrdered}</span>
+                </div>
+            </div>
+        </div>
+    );
+});
+MobileCardRow.displayName = 'MobileCardRow';
+
 /**
  * Map the processed data into the format expected by the table.
  */
@@ -465,32 +547,48 @@ const DailyDueInTableContent = memo(({ data, loading }: DailyDueInTableContentPr
     const displayData = maxRows > 0 ? tableData.slice(0, maxRows) : tableData;
 
     return (
-        <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-            <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
-                    <TableRow>
-                        <TableHead style={{ color: 'var(--table-text-primary)' }}>PO Number</TableHead>
-                        <TableHead style={{ color: 'var(--table-text-primary)' }}>Status</TableHead>
-                        <TableHead style={{ color: 'var(--table-text-primary)' }}>Vendor</TableHead>
-                        <TableHead style={{ color: 'var(--table-text-primary)' }}>Part Code</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Ordered</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Received</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Date Ordered</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Order</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Unit Price</TableHead>
-                        <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Price</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
+        <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
+            <TooltipProvider delayDuration={200}>
+                {/* Mobile Card View - shown at smaller sizes */}
+                <div className="@2xl:hidden mobile-cards-container">
                     {displayData.map((row) => (
-                        <MemoizedTableRow
+                        <MobileCardRow
                             key={row.itemNo}
                             row={row}
                             isHighlighted={newStatusVRows.has(row.itemNo)}
                         />
                     ))}
-                </TableBody>
-            </Table>
+                </div>
+
+                {/* Table View - shown at larger sizes */}
+                <div className="hidden @2xl:block">
+                    <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                        <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                            <TableRow>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>PO Number</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Status</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Vendor</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Part Code</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Ordered</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Received</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Date Ordered</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Order</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Unit Price</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Price</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {displayData.map((row) => (
+                                <MemoizedTableRow
+                                    key={row.itemNo}
+                                    row={row}
+                                    isHighlighted={newStatusVRows.has(row.itemNo)}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </TooltipProvider>
         </ScrollArea>
     );
 });

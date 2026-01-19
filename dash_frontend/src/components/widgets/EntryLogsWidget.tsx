@@ -277,71 +277,54 @@ const CardRow = memo(({ entry, useRelativeTime, relativeTimeThreshold, highlight
     const timeData = formatTimeAgo(entry.timestamp, useRelativeTime, relativeTimeThreshold);
     const resultStyles = getResultStyles(entry.result);
     const doorStyles = getDoorStyles(entry.door_name);
-    const methodStyles = getMethodStyles(entry.access_method);
+
+    // Determine status indicator color based on result
+    const getStatusColor = () => {
+        switch (entry.result) {
+            case 'ACCESS':
+            case 'SUCCESS':
+                return 'rgb(34, 197, 94)'; // Green
+            case 'BLOCKED':
+            case 'INCOMPLETE':
+                return 'rgb(239, 68, 68)'; // Red
+            default:
+                return 'rgb(107, 114, 128)'; // Gray
+        }
+    };
 
     return (
         <div
             className={`
-                rounded-lg border border-border/50 p-3 space-y-2
-                transition-all duration-300 hover:bg-muted/30
+                mobile-table-card
                 ${highlightNewEntries && entry.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
             `}
         >
-            {/* Top Row: Time & Result */}
-            <div className="flex items-center justify-between gap-2">
-                <div className="text-xs text-muted-foreground">
-                    {timeData.isRelative && timeData.tooltip ? (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <span className="cursor-help underline decoration-dotted">
-                                    {timeData.display}
-                                </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{timeData.tooltip}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    ) : timeData.display}
-                </div>
-                <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
-                    style={resultStyles}
-                >
-                    <ResultIcon result={entry.result} message={entry.message} />
-                    {entry.result}
-                </span>
-            </div>
+            {/* Status indicator bar */}
+            <div
+                className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md"
+                style={{ backgroundColor: getStatusColor() }}
+            />
 
-            {/* Main Row: User & Door */}
-            <div className="flex items-center justify-between gap-2">
-                <div className="font-medium text-sm truncate" style={TABLE_TEXT_PRIMARY_STYLE}>
-                    <User className="inline h-3.5 w-3.5 mr-1 opacity-60" />
-                    {entry.actor_name}
-                </div>
-                <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border shrink-0"
-                    style={doorStyles}
-                >
-                    <DoorOpen {...smallIconProps} />
-                    {entry.door_name}
-                </span>
-            </div>
-
-            {/* Bottom Row: Method & Message */}
-            {showAccessMethod && (
-                <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="pl-3 pr-3 py-2">
+                {/* Row 1: Name + Result */}
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {entry.actor_name}
+                    </span>
                     <span
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border"
-                        style={methodStyles}
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0"
+                        style={resultStyles}
                     >
-                        {getAccessMethodIcon(entry.access_method)}
-                        {entry.access_method}
-                    </span>
-                    <span className="text-muted-foreground truncate">
-                        {entry.message}
+                        {entry.result}
                     </span>
                 </div>
-            )}
+
+                {/* Row 2: Door + Time */}
+                <div className="flex items-center justify-between gap-2 mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span>{entry.door_name}</span>
+                    <span>{timeData.display}</span>
+                </div>
+            </div>
         </div>
     );
 }, (prevProps, nextProps) => {
@@ -601,7 +584,7 @@ export default function EntryLogsWidget() {
                     <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
                         <TooltipProvider delayDuration={200}>
                             {/* Compact Card View for Small Sizes */}
-                            <div className="@xl:hidden p-2 space-y-2">
+                            <div className="@xl:hidden mobile-cards-container">
                                 {entriesWithNew.map((entry) => (
                                     <CardRow
                                         key={entry.id}

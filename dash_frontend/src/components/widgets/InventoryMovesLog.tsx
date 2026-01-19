@@ -333,67 +333,50 @@ export default function InventoryMovesLog() {
             <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
                 <TooltipProvider delayDuration={200}>
                     {/* Compact Card View for Small Sizes */}
-                    <div className="@xl:hidden p-2 space-y-2">
+                    <div className="@xl:hidden mobile-cards-container">
                         {tableData.map((row, index) => {
                             const timeData = formatTimeAgo(row.moveDate, row.moveTime, useRelativeTime, relativeTimeThreshold);
+                            const transferColor = getTransferTypeColor(row.transferType);
+
                             return (
                                 <div
                                     key={`${row.docNumber}-${row.lotNumber}-${row.moveTime}-${index}`}
                                     className={`
-                                        rounded-lg border border-border/50 p-3 space-y-2
-                                        transition-all duration-300 hover:bg-muted/30
+                                        mobile-table-card
                                         ${highlightNewMoves && row.isNew ? "inventory-new-row inventory-new-row-glow" : ""}
                                     `}
                                 >
-                                    {/* Top Row: Time & Type */}
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="text-xs text-muted-foreground">
-                                            {timeData.isRelative && timeData.tooltip ? (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span className="cursor-help underline decoration-dotted">
-                                                            {timeData.display}
-                                                        </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{timeData.tooltip}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            ) : timeData.display}
-                                        </div>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border" style={getTransferTypeColor(row.transferType)}>
-                                            {row.transferType || "—"}
-                                        </span>
-                                    </div>
+                                    {/* Status indicator bar */}
+                                    <div
+                                        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md"
+                                        style={{ backgroundColor: transferColor.color || 'var(--text-muted)' }}
+                                    />
 
-                                    {/* Main Info Row: Part & Quantity */}
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="font-mono text-sm font-semibold truncate" style={{ color: 'var(--table-text-primary)' }}>
-                                            {row.partCode || "—"}
-                                        </div>
-                                        <div className="text-right font-semibold text-sm shrink-0">
-                                            <span style={{ color: row.quantity > 0 ? 'var(--value-positive)' : 'var(--value-negative)' }}>
-                                                {formatQuantity(row.quantity)}
+                                    <div className="pl-3 pr-3 py-2">
+                                        {/* Single row: Part + Qty + Location flow */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="font-mono text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                                                {row.partCode || "—"}
+                                            </span>
+                                            <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: row.quantity > 0 ? 'var(--value-positive)' : 'var(--value-negative)' }}>
+                                                {row.quantity > 0 ? '+' : ''}{formatQuantity(row.quantity)}
                                             </span>
                                         </div>
-                                    </div>
 
-                                    {/* Location & User Row */}
-                                    <div className="flex items-center justify-between gap-2 text-xs">
-                                        <div className="flex items-center gap-1">
-                                            {row.fromLocation && row.fromLocation !== "—" ? (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.fromLocation, true)}>
-                                                    {row.fromLocation}
+                                        {/* Second row: Location + metadata */}
+                                        <div className="flex items-center justify-between gap-2 mt-1.5">
+                                            <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                <span>{row.fromLocation || "—"}</span>
+                                                <span>→</span>
+                                                <span style={{ color: 'var(--text-secondary)' }}>{row.toLocation || "—"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                                <span className="px-1 py-0.5 rounded text-[10px] font-medium" style={transferColor}>
+                                                    {row.transferType || "—"}
                                                 </span>
-                                            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                                            <span style={{ color: 'var(--text-muted)' }}>→</span>
-                                            {row.toLocation && row.toLocation !== "—" ? (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border" style={getLocationColor(row.toLocation, false)}>
-                                                    {row.toLocation}
-                                                </span>
-                                            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                                                <span>{timeData.display}</span>
+                                            </div>
                                         </div>
-                                        <span className="lowercase shrink-0" style={{ color: 'var(--badge-primary-text)' }}>{row.moveUser || "—"}</span>
                                     </div>
                                 </div>
                             );

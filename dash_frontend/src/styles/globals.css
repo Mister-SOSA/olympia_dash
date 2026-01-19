@@ -1887,6 +1887,126 @@ tbody>tr:nth-child(odd) {
   animation: newRowGlow 2s ease-in-out 3;
 }
 
+/* ============================================
+   Mobile Table Card Styles
+   Professional card layout for table widgets
+   in compact/mobile mode
+   ============================================ */
+
+/* Mobile card container scrolling optimization */
+.mobile-card-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ================================================== */
+/* MOBILE TABLE CARDS                                 */
+/* ================================================== */
+
+.mobile-table-card {
+  background-color: var(--table-row-bg);
+  border: 1px solid var(--table-border);
+  border-radius: 6px;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.mobile-table-card:last-child {
+  margin-bottom: 0;
+}
+
+.mobile-table-card:hover {
+  background-color: var(--table-row-hover-bg);
+}
+
+/* Status indicator - left edge */
+.mobile-table-card>.absolute.left-0 {
+  width: 3px;
+  border-radius: 0;
+}
+
+/* State variants */
+.mobile-table-card.overdue {
+  background-color: var(--error-light);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.mobile-table-card.received {
+  background-color: var(--success-light);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.mobile-table-card.cancelled {
+  background-color: var(--error-light);
+  opacity: 0.6;
+}
+
+/* Container for mobile card list */
+.mobile-cards-container {
+  padding: 8px;
+}
+
+/* Empty state for mobile cards */
+.mobile-cards-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.mobile-cards-empty-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+/* Container for mobile card list */
+.mobile-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 380px) {
+  .mobile-table-card {
+    padding: 0.625rem;
+  }
+
+  .mobile-table-card .text-sm {
+    font-size: 0.8125rem;
+  }
+
+  .mobile-table-card .text-xs {
+    font-size: 0.6875rem;
+  }
+
+  .mobile-cards-container {
+    gap: 0.375rem;
+    padding: 0.375rem;
+  }
+}
+
+/* Stacked badge styling for mobile */
+.mobile-card-badge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+/* Truncation for long text on mobile */
+.mobile-card-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 @keyframes newStatusVPulse {
 
   0%,
