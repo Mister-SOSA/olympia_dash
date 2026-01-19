@@ -955,6 +955,196 @@ export function SettingsContent({
     }
 
     // =========================================================================
+    // Navigation View
+    // =========================================================================
+    if (activeView === 'navigation') {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h3 className="text-lg font-bold text-ui-text-primary">Navigation</h3>
+                    <p className="text-sm text-ui-text-secondary mt-1">Choose how you navigate the dashboard</p>
+                </div>
+                {isMobile ? (
+                    <div className="text-center py-8 px-4">
+                        <div className="w-16 h-16 rounded-full bg-ui-bg-secondary mx-auto mb-4 flex items-center justify-center">
+                            <MdDock className="w-8 h-8 text-ui-text-tertiary" />
+                        </div>
+                        <p className="text-ui-text-secondary text-sm">
+                            Navigation settings are available on desktop where the dock and taskbar are displayed.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-5">
+                        {/* Mode Selection */}
+                        <Subsection title="Navigation Mode">
+                            <p className="text-xs text-ui-text-tertiary mb-3">Choose between dock (macOS-style) or taskbar (Linux-style)</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => updateSetting('navigationMode', 'dock')}
+                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+                                        settings.navigationMode === 'dock'
+                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                            : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                    }`}
+                                >
+                                    {/* Mini dock preview */}
+                                    <div className="h-12 flex items-end justify-center mb-3">
+                                        <div className="flex items-end gap-1 px-3 py-1.5 bg-ui-bg-tertiary rounded-lg border border-ui-border-primary">
+                                            <div className="w-4 h-4 bg-ui-accent-primary/50 rounded" />
+                                            <div className="w-4 h-5 bg-ui-accent-secondary/50 rounded" />
+                                            <div className="w-4 h-4 bg-ui-text-secondary/30 rounded" />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-medium text-ui-text-primary block text-center">
+                                        Dock
+                                    </span>
+                                    <span className="text-xs text-ui-text-secondary block text-center mt-1">
+                                        macOS-style, centered
+                                    </span>
+                                    {settings.navigationMode === 'dock' && (
+                                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-ui-accent-primary rounded-full" />
+                                    )}
+                                </button>
+
+                                <button
+                                    onClick={() => updateSetting('navigationMode', 'taskbar')}
+                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+                                        settings.navigationMode === 'taskbar'
+                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                            : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                    }`}
+                                >
+                                    {/* Mini taskbar preview */}
+                                    <div className="h-12 flex items-end justify-center mb-3">
+                                        <div className="w-full h-7 bg-ui-bg-tertiary rounded border border-ui-border-primary flex items-center px-2 gap-2">
+                                            <div className="w-3 h-3 bg-ui-accent-primary/50 rounded" />
+                                            <div className="w-3 h-3 bg-ui-accent-secondary/50 rounded" />
+                                            <div className="flex-1" />
+                                            <div className="w-8 h-3 bg-ui-text-secondary/30 rounded" />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-medium text-ui-text-primary block text-center">
+                                        Taskbar
+                                    </span>
+                                    <span className="text-xs text-ui-text-secondary block text-center mt-1">
+                                        Linux-style, full width
+                                    </span>
+                                    {settings.navigationMode === 'taskbar' && (
+                                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-ui-accent-primary rounded-full" />
+                                    )}
+                                </button>
+                            </div>
+                        </Subsection>
+
+                        {/* Taskbar-specific settings */}
+                        {settings.navigationMode === 'taskbar' && (
+                            <>
+                                <Subsection title="Taskbar Position">
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => updateSetting('taskbarPosition', 'top')}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                                settings.taskbarPosition === 'top'
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                            }`}
+                                        >
+                                            Top
+                                        </button>
+                                        <button
+                                            onClick={() => updateSetting('taskbarPosition', 'bottom')}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                                settings.taskbarPosition === 'bottom'
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                            }`}
+                                        >
+                                            Bottom
+                                        </button>
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Taskbar Size">
+                                    <div className="flex gap-2">
+                                        {(['small', 'medium', 'large'] as const).map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => updateSetting('taskbarSize', size)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                                                    settings.taskbarSize === size
+                                                        ? 'bg-ui-accent-primary text-white'
+                                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Behavior">
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <ToggleSetting
+                                            label="Auto-hide"
+                                            description="Hide taskbar until mouse approaches edge"
+                                            enabled={settings.taskbarAutoHide}
+                                            onChange={(val) => updateSetting('taskbarAutoHide', val)}
+                                        />
+                                        <ToggleSetting
+                                            label="Show Labels"
+                                            description="Display text labels next to icons"
+                                            enabled={settings.taskbarShowLabels}
+                                            onChange={(val) => updateSetting('taskbarShowLabels', val)}
+                                        />
+                                        <SliderSetting
+                                            label="Opacity"
+                                            description="Taskbar background transparency"
+                                            value={settings.taskbarOpacity}
+                                            onChange={(val) => updateSetting('taskbarOpacity', val)}
+                                            min={50}
+                                            max={100}
+                                            step={5}
+                                            unit="%"
+                                        />
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Taskbar Clock">
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <ToggleSetting
+                                            label="Show Clock"
+                                            description="Display time in the taskbar"
+                                            enabled={settings.taskbarShowClock}
+                                            onChange={(val) => updateSetting('taskbarShowClock', val)}
+                                        />
+                                        <ToggleSetting
+                                            label="Show Date"
+                                            description="Display date next to the clock"
+                                            enabled={settings.taskbarShowDate}
+                                            onChange={(val) => updateSetting('taskbarShowDate', val)}
+                                            disabled={!settings.taskbarShowClock}
+                                        />
+                                    </div>
+                                </Subsection>
+                            </>
+                        )}
+
+                        {/* Note about dock settings */}
+                        {settings.navigationMode === 'dock' && (
+                            <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-4">
+                                <p className="text-xs text-ui-text-secondary">
+                                    <strong className="text-ui-text-primary">Tip:</strong> Configure dock appearance and behavior in the{' '}
+                                    <span className="text-ui-accent-primary font-medium">Dock</span> settings section.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // =========================================================================
     // Presets View
     // =========================================================================
     if (activeView === 'presets') {

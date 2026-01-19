@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
 import MobileDashboard from "./MobileDashboard";
 import DashboardDock from "./DashboardDock";
+import DashboardTaskbar, { TASKBAR_HEIGHTS } from "./DashboardTaskbar";
 import WidgetPicker from "./WidgetPicker";
 import PresetDialog from "./PresetDialog";
 import PresetManagerMenu from "./PresetManagerMenu";
@@ -37,6 +38,7 @@ import type {
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
 import { usePrivacy } from "@/contexts/PrivacyContext";
+import { useSettings } from "@/hooks/useSettings";
 
 // Utils
 import {
@@ -88,6 +90,13 @@ export default function Dashboard() {
 
   // Privacy mode
   const { toggle: togglePrivacy, isPrivate } = usePrivacy();
+
+  // Navigation settings
+  const { settings: navSettings } = useSettings();
+  const navigationMode = navSettings.navigationMode;
+  const taskbarPosition = navSettings.taskbarPosition;
+  const taskbarSize = navSettings.taskbarSize;
+  const taskbarAutoHide = navSettings.taskbarAutoHide;
 
   // ==========================================================================
   // Layout Management
@@ -343,24 +352,54 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
-      <div className="dashboard-container" style={isImpersonating ? { paddingTop: '60px' } : {}}>
-        {/* Dock - Auto-hides at bottom */}
-        <DashboardDock
-          presets={presets}
-          activePresetIndex={activePresetIndex}
-          onWidgetsClick={() => {
-            setMenuOpen(true);
-            updateTempLayout();
-          }}
-          onPresetManagerClick={() => setPresetManagerOpen(true)}
-          onPresetClick={handlePresetClick}
-          onPresetSave={handlePresetSave}
-          onSettingsClick={(view) => {
-            setSettingsView(view || 'account');
-            setSettingsOpen(true);
-          }}
-          onVisibilityChange={setIsDockVisible}
-        />
+      <div 
+        className="dashboard-container" 
+        style={{
+          ...(isImpersonating ? { paddingTop: '60px' } : {}),
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'top' && !taskbarAutoHide 
+            ? { paddingTop: isImpersonating ? `${60 + TASKBAR_HEIGHTS[taskbarSize]}px` : `${TASKBAR_HEIGHTS[taskbarSize]}px` } 
+            : {}),
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'bottom' && !taskbarAutoHide 
+            ? { paddingBottom: `${TASKBAR_HEIGHTS[taskbarSize]}px` } 
+            : {}),
+        }}
+      >
+        {/* Navigation - Dock or Taskbar based on user preference */}
+        {navigationMode === 'dock' ? (
+          <DashboardDock
+            presets={presets}
+            activePresetIndex={activePresetIndex}
+            onWidgetsClick={() => {
+              setMenuOpen(true);
+              updateTempLayout();
+            }}
+            onPresetManagerClick={() => setPresetManagerOpen(true)}
+            onPresetClick={handlePresetClick}
+            onPresetSave={handlePresetSave}
+            onSettingsClick={(view?: SettingsViewType) => {
+              setSettingsView(view || 'account');
+              setSettingsOpen(true);
+            }}
+            onVisibilityChange={setIsDockVisible}
+          />
+        ) : (
+          <DashboardTaskbar
+            presets={presets}
+            activePresetIndex={activePresetIndex}
+            onWidgetsClick={() => {
+              setMenuOpen(true);
+              updateTempLayout();
+            }}
+            onPresetManagerClick={() => setPresetManagerOpen(true)}
+            onPresetClick={handlePresetClick}
+            onPresetSave={handlePresetSave}
+            onSettingsClick={(view?: SettingsViewType) => {
+              setSettingsView(view || 'account');
+              setSettingsOpen(true);
+            }}
+            onVisibilityChange={setIsDockVisible}
+          />
+        )}
 
         {/* Preset Manager */}
         <PresetManagerMenu

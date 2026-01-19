@@ -258,6 +258,66 @@ export const DOCK_SETTINGS = {
 } as const;
 
 // ============================================
+// NAVIGATION SETTINGS
+// ============================================
+export const NAVIGATION_SETTINGS = {
+    mode: {
+        key: 'navigation.mode',
+        default: 'dock' as const,
+        options: ['dock', 'taskbar'] as const,
+        label: 'Navigation Mode',
+        description: 'Choose between macOS-style dock or Linux-style taskbar',
+    },
+    taskbarPosition: {
+        key: 'navigation.taskbarPosition',
+        default: 'bottom' as const,
+        options: ['top', 'bottom'] as const,
+        label: 'Taskbar Position',
+        description: 'Position of the taskbar on screen',
+    },
+    taskbarShowLabels: {
+        key: 'navigation.taskbarShowLabels',
+        default: true,
+        label: 'Show Labels',
+        description: 'Display text labels next to taskbar icons',
+    },
+    taskbarSize: {
+        key: 'navigation.taskbarSize',
+        default: 'medium' as const,
+        options: ['small', 'medium', 'large'] as const,
+        label: 'Taskbar Size',
+        description: 'Height of the taskbar',
+    },
+    taskbarAutoHide: {
+        key: 'navigation.taskbarAutoHide',
+        default: false,
+        label: 'Auto-hide Taskbar',
+        description: 'Hide taskbar until mouse approaches edge',
+    },
+    taskbarOpacity: {
+        key: 'navigation.taskbarOpacity',
+        default: 95,
+        min: 50,
+        max: 100,
+        step: 5,
+        label: 'Taskbar Opacity',
+        description: 'Background transparency of the taskbar',
+    },
+    taskbarShowClock: {
+        key: 'navigation.taskbarShowClock',
+        default: true,
+        label: 'Show Clock',
+        description: 'Display time in the taskbar',
+    },
+    taskbarShowDate: {
+        key: 'navigation.taskbarShowDate',
+        default: false,
+        label: 'Show Date',
+        description: 'Display date next to the clock',
+    },
+} as const;
+
+// ============================================
 // DRAG HANDLE SETTINGS
 // ============================================
 export const DRAG_HANDLE_SETTINGS = {
@@ -475,6 +535,7 @@ export const ALL_SETTINGS = {
     ...DASHBOARD_SETTINGS,
     ...GRID_SETTINGS,
     ...DOCK_SETTINGS,
+    ...NAVIGATION_SETTINGS,
     ...DRAG_HANDLE_SETTINGS,
     ...WIDGET_SETTINGS,
     ...NOTIFICATION_SETTINGS,
@@ -492,6 +553,9 @@ export type ClockFormat = '12h' | '24h';
 export type FontSize = 'small' | 'medium' | 'large';
 export type ToastPosition = typeof NOTIFICATION_SETTINGS.toastPosition.options[number];
 export type NumberFormat = typeof DATA_SETTINGS.numberFormat.options[number];
+export type NavigationMode = typeof NAVIGATION_SETTINGS.mode.options[number];
+export type TaskbarPosition = typeof NAVIGATION_SETTINGS.taskbarPosition.options[number];
+export type TaskbarSize = typeof NAVIGATION_SETTINGS.taskbarSize.options[number];
 
 // Settings categories for UI organization
 export const SETTINGS_CATEGORIES = [
@@ -524,6 +588,12 @@ export const SETTINGS_CATEGORIES = [
         label: 'Dock',
         description: 'Dock visibility and behavior',
         settings: DOCK_SETTINGS,
+    },
+    {
+        id: 'navigation',
+        label: 'Navigation',
+        description: 'Navigation bar style and behavior',
+        settings: NAVIGATION_SETTINGS,
     },
     {
         id: 'widgets',

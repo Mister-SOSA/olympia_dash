@@ -15,6 +15,7 @@ import {
     MdDock,
     MdRefresh,
     MdGridOn,
+    MdViewCompact,
 } from "react-icons/md";
 
 // =============================================================================
@@ -25,6 +26,7 @@ export type SettingsView =
     | 'account'
     | 'appearance'
     | 'layout'
+    | 'navigation'
     | 'dock'
     | 'widgets'
     | 'regional'
@@ -49,6 +51,7 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
     { id: 'account', icon: MdPerson, label: 'Account' },
     { id: 'appearance', icon: MdPalette, label: 'Appearance' },
     { id: 'layout', icon: MdGridOn, label: 'Layout & Grid', badge: 'Beta' },
+    { id: 'navigation', icon: MdViewCompact, label: 'Navigation', badge: 'New' },
     { id: 'dock', icon: MdDock, label: 'Dock' },
     { id: 'widgets', icon: MdTune, label: 'Widgets' },
     { id: 'regional', icon: MdSchedule, label: 'Regional' },

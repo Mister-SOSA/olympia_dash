@@ -18,6 +18,7 @@ import {
     DASHBOARD_SETTINGS,
     GRID_SETTINGS,
     DOCK_SETTINGS,
+    NAVIGATION_SETTINGS,
     DRAG_HANDLE_SETTINGS,
     WIDGET_SETTINGS,
     NOTIFICATION_SETTINGS,
@@ -30,6 +31,9 @@ import {
     type FontSize,
     type ToastPosition,
     type NumberFormat,
+    type NavigationMode,
+    type TaskbarPosition,
+    type TaskbarSize,
 } from '@/constants/settings';
 
 // Type definitions for all settings
@@ -72,6 +76,16 @@ export interface UserSettings {
     dockShowCreatePreset: boolean;
     dockShowAutoCycleToggle: boolean;
     dockShowEmptyDockHint: boolean;
+
+    // Navigation
+    navigationMode: NavigationMode;
+    taskbarPosition: TaskbarPosition;
+    taskbarShowLabels: boolean;
+    taskbarSize: TaskbarSize;
+    taskbarAutoHide: boolean;
+    taskbarOpacity: number;
+    taskbarShowClock: boolean;
+    taskbarShowDate: boolean;
 
     // Drag Handle
     dragHandleAlwaysShow: boolean;
@@ -151,6 +165,16 @@ const DEFAULT_SETTINGS: UserSettings = {
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.default,
     dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.default,
 
+    // Navigation
+    navigationMode: NAVIGATION_SETTINGS.mode.default,
+    taskbarPosition: NAVIGATION_SETTINGS.taskbarPosition.default,
+    taskbarShowLabels: NAVIGATION_SETTINGS.taskbarShowLabels.default,
+    taskbarSize: NAVIGATION_SETTINGS.taskbarSize.default,
+    taskbarAutoHide: NAVIGATION_SETTINGS.taskbarAutoHide.default,
+    taskbarOpacity: NAVIGATION_SETTINGS.taskbarOpacity.default,
+    taskbarShowClock: NAVIGATION_SETTINGS.taskbarShowClock.default,
+    taskbarShowDate: NAVIGATION_SETTINGS.taskbarShowDate.default,
+
     // Drag Handle
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.default,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.default,
@@ -223,6 +247,15 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.key,
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.key,
     dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.key,
+
+    navigationMode: NAVIGATION_SETTINGS.mode.key,
+    taskbarPosition: NAVIGATION_SETTINGS.taskbarPosition.key,
+    taskbarShowLabels: NAVIGATION_SETTINGS.taskbarShowLabels.key,
+    taskbarSize: NAVIGATION_SETTINGS.taskbarSize.key,
+    taskbarAutoHide: NAVIGATION_SETTINGS.taskbarAutoHide.key,
+    taskbarOpacity: NAVIGATION_SETTINGS.taskbarOpacity.key,
+    taskbarShowClock: NAVIGATION_SETTINGS.taskbarShowClock.key,
+    taskbarShowDate: NAVIGATION_SETTINGS.taskbarShowDate.key,
 
     dragHandleAlwaysShow: DRAG_HANDLE_SETTINGS.alwaysShow.key,
     showResizeHandles: DRAG_HANDLE_SETTINGS.showResizeHandles.key,
