@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { MdGroup, MdPeople, MdAdd, MdEdit, MdDelete, MdSave, MdCancel, MdRemoveCircle, MdCheckCircle } from 'react-icons/md';
+import { MdGroup, MdPeople, MdAdd, MdEdit, MdDelete, MdSave, MdCancel, MdRemoveCircle, MdCheckCircle, MdArrowBack } from 'react-icons/md';
 import type { UserGroup } from '@/types';
 
 interface GroupWithMembers extends UserGroup {
@@ -21,6 +21,7 @@ export function GroupsPanel() {
     const [selectedGroup, setSelectedGroup] = useState<GroupWithMembers | null>(null);
     const [groupMembers, setGroupMembers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
 
     // Create/Edit State
     const [isCreating, setIsCreating] = useState(false);
@@ -188,9 +189,9 @@ export function GroupsPanel() {
     );
 
     return (
-        <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
-            {/* Groups List - Left Side */}
-            <div className="col-span-4 flex flex-col h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-[calc(100vh-12rem)]">
+            {/* Groups List - Left Side (Hidden on mobile when detail view is active) */}
+            <div className={`lg:col-span-4 flex flex-col h-full ${mobileView === 'detail' ? 'hidden lg:flex' : 'flex'}`}>
                 <Card className="bg-ui-bg-secondary border-ui-border-primary flex flex-col h-full shadow-sm">
                     <CardHeader className="border-b border-ui-border-primary pb-4 flex-shrink-0">
                         <div className="flex justify-between items-center">
@@ -265,6 +266,7 @@ export function GroupsPanel() {
                                         setSelectedGroup(group);
                                         setIsCreating(false);
                                         setIsEditing(false);
+                                        setMobileView('detail');
                                     }}
                                     className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedGroup?.id === group.id
                                         ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
@@ -305,32 +307,38 @@ export function GroupsPanel() {
                 </Card>
             </div>
 
-            {/* Group Details - Right Side */}
-            <div className="col-span-8 flex flex-col h-full">
+            {/* Group Details - Right Side (Full width on mobile when active) */}
+            <div className={`lg:col-span-8 flex flex-col h-full ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
                 <Card className="bg-ui-bg-secondary border-ui-border-primary flex flex-col h-full shadow-sm">
                     <CardHeader className="border-b border-ui-border-primary pb-4 flex-shrink-0">
                         {selectedGroup && !isEditing ? (
-                            <div className="flex justify-between items-start">
-                                <div className="flex items-center space-x-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                <div className="flex items-center space-x-4 w-full sm:w-auto">
+                                    <button
+                                        onClick={() => setMobileView('list')}
+                                        className="lg:hidden p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-secondary"
+                                    >
+                                        <MdArrowBack className="h-5 w-5" />
+                                    </button>
                                     <div
-                                        className="w-10 h-10 rounded-lg shadow-sm flex items-center justify-center text-white font-bold text-lg"
+                                        className="w-10 h-10 rounded-lg shadow-sm flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
                                         style={{ backgroundColor: selectedGroup.color }}
                                     >
                                         {selectedGroup.name[0].toUpperCase()}
                                     </div>
-                                    <div>
-                                        <CardTitle className="text-ui-text-primary text-xl">{selectedGroup.name}</CardTitle>
-                                        <CardDescription className="text-ui-text-secondary mt-1">
+                                    <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-ui-text-primary text-lg sm:text-xl truncate">{selectedGroup.name}</CardTitle>
+                                        <CardDescription className="text-ui-text-secondary mt-1 truncate">
                                             {selectedGroup.description || 'No description provided'}
                                         </CardDescription>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 w-full sm:w-auto pl-12 lg:pl-0">
                                     <Button
                                         onClick={startEdit}
                                         size="sm"
                                         variant="outline"
-                                        className="border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
+                                        className="flex-1 sm:flex-none border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary"
                                     >
                                         <MdEdit className="mr-1" /> Edit
                                     </Button>
@@ -338,7 +346,7 @@ export function GroupsPanel() {
                                         onClick={() => handleDeleteGroup(selectedGroup.id)}
                                         size="sm"
                                         variant="outline"
-                                        className="border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg"
+                                        className="flex-1 sm:flex-none border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg"
                                     >
                                         <MdDelete className="mr-1" /> Delete
                                     </Button>
@@ -346,7 +354,19 @@ export function GroupsPanel() {
                             </div>
                         ) : isEditing && selectedGroup ? (
                             <div className="space-y-4 bg-ui-bg-tertiary p-4 rounded-lg border border-ui-border-primary">
-                                <div className="flex gap-4">
+                                <div className="flex items-center gap-2 mb-2 lg:hidden">
+                                    <button
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setMobileView('list');
+                                        }}
+                                        className="p-2 rounded-lg hover:bg-ui-bg-quaternary text-ui-text-secondary"
+                                    >
+                                        <MdArrowBack className="h-5 w-5" />
+                                    </button>
+                                    <span className="text-sm font-medium text-ui-text-primary">Edit Group</span>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4">
                                     <div className="flex-shrink-0">
                                         <Label className="text-xs text-ui-text-secondary mb-1 block">Color</Label>
                                         <Input
@@ -405,9 +425,9 @@ export function GroupsPanel() {
 
                     <CardContent className="flex-1 overflow-hidden p-0">
                         {selectedGroup ? (
-                            <div className="grid grid-cols-2 gap-0 h-full divide-x divide-ui-border-primary">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 h-full md:divide-x divide-ui-border-primary">
                                 {/* Current Members */}
-                                <div className="flex flex-col h-full overflow-hidden">
+                                <div className="flex flex-col h-full overflow-hidden border-b md:border-b-0 border-ui-border-primary">
                                     <div className="p-4 border-b border-ui-border-primary bg-ui-bg-tertiary/30">
                                         <h4 className="font-semibold text-ui-text-primary flex items-center text-sm">
                                             <MdPeople className="mr-2 text-ui-accent-primary" />
@@ -417,7 +437,7 @@ export function GroupsPanel() {
                                             </span>
                                         </h4>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[40vh] md:max-h-none">
                                         {groupMembers.map(member => (
                                             <div
                                                 key={member.id}
@@ -465,7 +485,7 @@ export function GroupsPanel() {
                                             <MdPeople className="absolute left-3 top-2.5 text-ui-text-muted" />
                                         </div>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-[40vh] md:max-h-none">
                                         {availableUsers.map(user => (
                                             <div
                                                 key={user.id}

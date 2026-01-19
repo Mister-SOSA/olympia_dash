@@ -41,6 +41,7 @@ export function DatabasePanel() {
     const [sortBy, setSortBy] = useState<string | null>(null);
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [currentPage, setCurrentPage] = useState(1);
+    const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
 
     useEffect(() => {
         loadTables();
@@ -167,10 +168,10 @@ export function DatabasePanel() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
                 {/* Tables List */}
-                <div className="col-span-3">
-                    <Card className="bg-ui-bg-secondary border-ui-border-primary h-[calc(100vh-280px)] overflow-hidden flex flex-col">
+                <div className={`lg:col-span-3 ${mobileView === 'detail' ? 'hidden lg:block' : 'block'}`}>
+                    <Card className="bg-ui-bg-secondary border-ui-border-primary h-[50vh] lg:h-[calc(100vh-280px)] overflow-hidden flex flex-col">
                         <CardHeader className="border-b border-ui-border-primary py-3 flex-shrink-0">
                             <CardTitle className="text-sm font-medium text-ui-text-primary">
                                 Tables ({tables.length})
@@ -181,7 +182,10 @@ export function DatabasePanel() {
                                 {tables.map((table) => (
                                     <button
                                         key={table.name}
-                                        onClick={() => setSelectedTable(table.name)}
+                                        onClick={() => {
+                                            setSelectedTable(table.name);
+                                            setMobileView('detail');
+                                        }}
                                         className={`w-full px-4 py-3 text-left transition-colors ${selectedTable === table.name
                                             ? 'bg-ui-accent-primary text-white'
                                             : 'hover:bg-ui-bg-tertiary text-ui-text-primary'
@@ -208,16 +212,19 @@ export function DatabasePanel() {
                 </div>
 
                 {/* Table Data View */}
-                <div className="col-span-9">
+                <div className={`lg:col-span-9 ${mobileView === 'list' ? 'hidden lg:block' : 'block'}`}>
                     {selectedTable ? (
-                        <Card className="bg-ui-bg-secondary border-ui-border-primary h-[calc(100vh-280px)] overflow-hidden flex flex-col">
+                        <Card className="bg-ui-bg-secondary border-ui-border-primary h-[70vh] lg:h-[calc(100vh-280px)] overflow-hidden flex flex-col">
                             <CardHeader className="border-b border-ui-border-primary py-3 flex-shrink-0">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setSelectedTable(null)}
+                                            onClick={() => {
+                                                setSelectedTable(null);
+                                                setMobileView('list');
+                                            }}
                                             className="p-1 h-auto text-ui-text-secondary hover:text-ui-text-primary"
                                         >
                                             <MdArrowBack className="h-5 w-5" />
@@ -232,7 +239,7 @@ export function DatabasePanel() {
                                         </div>
                                     </div>
                                     {tableData && (
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 ml-10 sm:ml-0">
                                             <span className="text-sm text-ui-text-muted">
                                                 Page {tableData.pagination.page} of {tableData.pagination.total_pages}
                                             </span>
@@ -328,12 +335,12 @@ export function DatabasePanel() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="bg-ui-bg-secondary border-ui-border-primary h-[calc(100vh-280px)]">
-                            <CardContent className="flex flex-col items-center justify-center h-full">
-                                <MdStorage className="h-16 w-16 text-ui-text-muted mb-4" />
-                                <h3 className="text-lg font-medium text-ui-text-primary mb-2">Select a Table</h3>
+                        <Card className="bg-ui-bg-secondary border-ui-border-primary h-[50vh] lg:h-[calc(100vh-280px)]">
+                            <CardContent className="flex flex-col items-center justify-center h-full p-4">
+                                <MdStorage className="h-12 w-12 lg:h-16 lg:w-16 text-ui-text-muted mb-4" />
+                                <h3 className="text-base lg:text-lg font-medium text-ui-text-primary mb-2 text-center">Select a Table</h3>
                                 <p className="text-sm text-ui-text-muted text-center max-w-sm">
-                                    Choose a table from the list on the left to browse its contents.
+                                    Choose a table from the list to browse its contents.
                                     Sensitive data like passwords are automatically masked.
                                 </p>
                             </CardContent>

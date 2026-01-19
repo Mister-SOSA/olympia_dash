@@ -14,7 +14,8 @@ import { ConfirmModal } from '@/components/ui/modal';
 import {
   MdPeople, MdCheckCircle, MdAdminPanelSettings, MdDevices,
   MdHistory, MdArrowBack, MdSettings, MdStorage, MdHealthAndSafety,
-  MdFileDownload, MdCleaningServices, MdGroups, MdSecurity, MdPerson, MdBarChart, MdDescription
+  MdFileDownload, MdCleaningServices, MdGroups, MdSecurity, MdPerson, MdBarChart, MdDescription,
+  MdMenu, MdClose
 } from 'react-icons/md';
 import { IoTime } from 'react-icons/io5';
 import { toast } from 'sonner';
@@ -100,6 +101,7 @@ export default function AdminPage() {
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'logs' | 'devices' | 'groups' | 'permissions' | 'activity' | 'analytics' | 'database'>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
@@ -566,8 +568,37 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen bg-ui-bg-primary overflow-hidden">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-ui-bg-secondary border-b border-ui-border-primary px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-primary transition-colors"
+          aria-label="Open menu"
+        >
+          <MdMenu className="w-6 h-6" />
+        </button>
+        <h1 className="text-lg font-bold text-ui-text-primary flex items-center gap-2">
+          <MdAdminPanelSettings className="text-ui-accent-primary" />
+          Admin
+        </h1>
+        <div className="w-10" /> {/* Spacer for centering */}
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className="w-64 bg-ui-bg-secondary border-r border-ui-border-primary flex-shrink-0 flex flex-col">
+      <aside className={`
+        fixed lg:relative inset-y-0 left-0 z-50
+        w-72 lg:w-64 bg-ui-bg-secondary border-r border-ui-border-primary flex-shrink-0 flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         <div className="p-6 border-b border-ui-border-primary">
           <div className="flex items-center justify-between">
             <div>
@@ -577,6 +608,14 @@ export default function AdminPage() {
               </h1>
               <p className="text-xs text-ui-text-secondary mt-1">System Management</p>
             </div>
+            {/* Mobile close button */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-muted transition-colors"
+              aria-label="Close menu"
+            >
+              <MdClose className="w-5 h-5" />
+            </button>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -606,7 +645,10 @@ export default function AdminPage() {
           {tabs.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as any);
+                setSidebarOpen(false); // Close on mobile
+              }}
               className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${activeTab === tab.id
                 ? 'bg-ui-accent-primary text-white shadow-lg shadow-ui-accent-primary/20'
                 : 'text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary'
@@ -631,15 +673,15 @@ export default function AdminPage() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-ui-bg-primary p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto bg-ui-bg-primary p-4 pt-20 lg:p-8 lg:pt-8">
+        <div className="max-w-6xl mx-auto space-y-4 lg:space-y-6">
 
           {/* Header for Mobile/Context */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-ui-text-primary">
+          <div className="mb-4 lg:mb-8">
+            <h2 className="text-xl lg:text-2xl font-bold text-ui-text-primary">
               {tabs.find(t => t.id === activeTab)?.label}
             </h2>
-            <p className="text-ui-text-secondary">
+            <p className="text-sm lg:text-base text-ui-text-secondary">
               {activeTab === 'overview' && 'System health and performance metrics'}
               {activeTab === 'analytics' && 'User behavior insights and trends'}
               {activeTab === 'users' && 'Manage user accounts and access'}

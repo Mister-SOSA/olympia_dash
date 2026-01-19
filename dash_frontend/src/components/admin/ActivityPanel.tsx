@@ -393,74 +393,116 @@ export function ActivityPanel() {
                             <p className="text-sm mt-2">Try adjusting your filters</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-ui-bg-tertiary sticky top-0 z-10">
-                                    <tr>
-                                        <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
-                                            <div className="flex items-center gap-2">
-                                                <MdCalendarToday className="text-ui-text-muted" />
-                                                Time
-                                            </div>
-                                        </th>
-                                        <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
-                                            Action
-                                        </th>
-                                        <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
-                                            <div className="flex items-center gap-2">
-                                                <MdPerson className="text-ui-text-muted" />
-                                                User
-                                            </div>
-                                        </th>
-                                        <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
-                                            Details
-                                        </th>
-                                        <th className="text-right p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
-                                            IP Address
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-ui-border-primary">
-                                    {filteredLogs.map((log, index) => (
-                                        <tr
-                                            key={log.id}
-                                            className="hover:bg-ui-bg-tertiary/50 transition-colors"
-                                            style={{ animationDelay: `${index * 20}ms` }}
-                                        >
-                                            <td className="p-3 text-ui-text-muted text-xs whitespace-nowrap font-mono">
-                                                {formatDateTime(log.created_at)}
-                                            </td>
-                                            <td className="p-3">
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-ui-bg-tertiary sticky top-0 z-10">
+                                        <tr>
+                                            <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
                                                 <div className="flex items-center gap-2">
-                                                    {getActionIcon(log.action)}
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium border ${getActionStyle(log.action)}`}>
-                                                        {log.action}
-                                                    </span>
+                                                    <MdCalendarToday className="text-ui-text-muted" />
+                                                    Time
                                                 </div>
-                                            </td>
-                                            <td className="p-3 text-ui-text-secondary text-sm">
-                                                {log.user_id ? (
-                                                    <div>
-                                                        <div className="font-medium text-ui-text-primary">{log.user_name || `User #${log.user_id}`}</div>
-                                                        <div className="text-xs text-ui-text-muted">{log.user_email}</div>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-ui-text-muted italic">System</span>
-                                                )}
-                                            </td>
-                                            <td className="p-3 text-ui-text-secondary text-sm max-w-md">
-                                                <div className="truncate" title={log.details || ''}>
-                                                    {log.details || '-'}
+                                            </th>
+                                            <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
+                                                Action
+                                            </th>
+                                            <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
+                                                <div className="flex items-center gap-2">
+                                                    <MdPerson className="text-ui-text-muted" />
+                                                    User
                                                 </div>
-                                            </td>
-                                            <td className="p-3 text-right text-ui-text-muted text-xs font-mono">
-                                                {log.ip_address || '-'}
-                                            </td>
+                                            </th>
+                                            <th className="text-left p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
+                                                Details
+                                            </th>
+                                            <th className="text-right p-3 text-ui-text-secondary font-semibold text-xs uppercase tracking-wider">
+                                                IP Address
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-ui-border-primary">
+                                        {filteredLogs.map((log, index) => (
+                                            <tr
+                                                key={log.id}
+                                                className="hover:bg-ui-bg-tertiary/50 transition-colors"
+                                                style={{ animationDelay: `${index * 20}ms` }}
+                                            >
+                                                <td className="p-3 text-ui-text-muted text-xs whitespace-nowrap font-mono">
+                                                    {formatDateTime(log.created_at)}
+                                                </td>
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        {getActionIcon(log.action)}
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium border ${getActionStyle(log.action)}`}>
+                                                            {log.action}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3 text-ui-text-secondary text-sm">
+                                                    {log.user_id ? (
+                                                        <div>
+                                                            <div className="font-medium text-ui-text-primary">{log.user_name || `User #${log.user_id}`}</div>
+                                                            <div className="text-xs text-ui-text-muted">{log.user_email}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-ui-text-muted italic">System</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-ui-text-secondary text-sm max-w-md">
+                                                    <div className="truncate" title={log.details || ''}>
+                                                        {log.details || '-'}
+                                                    </div>
+                                                </td>
+                                                <td className="p-3 text-right text-ui-text-muted text-xs font-mono">
+                                                    {log.ip_address || '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="md:hidden divide-y divide-ui-border-primary">
+                                {filteredLogs.map((log) => (
+                                    <div key={log.id} className="p-4 space-y-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                {getActionIcon(log.action)}
+                                                <span className={`px-2 py-1 rounded text-xs font-medium border ${getActionStyle(log.action)}`}>
+                                                    {log.action}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-ui-text-muted font-mono whitespace-nowrap">
+                                                {formatDateTime(log.created_at)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <MdPerson className="text-ui-text-muted flex-shrink-0" />
+                                            {log.user_id ? (
+                                                <span className="text-ui-text-primary truncate">
+                                                    {log.user_name || log.user_email || `User #${log.user_id}`}
+                                                </span>
+                                            ) : (
+                                                <span className="text-ui-text-muted italic">System</span>
+                                            )}
+                                        </div>
+                                        {log.details && (
+                                            <p className="text-sm text-ui-text-secondary line-clamp-2">
+                                                {log.details}
+                                            </p>
+                                        )}
+                                        {log.ip_address && (
+                                            <div className="text-xs text-ui-text-muted font-mono">
+                                                IP: {log.ip_address}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>

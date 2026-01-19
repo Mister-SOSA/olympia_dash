@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { MdPerson, MdGroup, MdSearch, MdSecurity, MdAllInclusive } from 'react-icons/md';
+import { MdPerson, MdGroup, MdSearch, MdSecurity, MdAllInclusive, MdArrowBack } from 'react-icons/md';
 import { WIDGETS } from '@/constants/widgets';
 import type { UserGroup, WidgetPermission } from '@/types';
 
@@ -28,6 +28,7 @@ export function PermissionsPanel() {
   const [allGroups, setAllGroups] = useState<UserGroup[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
 
   const [userPermissions, setUserPermissions] = useState<WidgetPermission[]>([]);
   const [groupPermissions, setGroupPermissions] = useState<WidgetPermission[]>([]);
@@ -195,9 +196,9 @@ export function PermissionsPanel() {
   const listItems = mode === 'user' ? allUsers : allGroups;
 
   return (
-    <div className="grid grid-cols-12 gap-6 h-[calc(100vh-12rem)]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 h-[calc(100vh-12rem)]">
       {/* Entity Selection - Left Side */}
-      <div className="col-span-4 flex flex-col h-full">
+      <div className={`lg:col-span-4 flex flex-col h-full ${mobileView === 'detail' ? 'hidden lg:flex' : 'flex'}`}>
         <Card className="bg-ui-bg-secondary border-ui-border-primary flex flex-col h-full shadow-sm">
           <CardHeader className="border-b border-ui-border-primary pb-4 flex-shrink-0">
             <CardTitle className="text-ui-text-primary text-lg">Select Target</CardTitle>
@@ -246,7 +247,10 @@ export function PermissionsPanel() {
                 allUsers.map(user => (
                   <div
                     key={user.id}
-                    onClick={() => setSelectedUserId(user.id)}
+                    onClick={() => {
+                      setSelectedUserId(user.id);
+                      setMobileView('detail');
+                    }}
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedUserId === user.id
                       ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
                       : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
@@ -269,7 +273,10 @@ export function PermissionsPanel() {
                 allGroups.map(group => (
                   <div
                     key={group.id}
-                    onClick={() => setSelectedGroupId(group.id)}
+                    onClick={() => {
+                      setSelectedGroupId(group.id);
+                      setMobileView('detail');
+                    }}
                     className={`p-3 rounded-lg cursor-pointer transition-all border ${selectedGroupId === group.id
                       ? 'bg-ui-accent-primary/10 border-ui-accent-primary shadow-sm'
                       : 'bg-ui-bg-tertiary border-transparent hover:border-ui-border-primary hover:bg-ui-bg-quaternary'
@@ -305,28 +312,36 @@ export function PermissionsPanel() {
       </div>
 
       {/* Widget Permissions - Right Side */}
-      <div className="col-span-8 flex flex-col h-full">
+      <div className={`lg:col-span-8 flex flex-col h-full ${mobileView === 'list' ? 'hidden lg:flex' : 'flex'}`}>
         <Card className="bg-ui-bg-secondary border-ui-border-primary flex flex-col h-full shadow-sm">
           <CardHeader className="border-b border-ui-border-primary pb-4 flex-shrink-0">
             {selectedEntity ? (
               <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <CardTitle className="text-ui-text-primary text-xl flex items-center">
-                      <MdSecurity className="mr-2 text-ui-accent-primary" />
-                      Permissions: {mode === 'user' ? (selectedEntity as User).name : (selectedEntity as UserGroup).name}
-                    </CardTitle>
-                    <CardDescription className="text-ui-text-secondary mt-1">
-                      Manage access levels for individual widgets
-                    </CardDescription>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => setMobileView('list')}
+                      className="lg:hidden p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-secondary"
+                    >
+                      <MdArrowBack className="h-5 w-5" />
+                    </button>
+                    <div>
+                      <CardTitle className="text-ui-text-primary text-lg sm:text-xl flex items-center">
+                        <MdSecurity className="mr-2 text-ui-accent-primary hidden sm:inline" />
+                        <span className="truncate">Permissions: {mode === 'user' ? (selectedEntity as User).name : (selectedEntity as UserGroup).name}</span>
+                      </CardTitle>
+                      <CardDescription className="text-ui-text-secondary mt-1">
+                        Manage access levels for individual widgets
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div className="text-xs text-ui-text-muted bg-ui-bg-tertiary px-3 py-1 rounded-full border border-ui-border-primary">
+                  <div className="text-xs text-ui-text-muted bg-ui-bg-tertiary px-3 py-1 rounded-full border border-ui-border-primary ml-11 lg:ml-0">
                     {widgetRows.filter(r => r.currentLevel !== 'none').length} active permissions
                   </div>
                 </div>
 
                 {/* Filters */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
                     <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-muted" />
                     <Input
@@ -336,7 +351,7 @@ export function PermissionsPanel() {
                       className="pl-9 bg-ui-bg-tertiary border-ui-border-primary focus:ring-ui-accent-primary h-9 text-sm"
                     />
                   </div>
-                  <div className="w-48">
+                  <div className="w-full sm:w-48">
                     <Select
                       value={categoryFilter}
                       onChange={(val) => setCategoryFilter(val)}
@@ -351,21 +366,21 @@ export function PermissionsPanel() {
 
                 {/* All Widgets Quick Toggle */}
                 <div className="mt-4 p-3 bg-ui-bg-tertiary rounded-lg border border-ui-border-primary">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <MdAllInclusive className="text-ui-accent-secondary-text" />
+                      <MdAllInclusive className="text-ui-accent-secondary-text flex-shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-ui-text-primary">All Widgets Access</p>
                         <p className="text-xs text-ui-text-muted">Grant access to all current and future widgets</p>
                       </div>
                     </div>
-                    <div className="flex bg-ui-bg-secondary rounded-md p-1 border border-ui-border-primary">
+                    <div className="flex bg-ui-bg-secondary rounded-md p-1 border border-ui-border-primary w-full sm:w-auto">
                       {(['none', 'view', 'edit', 'admin'] as AccessLevel[]).map(level => (
                         <button
                           key={level}
                           onClick={() => handleAllWidgetsToggle(level)}
                           disabled={saving === '*'}
-                          className={`px-3 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide ${hasAllWidgetsPermission() === level
+                          className={`flex-1 sm:flex-none px-3 text-[10px] font-medium py-1.5 rounded transition-all duration-200 uppercase tracking-wide ${hasAllWidgetsPermission() === level
                             ? level === 'none'
                               ? 'bg-ui-text-muted text-white shadow-sm'
                               : level === 'view'
@@ -396,8 +411,8 @@ export function PermissionsPanel() {
           <CardContent className="flex-1 overflow-hidden p-0 bg-ui-bg-tertiary/5">
             {selectedEntity ? (
               <div className="flex flex-col h-full">
-                {/* Header Row */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-ui-border-primary bg-ui-bg-tertiary/50 text-xs font-semibold text-ui-text-secondary uppercase tracking-wider">
+                {/* Header Row - Desktop */}
+                <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 border-b border-ui-border-primary bg-ui-bg-tertiary/50 text-xs font-semibold text-ui-text-secondary uppercase tracking-wider">
                   <div className="col-span-5">Widget</div>
                   <div className="col-span-2">Category</div>
                   <div className="col-span-5 text-center">Access Level</div>
@@ -408,18 +423,18 @@ export function PermissionsPanel() {
                   {filteredRows.map(row => (
                     <div
                       key={row.widgetId}
-                      className="grid grid-cols-12 gap-4 items-center p-4 bg-ui-bg-secondary rounded-lg border border-ui-border-primary hover:border-ui-accent-primary/30 transition-all shadow-sm"
+                      className="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 md:items-center p-4 bg-ui-bg-secondary rounded-lg border border-ui-border-primary hover:border-ui-accent-primary/30 transition-all shadow-sm"
                     >
-                      <div className="col-span-5">
+                      <div className="md:col-span-5">
                         <p className="font-medium text-ui-text-primary text-sm">{row.widgetTitle}</p>
                         <p className="text-xs text-ui-text-muted font-mono mt-0.5">{row.widgetId}</p>
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <span className="text-[10px] px-2 py-1 rounded-full bg-ui-bg-tertiary text-ui-text-secondary border border-ui-border-primary uppercase tracking-wider">
                           {row.widgetCategory}
                         </span>
                       </div>
-                      <div className="col-span-5">
+                      <div className="md:col-span-5">
                         <div className="flex bg-ui-bg-tertiary rounded-md p-1 border border-ui-border-primary">
                           {(['none', 'view', 'edit', 'admin'] as AccessLevel[]).map(level => (
                             <button

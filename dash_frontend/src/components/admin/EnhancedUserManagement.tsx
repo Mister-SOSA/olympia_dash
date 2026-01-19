@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
     MdPerson, MdCheckCircle, MdCleaningServices, MdSearch,
-    MdFilterList, MdDownload, MdUpload, MdPersonAdd, MdVpnKey
+    MdFilterList, MdDownload, MdUpload, MdPersonAdd, MdVpnKey,
+    MdMoreVert, MdExpandMore, MdExpandLess
 } from 'react-icons/md';
 import { ExtendedUser } from '@/hooks/useAdminData';
 import { formatDate } from '@/utils/dateUtils';
@@ -31,6 +32,7 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'email' | 'role' | 'last_active'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
 
     // Filtering and sorting logic
     const filteredUsers = useMemo(() => {
@@ -316,8 +318,8 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
                     </div>
 
                     {/* Search and Filters */}
-                    <div className="flex gap-3 flex-wrap">
-                        <div className="relative flex-1 min-w-[250px]">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
                             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-muted" />
                             <Input
                                 type="text"
@@ -327,40 +329,42 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
                                 className="pl-10 bg-ui-bg-tertiary border-ui-border-primary"
                             />
                         </div>
-                        <Select
-                            value={filterRole}
-                            onChange={(val) => setFilterRole(val as any)}
-                            options={[
-                                { value: 'all', label: 'All Roles' },
-                                { value: 'user', label: 'Users' },
-                                { value: 'admin', label: 'Admins' },
-                            ]}
-                            className="w-32"
-                        />
-                        <Select
-                            value={filterStatus}
-                            onChange={(val) => setFilterStatus(val as any)}
-                            options={[
-                                { value: 'all', label: 'All Status' },
-                                { value: 'active', label: 'Active' },
-                                { value: 'inactive', label: 'Inactive' },
-                            ]}
-                            className="w-32"
-                        />
+                        <div className="flex gap-2">
+                            <Select
+                                value={filterRole}
+                                onChange={(val) => setFilterRole(val as any)}
+                                options={[
+                                    { value: 'all', label: 'All Roles' },
+                                    { value: 'user', label: 'Users' },
+                                    { value: 'admin', label: 'Admins' },
+                                ]}
+                                className="flex-1 sm:w-32"
+                            />
+                            <Select
+                                value={filterStatus}
+                                onChange={(val) => setFilterStatus(val as any)}
+                                options={[
+                                    { value: 'all', label: 'All Status' },
+                                    { value: 'active', label: 'Active' },
+                                    { value: 'inactive', label: 'Inactive' },
+                                ]}
+                                className="flex-1 sm:w-32"
+                            />
+                        </div>
                     </div>
                 </div>
             </CardHeader>
 
             {/* Bulk Actions Bar */}
             <div className="bg-ui-bg-tertiary/50 border-b border-ui-border-primary px-4 py-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
-                        <span className={`font-semibold flex items-center gap-2 transition-colors ${selectedUsers.size > 0 ? 'text-ui-accent-primary' : 'text-ui-text-muted'
+                        <span className={`font-semibold flex items-center gap-2 transition-colors text-sm ${selectedUsers.size > 0 ? 'text-ui-accent-primary' : 'text-ui-text-muted'
                             }`}>
                             <MdCheckCircle className={selectedUsers.size > 0 ? 'text-ui-accent-primary' : 'text-ui-text-muted'} />
                             {selectedUsers.size > 0
-                                ? `${selectedUsers.size} user${selectedUsers.size !== 1 ? 's' : ''} selected`
-                                : 'No users selected'
+                                ? `${selectedUsers.size} selected`
+                                : 'None selected'
                             }
                         </span>
                         {selectedUsers.size > 0 && (
@@ -374,40 +378,41 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
                             </Button>
                         )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full sm:w-auto">
                         <Button
                             onClick={() => handleBulkActivate(true)}
                             disabled={bulkActionLoading || selectedUsers.size === 0}
                             size="sm"
-                            className="bg-ui-success-bg hover:bg-ui-success-bg/90 text-ui-success-text border border-ui-success-border h-8"
+                            className="flex-1 sm:flex-none bg-ui-success-bg hover:bg-ui-success-bg/90 text-ui-success-text border border-ui-success-border h-8 text-xs sm:text-sm"
                         >
                             <MdCheckCircle className="mr-1 h-4 w-4" />
-                            Activate
+                            <span className="hidden sm:inline">Activate</span>
                         </Button>
                         <Button
                             onClick={() => handleBulkActivate(false)}
                             disabled={bulkActionLoading || selectedUsers.size === 0}
                             size="sm"
-                            className="bg-ui-warning-bg hover:bg-ui-warning-bg/90 text-ui-warning-text border border-ui-warning-border h-8"
+                            className="flex-1 sm:flex-none bg-ui-warning-bg hover:bg-ui-warning-bg/90 text-ui-warning-text border border-ui-warning-border h-8 text-xs sm:text-sm"
                         >
-                            Deactivate
+                            <span className="hidden sm:inline">Deactivate</span>
+                            <span className="sm:hidden">Off</span>
                         </Button>
                         <Button
                             onClick={handleBulkRevokeSession}
                             disabled={bulkActionLoading || selectedUsers.size === 0}
                             size="sm"
                             variant="outline"
-                            className="border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg h-8"
+                            className="flex-1 sm:flex-none border-ui-danger-border text-ui-danger-text hover:bg-ui-danger-bg h-8 text-xs sm:text-sm"
                         >
-                            <MdCleaningServices className="mr-1 h-4 w-4" />
-                            Revoke Sessions
+                            <MdCleaningServices className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Revoke</span>
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* Users Table */}
-            <CardContent className="p-0">
+            {/* Users Table - Desktop */}
+            <CardContent className="p-0 hidden lg:block">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-ui-bg-tertiary sticky top-0 z-10">
@@ -485,8 +490,8 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
                                         <button
                                             onClick={() => handleToggleActive(user.id)}
                                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${user.is_active
-                                                    ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border hover:bg-ui-success-bg/80'
-                                                    : 'bg-ui-danger-bg text-ui-danger-text border-ui-danger-border hover:bg-ui-danger-bg/80'
+                                                ? 'bg-ui-success-bg text-ui-success-text border-ui-success-border hover:bg-ui-success-bg/80'
+                                                : 'bg-ui-danger-bg text-ui-danger-text border-ui-danger-border hover:bg-ui-danger-bg/80'
                                                 }`}
                                         >
                                             <span className={`w-1.5 h-1.5 rounded-full ${user.is_active ? 'bg-ui-success-text' : 'bg-ui-danger-text'}`} />
@@ -538,16 +543,127 @@ export function EnhancedUserManagement({ users, onRefresh }: EnhancedUserManagem
                             ))}
                         </tbody>
                     </table>
-
-                    {filteredUsers.length === 0 && (
-                        <div className="text-center py-16 text-ui-text-muted">
-                            <MdFilterList className="mx-auto h-12 w-12 opacity-30 mb-4" />
-                            <p className="text-lg font-medium">No users found</p>
-                            <p className="text-sm mt-2">Try adjusting your search or filters</p>
-                        </div>
-                    )}
                 </div>
             </CardContent>
+
+            {/* Users List - Mobile Cards */}
+            <CardContent className="p-0 lg:hidden">
+                <div className="divide-y divide-ui-border-primary">
+                    {filteredUsers.map((user) => {
+                        const isExpanded = expandedUserId === user.id;
+                        return (
+                            <div
+                                key={user.id}
+                                className={`p-4 ${selectedUsers.has(user.id) ? 'bg-ui-accent-primary-bg/20 border-l-4 border-ui-accent-primary' : ''}`}
+                            >
+                                {/* Main row */}
+                                <div className="flex items-center gap-3">
+                                    <Checkbox
+                                        checked={selectedUsers.has(user.id)}
+                                        onCheckedChange={() => handleToggleUserSelection(user.id)}
+                                        className="flex-shrink-0"
+                                    />
+                                    <div className="w-10 h-10 rounded-full bg-ui-accent-primary-bg flex items-center justify-center text-ui-accent-primary-text font-bold text-sm flex-shrink-0">
+                                        {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium text-ui-text-primary truncate">
+                                                {user.name || 'Unnamed'}
+                                            </span>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${user.is_active
+                                                    ? 'bg-ui-success-bg text-ui-success-text'
+                                                    : 'bg-ui-danger-bg text-ui-danger-text'
+                                                }`}>
+                                                <span className={`w-1 h-1 rounded-full ${user.is_active ? 'bg-ui-success-text' : 'bg-ui-danger-text'}`} />
+                                                {user.is_active ? 'Active' : 'Off'}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-ui-text-muted truncate">{user.email}</div>
+                                    </div>
+                                    <button
+                                        onClick={() => setExpandedUserId(isExpanded ? null : user.id)}
+                                        className="p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-muted transition-colors flex-shrink-0"
+                                    >
+                                        {isExpanded ? <MdExpandLess className="w-5 h-5" /> : <MdExpandMore className="w-5 h-5" />}
+                                    </button>
+                                </div>
+
+                                {/* Expanded content */}
+                                {isExpanded && (
+                                    <div className="mt-4 pt-4 border-t border-ui-border-primary space-y-4">
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <span className="text-ui-text-muted text-xs">Role</span>
+                                                <Select
+                                                    value={user.role}
+                                                    onChange={(val) => handleChangeRole(user.id, val)}
+                                                    options={[
+                                                        { value: 'user', label: 'User' },
+                                                        { value: 'admin', label: 'Admin' },
+                                                    ]}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                            <div>
+                                                <span className="text-ui-text-muted text-xs">Last Active</span>
+                                                <p className="mt-1 text-ui-text-secondary">
+                                                    {(user as any).last_active
+                                                        ? formatDate((user as any).last_active)
+                                                        : user.last_login
+                                                            ? formatDate(user.last_login)
+                                                            : 'Never'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={() => handleToggleActive(user.id)}
+                                                size="sm"
+                                                className={`flex-1 ${user.is_active
+                                                        ? 'bg-ui-warning-bg text-ui-warning-text border border-ui-warning-border'
+                                                        : 'bg-ui-success-bg text-ui-success-text border border-ui-success-border'
+                                                    }`}
+                                            >
+                                                {user.is_active ? 'Deactivate' : 'Activate'}
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleImpersonateUser(user.id, user.name)}
+                                                size="sm"
+                                                variant="outline"
+                                                className="flex-1 border-ui-border-primary"
+                                                disabled={user.role === 'admin'}
+                                            >
+                                                <MdPerson className="mr-1 h-4 w-4" />
+                                                Impersonate
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleRevokeAllSessions(user.id)}
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-ui-danger-border text-ui-danger-text"
+                                            >
+                                                <MdCleaningServices className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </CardContent>
+
+            {/* Empty state - both views */}
+            {filteredUsers.length === 0 && (
+                <CardContent>
+                    <div className="text-center py-12 lg:py-16 text-ui-text-muted">
+                        <MdFilterList className="mx-auto h-10 w-10 lg:h-12 lg:w-12 opacity-30 mb-4" />
+                        <p className="text-base lg:text-lg font-medium">No users found</p>
+                        <p className="text-sm mt-2">Try adjusting your search or filters</p>
+                    </div>
+                </CardContent>
+            )}
         </Card>
     );
 }
