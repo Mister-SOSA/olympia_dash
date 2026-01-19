@@ -159,9 +159,11 @@ export default function Dashboard() {
   // ==========================================================================
   const {
     preferencesReady,
+    loadingStage,
     showOnboarding,
     setShowOnboarding,
     permissionsLoading,
+    refreshPreferences,
   } = useDashboardPreferences({
     isAuthenticated,
     user,
@@ -266,8 +268,17 @@ export default function Dashboard() {
   // Loading state
   if (checkingAuth || !preferencesReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-ui-bg-primary text-ui-text-primary">
         <Loader />
+        <div className="text-sm opacity-80">{loadingStage || 'Loading your dashboard...'}</div>
+        {!checkingAuth && !permissionsLoading && (
+          <button
+            className="px-3 py-1 text-sm rounded bg-ui-surface-2 border border-ui-border hover:bg-ui-surface-3"
+            onClick={refreshPreferences}
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }

@@ -84,6 +84,10 @@ class AuthService {
         return this.refreshToken;
     }
 
+    hasRefreshToken(): boolean {
+        return this.refreshToken !== null;
+    }
+
     getUser(): User | null {
         // Return impersonated user if active, otherwise real user
         return this.impersonatedUser || this.user;

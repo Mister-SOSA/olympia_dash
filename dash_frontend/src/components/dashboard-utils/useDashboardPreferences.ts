@@ -44,6 +44,8 @@ interface UseDashboardPreferencesOptions {
 interface UseDashboardPreferencesReturn {
   /** Whether preferences are fully loaded and ready */
   preferencesReady: boolean;
+  /** Human-readable loading stage for UX messaging */
+  loadingStage: string;
   /** Whether to show onboarding flow */
   showOnboarding: boolean;
   /** Set onboarding visibility */
@@ -62,6 +64,8 @@ interface UseDashboardPreferencesReturn {
   applyPendingRemoteUpdate: () => boolean;
   /** Summary of the pending remote diff, if any */
   pendingRemoteDiff?: ReturnType<typeof detectStructuralChanges>;
+  /** Manually re-run preferences sync (used for retry UI) */
+  refreshPreferences: () => Promise<void>;
 }
 
 /**
@@ -86,6 +90,7 @@ export function useDashboardPreferences({
   isEditingRef,
 }: UseDashboardPreferencesOptions): UseDashboardPreferencesReturn {
   const [preferencesReady, setPreferencesReady] = useState(false);
+  const [loadingStage, setLoadingStage] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Widget permissions
@@ -159,6 +164,7 @@ export function useDashboardPreferences({
     const initPreferences = async () => {
       preferencesInitialized.current = true;
 
+      setLoadingStage('Migrating local data');
       console.log('🚀 Initializing dashboard preferences...');
       console.log(`   User: ${user?.email} (ID: ${user?.id})`);
       console.log(`   Impersonating: ${authService.isImpersonating()}`);
@@ -174,6 +180,7 @@ export function useDashboardPreferences({
       let syncSuccess = false;
       for (let attempt = 1; attempt <= 3 && !syncSuccess; attempt++) {
         try {
+          setLoadingStage(`Syncing preferences (attempt ${attempt}/3)`);
           await preferencesService.syncOnLogin();
           // Verify data was actually loaded
           syncSuccess = preferencesService.isLoaded();
@@ -190,8 +197,10 @@ export function useDashboardPreferences({
 
       if (!syncSuccess) {
         console.warn('[Dashboard] All sync attempts failed, using cached/default preferences');
+        setLoadingStage('Using cached preferences');
       } else {
         console.log('[Dashboard] Preferences synced successfully');
+        setLoadingStage('Preferences synced');
       }
 
       // Check if user has completed onboarding
@@ -208,6 +217,7 @@ export function useDashboardPreferences({
       }
 
       console.log('📊 Loading dashboard state from preferences...');
+      setLoadingStage('Loading dashboard layout');
 
       // Load preferences into state
       const storedLayout = readLayoutFromStorage();
@@ -230,6 +240,7 @@ export function useDashboardPreferences({
 
       // Mark preferences as ready AFTER all data is loaded
       setPreferencesReady(true);
+      setLoadingStage('Ready');
       console.log('✅ Dashboard initialization complete');
     };
 
@@ -387,8 +398,27 @@ export function useDashboardPreferences({
     return true;
   }, [onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate]);
 
+  const refreshPreferences = useCallback(async () => {
+    // Allow manual re-sync without re-running migration
+    setPreferencesReady(false);
+    setLoadingStage('Refreshing preferences');
+    try {
+      await preferencesService.syncOnLogin();
+      const storedLayout = readLayoutFromStorage();
+      const normalizedLayout = normalizeLayout(storedLayout);
+      onLayoutUpdate(normalizedLayout);
+      onPresetsUpdate(readPresetsFromStorage());
+      onPresetTypeUpdate(readCurrentPresetType() as PresetType);
+      onActivePresetIndexUpdate(readActivePresetIndex());
+    } finally {
+      setPreferencesReady(true);
+      setLoadingStage('Ready');
+    }
+  }, [onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate]);
+
   return {
     preferencesReady,
+    loadingStage,
     showOnboarding,
     setShowOnboarding,
     permissionsLoading,
@@ -398,6 +428,7 @@ export function useDashboardPreferences({
     hasPendingRemoteUpdate,
     applyPendingRemoteUpdate,
     pendingRemoteDiff,
+    refreshPreferences,
   };
 }
 

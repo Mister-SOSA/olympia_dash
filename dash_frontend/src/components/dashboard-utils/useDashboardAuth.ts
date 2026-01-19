@@ -42,23 +42,36 @@ export function useDashboardAuth(): UseDashboardAuthReturn {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      if (!authService.isAuthenticated()) {
-        router.push('/login');
-        return;
-      }
+      try {
+        // If we lack access token but have a refresh token, attempt a silent refresh first
+        if (!authService.isAuthenticated() && authService.hasRefreshToken()) {
+          await authService.refreshAccessToken();
+        }
 
-      // Verify token is still valid
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
+        if (!authService.isAuthenticated()) {
+          router.push('/login');
+          return;
+        }
 
-      // Set user and impersonation state
-      setUser(authService.getUser()); // Gets impersonated user if active
-      setIsImpersonating(authService.isImpersonating());
-      setIsAuthenticated(true);
-      setCheckingAuth(false);
+        // Verify token is still valid
+        const currentUser = await authService.getCurrentUser();
+        if (!currentUser) {
+          await authService.logout();
+          router.push('/login');
+          return;
+        }
+
+        // Set user and impersonation state
+        setUser(authService.getUser()); // Gets impersonated user if active
+        setIsImpersonating(authService.isImpersonating());
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('[Auth] checkAuth failed', error);
+        await authService.logout();
+        router.push('/login');
+      } finally {
+        setCheckingAuth(false);
+      }
     };
 
     checkAuth();
