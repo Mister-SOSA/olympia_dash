@@ -72,8 +72,7 @@ interface TaskbarIconProps {
     tooltip: string;
     onClick?: () => void;
     onContextMenu?: (e: React.MouseEvent) => void;
-    isActive?: boolean;
-    activeColor?: string;
+    className?: string;
     children: React.ReactNode;
     tooltipSide?: 'top' | 'bottom';
     size?: 'small' | 'medium' | 'large';
@@ -83,8 +82,7 @@ function TaskbarIcon({
     tooltip,
     onClick,
     onContextMenu,
-    isActive = false,
-    activeColor,
+    className,
     children,
     tooltipSide = 'top',
     size = 'medium',
@@ -99,20 +97,12 @@ function TaskbarIcon({
                     onContextMenu={onContextMenu}
                     style={{ width: btnSize, height: btnSize }}
                     className={`
-                        relative flex items-center justify-center rounded-md
-                        transition-all duration-100 ease-out
-                        ${isActive
-                            ? `bg-ui-bg-tertiary ${activeColor || 'text-ui-text-primary'}`
-                            : 'text-ui-text-secondary hover:bg-ui-bg-tertiary hover:text-ui-text-primary'
-                        }
+                        flex items-center justify-center rounded-xl
+                        transition-colors duration-150 shadow-sm
+                        ${className}
                     `}
                 >
                     {children}
-                    {isActive && (
-                        <div
-                            className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${activeColor ? 'bg-current' : 'bg-ui-accent-primary'}`}
-                        />
-                    )}
                 </button>
             </TooltipTrigger>
             <TooltipContent side={tooltipSide} className="text-xs font-medium">
@@ -128,7 +118,7 @@ function TaskbarIcon({
 
 function TaskbarDivider({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) {
     const heights = { small: 'h-5', medium: 'h-6', large: 'h-7' };
-    return <div className={`w-px ${heights[size]} bg-ui-border-primary mx-2`} />;
+    return <div className={`w-px ${heights[size]} bg-ui-border-primary mx-1.5`} />;
 }
 
 // =============================================================================
@@ -175,14 +165,14 @@ function TaskbarClock({
         <Tooltip>
             <TooltipTrigger asChild>
                 <button
-                    className="flex flex-col items-center justify-center px-3 h-full text-ui-text-primary hover:bg-ui-bg-tertiary transition-colors rounded-md min-w-[70px]"
+                    className="flex flex-col items-center justify-center px-3 h-full text-ui-text-primary hover:bg-ui-bg-tertiary/60 transition-colors duration-150 rounded-lg min-w-[70px]"
                     onClick={() => {/* Could open calendar */ }}
                 >
                     <span className={`${fonts.clock} font-medium tabular-nums leading-tight`}>
                         {formatTime(time)}
                     </span>
                     {showDate && (
-                        <span className={`${fonts.date} text-ui-text-secondary leading-tight`}>
+                        <span className={`${fonts.date} text-ui-text-tertiary leading-tight`}>
                             {formatDate(time)}
                         </span>
                     )}
@@ -240,16 +230,16 @@ function PresetButton({
                     onContextMenu={onContextMenu}
                     style={{ height: btnHeight }}
                     className={`
-                        relative flex items-center gap-1.5 px-3 rounded-md font-medium
-                        transition-all duration-100 ease-out
+                        flex items-center gap-1.5 px-3 rounded-xl font-medium shadow-sm
+                        transition-colors duration-150
                         ${fonts.label}
                         ${isActive
-                            ? 'bg-ui-accent-primary text-white shadow-md shadow-ui-accent-primary/30'
-                            : 'bg-ui-bg-tertiary text-ui-text-secondary hover:bg-ui-bg-quaternary hover:text-ui-text-primary'
+                            ? 'bg-ui-accent-primary text-white'
+                            : 'bg-ui-bg-tertiary text-ui-text-primary hover:bg-ui-bg-quaternary'
                         }
                     `}
                 >
-                    <span className="font-bold opacity-60">{index + 1}</span>
+                    <span className="font-semibold">{index + 1}</span>
                     {!isGenericName && (
                         <span className="font-medium">{displayLabel}</span>
                     )}
@@ -257,7 +247,7 @@ function PresetButton({
             </TooltipTrigger>
             <TooltipContent side={tooltipSide} className="text-xs">
                 <div className="font-semibold">{presetName}</div>
-                <div className="text-ui-text-secondary">{widgetCount} widget{widgetCount !== 1 ? 's' : ''} • Right-click to save</div>
+                <div className="text-ui-text-tertiary">{widgetCount} widget{widgetCount !== 1 ? 's' : ''} • Right-click to save</div>
             </TooltipContent>
         </Tooltip>
     );
@@ -301,9 +291,9 @@ function SystemTray({
     size,
 }: SystemTrayProps) {
     return (
-        <div className="flex items-center h-full">
+        <div className="flex items-center h-full gap-1">
             {/* Status Icons */}
-            <div className="flex items-center gap-0.5 px-1">
+            <div className="flex items-center gap-1">
                 {showAutoCycle && (
                     <TaskbarIcon
                         tooltip={autoCycleEnabled ? "Auto-Cycle: On" : "Auto-Cycle: Off"}
@@ -312,8 +302,10 @@ function SystemTray({
                             e.preventDefault();
                             onSettingsContext('presets');
                         }}
-                        isActive={autoCycleEnabled}
-                        activeColor="text-blue-400"
+                        className={autoCycleEnabled
+                            ? "bg-ui-info text-white"
+                            : "bg-ui-bg-tertiary text-ui-text-primary hover:bg-ui-bg-quaternary"
+                        }
                         tooltipSide={tooltipSide}
                         size={size}
                     >
@@ -332,8 +324,10 @@ function SystemTray({
                             e.preventDefault();
                             onSettingsContext('privacy');
                         }}
-                        isActive={isPrivate}
-                        activeColor="text-amber-400"
+                        className={isPrivate
+                            ? "bg-ui-warning text-white"
+                            : "bg-ui-bg-tertiary text-ui-text-primary hover:bg-ui-bg-quaternary"
+                        }
                         tooltipSide={tooltipSide}
                         size={size}
                     >
@@ -365,6 +359,7 @@ function SystemTray({
                             e.preventDefault();
                             onSettingsContext('navigation');
                         }}
+                        className="bg-ui-bg-tertiary text-ui-text-primary hover:bg-ui-bg-quaternary"
                         tooltipSide={tooltipSide}
                         size={size}
                     >
@@ -502,10 +497,10 @@ export default function DashboardTaskbar({
                     <div
                         className={`
                             w-full h-full flex items-center justify-between px-2
-                            bg-ui-bg-primary backdrop-blur-2xl
+                            bg-ui-bg-secondary/95 backdrop-blur-xl
                             ${taskbarPosition === 'top'
-                                ? 'border-b-2 border-ui-border-primary shadow-lg shadow-black/20'
-                                : 'border-t-2 border-ui-border-primary shadow-[0_-4px_20px_rgba(0,0,0,0.15)]'
+                                ? 'border-b border-ui-border-primary shadow-xl'
+                                : 'border-t border-ui-border-primary shadow-xl'
                             }
                         `}
                         style={{ opacity: taskbarOpacity / 100 }}
@@ -513,7 +508,7 @@ export default function DashboardTaskbar({
                         <TooltipProvider delayDuration={300}>
                             {/* Left Section - App launchers */}
                             <div className="flex items-center h-full gap-1">
-                                {/* Widgets */}
+                                {/* Widgets - Blue */}
                                 {dockShowWidgetsToggle && (
                                     <TaskbarIcon
                                         tooltip="Widgets (F)"
@@ -522,6 +517,7 @@ export default function DashboardTaskbar({
                                             e.preventDefault();
                                             onSettingsClick('widgets');
                                         }}
+                                        className="bg-ui-accent-primary text-white"
                                         tooltipSide={tooltipSide}
                                         size={taskbarSize}
                                     >
@@ -529,7 +525,7 @@ export default function DashboardTaskbar({
                                     </TaskbarIcon>
                                 )}
 
-                                {/* Preset Manager */}
+                                {/* Preset Manager - Purple */}
                                 {dockShowPresetManager && (
                                     <TaskbarIcon
                                         tooltip="Presets (P)"
@@ -538,6 +534,7 @@ export default function DashboardTaskbar({
                                             e.preventDefault();
                                             onSettingsClick('presets');
                                         }}
+                                        className="bg-ui-accent-secondary text-white"
                                         tooltipSide={tooltipSide}
                                         size={taskbarSize}
                                     >
@@ -574,9 +571,9 @@ export default function DashboardTaskbar({
                                                 <button
                                                     onClick={handleCreatePreset}
                                                     style={{ height: BUTTON_SIZES[taskbarSize].height, width: BUTTON_SIZES[taskbarSize].height }}
-                                                    className="flex items-center justify-center rounded-md border-2 border-dashed border-ui-border-secondary text-ui-text-muted hover:text-ui-text-secondary hover:border-ui-accent-primary hover:bg-ui-bg-tertiary transition-all"
+                                                    className="flex items-center justify-center rounded-xl border-2 border-dashed border-ui-border-secondary text-ui-text-tertiary hover:text-ui-text-secondary hover:border-ui-text-tertiary transition-colors duration-150"
                                                 >
-                                                    <MdAdd style={{ width: iconSize * 0.7, height: iconSize * 0.7 }} />
+                                                    <MdAdd style={{ width: iconSize * 0.8, height: iconSize * 0.8 }} />
                                                 </button>
                                             </TooltipTrigger>
                                             <TooltipContent side={tooltipSide} className="text-xs font-medium">
