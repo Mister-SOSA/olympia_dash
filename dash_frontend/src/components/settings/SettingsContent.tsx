@@ -29,6 +29,9 @@ import {
     MdBookmarks,
     MdDelete,
     MdWarning,
+    MdWidgets,
+    MdSettings,
+    MdAutorenew,
 } from "react-icons/md";
 
 import type { SettingsView } from "./types";
@@ -854,19 +857,37 @@ export function SettingsContent({
                                         : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
                                         }`}
                                 >
-                                    {/* Mini dock preview */}
-                                    <div className="h-12 flex items-end justify-center mb-3">
-                                        <div className="flex items-end gap-1 px-3 py-1.5 bg-ui-bg-tertiary rounded-lg border border-ui-border-primary">
-                                            <div className="w-4 h-4 bg-ui-accent-primary/50 rounded" />
-                                            <div className="w-4 h-5 bg-ui-accent-secondary/50 rounded" />
-                                            <div className="w-4 h-4 bg-ui-text-secondary/30 rounded" />
+                                    {/* Mini dock preview - matches actual dock styling */}
+                                    <div className="h-16 flex items-end justify-center mb-3">
+                                        {/* Floating dock - uses actual dock classes */}
+                                        <div className="flex items-end gap-1 px-2 py-1.5 bg-ui-bg-primary border border-ui-border-primary rounded-2xl shadow-2xl">
+                                            {/* Widget button */}
+                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-primary flex items-center justify-center">
+                                                <MdWidgets className="w-3 h-3 text-white" />
+                                            </div>
+                                            {/* Preset manager */}
+                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-secondary flex items-center justify-center">
+                                                <MdBookmarks className="w-3 h-3 text-white" />
+                                            </div>
+                                            {/* Divider */}
+                                            <div className="w-px h-5 bg-ui-border-primary mx-0.5" />
+                                            {/* Preset 1 - active */}
+                                            <div className="w-5 h-5 rounded-lg bg-ui-success flex items-center justify-center text-[8px] font-bold text-white">1</div>
+                                            {/* Preset 2 */}
+                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary flex items-center justify-center text-[8px] font-bold text-ui-text-secondary">2</div>
+                                            {/* Divider */}
+                                            <div className="w-px h-5 bg-ui-border-primary mx-0.5" />
+                                            {/* Settings */}
+                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary flex items-center justify-center">
+                                                <MdSettings className="w-3 h-3 text-ui-text-secondary" />
+                                            </div>
                                         </div>
                                     </div>
                                     <span className="text-sm font-medium text-ui-text-primary block text-center">
                                         Dock
                                     </span>
                                     <span className="text-xs text-ui-text-secondary block text-center mt-1">
-                                        macOS-style, centered
+                                        macOS-style, fancy floating dock
                                     </span>
                                     {settings.navigationMode === 'dock' && (
                                         <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-ui-accent-primary rounded-full" />
@@ -880,20 +901,48 @@ export function SettingsContent({
                                         : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
                                         }`}
                                 >
-                                    {/* Mini taskbar preview */}
-                                    <div className="h-12 flex items-end justify-center mb-3">
-                                        <div className="w-full h-7 bg-ui-bg-tertiary rounded border border-ui-border-primary flex items-center px-2 gap-2">
-                                            <div className="w-3 h-3 bg-ui-accent-primary/50 rounded" />
-                                            <div className="w-3 h-3 bg-ui-accent-secondary/50 rounded" />
-                                            <div className="flex-1" />
-                                            <div className="w-8 h-3 bg-ui-text-secondary/30 rounded" />
+                                    {/* Mini taskbar preview - realistic Linux/Windows style */}
+                                    <div className="h-16 flex items-end justify-center mb-3">
+                                        {/* Mini screen with taskbar */}
+                                        <div className="relative w-full h-full bg-gradient-to-b from-ui-bg-tertiary/50 to-ui-bg-secondary/30 rounded-lg border border-ui-border-primary overflow-hidden">
+                                            {/* Mini widgets on screen */}
+                                            <div className="absolute inset-x-2 top-2 bottom-5 flex gap-1">
+                                                <div className="w-1/2 h-full bg-ui-bg-tertiary/40 rounded-sm" />
+                                                <div className="w-1/2 flex flex-col gap-1">
+                                                    <div className="flex-1 bg-ui-bg-tertiary/40 rounded-sm" />
+                                                    <div className="flex-1 bg-ui-bg-tertiary/40 rounded-sm" />
+                                                </div>
+                                            </div>
+                                            {/* The taskbar */}
+                                            <div className="absolute bottom-0 left-0 right-0 h-4 bg-ui-bg-primary/95 border-t border-ui-border-primary flex items-center px-1 justify-between">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-2.5 h-2.5 rounded-sm bg-ui-accent-primary/70 flex items-center justify-center">
+                                                        <MdWidgets className="w-1.5 h-1.5 text-white" />
+                                                    </div>
+                                                    <div className="w-2.5 h-2.5 rounded-sm bg-ui-accent-secondary/70 flex items-center justify-center">
+                                                        <MdBookmarks className="w-1.5 h-1.5 text-white" />
+                                                    </div>
+                                                    <div className="w-px h-2 bg-ui-border-primary" />
+                                                    <div className="flex gap-0.5">
+                                                        <div className="px-1 h-2.5 rounded-sm bg-ui-accent-primary text-[6px] text-white font-bold flex items-center">1</div>
+                                                        <div className="px-1 h-2.5 rounded-sm bg-ui-bg-tertiary text-[6px] text-ui-text-secondary font-bold flex items-center">2</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <MdAutorenew className="w-2 h-2 text-ui-text-tertiary" />
+                                                    <MdVisibilityOff className="w-2 h-2 text-ui-text-tertiary" />
+                                                    <div className="w-px h-2 bg-ui-border-primary" />
+                                                    <span className="text-[5px] text-ui-text-secondary font-medium tabular-nums">12:34</span>
+                                                    <MdSettings className="w-2 h-2 text-ui-text-tertiary" />
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <span className="text-sm font-medium text-ui-text-primary block text-center">
                                         Taskbar
                                     </span>
                                     <span className="text-xs text-ui-text-secondary block text-center mt-1">
-                                        Linux-style, full width
+                                        Traditional, static taskbar
                                     </span>
                                     {settings.navigationMode === 'taskbar' && (
                                         <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-ui-accent-primary rounded-full" />
