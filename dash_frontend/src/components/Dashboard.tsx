@@ -79,6 +79,12 @@ export default function Dashboard() {
   const [isDockVisible, setIsDockVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Track whether the user is actively editing (to defer remote updates safely)
+  const isEditingRef = useRef(false);
+  useEffect(() => {
+    isEditingRef.current = menuOpen || settingsOpen || presetManagerOpen || presetDialogOpen || isTransitioning;
+  }, [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, isTransitioning]);
+
   // Privacy mode
   const { toggle: togglePrivacy, isPrivate } = usePrivacy();
 
@@ -167,6 +173,7 @@ export default function Dashboard() {
       setUser(newUser);
       setIsImpersonating(impersonating);
     },
+    isEditingRef,
   });
 
   // ==========================================================================
@@ -211,7 +218,7 @@ export default function Dashboard() {
   // ==========================================================================
   // Event Handlers
   // ==========================================================================
-  
+
   // Handle preset click with intelligent dialog
   const handlePresetClick = useCallback((index: number) => {
     const result = presetClickHandler(index);
@@ -248,7 +255,7 @@ export default function Dashboard() {
   // ==========================================================================
   // Render
   // ==========================================================================
-  
+
   // Loading state
   if (checkingAuth || !preferencesReady) {
     return (

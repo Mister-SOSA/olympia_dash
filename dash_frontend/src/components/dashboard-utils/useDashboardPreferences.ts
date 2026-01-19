@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, MutableRefObject } from "react";
 import { Widget, DashboardPreset, PresetType } from "@/types";
 import { authService } from "@/lib/auth";
 import { preferencesService, migrateFromLocalStorage } from "@/lib/preferences";
@@ -34,6 +34,11 @@ interface UseDashboardPreferencesOptions {
   onActivePresetIndexUpdate: (index: number | null) => void;
   /** Callback when user/impersonation state changes */
   onUserStateUpdate: (user: ReturnType<typeof authService.getUser>, isImpersonating: boolean) => void;
+  /**
+   * Optional flag to indicate local edits are in progress (widget menu/settings/preset dialogs).
+   * When true, remote preference updates are deferred and applied once editing is done.
+   */
+  isEditingRef?: MutableRefObject<boolean>;
 }
 
 interface UseDashboardPreferencesReturn {
@@ -51,6 +56,8 @@ interface UseDashboardPreferencesReturn {
   widgetAccess: { all_access: boolean; permissions: Record<string, 'view' | 'edit' | 'admin'> };
   /** Refresh widget permissions */
   refreshWidgetPermissions: () => Promise<void>;
+  /** Whether a remote update is queued because the user is editing locally */
+  hasPendingRemoteUpdate: boolean;
 }
 
 /**
@@ -72,6 +79,7 @@ export function useDashboardPreferences({
   onPresetTypeUpdate,
   onActivePresetIndexUpdate,
   onUserStateUpdate,
+  isEditingRef,
 }: UseDashboardPreferencesOptions): UseDashboardPreferencesReturn {
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -83,6 +91,15 @@ export function useDashboardPreferences({
     loading: permissionsLoading,
     refresh: refreshWidgetPermissions
   } = useWidgetPermissions();
+
+  // Track deferred remote updates so we don't clobber in-progress local edits
+  const pendingRemoteUpdateRef = useRef<{
+    layout: Widget[];
+    presets: Array<DashboardPreset | null>;
+    presetType: PresetType;
+    activePresetIndex: number | null;
+  } | null>(null);
+  const [hasPendingRemoteUpdate, setHasPendingRemoteUpdate] = useState(false);
 
   // Track if preferences have been initialized to prevent duplicate loads
   const preferencesInitialized = useRef(false);
@@ -227,6 +244,8 @@ export function useDashboardPreferences({
         return;
       }
 
+      const isEditing = isEditingRef?.current ?? false;
+
       console.log('[Dashboard] Remote preferences change detected...', changedKeys);
 
       // Check for grid setting changes that require reload
@@ -243,6 +262,22 @@ export function useDashboardPreferences({
       if (!changedKeys || changedKeys.length === 0 || changedKeys.includes('dashboard')) {
         const storedLayout = readLayoutFromStorage();
         const normalizedLayout = normalizeLayout(storedLayout);
+        const queuedPresets = readPresetsFromStorage();
+        const queuedPresetType = readCurrentPresetType() as PresetType;
+        const queuedActivePresetIndex = readActivePresetIndex();
+
+        // If the user is editing, queue the latest remote snapshot instead of applying immediately
+        if (isEditing) {
+          pendingRemoteUpdateRef.current = {
+            layout: normalizedLayout,
+            presets: queuedPresets,
+            presetType: queuedPresetType,
+            activePresetIndex: queuedActivePresetIndex,
+          };
+          setHasPendingRemoteUpdate(true);
+          console.log('[Dashboard] Remote update deferred due to local edits.');
+          return;
+        }
 
         // Check if this is a structural change (widgets added/removed) for logging
         const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
@@ -264,9 +299,9 @@ export function useDashboardPreferences({
         onLayoutUpdate(normalizedLayout);
 
         // Sync presets and other metadata
-        onPresetsUpdate(readPresetsFromStorage());
-        onPresetTypeUpdate(readCurrentPresetType() as PresetType);
-        onActivePresetIndexUpdate(readActivePresetIndex());
+        onPresetsUpdate(queuedPresets);
+        onPresetTypeUpdate(queuedPresetType);
+        onActivePresetIndexUpdate(queuedActivePresetIndex);
       }
 
       // Update user state to reflect impersonation changes
@@ -278,6 +313,31 @@ export function useDashboardPreferences({
     return unsubscribe;
   }, [isAuthenticated, layout, onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate, onUserStateUpdate]);
 
+  // Apply any deferred remote updates once local edits finish
+  useEffect(() => {
+    const isEditing = isEditingRef?.current ?? false;
+    if (!hasPendingRemoteUpdate || isEditing) {
+      return;
+    }
+
+    const payload = pendingRemoteUpdateRef.current;
+    if (!payload) {
+      setHasPendingRemoteUpdate(false);
+      return;
+    }
+
+    console.log('[Dashboard] Applying deferred remote update after edits finished.');
+
+    // Apply queued layout/presets
+    onLayoutUpdate(payload.layout);
+    onPresetsUpdate(payload.presets);
+    onPresetTypeUpdate(payload.presetType);
+    onActivePresetIndexUpdate(payload.activePresetIndex);
+
+    pendingRemoteUpdateRef.current = null;
+    setHasPendingRemoteUpdate(false);
+  }, [hasPendingRemoteUpdate, onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate, isEditingRef]);
+
   return {
     preferencesReady,
     showOnboarding,
@@ -286,6 +346,7 @@ export function useDashboardPreferences({
     hasAccess,
     widgetAccess,
     refreshWidgetPermissions,
+    hasPendingRemoteUpdate,
   };
 }
 
