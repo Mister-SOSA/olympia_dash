@@ -16,10 +16,7 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
     ({ className, children, magnification = true, iconSize = 48, magnificationScale = 1.4 }, ref) => {
         const mouseX = useMotionValue(Infinity);
 
-        // Dock height is based on the BASE icon size only
-        // Icons grow upward from the bottom when magnified (via items-end)
-        // We add a small buffer for the magnification to expand into
-        const baseHeight = iconSize + 16; // icon + padding
+        const baseHeight = iconSize + 16;
 
         return (
             <motion.div
@@ -27,14 +24,13 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                 onMouseMove={(e) => mouseX.set(e.pageX)}
                 onMouseLeave={() => mouseX.set(Infinity)}
                 className={cn(
-                    "flex gap-2 items-end rounded-2xl px-3 pb-2",
-                    "bg-ui-bg-primary border border-ui-border-primary",
-                    "shadow-2xl",
+                    "flex gap-1 items-end rounded-2xl px-3 pb-2",
+                    "bg-ui-bg-secondary/95 backdrop-blur-xl",
+                    "border border-ui-border-primary",
+                    "shadow-xl",
                     className
                 )}
-                style={{
-                    height: `${baseHeight}px`,
-                }}
+                style={{ height: `${baseHeight}px` }}
             >
                 {React.Children.map(children, (child) => {
                     if (React.isValidElement(child)) {
@@ -80,7 +76,6 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
     }, ref) => {
         const iconRef = useRef<HTMLButtonElement>(null);
 
-        // Use a fallback mouseX value if not provided
         const fallbackMouseX = useMotionValue(Infinity);
         const effectiveMouseX = mouseX || fallbackMouseX;
 
@@ -89,10 +84,8 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
             return val - bounds.x - bounds.width / 2;
         });
 
-        // Calculate magnified size based on iconSize and magnificationScale
         const magnifiedSize = Math.round(iconSize * magnificationScale);
 
-        // When magnification is enabled, scale from base size to magnified size
         const widthSync = useTransform(
             distance,
             [-150, 0, 150],
@@ -114,9 +107,8 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
                 onContextMenu={onContextMenu}
                 title={title}
                 className={cn(
-                    "flex aspect-square items-center justify-center rounded-xl relative",
-                    "border transition-colors duration-200",
-                    "shadow-lg hover:shadow-xl",
+                    "flex aspect-square items-center justify-center rounded-xl",
+                    "transition-colors duration-200",
                     className
                 )}
             >

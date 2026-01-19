@@ -186,7 +186,7 @@ export default function DashboardDock({
                             iconSize={dockIconSize}
                             magnificationScale={dockMagnificationScale}
                         >
-                            {/* Widgets Icon */}
+                            {/* Widgets Icon - Blue */}
                             {dockShowWidgetsToggle && (
                                 <DockIconWithTooltip
                                     tooltip="Add Widgets (F)"
@@ -195,9 +195,9 @@ export default function DashboardDock({
                                         e.preventDefault();
                                         onSettingsClick('widgets');
                                     }}
-                                    className="bg-ui-accent-primary-bg hover:bg-ui-accent-primary border-ui-accent-primary-border hover:border-ui-accent-primary text-ui-accent-primary-text hover:text-white"
+                                    className="bg-ui-accent-primary text-white shadow-sm"
                                 >
-                                    <MdWidgets className="w-6 h-6" />
+                                    <MdWidgets className="w-5 h-5" />
                                 </DockIconWithTooltip>
                             )}
 
@@ -216,32 +216,29 @@ export default function DashboardDock({
                                         onContextMenu={(e) => handlePresetRightClick(e, index)}
                                         className={
                                             isActive
-                                                ? "bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover border-ui-accent-secondary text-white ring-2 ring-ui-accent-secondary/50"
-                                                : "bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary border-ui-accent-secondary-border hover:border-ui-accent-secondary text-ui-accent-secondary-text hover:text-white"
+                                                ? "bg-ui-accent-primary text-white shadow-sm"
+                                                : "bg-ui-bg-tertiary text-ui-text-primary shadow-sm hover:bg-ui-bg-quaternary"
                                         }
                                     >
-                                        <span className="font-bold text-base">{index + 1}</span>
-                                        {dockShowActiveIndicator && isActive && (
-                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-ui-accent-secondary rounded-full shadow-lg animate-pulse" />
-                                        )}
+                                        <span className="font-semibold text-sm">{index + 1}</span>
                                     </DockIconWithTooltip>
                                 );
                             })}
 
-                            {/* Add Preset Button - Only show if there's an available slot */}
+                            {/* Add Preset Button */}
                             {hasAvailableSlot && dockShowCreatePreset && (
                                 <DockIconWithTooltip
                                     tooltip={`Create Preset ${firstAvailableSlot + 1}`}
                                     onClick={handleCreatePreset}
-                                    className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-accent-secondary-border border-dashed text-ui-text-secondary hover:text-ui-accent-secondary-text"
+                                    className="bg-transparent text-ui-text-tertiary border-2 border-dashed border-ui-border-secondary hover:border-ui-text-tertiary hover:text-ui-text-secondary"
                                 >
-                                    <MdAdd className="w-6 h-6" />
+                                    <MdAdd className="w-5 h-5" />
                                 </DockIconWithTooltip>
                             )}
 
                             {(dockShowAutoCycleToggle || dockShowPresetManager || dockShowPrivacyToggle || dockShowSettingsToggle) && <DockDivider />}
 
-                            {/* Auto-Cycle Toggle */}
+                            {/* Auto-Cycle Toggle - Info blue when active */}
                             {dockShowAutoCycleToggle && (
                                 <DockIconWithTooltip
                                     tooltip={settings.autoCycleEnabled ? "Disable Auto-Cycle" : "Enable Auto-Cycle"}
@@ -254,15 +251,15 @@ export default function DashboardDock({
                                         onSettingsClick('presets');
                                     }}
                                     className={settings.autoCycleEnabled
-                                        ? "bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/50 hover:border-blue-500 text-blue-400 hover:text-blue-300 ring-2 ring-blue-500/40"
-                                        : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                                        ? "bg-ui-info text-white shadow-sm"
+                                        : "bg-ui-bg-tertiary text-ui-text-primary shadow-sm hover:bg-ui-bg-quaternary"
                                     }
                                 >
-                                    <MdAutorenew className={`w-6 h-6 ${settings.autoCycleEnabled ? 'animate-spin' : ''}`} style={settings.autoCycleEnabled ? { animationDuration: '3s' } : {}} />
+                                    <MdAutorenew className={`w-5 h-5 ${settings.autoCycleEnabled ? 'animate-spin' : ''}`} style={settings.autoCycleEnabled ? { animationDuration: '3s' } : {}} />
                                 </DockIconWithTooltip>
                             )}
 
-                            {/* Preset Manager Icon */}
+                            {/* Preset Manager Icon - Purple */}
                             {dockShowPresetManager && (
                                 <DockIconWithTooltip
                                     tooltip="Manage Presets (P)"
@@ -271,13 +268,13 @@ export default function DashboardDock({
                                         e.preventDefault();
                                         onSettingsClick('presets');
                                     }}
-                                    className="bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary border-ui-accent-secondary-border hover:border-ui-accent-secondary text-ui-accent-secondary-text hover:text-white"
+                                    className="bg-ui-accent-secondary text-white shadow-sm"
                                 >
-                                    <MdBookmarks className="w-6 h-6" />
+                                    <MdBookmarks className="w-5 h-5" />
                                 </DockIconWithTooltip>
                             )}
 
-                            {/* Privacy Toggle */}
+                            {/* Privacy Toggle - Warning orange when active */}
                             {dockShowPrivacyToggle && (
                                 <DockIconWithTooltip
                                     tooltip="Privacy Mode (\\)"
@@ -287,19 +284,19 @@ export default function DashboardDock({
                                         onSettingsClick('privacy');
                                     }}
                                     className={isPrivate
-                                        ? "bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 hover:border-amber-500 text-amber-400 hover:text-amber-300 ring-2 ring-amber-500/40"
-                                        : "bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                                        ? "bg-ui-warning text-white shadow-sm"
+                                        : "bg-ui-bg-tertiary text-ui-text-primary shadow-sm hover:bg-ui-bg-quaternary"
                                     }
                                 >
                                     {isPrivate ? (
-                                        <MdVisibilityOff className="w-6 h-6" />
+                                        <MdVisibilityOff className="w-5 h-5" />
                                     ) : (
-                                        <MdVisibility className="w-6 h-6" />
+                                        <MdVisibility className="w-5 h-5" />
                                     )}
                                 </DockIconWithTooltip>
                             )}
 
-                            {/* Settings Icon */}
+                            {/* Settings Icon - Gray */}
                             {dockShowSettingsToggle && (
                                 <DockIconWithTooltip
                                     tooltip="Settings (S)"
@@ -308,9 +305,9 @@ export default function DashboardDock({
                                         e.preventDefault();
                                         onSettingsClick('navigation');
                                     }}
-                                    className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
+                                    className="bg-ui-bg-tertiary text-ui-text-primary shadow-sm hover:bg-ui-bg-quaternary"
                                 >
-                                    <MdSettings className="w-6 h-6" />
+                                    <MdSettings className="w-5 h-5" />
                                 </DockIconWithTooltip>
                             )}
                         </Dock>

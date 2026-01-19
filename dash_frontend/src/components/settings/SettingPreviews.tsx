@@ -206,21 +206,21 @@ interface DockPreviewProps {
 
 export function DockPreview({ settings }: DockPreviewProps) {
     return (
-        <div className="relative h-28 bg-gradient-to-b from-ui-bg-tertiary/20 to-ui-bg-tertiary/50 rounded-xl overflow-hidden border border-ui-border-primary">
+        <div className="relative h-28 bg-ui-bg-tertiary/30 rounded-xl overflow-hidden border border-ui-border-primary">
             {/* Mock screen content */}
             <div className="absolute inset-x-4 top-3 h-6 bg-ui-bg-tertiary/30 rounded" />
             <div className="absolute inset-x-4 top-11 h-3 bg-ui-bg-tertiary/20 rounded" />
             <div className="absolute left-4 right-20 top-16 h-3 bg-ui-bg-tertiary/15 rounded" />
 
-            {/* Preview Dock */}
+            {/* Preview Dock - macOS style */}
             <div
-                className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1.5 px-3 py-2 rounded-xl bg-ui-bg-primary/95 border border-ui-border-primary shadow-lg backdrop-blur-sm"
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1 px-2 pb-2 pt-2 rounded-[18px] bg-ui-bg-secondary/80 backdrop-blur-xl border border-white/10 shadow-lg"
                 style={{ opacity: settings.dockOpacity / 100 }}
             >
                 {[1, 2, 3, 4, 5].map((i) => (
                     <motion.div
                         key={i}
-                        className={`rounded-lg transition-all ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
+                        className={`rounded-xl ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
                         style={{
                             width: `${settings.dockIconSize / 3.5}px`,
                             height: `${settings.dockIconSize / 3.5}px`,

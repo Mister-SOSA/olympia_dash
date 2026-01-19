@@ -857,37 +857,23 @@ export function SettingsContent({
                                         : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
                                         }`}
                                 >
-                                    {/* Mini dock preview - matches actual dock styling */}
+                                    {/* Mini dock preview - macOS style */}
                                     <div className="h-16 flex items-end justify-center mb-3">
-                                        {/* Floating dock - uses actual dock classes */}
-                                        <div className="flex items-end gap-1 px-2 py-1.5 bg-ui-bg-primary border border-ui-border-primary rounded-2xl shadow-2xl">
-                                            {/* Widget button */}
-                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-primary flex items-center justify-center">
-                                                <MdWidgets className="w-3 h-3 text-white" />
-                                            </div>
-                                            {/* Preset manager */}
-                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-secondary flex items-center justify-center">
-                                                <MdBookmarks className="w-3 h-3 text-white" />
-                                            </div>
-                                            {/* Divider */}
-                                            <div className="w-px h-5 bg-ui-border-primary mx-0.5" />
-                                            {/* Preset 1 - active */}
-                                            <div className="w-5 h-5 rounded-lg bg-ui-success flex items-center justify-center text-[8px] font-bold text-white">1</div>
-                                            {/* Preset 2 */}
-                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary flex items-center justify-center text-[8px] font-bold text-ui-text-secondary">2</div>
-                                            {/* Divider */}
-                                            <div className="w-px h-5 bg-ui-border-primary mx-0.5" />
-                                            {/* Settings */}
-                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary flex items-center justify-center">
-                                                <MdSettings className="w-3 h-3 text-ui-text-secondary" />
-                                            </div>
+                                        <div className="flex items-end gap-1 px-2 pb-2 pt-2 bg-ui-bg-secondary/80 backdrop-blur-xl border border-white/10 rounded-[14px] shadow-lg">
+                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-primary" />
+                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-secondary" />
+                                            <div className="w-px h-4 bg-white/20 mx-0.5" />
+                                            <div className="w-5 h-5 rounded-lg bg-ui-accent-primary" />
+                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary" />
+                                            <div className="w-px h-4 bg-white/20 mx-0.5" />
+                                            <div className="w-5 h-5 rounded-lg bg-ui-bg-tertiary" />
                                         </div>
                                     </div>
                                     <span className="text-sm font-medium text-ui-text-primary block text-center">
                                         Dock
                                     </span>
                                     <span className="text-xs text-ui-text-secondary block text-center mt-1">
-                                        macOS-style, fancy floating dock
+                                        Floating, centered
                                     </span>
                                     {settings.navigationMode === 'dock' && (
                                         <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-ui-accent-primary rounded-full" />
