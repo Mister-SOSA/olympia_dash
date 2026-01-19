@@ -777,7 +777,7 @@ export function SettingsContent({
                             <div className="mb-4">
                                 <div className="text-xs font-medium text-ui-text-secondary mb-2">Style</div>
                                 <div className="grid grid-cols-4 gap-2">
-                                    {DRAG_HANDLE_SETTINGS.style.options.map((styleId) => (
+                                    {DRAG_HANDLE_SETTINGS.handleStyle.options.map((styleId) => (
                                         <button
                                             key={styleId}
                                             onClick={() => updateSetting('dragHandleStyle', styleId)}
@@ -801,7 +801,7 @@ export function SettingsContent({
                             <div>
                                 <div className="text-xs font-medium text-ui-text-secondary mb-2">Size</div>
                                 <div className="flex gap-2">
-                                    {DRAG_HANDLE_SETTINGS.size.options.map((sizeId) => (
+                                    {DRAG_HANDLE_SETTINGS.handleSize.options.map((sizeId) => (
                                         <button
                                             key={sizeId}
                                             onClick={() => updateSetting('dragHandleSize', sizeId)}
@@ -814,138 +814,6 @@ export function SettingsContent({
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-                        </Subsection>
-                    </div>
-                )}
-            </div>
-        );
-    }
-
-    // =========================================================================
-    // Dock View (desktop-focused)
-    // =========================================================================
-    if (activeView === 'dock') {
-        return (
-            <div className="space-y-6">
-                <div>
-                    <h3 className="text-lg font-bold text-ui-text-primary">Dock</h3>
-                    <p className="text-sm text-ui-text-secondary mt-1">Quick access toolbar settings</p>
-                </div>
-                {isMobile ? (
-                    <div className="text-center py-8 px-4">
-                        <div className="w-16 h-16 rounded-full bg-ui-bg-secondary mx-auto mb-4 flex items-center justify-center">
-                            <MdDock className="w-8 h-8 text-ui-text-tertiary" />
-                        </div>
-                        <p className="text-ui-text-secondary text-sm">
-                            Dock settings are available on desktop where the dock is displayed.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-5">
-                        {/* Live Preview */}
-                        <Subsection title="Preview">
-                            <DockPreview settings={settings} />
-                        </Subsection>
-
-                        <Subsection title="Behavior">
-                            <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                <ToggleSetting
-                                    label="Auto-hide"
-                                    description="Hide dock until you hover"
-                                    enabled={settings.dockAutoHide}
-                                    onChange={(val) => updateSetting('dockAutoHide', val)}
-                                />
-                                {settings.dockAutoHide && (
-                                    <SliderSetting
-                                        label="Trigger Distance"
-                                        description="Pixels from edge to show dock"
-                                        value={settings.dockTriggerDistance}
-                                        onChange={(val) => updateSetting('dockTriggerDistance', val)}
-                                        min={DOCK_SETTINGS.triggerDistance.min}
-                                        max={DOCK_SETTINGS.triggerDistance.max}
-                                        step={DOCK_SETTINGS.triggerDistance.step}
-                                        unit="px"
-                                    />
-                                )}
-                                <ToggleSetting
-                                    label="Magnification"
-                                    description="Enlarge icons on hover"
-                                    enabled={settings.dockMagnification}
-                                    onChange={(val) => updateSetting('dockMagnification', val)}
-                                />
-                                {settings.dockMagnification && (
-                                    <SliderSetting
-                                        label="Magnification Scale"
-                                        description="How much icons enlarge"
-                                        value={settings.dockMagnificationScale}
-                                        onChange={(val) => updateSetting('dockMagnificationScale', val)}
-                                        min={DOCK_SETTINGS.magnificationScale.min}
-                                        max={DOCK_SETTINGS.magnificationScale.max}
-                                        step={DOCK_SETTINGS.magnificationScale.step}
-                                    />
-                                )}
-                            </div>
-                        </Subsection>
-
-                        <Subsection title="Appearance">
-                            <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                <SliderSetting
-                                    label="Icon Size"
-                                    description="Size of dock icons"
-                                    value={settings.dockIconSize}
-                                    onChange={(val) => updateSetting('dockIconSize', val)}
-                                    min={DOCK_SETTINGS.iconSize.min}
-                                    max={DOCK_SETTINGS.iconSize.max}
-                                    step={DOCK_SETTINGS.iconSize.step}
-                                    unit="px"
-                                />
-                                <SliderSetting
-                                    label="Opacity"
-                                    description="Dock background opacity"
-                                    value={settings.dockOpacity}
-                                    onChange={(val) => updateSetting('dockOpacity', val)}
-                                    min={DOCK_SETTINGS.opacity.min}
-                                    max={DOCK_SETTINGS.opacity.max}
-                                    step={DOCK_SETTINGS.opacity.step}
-                                    unit="%"
-                                />
-                            </div>
-                        </Subsection>
-
-                        <Subsection title="Dock Items">
-                            <p className="text-xs text-ui-text-tertiary mb-3">Choose which items appear in the dock</p>
-                            <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
-                                <DockItemToggle
-                                    label="Widget Menu"
-                                    description="Quick access to add widgets"
-                                    enabled={settings.dockShowWidgetMenu}
-                                    onChange={(val) => updateSetting('dockShowWidgetMenu', val)}
-                                />
-                                <DockItemToggle
-                                    label="Preset Manager"
-                                    description="Save and load layouts"
-                                    enabled={settings.dockShowPresetManager}
-                                    onChange={(val) => updateSetting('dockShowPresetManager', val)}
-                                />
-                                <DockItemToggle
-                                    label="Compact Button"
-                                    description="Quick compact/expand layout"
-                                    enabled={settings.dockShowCompact}
-                                    onChange={(val) => updateSetting('dockShowCompact', val)}
-                                />
-                                <DockItemToggle
-                                    label="Privacy Toggle"
-                                    description="Quick privacy mode toggle"
-                                    enabled={settings.dockShowPrivacy}
-                                    onChange={(val) => updateSetting('dockShowPrivacy', val)}
-                                />
-                                <DockItemToggle
-                                    label="Settings"
-                                    description="Open settings panel"
-                                    enabled={settings.dockShowSettings}
-                                    onChange={(val) => updateSetting('dockShowSettings', val)}
-                                />
                             </div>
                         </Subsection>
                     </div>
@@ -981,11 +849,10 @@ export function SettingsContent({
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => updateSetting('navigationMode', 'dock')}
-                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${
-                                        settings.navigationMode === 'dock'
-                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
-                                            : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
-                                    }`}
+                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${settings.navigationMode === 'dock'
+                                        ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                        : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                        }`}
                                 >
                                     {/* Mini dock preview */}
                                     <div className="h-12 flex items-end justify-center mb-3">
@@ -1008,11 +875,10 @@ export function SettingsContent({
 
                                 <button
                                     onClick={() => updateSetting('navigationMode', 'taskbar')}
-                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${
-                                        settings.navigationMode === 'taskbar'
-                                            ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
-                                            : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
-                                    }`}
+                                    className={`relative p-4 rounded-xl border-2 transition-all hover:scale-[1.02] ${settings.navigationMode === 'taskbar'
+                                        ? 'border-ui-accent-primary bg-ui-accent-primary/10 shadow-sm'
+                                        : 'border-ui-border-primary hover:border-ui-border-secondary bg-ui-bg-secondary/30'
+                                        }`}
                                 >
                                     {/* Mini taskbar preview */}
                                     <div className="h-12 flex items-end justify-center mb-3">
@@ -1043,21 +909,19 @@ export function SettingsContent({
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => updateSetting('taskbarPosition', 'top')}
-                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                                                settings.taskbarPosition === 'top'
-                                                    ? 'bg-ui-accent-primary text-white'
-                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
-                                            }`}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${settings.taskbarPosition === 'top'
+                                                ? 'bg-ui-accent-primary text-white'
+                                                : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                }`}
                                         >
                                             Top
                                         </button>
                                         <button
                                             onClick={() => updateSetting('taskbarPosition', 'bottom')}
-                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                                                settings.taskbarPosition === 'bottom'
-                                                    ? 'bg-ui-accent-primary text-white'
-                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
-                                            }`}
+                                            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${settings.taskbarPosition === 'bottom'
+                                                ? 'bg-ui-accent-primary text-white'
+                                                : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                }`}
                                         >
                                             Bottom
                                         </button>
@@ -1070,11 +934,10 @@ export function SettingsContent({
                                             <button
                                                 key={size}
                                                 onClick={() => updateSetting('taskbarSize', size)}
-                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${
-                                                    settings.taskbarSize === size
-                                                        ? 'bg-ui-accent-primary text-white'
-                                                        : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
-                                                }`}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${settings.taskbarSize === size
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
                                             >
                                                 {size}
                                             </button>
@@ -1126,17 +989,160 @@ export function SettingsContent({
                                         />
                                     </div>
                                 </Subsection>
+
+                                <Subsection title="Taskbar Items">
+                                    <p className="text-xs text-ui-text-tertiary mb-3">Choose which items appear in the taskbar</p>
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <DockItemToggle
+                                            label="Widget Menu"
+                                            description="Quick access to add widgets"
+                                            enabled={settings.dockShowWidgetMenu}
+                                            onChange={(val) => updateSetting('dockShowWidgetMenu', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Preset Manager"
+                                            description="Save and load layouts"
+                                            enabled={settings.dockShowPresetManager}
+                                            onChange={(val) => updateSetting('dockShowPresetManager', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Auto-Cycle Toggle"
+                                            description="Quick toggle for preset auto-cycle"
+                                            enabled={settings.dockShowAutoCycle}
+                                            onChange={(val) => updateSetting('dockShowAutoCycle', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Privacy Toggle"
+                                            description="Quick privacy mode toggle"
+                                            enabled={settings.dockShowPrivacy}
+                                            onChange={(val) => updateSetting('dockShowPrivacy', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Settings"
+                                            description="Open settings panel"
+                                            enabled={settings.dockShowSettings}
+                                            onChange={(val) => updateSetting('dockShowSettings', val)}
+                                        />
+                                    </div>
+                                </Subsection>
                             </>
                         )}
 
-                        {/* Note about dock settings */}
+                        {/* Dock-specific settings */}
                         {settings.navigationMode === 'dock' && (
-                            <div className="rounded-lg border border-ui-accent-primary/30 bg-ui-accent-primary/5 p-4">
-                                <p className="text-xs text-ui-text-secondary">
-                                    <strong className="text-ui-text-primary">Tip:</strong> Configure dock appearance and behavior in the{' '}
-                                    <span className="text-ui-accent-primary font-medium">Dock</span> settings section.
-                                </p>
-                            </div>
+                            <>
+                                {/* Live Preview */}
+                                <Subsection title="Preview">
+                                    <DockPreview settings={settings} />
+                                </Subsection>
+
+                                <Subsection title="Behavior">
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <ToggleSetting
+                                            label="Auto-hide"
+                                            description="Hide dock until you hover"
+                                            enabled={settings.dockAutoHide}
+                                            onChange={(val) => updateSetting('dockAutoHide', val)}
+                                        />
+                                        {settings.dockAutoHide && (
+                                            <SliderSetting
+                                                label="Trigger Distance"
+                                                description="Pixels from edge to show dock"
+                                                value={settings.dockTriggerDistance}
+                                                onChange={(val) => updateSetting('dockTriggerDistance', val)}
+                                                min={DOCK_SETTINGS.triggerDistance.min}
+                                                max={DOCK_SETTINGS.triggerDistance.max}
+                                                step={DOCK_SETTINGS.triggerDistance.step}
+                                                unit="px"
+                                            />
+                                        )}
+                                        <ToggleSetting
+                                            label="Magnification"
+                                            description="Enlarge icons on hover"
+                                            enabled={settings.dockMagnification}
+                                            onChange={(val) => updateSetting('dockMagnification', val)}
+                                        />
+                                        {settings.dockMagnification && (
+                                            <SliderSetting
+                                                label="Magnification Scale"
+                                                description="How much icons enlarge"
+                                                value={settings.dockMagnificationScale}
+                                                onChange={(val) => updateSetting('dockMagnificationScale', val)}
+                                                min={DOCK_SETTINGS.magnificationScale.min}
+                                                max={DOCK_SETTINGS.magnificationScale.max}
+                                                step={DOCK_SETTINGS.magnificationScale.step}
+                                            />
+                                        )}
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Appearance">
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <SliderSetting
+                                            label="Icon Size"
+                                            description="Size of dock icons"
+                                            value={settings.dockIconSize}
+                                            onChange={(val) => updateSetting('dockIconSize', val)}
+                                            min={DOCK_SETTINGS.iconSize.min}
+                                            max={DOCK_SETTINGS.iconSize.max}
+                                            step={DOCK_SETTINGS.iconSize.step}
+                                            unit="px"
+                                        />
+                                        <SliderSetting
+                                            label="Opacity"
+                                            description="Dock background opacity"
+                                            value={settings.dockOpacity}
+                                            onChange={(val) => updateSetting('dockOpacity', val)}
+                                            min={DOCK_SETTINGS.opacity.min}
+                                            max={DOCK_SETTINGS.opacity.max}
+                                            step={DOCK_SETTINGS.opacity.step}
+                                            unit="%"
+                                        />
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Dock Items">
+                                    <p className="text-xs text-ui-text-tertiary mb-3">Choose which items appear in the dock</p>
+                                    <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
+                                        <DockItemToggle
+                                            label="Widget Menu"
+                                            description="Quick access to add widgets"
+                                            enabled={settings.dockShowWidgetMenu}
+                                            onChange={(val) => updateSetting('dockShowWidgetMenu', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Preset Manager"
+                                            description="Save and load layouts"
+                                            enabled={settings.dockShowPresetManager}
+                                            onChange={(val) => updateSetting('dockShowPresetManager', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Compact Button"
+                                            description="Quick compact/expand layout"
+                                            enabled={settings.dockShowCompact}
+                                            onChange={(val) => updateSetting('dockShowCompact', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Auto-Cycle Toggle"
+                                            description="Quick toggle for preset auto-cycle"
+                                            enabled={settings.dockShowAutoCycle}
+                                            onChange={(val) => updateSetting('dockShowAutoCycle', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Privacy Toggle"
+                                            description="Quick privacy mode toggle"
+                                            enabled={settings.dockShowPrivacy}
+                                            onChange={(val) => updateSetting('dockShowPrivacy', val)}
+                                        />
+                                        <DockItemToggle
+                                            label="Settings"
+                                            description="Open settings panel"
+                                            enabled={settings.dockShowSettings}
+                                            onChange={(val) => updateSetting('dockShowSettings', val)}
+                                        />
+                                    </div>
+                                </Subsection>
+                            </>
                         )}
                     </div>
                 )}

@@ -33,7 +33,7 @@ export interface DashboardUIState {
   isTransitioning: boolean;
 }
 
-export type SettingsViewType = 'account' | 'appearance' | 'layout' | 'navigation' | 'dock' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts' | 'advanced';
+export type SettingsViewType = 'account' | 'appearance' | 'layout' | 'navigation' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts' | 'advanced';
 export type PresetDialogType = "empty" | "save" | "overwrite";
 
 // =============================================================================

@@ -352,15 +352,15 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
-      <div 
-        className="dashboard-container" 
+      <div
+        className="dashboard-container"
         style={{
           ...(isImpersonating ? { paddingTop: '60px' } : {}),
-          ...(navigationMode === 'taskbar' && taskbarPosition === 'top' && !taskbarAutoHide 
-            ? { paddingTop: isImpersonating ? `${60 + TASKBAR_HEIGHTS[taskbarSize]}px` : `${TASKBAR_HEIGHTS[taskbarSize]}px` } 
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'top' && !taskbarAutoHide
+            ? { paddingTop: isImpersonating ? `${60 + TASKBAR_HEIGHTS[taskbarSize]}px` : `${TASKBAR_HEIGHTS[taskbarSize]}px` }
             : {}),
-          ...(navigationMode === 'taskbar' && taskbarPosition === 'bottom' && !taskbarAutoHide 
-            ? { paddingBottom: `${TASKBAR_HEIGHTS[taskbarSize]}px` } 
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'bottom' && !taskbarAutoHide
+            ? { paddingBottom: `${TASKBAR_HEIGHTS[taskbarSize]}px` }
             : {}),
         }}
       >

@@ -90,7 +90,7 @@ function TaskbarIcon({
     size = 'medium',
 }: TaskbarIconProps) {
     const btnSize = BUTTON_SIZES[size].iconBtn;
-    
+
     return (
         <Tooltip>
             <TooltipTrigger asChild>
@@ -109,7 +109,7 @@ function TaskbarIcon({
                 >
                     {children}
                     {isActive && (
-                        <div 
+                        <div
                             className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${activeColor ? 'bg-current' : 'bg-ui-accent-primary'}`}
                         />
                     )}
@@ -174,9 +174,9 @@ function TaskbarClock({
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <button 
+                <button
                     className="flex flex-col items-center justify-center px-3 h-full text-ui-text-primary hover:bg-ui-bg-tertiary transition-colors rounded-md min-w-[70px]"
-                    onClick={() => {/* Could open calendar */}}
+                    onClick={() => {/* Could open calendar */ }}
                 >
                     <span className={`${fonts.clock} font-medium tabular-nums leading-tight`}>
                         {formatTime(time)}
@@ -222,14 +222,14 @@ function PresetButton({
     const widgetCount = preset?.layout.filter(w => w.enabled).length || 0;
     const btnHeight = BUTTON_SIZES[size].height;
     const fonts = FONT_SIZES[size];
-    
+
     // Intelligent label: show truncated name, or number if name is generic
     const isGenericName = presetName.toLowerCase().startsWith('preset');
     const maxLabelLength = size === 'large' ? 12 : size === 'medium' ? 10 : 8;
-    const displayLabel = isGenericName 
-        ? `${index + 1}` 
-        : presetName.length > maxLabelLength 
-            ? presetName.slice(0, maxLabelLength - 1) + '…' 
+    const displayLabel = isGenericName
+        ? `${index + 1}`
+        : presetName.length > maxLabelLength
+            ? presetName.slice(0, maxLabelLength - 1) + '…'
             : presetName;
 
     return (
@@ -317,7 +317,7 @@ function SystemTray({
                         tooltipSide={tooltipSide}
                         size={size}
                     >
-                        <MdAutorenew 
+                        <MdAutorenew
                             style={{ width: iconSize, height: iconSize }}
                             className={autoCycleEnabled ? 'animate-spin' : ''}
                         />
@@ -448,8 +448,8 @@ export default function DashboardTaskbar({
                 hideTimeoutRef.current = null;
             }
 
-            const isAtEdge = taskbarPosition === 'top' 
-                ? e.clientY < triggerZone 
+            const isAtEdge = taskbarPosition === 'top'
+                ? e.clientY < triggerZone
                 : e.clientY > windowHeight - triggerZone;
 
             if (isAtEdge) {
@@ -495,7 +495,7 @@ export default function DashboardTaskbar({
                         fixed left-0 right-0 z-50
                         ${taskbarPosition === 'top' ? 'top-0' : 'bottom-0'}
                     `}
-                    style={{ 
+                    style={{
                         height: taskbarHeight,
                     }}
                 >
@@ -503,8 +503,8 @@ export default function DashboardTaskbar({
                         className={`
                             w-full h-full flex items-center justify-between px-2
                             bg-ui-bg-primary backdrop-blur-2xl
-                            ${taskbarPosition === 'top' 
-                                ? 'border-b-2 border-ui-border-primary shadow-lg shadow-black/20' 
+                            ${taskbarPosition === 'top'
+                                ? 'border-b-2 border-ui-border-primary shadow-lg shadow-black/20'
                                 : 'border-t-2 border-ui-border-primary shadow-[0_-4px_20px_rgba(0,0,0,0.15)]'
                             }
                         `}

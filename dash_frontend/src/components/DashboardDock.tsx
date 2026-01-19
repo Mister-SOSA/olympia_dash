@@ -47,7 +47,7 @@ interface DashboardDockProps {
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
     onPresetSave: (index: number) => void;
-    onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'dock') => void;
+    onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'navigation') => void;
     onVisibilityChange?: (visible: boolean) => void;
 }
 
@@ -306,7 +306,7 @@ export default function DashboardDock({
                                     onClick={() => onSettingsClick()}
                                     onContextMenu={(e) => {
                                         e.preventDefault();
-                                        onSettingsClick('dock');
+                                        onSettingsClick('navigation');
                                     }}
                                     className="bg-ui-bg-secondary hover:bg-ui-bg-tertiary border-ui-border-primary hover:border-ui-border-secondary text-ui-text-secondary hover:text-ui-text-primary"
                                 >
