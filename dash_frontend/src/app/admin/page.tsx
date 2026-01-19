@@ -569,11 +569,37 @@ export default function AdminPage() {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-ui-bg-secondary border-r border-ui-border-primary flex-shrink-0 flex flex-col">
         <div className="p-6 border-b border-ui-border-primary">
-          <h1 className="text-xl font-bold text-ui-text-primary flex items-center gap-2">
-            <MdAdminPanelSettings className="text-ui-accent-primary" />
-            Admin Console
-          </h1>
-          <p className="text-xs text-ui-text-secondary mt-1">System Management</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-ui-text-primary flex items-center gap-2">
+                <MdAdminPanelSettings className="text-ui-accent-primary" />
+                Admin Console
+              </h1>
+              <p className="text-xs text-ui-text-secondary mt-1">System Management</p>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="p-2 rounded-lg hover:bg-ui-bg-tertiary text-ui-text-muted transition-colors">
+                    <MdSettings className="w-4 h-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <div className="text-xs space-y-1">
+                    <div className="font-semibold mb-2">Keyboard Shortcuts</div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-ui-text-muted">Alt + 1-8</span>
+                      <span>Switch tabs</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-ui-text-muted">Alt + R</span>
+                      <span>Refresh data</span>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">

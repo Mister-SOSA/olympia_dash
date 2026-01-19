@@ -46,7 +46,7 @@ export function GroupsPanel() {
     const loadGroups = async () => {
         try {
             const data = await adminService.getAllGroups();
-            setGroups(data);
+            setGroups(data as GroupWithMembers[]);
         } catch (error) {
             toast.error('Failed to load groups');
         } finally {
