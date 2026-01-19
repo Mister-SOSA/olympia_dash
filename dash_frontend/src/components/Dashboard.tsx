@@ -45,12 +45,13 @@ import {
   normalizeLayout,
   generatePresetName,
 } from "@/utils/layoutUtils";
-import { PresetType, DashboardPreset } from "@/types";
+import { PresetType, DashboardPreset, Widget } from "@/types";
 
 export default function Dashboard() {
   const router = useRouter();
   const isMobile = useIsMobile();
   const gridDashboardRef = useRef<GridDashboardHandle>(null);
+  const layoutRef = useRef<Widget[]>([]);
 
   // ==========================================================================
   // Authentication
@@ -193,6 +194,7 @@ export default function Dashboard() {
     gridDashboardRef,
     presetsRef,
     presetIndexRef,
+    layoutRef,
     menuOpen,
     settingsOpen,
     presetManagerOpen,
@@ -214,6 +216,11 @@ export default function Dashboard() {
     onTogglePrivacy: togglePrivacy,
     isPrivate,
   });
+
+  // Keep a live ref of layout for keyboard quick-saves
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
 
   // ==========================================================================
   // Event Handlers

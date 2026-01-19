@@ -1,18 +1,11 @@
 "use client";
 
 import { useEffect, useCallback, useRef, MutableRefObject } from "react";
-import { Widget, DashboardPreset, PresetType } from "@/types";
+import { Widget, DashboardPreset } from "@/types";
 import { preferencesService } from "@/lib/preferences";
 import { toast } from "sonner";
-import {
-  readLayoutFromStorage,
-  savePresetsToStorage,
-  saveActivePresetIndex,
-  normalizeLayout,
-  generatePresetName,
-} from "@/utils/layoutUtils";
 import { GridDashboardHandle } from "@/components/GridDashboard";
-import { shouldIgnoreGlobalHotkeys, findNextPresetIndex, deepClone } from "./types";
+import { shouldIgnoreGlobalHotkeys, findNextPresetIndex } from "./types";
 
 interface UseDashboardKeyboardOptions {
   /** Reference to GridDashboard for compact action */
@@ -21,6 +14,8 @@ interface UseDashboardKeyboardOptions {
   presetsRef: MutableRefObject<Array<DashboardPreset | null>>;
   /** Reference to preset index (to avoid stale closures) */
   presetIndexRef: MutableRefObject<number>;
+  /** Reference to the live layout (avoids saving stale storage snapshots) */
+  layoutRef: MutableRefObject<Widget[]>;
   /** Whether menu is open */
   menuOpen: boolean;
   /** Whether settings is open */
@@ -65,6 +60,7 @@ export function useDashboardKeyboard({
   gridDashboardRef,
   presetsRef,
   presetIndexRef,
+  layoutRef,
   menuOpen,
   settingsOpen,
   presetManagerOpen,
@@ -182,17 +178,17 @@ export function useDashboardKeyboard({
         } else {
           digit = parseInt(key, 10);
         }
-        
+
         // 0: Reload page
         if (digit === 0) {
           window.location.reload();
         } else if (digit >= 1 && digit <= 9) {
           const index = digit - 1;
-          
+
           // Shift+number: Save to preset
           if (e.shiftKey) {
-            const liveLayout = readLayoutFromStorage();
-            if (liveLayout) {
+            const liveLayout = layoutRef.current;
+            if (liveLayout && liveLayout.length > 0) {
               onSavePreset(index, liveLayout);
             }
           } else {
@@ -225,6 +221,7 @@ export function useDashboardKeyboard({
       gridDashboardRef,
       presetsRef,
       presetIndexRef,
+      layoutRef,
       onToggleMenu,
       onTogglePresetManager,
       onToggleSettings,

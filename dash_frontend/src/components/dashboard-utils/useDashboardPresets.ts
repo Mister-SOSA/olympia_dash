@@ -86,6 +86,8 @@ export function useDashboardPresets({
   const presetsRef = useRef(presets);
   const presetIndexRef = useRef(presetIndex);
   const loadPresetRef = useRef<((index: number) => void) | null>(null);
+  const loadPresetFadeOutTimerRef = useRef<number | null>(null);
+  const loadPresetFadeInTimerRef = useRef<number | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -106,11 +108,19 @@ export function useDashboardPresets({
 
       toast.info(`Loaded Preset ${index + 1}`);
 
+      // Clear any in-flight timers to avoid stale state updates
+      if (loadPresetFadeOutTimerRef.current) {
+        clearTimeout(loadPresetFadeOutTimerRef.current);
+      }
+      if (loadPresetFadeInTimerRef.current) {
+        clearTimeout(loadPresetFadeInTimerRef.current);
+      }
+
       // Start fade out
       setIsTransitioning(true);
 
       // Wait for fade out, then switch layout, then fade in
-      setTimeout(() => {
+      loadPresetFadeOutTimerRef.current = window.setTimeout(() => {
         const merged = normalizeLayout(mergePreset(deepClone(preset.layout)));
 
         setLayout(merged);
@@ -124,7 +134,7 @@ export function useDashboardPresets({
         saveActivePresetIndex(index);
 
         // End transition to fade back in
-        setTimeout(() => {
+        loadPresetFadeInTimerRef.current = window.setTimeout(() => {
           setIsTransitioning(false);
         }, 50); // Small delay to ensure layout has updated
       }, 200); // Fade out duration
@@ -135,6 +145,14 @@ export function useDashboardPresets({
   // Update loadPresetRef for auto-cycle hook
   useEffect(() => {
     loadPresetRef.current = loadPreset;
+    return () => {
+      if (loadPresetFadeOutTimerRef.current) {
+        clearTimeout(loadPresetFadeOutTimerRef.current);
+      }
+      if (loadPresetFadeInTimerRef.current) {
+        clearTimeout(loadPresetFadeInTimerRef.current);
+      }
+    };
   }, [loadPreset]);
 
   // Handle preset click with intelligent dialog
@@ -260,4 +278,7 @@ export function useDashboardPresets({
   };
 }
 
+// Track transition timers to allow cleanup/cancellation
+const loadPresetFadeOutTimerRef = { current: null as number | null };
+const loadPresetFadeInTimerRef = { current: null as number | null };
 export default useDashboardPresets;

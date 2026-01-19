@@ -75,7 +75,7 @@ export function useDashboardLayout({
 
   // Handle layout changes from grid interactions
   const handleExternalLayoutChange = useCallback((
-    activeLayout: Widget[], 
+    activeLayout: Widget[],
     source: LayoutUpdateSource = 'local-interaction'
   ) => {
     const mergedLayout = mergeLayoutWithActive(layout, activeLayout);
@@ -131,37 +131,40 @@ export function useDashboardLayout({
         : 'local-interaction';
 
     // Save with appropriate source tag
+    if (areLayoutsEqual(layout, normalizedLayout)) {
+      return; // No-op; avoid redundant saves/broadcasts
+    }
+
+    // Save with appropriate source tag
     saveLayoutToStorage(normalizedLayout, { source });
 
-    if (!areLayoutsEqual(layout, normalizedLayout)) {
-      setLayout(normalizedLayout);
+    setLayout(normalizedLayout);
 
-      if (activePresetIndex !== null && presets[activePresetIndex]) {
-        const now = new Date().toISOString();
-        const updatedPresets = [...presets];
-        const existingPreset = updatedPresets[activePresetIndex];
+    if (activePresetIndex !== null && presets[activePresetIndex]) {
+      const now = new Date().toISOString();
+      const updatedPresets = [...presets];
+      const existingPreset = updatedPresets[activePresetIndex];
 
-        updatedPresets[activePresetIndex] = {
-          ...existingPreset!,
-          layout: deepClone(normalizedLayout),
-          type: existingPreset?.type || "grid",
-          name: existingPreset?.name || generatePresetName(normalizedLayout),
-          updatedAt: now
-        };
+      updatedPresets[activePresetIndex] = {
+        ...existingPreset!,
+        layout: deepClone(normalizedLayout),
+        type: existingPreset?.type || "grid",
+        name: existingPreset?.name || generatePresetName(normalizedLayout),
+        updatedAt: now
+      };
 
-        setPresets(updatedPresets);
-        savePresetsToStorage(updatedPresets);
-        const presetType = updatedPresets[activePresetIndex]!.type;
-        setCurrentPresetType(presetType);
-        saveCurrentPresetType(presetType);
-        saveActivePresetIndex(activePresetIndex);
-      } else {
-        // Manual layout edits without an active preset fall back to grid mode
-        setCurrentPresetType("grid");
-        saveCurrentPresetType("grid");
-        setActivePresetIndex(null);
-        saveActivePresetIndex(null);
-      }
+      setPresets(updatedPresets);
+      savePresetsToStorage(updatedPresets);
+      const presetType = updatedPresets[activePresetIndex]!.type;
+      setCurrentPresetType(presetType);
+      saveCurrentPresetType(presetType);
+      saveActivePresetIndex(activePresetIndex);
+    } else {
+      // Manual layout edits without an active preset fall back to grid mode
+      setCurrentPresetType("grid");
+      saveCurrentPresetType("grid");
+      setActivePresetIndex(null);
+      saveActivePresetIndex(null);
     }
   }, [tempLayout, layout, activePresetIndex, presets, setPresets, setCurrentPresetType, setActivePresetIndex]);
 

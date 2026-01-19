@@ -58,6 +58,10 @@ interface UseDashboardPreferencesReturn {
   refreshWidgetPermissions: () => Promise<void>;
   /** Whether a remote update is queued because the user is editing locally */
   hasPendingRemoteUpdate: boolean;
+  /** Apply a queued remote update (used after prompting the user) */
+  applyPendingRemoteUpdate: () => boolean;
+  /** Summary of the pending remote diff, if any */
+  pendingRemoteDiff?: ReturnType<typeof detectStructuralChanges>;
 }
 
 /**
@@ -98,8 +102,11 @@ export function useDashboardPreferences({
     presets: Array<DashboardPreset | null>;
     presetType: PresetType;
     activePresetIndex: number | null;
+    structuralChanges: ReturnType<typeof detectStructuralChanges>;
+    reason: 'editing' | 'structural';
   } | null>(null);
   const [hasPendingRemoteUpdate, setHasPendingRemoteUpdate] = useState(false);
+  const [pendingRemoteDiff, setPendingRemoteDiff] = useState<ReturnType<typeof detectStructuralChanges> | undefined>(undefined);
 
   // Track if preferences have been initialized to prevent duplicate loads
   const preferencesInitialized = useRef(false);
@@ -253,8 +260,9 @@ export function useDashboardPreferences({
       const newGridCellHeight = preferencesService.get('grid.cellHeight', 80) as number;
 
       if (newGridColumns !== initialGridColumns || newGridCellHeight !== initialGridCellHeight) {
-        console.log('[Dashboard] Grid settings changed from another session, reloading...');
-        window.location.reload();
+        console.log('[Dashboard] Grid settings changed from another session, refreshing layout in-place.');
+        const refreshedLayout = normalizeLayout(readLayoutFromStorage());
+        onLayoutUpdate(refreshedLayout);
         return;
       }
 
@@ -266,6 +274,9 @@ export function useDashboardPreferences({
         const queuedPresetType = readCurrentPresetType() as PresetType;
         const queuedActivePresetIndex = readActivePresetIndex();
 
+        // Check if this is a structural change (widgets added/removed) for logging
+        const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
+
         // If the user is editing, queue the latest remote snapshot instead of applying immediately
         if (isEditing) {
           pendingRemoteUpdateRef.current = {
@@ -273,14 +284,30 @@ export function useDashboardPreferences({
             presets: queuedPresets,
             presetType: queuedPresetType,
             activePresetIndex: queuedActivePresetIndex,
+            structuralChanges,
+            reason: 'editing'
           };
+          setPendingRemoteDiff(structuralChanges);
           setHasPendingRemoteUpdate(true);
           console.log('[Dashboard] Remote update deferred due to local edits.');
           return;
         }
 
-        // Check if this is a structural change (widgets added/removed) for logging
-        const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
+        // If structural changes exist (add/remove), require explicit apply to avoid clobbering local intent
+        if (structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved) {
+          pendingRemoteUpdateRef.current = {
+            layout: normalizedLayout,
+            presets: queuedPresets,
+            presetType: queuedPresetType,
+            activePresetIndex: queuedActivePresetIndex,
+            structuralChanges,
+            reason: 'structural'
+          };
+          setPendingRemoteDiff(structuralChanges);
+          setHasPendingRemoteUpdate(true);
+          console.log('[Dashboard] Remote structural update queued; awaiting user confirmation.');
+          return;
+        }
 
         // Check the source metadata to understand WHY the originating session made this change
         const layoutMeta = preferencesService.get<{ source?: LayoutUpdateSource, sessionId?: string }>('dashboard.layoutMeta');
@@ -295,13 +322,14 @@ export function useDashboardPreferences({
           console.log(`[Dashboard] Widgets removed remotely: ${structuralChanges.removedIds.join(', ')}`);
         }
 
-        // Apply the remote layout
+        // Apply the remote layout (non-structural, safe to auto-apply)
         onLayoutUpdate(normalizedLayout);
 
         // Sync presets and other metadata
         onPresetsUpdate(queuedPresets);
         onPresetTypeUpdate(queuedPresetType);
         onActivePresetIndexUpdate(queuedActivePresetIndex);
+        setPendingRemoteDiff(undefined);
       }
 
       // Update user state to reflect impersonation changes
@@ -326,17 +354,38 @@ export function useDashboardPreferences({
       return;
     }
 
-    console.log('[Dashboard] Applying deferred remote update after edits finished.');
+    // Only auto-apply deferred updates that were paused due to editing AND are non-structural
+    if (payload.reason === 'editing' && !payload.structuralChanges.widgetsAdded && !payload.structuralChanges.widgetsRemoved) {
+      console.log('[Dashboard] Applying deferred remote update after edits finished (non-structural).');
+      onLayoutUpdate(payload.layout);
+      onPresetsUpdate(payload.presets);
+      onPresetTypeUpdate(payload.presetType);
+      onActivePresetIndexUpdate(payload.activePresetIndex);
+      pendingRemoteUpdateRef.current = null;
+      setPendingRemoteDiff(undefined);
+      setHasPendingRemoteUpdate(false);
+    }
+  }, [hasPendingRemoteUpdate, onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate, isEditingRef]);
 
-    // Apply queued layout/presets
+  const applyPendingRemoteUpdate = useCallback((): boolean => {
+    const payload = pendingRemoteUpdateRef.current;
+    if (!payload) {
+      setHasPendingRemoteUpdate(false);
+      setPendingRemoteDiff(undefined);
+      return false;
+    }
+
     onLayoutUpdate(payload.layout);
     onPresetsUpdate(payload.presets);
     onPresetTypeUpdate(payload.presetType);
     onActivePresetIndexUpdate(payload.activePresetIndex);
 
     pendingRemoteUpdateRef.current = null;
+    setPendingRemoteDiff(undefined);
     setHasPendingRemoteUpdate(false);
-  }, [hasPendingRemoteUpdate, onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate, isEditingRef]);
+    console.log('[Dashboard] Pending remote update applied by user.');
+    return true;
+  }, [onLayoutUpdate, onPresetsUpdate, onPresetTypeUpdate, onActivePresetIndexUpdate]);
 
   return {
     preferencesReady,
@@ -347,6 +396,8 @@ export function useDashboardPreferences({
     widgetAccess,
     refreshWidgetPermissions,
     hasPendingRemoteUpdate,
+    applyPendingRemoteUpdate,
+    pendingRemoteDiff,
   };
 }
 
