@@ -24,6 +24,7 @@ from auth.preferences_routes import preferences_bp
 from auth.groups_routes import groups_bp
 from auth.widget_routes import widget_bp
 from auth.analytics_routes import analytics_bp
+from auth.custom_widget_routes import custom_widget_bp
 from auth.middleware import require_auth
 from services.usda_mpr import get_beef_prices, get_beef_heart_prices
 from services.unifi_access import get_entry_logs as fetch_entry_logs
@@ -228,6 +229,7 @@ app.register_blueprint(preferences_bp, url_prefix='/api')
 app.register_blueprint(groups_bp, url_prefix='/api/auth/admin/groups')
 app.register_blueprint(widget_bp, url_prefix='/api/auth/widgets')
 app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+app.register_blueprint(custom_widget_bp, url_prefix='/api/custom-widgets')
 
 # App version - updated on each deployment to trigger client reloads
 # You can also use BUILD_VERSION env var set during docker build

@@ -316,6 +316,37 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_stats(stat_date)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_feature_usage_user_id ON feature_usage(user_id)')
     
+    # ============ Custom Widgets Tables ============
+    
+    # Custom widget definitions - stores user-created widget configurations
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS custom_widgets (
+            id TEXT PRIMARY KEY,
+            creator_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT DEFAULT 'Custom',
+            visualization_type TEXT NOT NULL,
+            data_source TEXT NOT NULL,
+            config TEXT NOT NULL,
+            default_size TEXT NOT NULL DEFAULT '{"w": 4, "h": 4}',
+            min_size TEXT,
+            max_size TEXT,
+            settings_schema TEXT,
+            is_shared BOOLEAN DEFAULT 0,
+            is_template BOOLEAN DEFAULT 0,
+            version INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # Custom widget indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_custom_widgets_creator ON custom_widgets(creator_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_custom_widgets_shared ON custom_widgets(is_shared)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_custom_widgets_category ON custom_widgets(category)')
+    
     conn.commit()
     conn.close()
 
@@ -1637,3 +1668,280 @@ def cleanup_old_analytics(days_to_keep=90):
         'sessions_deleted': sessions_deleted
     }
 
+
+# ============ Custom Widgets Functions ============
+
+def create_custom_widget(widget_id, creator_id, title, description, category, visualization_type, 
+                         data_source, config, default_size, min_size=None, max_size=None, 
+                         settings_schema=None, is_template=False):
+    """Create a new custom widget definition."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+            INSERT INTO custom_widgets (
+                id, creator_id, title, description, category, visualization_type,
+                data_source, config, default_size, min_size, max_size, 
+                settings_schema, is_template
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            widget_id,
+            creator_id,
+            title,
+            description,
+            category or 'Custom',
+            visualization_type,
+            json.dumps(data_source) if isinstance(data_source, dict) else data_source,
+            json.dumps(config) if isinstance(config, dict) else config,
+            json.dumps(default_size) if isinstance(default_size, dict) else default_size,
+            json.dumps(min_size) if min_size else None,
+            json.dumps(max_size) if max_size else None,
+            json.dumps(settings_schema) if settings_schema else None,
+            is_template
+        ))
+        conn.commit()
+        return widget_id
+    except sqlite3.IntegrityError as e:
+        raise ValueError(f"Widget with ID '{widget_id}' already exists") from e
+    finally:
+        conn.close()
+
+
+def get_custom_widget(widget_id):
+    """Get a custom widget by ID."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT cw.*, u.email as creator_email, u.name as creator_name
+        FROM custom_widgets cw
+        JOIN users u ON cw.creator_id = u.id
+        WHERE cw.id = ?
+    ''', (widget_id,))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return None
+    
+    widget = dict(row)
+    # Parse JSON fields
+    for field in ['data_source', 'config', 'default_size', 'min_size', 'max_size', 'settings_schema']:
+        if widget.get(field):
+            try:
+                widget[field] = json.loads(widget[field])
+            except (json.JSONDecodeError, TypeError):
+                pass
+    
+    return widget
+
+
+def get_user_custom_widgets(user_id):
+    """Get all custom widgets created by a user."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM custom_widgets
+        WHERE creator_id = ?
+        ORDER BY updated_at DESC
+    ''', (user_id,))
+    
+    widgets = []
+    for row in cursor.fetchall():
+        widget = dict(row)
+        for field in ['data_source', 'config', 'default_size', 'min_size', 'max_size', 'settings_schema']:
+            if widget.get(field):
+                try:
+                    widget[field] = json.loads(widget[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        widgets.append(widget)
+    
+    conn.close()
+    return widgets
+
+
+def get_accessible_custom_widgets(user_id):
+    """Get all custom widgets a user can access (own + shared via permissions)."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get user's own widgets + widgets shared with them directly or via groups
+    cursor.execute('''
+        SELECT DISTINCT cw.*, u.email as creator_email, u.name as creator_name,
+               CASE WHEN cw.creator_id = ? THEN 'owner'
+                    WHEN wp.access_level IS NOT NULL THEN wp.access_level
+                    WHEN gwp.access_level IS NOT NULL THEN gwp.access_level
+                    ELSE 'view' END as access_level
+        FROM custom_widgets cw
+        JOIN users u ON cw.creator_id = u.id
+        LEFT JOIN widget_permissions wp ON wp.widget_id = ('custom:' || cw.id) AND wp.user_id = ?
+        LEFT JOIN group_members gm ON gm.user_id = ?
+        LEFT JOIN group_widget_permissions gwp ON gwp.widget_id = ('custom:' || cw.id) AND gwp.group_id = gm.group_id
+        WHERE cw.creator_id = ? 
+           OR cw.is_shared = 1
+           OR wp.id IS NOT NULL 
+           OR gwp.id IS NOT NULL
+        ORDER BY cw.updated_at DESC
+    ''', (user_id, user_id, user_id, user_id))
+    
+    widgets = []
+    for row in cursor.fetchall():
+        widget = dict(row)
+        for field in ['data_source', 'config', 'default_size', 'min_size', 'max_size', 'settings_schema']:
+            if widget.get(field):
+                try:
+                    widget[field] = json.loads(widget[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        widgets.append(widget)
+    
+    conn.close()
+    return widgets
+
+
+def update_custom_widget(widget_id, user_id, updates):
+    """Update a custom widget. User must be the creator or have edit access."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Check ownership or edit permission
+    cursor.execute('''
+        SELECT cw.creator_id, wp.access_level, gwp.access_level as group_access
+        FROM custom_widgets cw
+        LEFT JOIN widget_permissions wp ON wp.widget_id = ('custom:' || cw.id) AND wp.user_id = ?
+        LEFT JOIN group_members gm ON gm.user_id = ?
+        LEFT JOIN group_widget_permissions gwp ON gwp.widget_id = ('custom:' || cw.id) AND gwp.group_id = gm.group_id
+        WHERE cw.id = ?
+    ''', (user_id, user_id, widget_id))
+    
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        raise ValueError(f"Widget '{widget_id}' not found")
+    
+    creator_id, access_level, group_access = row
+    can_edit = (creator_id == user_id or 
+                access_level in ('edit', 'admin') or 
+                group_access in ('edit', 'admin'))
+    
+    if not can_edit:
+        conn.close()
+        raise PermissionError("You don't have permission to edit this widget")
+    
+    # Build update query
+    allowed_fields = ['title', 'description', 'category', 'visualization_type', 
+                      'data_source', 'config', 'default_size', 'min_size', 'max_size',
+                      'settings_schema', 'is_shared']
+    
+    set_clauses = []
+    values = []
+    
+    for field, value in updates.items():
+        if field in allowed_fields:
+            set_clauses.append(f"{field} = ?")
+            if field in ['data_source', 'config', 'default_size', 'min_size', 'max_size', 'settings_schema']:
+                values.append(json.dumps(value) if value else None)
+            else:
+                values.append(value)
+    
+    if not set_clauses:
+        conn.close()
+        return False
+    
+    # Increment version and update timestamp
+    set_clauses.append("version = version + 1")
+    set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+    values.append(widget_id)
+    
+    cursor.execute(f'''
+        UPDATE custom_widgets
+        SET {", ".join(set_clauses)}
+        WHERE id = ?
+    ''', values)
+    
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+
+def delete_custom_widget(widget_id, user_id, is_admin=False):
+    """Delete a custom widget. Only creator or admin can delete."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    if is_admin:
+        cursor.execute('DELETE FROM custom_widgets WHERE id = ?', (widget_id,))
+    else:
+        cursor.execute('DELETE FROM custom_widgets WHERE id = ? AND creator_id = ?', 
+                      (widget_id, user_id))
+    
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    
+    # Also clean up any permissions for this widget
+    if success:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM widget_permissions WHERE widget_id = ?", (f'custom:{widget_id}',))
+        cursor.execute("DELETE FROM group_widget_permissions WHERE widget_id = ?", (f'custom:{widget_id}',))
+        conn.commit()
+        conn.close()
+    
+    return success
+
+
+def share_custom_widget(widget_id, creator_id, is_shared=True):
+    """Toggle the shared status of a custom widget."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE custom_widgets
+        SET is_shared = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND creator_id = ?
+    ''', (is_shared, widget_id, creator_id))
+    
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+
+def get_shared_widget_templates():
+    """Get all widgets marked as templates (for widget gallery)."""
+    import json
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT cw.*, u.email as creator_email, u.name as creator_name
+        FROM custom_widgets cw
+        JOIN users u ON cw.creator_id = u.id
+        WHERE cw.is_template = 1
+        ORDER BY cw.title
+    ''')
+    
+    widgets = []
+    for row in cursor.fetchall():
+        widget = dict(row)
+        for field in ['data_source', 'config', 'default_size', 'min_size', 'max_size', 'settings_schema']:
+            if widget.get(field):
+                try:
+                    widget[field] = json.loads(widget[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        widgets.append(widget)
+    
+    conn.close()
+    return widgets

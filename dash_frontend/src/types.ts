@@ -41,6 +41,7 @@ export interface Widget {
      * Unique identifier for the widget instance.
      * For singleton widgets: matches the widgetType (e.g., "ClockWidget")
      * For multi-instance widgets: format is "widgetType:instanceId" (e.g., "FanController:fan1")
+     * For custom widgets: format is "custom:widgetId" (e.g., "custom:cw_abc123def456")
      */
     id: string;
     x: number;
@@ -57,6 +58,10 @@ export interface Widget {
      * Stored alongside widget in layout for persistence.
      */
     instanceConfig?: Record<string, any>;
+    /**
+     * Indicates this is a custom widget (user-created via widget builder)
+     */
+    isCustom?: boolean;
 }
 
 export type PresetType = "grid" | "fullscreen";
@@ -253,5 +258,212 @@ export interface AccessLogResponse {
     success: boolean;
     data: AccessLogEntry[];
     total: number;
+    error?: string;
+}
+
+// ============ Custom Widget Builder Types ============
+
+/**
+ * Visualization types supported by the custom widget builder
+ */
+export type VisualizationType =
+    | 'bar'          // Bar chart
+    | 'line'         // Line chart
+    | 'pie'          // Pie/donut chart
+    | 'table'        // Data table
+    | 'single_value' // Big number display
+    | 'gauge'        // Circular gauge
+    | 'custom';      // Custom template (future)
+
+/**
+ * Data source configuration for custom widgets
+ */
+export interface DataSourceConfig {
+    /** Type of data source */
+    type: 'none' | 'query_registry' | 'api_endpoint' | 'static';
+
+    /** For query_registry: the registered query ID */
+    queryId?: string;
+
+    /** Parameters to pass to the query */
+    params?: Record<string, any>;
+
+    /** For api_endpoint: the endpoint path */
+    endpoint?: string;
+
+    /** HTTP method for api_endpoint */
+    method?: 'GET' | 'POST';
+
+    /** For static: the static data */
+    staticData?: any[];
+
+    /** Refresh interval in milliseconds (0 = no refresh) */
+    refreshInterval?: number;
+}
+
+/**
+ * Visualization configuration for custom widgets
+ */
+export interface VisualizationConfig {
+    /** Primary field for X axis or labels */
+    xField?: string;
+
+    /** Field(s) for Y axis or values */
+    yField?: string | string[];
+
+    /** Field for series grouping (multi-series charts) */
+    seriesField?: string;
+
+    /** Field for labels */
+    labelField?: string;
+
+    /** Field for values (pie charts, single value) */
+    valueField?: string;
+
+    /** Color configuration */
+    colors?: {
+        primary?: string;
+        secondary?: string;
+        palette?: string[];
+    };
+
+    /** Chart-specific options */
+    chartOptions?: {
+        showLegend?: boolean;
+        showGrid?: boolean;
+        showTooltip?: boolean;
+        stacked?: boolean;
+        horizontal?: boolean;
+        animate?: boolean;
+    };
+
+    /** Table-specific configuration */
+    tableConfig?: {
+        columns?: Array<{
+            field: string;
+            header: string;
+            width?: number;
+            align?: 'left' | 'center' | 'right';
+            format?: 'text' | 'number' | 'currency' | 'date' | 'percent';
+        }>;
+        sortable?: boolean;
+        pagination?: boolean;
+        pageSize?: number;
+    };
+
+    /** Single value specific configuration */
+    singleValueConfig?: {
+        prefix?: string;
+        suffix?: string;
+        format?: 'number' | 'currency' | 'percent';
+        decimals?: number;
+        comparison?: {
+            field: string;
+            label: string;
+        };
+    };
+
+    /** Gauge specific configuration */
+    gaugeConfig?: {
+        min?: number;
+        max?: number;
+        thresholds?: Array<{ value: number; color: string }>;
+        unit?: string;
+    };
+}
+
+/**
+ * Custom widget definition stored in database
+ */
+export interface CustomWidgetDefinition {
+    /** Unique widget ID (e.g., "cw_abc123def456") */
+    id: string;
+
+    /** User who created this widget */
+    creator_id: number;
+    creator_email?: string;
+    creator_name?: string;
+
+    /** Widget metadata */
+    title: string;
+    description?: string;
+    category: string;
+
+    /** Visualization configuration */
+    visualization_type: VisualizationType;
+
+    /** Data source configuration */
+    data_source: DataSourceConfig;
+
+    /** Full visualization config */
+    config: VisualizationConfig;
+
+    /** Size constraints */
+    default_size: { w: number; h: number };
+    min_size?: { w: number; h: number };
+    max_size?: { w: number; h: number };
+
+    /** Optional custom settings schema */
+    settings_schema?: any;
+
+    /** Sharing flags */
+    is_shared: boolean;
+    is_template: boolean;
+
+    /** Version for conflict resolution */
+    version: number;
+
+    /** Timestamps */
+    created_at: string;
+    updated_at: string;
+
+    /** Access level (when queried with user context) */
+    access_level?: 'owner' | 'view' | 'edit' | 'admin';
+}
+
+/**
+ * Request payload for creating a custom widget
+ */
+export interface CreateCustomWidgetRequest {
+    title: string;
+    description?: string;
+    category?: string;
+    visualization_type: VisualizationType;
+    data_source: DataSourceConfig;
+    config: VisualizationConfig;
+    default_size?: { w: number; h: number };
+    min_size?: { w: number; h: number };
+    max_size?: { w: number; h: number };
+    settings_schema?: any;
+    is_template?: boolean;
+}
+
+/**
+ * Request payload for updating a custom widget
+ */
+export interface UpdateCustomWidgetRequest {
+    title?: string;
+    description?: string;
+    category?: string;
+    visualization_type?: VisualizationType;
+    data_source?: DataSourceConfig;
+    config?: VisualizationConfig;
+    default_size?: { w: number; h: number };
+    min_size?: { w: number; h: number };
+    max_size?: { w: number; h: number };
+    settings_schema?: any;
+    is_shared?: boolean;
+}
+
+/**
+ * API response for custom widget operations
+ */
+export interface CustomWidgetResponse {
+    success: boolean;
+    widget?: CustomWidgetDefinition;
+    widgets?: CustomWidgetDefinition[];
+    templates?: CustomWidgetDefinition[];
+    count?: number;
+    message?: string;
     error?: string;
 }
