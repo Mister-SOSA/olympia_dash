@@ -9,7 +9,8 @@ import React, {
     useRef,
     memo,
 } from "react";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Drawer } from "vaul";
 import { getWidgetById } from "@/constants/widgets";
 
 // Swiper - native-feeling carousel
@@ -838,7 +839,7 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
 });
 
 // ============================================
-// Detail View (Full Screen Widget) - Memoized
+// Detail View (Full Screen Widget) - Using Vaul Drawer
 // ============================================
 
 interface DetailViewProps {
@@ -850,151 +851,118 @@ const DetailView = memo(function DetailView({ widgetId, onClose }: DetailViewPro
     const widgetDef = getWidgetById(widgetId);
     const config = getWidgetConfig(widgetId);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
     const hasSettings = getWidgetSettingsSchema(widgetId) !== null;
     const title = widgetDef?.title || config?.title || widgetId;
-
-    const handleDragEnd = useCallback(
-        (_: unknown, info: PanInfo) => {
-            if (info.offset.y > 100 || info.velocity.y > 500) {
-                vibrate(10);
-                onClose();
-            }
-        },
-        [onClose]
-    );
 
     const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
     const handleCloseSettings = useCallback(() => setSettingsOpen(false), []);
 
+    const handleOpenChange = useCallback((open: boolean) => {
+        setIsOpen(open);
+        if (!open) {
+            // Delay unmount to allow close animation to complete
+            setTimeout(onClose, 300);
+        }
+    }, [onClose]);
+
     return (
         <>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                className="fixed inset-0 z-50"
-                style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-                onClick={onClose}
-                role="dialog"
-                aria-modal="true"
-                aria-label={`${title} widget details`}
+            <Drawer.Root
+                open={isOpen}
+                onOpenChange={handleOpenChange}
+                shouldScaleBackground={false}
             >
-                <motion.div
-                    initial={{ y: "100%" }}
-                    animate={{ y: 0 }}
-                    exit={{ y: "100%" }}
-                    transition={EASE_OUT_TRANSITION}
-                    drag="y"
-                    dragConstraints={{ top: 0, bottom: 0 }}
-                    dragElastic={{ top: 0.1, bottom: 0.3 }}
-                    onDragEnd={handleDragEnd}
-                    className="absolute inset-x-0 bottom-0 top-[env(safe-area-inset-top)] flex flex-col overflow-hidden"
-                    style={{
-                        backgroundColor: "var(--ui-bg-primary)",
-                        borderTopLeftRadius: "1.5rem",
-                        borderTopRightRadius: "1.5rem",
-                        willChange: "transform",
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Drag Handle */}
-                    <div className="flex justify-center py-3 flex-shrink-0">
-                        <div
-                            className="w-10 h-1 rounded-full"
-                            style={{ backgroundColor: "var(--ui-border-secondary)" }}
-                        />
-                    </div>
-
-                    {/* Header */}
-                    <div
-                        className="flex items-center justify-between px-4 pb-3 border-b flex-shrink-0"
-                        style={{ borderColor: "var(--ui-border-primary)" }}
+                <Drawer.Portal>
+                    <Drawer.Overlay
+                        className="fixed inset-0 z-50 bg-black/60"
+                    />
+                    <Drawer.Content
+                        className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none"
+                        style={{
+                            top: "env(safe-area-inset-top, 0px)",
+                            backgroundColor: "var(--ui-bg-primary)",
+                            borderTopLeftRadius: "0.75rem",
+                            borderTopRightRadius: "0.75rem",
+                        }}
+                        aria-label={`${title} widget details`}
                     >
-                        <div className="flex-1 min-w-0">
-                            <h2
-                                className="text-lg font-semibold truncate"
-                                style={{ color: "var(--ui-text-primary)" }}
-                            >
-                                {title}
-                            </h2>
-                            {config?.category && (
-                                <span className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
-                                    {config.category}
-                                </span>
-                            )}
+                        {/* Drag handle */}
+                        <div className="flex justify-center pt-3 pb-2">
+                            <Drawer.Handle
+                                className="w-10 h-1 rounded-full"
+                                style={{ backgroundColor: "var(--ui-border-secondary)" }}
+                            />
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                            {hasSettings && (
+
+                        {/* Header */}
+                        <div
+                            className="flex items-center gap-3 px-3 pb-2 border-b flex-shrink-0"
+                            style={{ borderColor: "var(--ui-border-primary)" }}
+                        >
+                            {/* Settings button - left side */}
+                            {hasSettings ? (
                                 <button
                                     onClick={handleOpenSettings}
-                                    className="p-2 rounded-full transition-colors active:scale-95"
-                                    style={{
-                                        backgroundColor: "var(--ui-bg-tertiary)",
-                                        color: "var(--ui-text-secondary)",
-                                    }}
+                                    className="p-1.5 -ml-1 rounded-full transition-colors active:scale-95"
+                                    style={{ color: "var(--ui-text-secondary)" }}
                                     aria-label="Widget Settings"
                                 >
                                     <MdTune className="w-5 h-5" />
                                 </button>
+                            ) : (
+                                <div className="w-8" />
                             )}
-                            <button
-                                onClick={onClose}
-                                className="p-2 rounded-full transition-colors active:scale-95"
-                                style={{
-                                    backgroundColor: "var(--ui-bg-tertiary)",
-                                    color: "var(--ui-text-secondary)",
-                                }}
-                                aria-label="Close"
-                            >
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
 
-                    {/* Widget Content */}
-                    <div
-                        className="flex-1 overflow-auto p-4"
-                        style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }}
-                    >
-                        {widgetDef && (
-                            <WidgetErrorBoundary widgetName={widgetDef.title || widgetDef.id}>
-                                <Suspense
-                                    fallback={
-                                        <div className="flex items-center justify-center h-64">
-                                            <Loader />
-                                        </div>
-                                    }
+                            {/* Title - centered */}
+                            <Drawer.Title className="flex-1 min-w-0 text-center">
+                                <span
+                                    className="text-base font-semibold truncate leading-tight block"
+                                    style={{ color: "var(--ui-text-primary)" }}
                                 >
-                                    <div className="h-full min-h-[300px]">
-                                        <widgetDef.component />
-                                    </div>
-                                </Suspense>
-                            </WidgetErrorBoundary>
-                        )}
-                    </div>
+                                    {title}
+                                </span>
+                            </Drawer.Title>
 
-                    {/* Swipe hint */}
-                    <motion.div
-                        className="absolute bottom-6 inset-x-0 flex justify-center pointer-events-none"
-                        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 0.8, y: 0 }}
-                        transition={{ delay: 1.5 }}
-                    >
+                            {/* Close button - right side */}
+                            <Drawer.Close asChild>
+                                <button
+                                    className="p-1.5 -mr-1 rounded-full transition-colors active:scale-95"
+                                    style={{ color: "var(--ui-text-secondary)" }}
+                                    aria-label="Close"
+                                >
+                                    <MdClose className="w-5 h-5" />
+                                </button>
+                            </Drawer.Close>
+                        </div>
+
+                        {/* Widget Content - maximized space */}
                         <div
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                            className="flex-1 overflow-auto"
                             style={{
-                                backgroundColor: "var(--ui-bg-tertiary)",
-                                color: "var(--ui-text-muted)",
+                                padding: "0.75rem",
+                                paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))"
                             }}
                         >
-                            <MdExpandMore className="w-4 h-4" />
-                            <span className="text-xs font-medium">Swipe down to close</span>
+                            {widgetDef && (
+                                <WidgetErrorBoundary widgetName={widgetDef.title || widgetDef.id}>
+                                    <Suspense
+                                        fallback={
+                                            <div className="flex items-center justify-center h-48">
+                                                <Loader />
+                                            </div>
+                                        }
+                                    >
+                                        <div className="h-full w-full">
+                                            <widgetDef.component />
+                                        </div>
+                                    </Suspense>
+                                </WidgetErrorBoundary>
+                            )}
                         </div>
-                    </motion.div>
-                </motion.div>
-            </motion.div>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
 
             {hasSettings && (
                 <WidgetSettingsDialog
