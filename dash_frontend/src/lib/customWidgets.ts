@@ -281,7 +281,7 @@ class CustomWidgetService {
      * Get custom widgets from preferences (for offline/fast access)
      */
     getFromPreferences(): Record<string, Partial<CustomWidgetDefinition>> {
-        return preferencesService.get<Record<string, Partial<CustomWidgetDefinition>>>('customWidgets', {});
+        return preferencesService.get<Record<string, Partial<CustomWidgetDefinition>>>('customWidgets', {}) ?? {};
     }
 
     /**

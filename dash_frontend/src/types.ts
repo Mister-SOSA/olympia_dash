@@ -302,32 +302,226 @@ export interface DataSourceConfig {
 }
 
 /**
+ * Series configuration for multi-series charts
+ */
+export interface ChartSeriesConfig {
+    field: string;
+    label?: string;
+    color?: string;
+}
+
+/**
+ * Reference line configuration
+ */
+export interface ReferenceLineConfig {
+    value: number;
+    label?: string;
+    color?: string;
+}
+
+/**
+ * Table column configuration
+ */
+export interface TableColumnConfig {
+    field: string;
+    label?: string;
+    header?: string;
+    width?: string;
+    align?: 'left' | 'center' | 'right';
+    format?: 'text' | 'number' | 'currency' | 'date' | 'percent';
+    decimals?: number;
+    sortable?: boolean;
+}
+
+/**
+ * Gauge zone configuration
+ */
+export interface GaugeZoneConfig {
+    min: number;
+    max: number;
+    color: string;
+}
+
+/**
+ * Threshold configuration for single value
+ */
+export interface ThresholdConfig {
+    danger?: number;
+    warning?: number;
+    success?: number;
+}
+
+/**
  * Visualization configuration for custom widgets
+ * 
+ * This interface supports all visualization types with a flexible schema.
+ * Each visualization type uses a subset of these properties.
  */
 export interface VisualizationConfig {
-    /** Primary field for X axis or labels */
+    // ============================================
+    // Common Field Mappings
+    // ============================================
+
+    /** Primary field for X axis */
+    xAxisField?: string;
+    /** Primary field for Y axis */
+    yAxisField?: string;
+    /** Field for names/labels */
+    nameField?: string;
+    /** Field for values */
+    valueField?: string;
+    /** Field for comparison values */
+    comparisonField?: string;
+    /** Multiple series configuration */
+    series?: ChartSeriesConfig[];
+
+    // ============================================
+    // Legacy/Alias Field Mappings (backwards compat)
+    // ============================================
+
+    /** @deprecated Use xAxisField */
     xField?: string;
-
-    /** Field(s) for Y axis or values */
+    /** @deprecated Use yAxisField */
     yField?: string | string[];
-
-    /** Field for series grouping (multi-series charts) */
+    /** Field for series grouping */
     seriesField?: string;
-
     /** Field for labels */
     labelField?: string;
 
-    /** Field for values (pie charts, single value) */
-    valueField?: string;
+    // ============================================
+    // Display Options
+    // ============================================
 
-    /** Color configuration */
+    /** Show chart grid lines */
+    showGrid?: boolean;
+    /** Show legend */
+    showLegend?: boolean;
+    /** Show tooltip on hover */
+    showTooltip?: boolean;
+    /** Show data point labels */
+    showLabels?: boolean;
+    /** Show the value display */
+    showValue?: boolean;
+    /** Show min/max labels */
+    showMinMax?: boolean;
+    /** Show trend indicator */
+    showTrend?: boolean;
+    /** Show area fill under line */
+    showArea?: boolean;
+    /** Show data point dots */
+    showDots?: boolean;
+    /** Show table header */
+    showHeader?: boolean;
+
+    // ============================================
+    // Chart-Specific Options
+    // ============================================
+
+    /** Stack bars/areas */
+    stacked?: boolean;
+    /** Use curved lines (vs straight) */
+    curved?: boolean;
+    /** Chart orientation */
+    orientation?: 'vertical' | 'horizontal';
+    /** Donut mode for pie charts */
+    donut?: boolean;
+
+    // ============================================
+    // Style Options
+    // ============================================
+
+    /** Value format type */
+    valueFormat?: 'number' | 'currency' | 'percent' | 'text' | 'date';
+    /** Use compact number formatting (1K, 1M, etc.) */
+    compactValues?: boolean;
+    /** Decimal places */
+    decimals?: number;
+    /** Value prefix */
+    prefix?: string;
+    /** Value suffix */
+    suffix?: string;
+    /** Display label */
+    label?: string;
+    /** Comparison label */
+    comparisonLabel?: string;
+    /** Icon (for single value) */
+    icon?: string;
+
+    // ============================================
+    // Chart Styling
+    // ============================================
+
+    /** Bar corner radius */
+    barRadius?: number;
+    /** Line stroke width */
+    strokeWidth?: number;
+    /** Dot size for line charts */
+    dotSize?: number;
+    /** Padding angle for pie charts */
+    paddingAngle?: number;
+    /** Inner radius for donut charts */
+    innerRadius?: number;
+    /** Outer radius for pie/donut charts */
+    outerRadius?: number;
+    /** Start angle for pie/gauge */
+    startAngle?: number;
+    /** End angle for pie/gauge */
+    endAngle?: number;
+    /** Arc width for gauge */
+    arcWidth?: number;
+
+    // ============================================
+    // Data Options
+    // ============================================
+
+    /** Minimum value (gauge) */
+    minValue?: number;
+    /** Maximum value (gauge) */
+    maxValue?: number;
+    /** Target value (gauge, single value) */
+    target?: number;
+    /** Reference lines */
+    referenceLines?: ReferenceLineConfig[];
+    /** Thresholds for value coloring */
+    thresholds?: ThresholdConfig;
+    /** Gauge zones */
+    zones?: GaugeZoneConfig[];
+    /** Invert trend direction (down is good) */
+    invertTrend?: boolean;
+
+    // ============================================
+    // Table Options
+    // ============================================
+
+    /** Table columns configuration */
+    columns?: TableColumnConfig[];
+    /** Enable striped rows */
+    striped?: boolean;
+    /** Compact table mode */
+    compact?: boolean;
+    /** Enable sorting */
+    sortable?: boolean;
+    /** Maximum rows to display */
+    maxRows?: number;
+    /** Default sort configuration */
+    defaultSort?: { field: string; direction: 'asc' | 'desc' };
+
+    // ============================================
+    // Color Configuration
+    // ============================================
+
+    /** Color configuration object */
     colors?: {
         primary?: string;
         secondary?: string;
         palette?: string[];
     };
 
-    /** Chart-specific options */
+    // ============================================
+    // Legacy Nested Options (backwards compat)
+    // ============================================
+
+    /** @deprecated Use flat properties instead */
     chartOptions?: {
         showLegend?: boolean;
         showGrid?: boolean;
@@ -337,21 +531,15 @@ export interface VisualizationConfig {
         animate?: boolean;
     };
 
-    /** Table-specific configuration */
+    /** @deprecated Use flat properties instead */
     tableConfig?: {
-        columns?: Array<{
-            field: string;
-            header: string;
-            width?: number;
-            align?: 'left' | 'center' | 'right';
-            format?: 'text' | 'number' | 'currency' | 'date' | 'percent';
-        }>;
+        columns?: TableColumnConfig[];
         sortable?: boolean;
         pagination?: boolean;
         pageSize?: number;
     };
 
-    /** Single value specific configuration */
+    /** @deprecated Use flat properties instead */
     singleValueConfig?: {
         prefix?: string;
         suffix?: string;
@@ -363,13 +551,16 @@ export interface VisualizationConfig {
         };
     };
 
-    /** Gauge specific configuration */
+    /** @deprecated Use flat properties instead */
     gaugeConfig?: {
         min?: number;
         max?: number;
         thresholds?: Array<{ value: number; color: string }>;
         unit?: string;
     };
+
+    /** Index signature for any additional custom properties */
+    [key: string]: any;
 }
 
 /**
