@@ -17,17 +17,7 @@ import { PieChartLegend } from "./PieChartLegend";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { obfuscateName } from "@/utils/privacyUtils";
-
-// Chart colors matching TopCustomersThisYearPie
-const CHART_COLORS = [
-    "#4CAF50", // Green
-    "#2196F3", // Blue
-    "#FFC107", // Amber
-    "#FF5722", // Deep Orange
-    "#9C27B0", // Purple
-    "#E91E63", // Pink
-    "#78909C", // Blue Grey (Other)
-];
+import { useChartColors } from "@/hooks/useChartColors";
 
 // Hook to track container dimensions
 function useContainerDimensions(ref: React.RefObject<HTMLElement | null>) {
@@ -292,6 +282,7 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const chartColors = useChartColors();
 
     // Helper to obfuscate names when privacy is enabled
     const getDisplayName = useCallback((name: string): string => {
@@ -348,10 +339,10 @@ const PayablesPieChart: React.FC<PayablesPieChartProps> = ({ data, maxVendorsSho
         return processed.map((item, index) => ({
             ...item,
             color: item.name.toUpperCase() === "OTHER"
-                ? CHART_COLORS[CHART_COLORS.length - 1] // Grey for Other
-                : CHART_COLORS[index] || CHART_COLORS[0],
+                ? chartColors[chartColors.length - 1] || "#78909C" // Grey for Other
+                : chartColors[index] || chartColors[0] || "#4CAF50",
         }));
-    }, [data, maxVendorsShown, showOtherCategory, sortOrder]);
+    }, [data, chartColors, maxVendorsShown, showOtherCategory, sortOrder]);
 
     // Calculate optimal layout
     const layout = useMemo(

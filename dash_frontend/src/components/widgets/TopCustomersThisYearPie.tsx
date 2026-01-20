@@ -19,17 +19,20 @@ import { PieChartLegend } from "./PieChartLegend";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { obfuscateName } from "@/utils/privacyUtils";
+import { useChartColors } from "@/hooks/useChartColors";
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
-const CHART_COLORS = [
-    "#4CAF50", // Green
-    "#2196F3", // Blue
-    "#FFC107", // Amber
-    "#FF5722", // Deep Orange
-    "#9C27B0", // Purple
-    "#E91E63", // Pink
-    "#78909C", // Blue Grey (Other)
+
+// Fallback colors (used if CSS vars not yet loaded)
+const FALLBACK_COLORS = [
+    "#4CAF50",
+    "#2196F3",
+    "#FFC107",
+    "#FF5722",
+    "#9C27B0",
+    "#E91E63",
+    "#78909C",
 ];
 
 // Map a business name to its parent company using the config mapping.
@@ -44,7 +47,7 @@ const mapToParentCompany = (businessName: string): string => {
 };
 
 // Combine data transformation steps into one function.
-const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOther: boolean = true, sortOrder: 'value' | 'name' = 'value'): CustomerData[] => {
+const processCustomerData = (data: CustomerData[], chartColors: string[], maxShown: number = 6, showOther: boolean = true, sortOrder: 'value' | 'name' = 'value'): CustomerData[] => {
     if (!data || data.length === 0) return [];
 
     // Aggregate data by parent company.
@@ -80,7 +83,7 @@ const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOth
                 timestamp: new Date(),
                 businessName: "Other",
                 totalSales: otherTotal,
-                color: CHART_COLORS[CHART_COLORS.length - 1],
+                color: chartColors[chartColors.length - 1] || "#78909C",
             },
         ];
     } else {
@@ -105,8 +108,8 @@ const processCustomerData = (data: CustomerData[], maxShown: number = 6, showOth
     return aggregatedData.map((item, index) => ({
         ...item,
         color: item.businessName === "Other"
-            ? CHART_COLORS[CHART_COLORS.length - 1] // Grey for Other
-            : CHART_COLORS[index] || CHART_COLORS[0],
+            ? chartColors[chartColors.length - 1] || "#78909C" // Grey for Other
+            : chartColors[index] || chartColors[0] || "#4CAF50",
     }));
 };
 
@@ -372,6 +375,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const chartColors = useChartColors();
 
     // Helper to obfuscate names when privacy is enabled
     const getDisplayName = useCallback((name: string): string => {
@@ -382,7 +386,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
     }, [privacyEnabled]);
 
     const processedData = useMemo(() => {
-        const transformed = processCustomerData(data, maxCustomersShown, showOtherCategory, sortOrder).map((item) => ({
+        const transformed = processCustomerData(data, chartColors, maxCustomersShown, showOtherCategory, sortOrder).map((item) => ({
             name: item.businessName,
             value: item.totalSales,
             color: item.color,
@@ -394,7 +398,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersS
             ...item,
             percent: (item.value / total) * 100,
         }));
-    }, [data, maxCustomersShown, showOtherCategory, sortOrder]);
+    }, [data, chartColors, maxCustomersShown, showOtherCategory, sortOrder]);
 
     // Calculate optimal layout
     const layout = useMemo(
