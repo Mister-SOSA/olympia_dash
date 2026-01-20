@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { preferencesService } from "@/lib/preferences";
 
-export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight" | "dawn" | "nordic" | "coral" | "crimson" | "neon" | "monokai" | "dracula" | "tokyo-night" | "gruvbox" | "catppuccin" | "cyberpunk" | "github" | "solarized" | "one-light" | "lavender" | "mint" | "cream" | "rose" | "sky" | "fintech" | "vercel" | "fintech-light" | "vercel-light";
+export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight" | "dawn" | "nordic" | "coral" | "crimson" | "neon" | "monokai" | "dracula" | "tokyo-night" | "gruvbox" | "catppuccin" | "cyberpunk" | "github" | "solarized" | "one-light" | "lavender" | "mint" | "cream" | "rose" | "sky" | "fintech" | "vercel" | "fintech-light" | "vercel-light" | "terminal" | "spotify" | "synthwave" | "twitch";
 
 export const THEMES = [
     { id: "slate" as Theme, name: "Slate", colors: ["#2563eb", "#9333ea", "#374151"], category: "dark" },
@@ -21,6 +21,10 @@ export const THEMES = [
     { id: "cyberpunk" as Theme, name: "Cyberpunk", colors: ["#00ff9f", "#ff2a6d", "#0a0e27"], category: "dark" },
     { id: "fintech" as Theme, name: "Fintech", colors: ["#00d26a", "#00a8ff", "#0a0e12"], category: "dark" },
     { id: "vercel" as Theme, name: "Vercel", colors: ["#0070f3", "#888888", "#000000"], category: "dark" },
+    { id: "terminal" as Theme, name: "Terminal", colors: ["#33ff33", "#22cc22", "#0a0a0a"], category: "dark" },
+    { id: "spotify" as Theme, name: "Spotify", colors: ["#1DB954", "#1ed760", "#121212"], category: "dark" },
+    { id: "synthwave" as Theme, name: "Synthwave", colors: ["#ff2a6d", "#05d9e8", "#1a1a2e"], category: "dark" },
+    { id: "twitch" as Theme, name: "Twitch", colors: ["#9146ff", "#bf94ff", "#0e0e10"], category: "dark" },
     { id: "dawn" as Theme, name: "Dawn", colors: ["#db2777", "#a855f7", "#fbcfe8"], category: "light" },
     { id: "nordic" as Theme, name: "Nordic", colors: ["#0ea5e9", "#3b82f6", "#e2e8f0"], category: "light" },
     { id: "coral" as Theme, name: "Coral", colors: ["#f97316", "#f43f5e", "#fed7aa"], category: "light" },

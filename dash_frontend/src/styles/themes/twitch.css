@@ -1,0 +1,109 @@
+/* Twitch Theme - Purple focused streaming aesthetic */
+.theme-twitch {
+    /* UI Colors - Twitch dark backgrounds */
+    --ui-bg-primary: #0e0e10;
+    --ui-bg-secondary: #18181b;
+    --ui-bg-tertiary: #1f1f23;
+    --ui-bg-quaternary: #26262c;
+
+    --ui-border-primary: #2f2f35;
+    --ui-border-secondary: #3d3d44;
+
+    --ui-text-primary: #efeff1;
+    --ui-text-secondary: #adadb8;
+    --ui-text-muted: #7d7d8a;
+
+    /* Primary accent - Twitch purple */
+    --ui-accent-primary: #9146ff;
+    --ui-accent-primary-hover: #a970ff;
+    --ui-accent-primary-light: #bf94ff;
+    --ui-accent-primary-text: #bf94ff;
+    --ui-accent-primary-bg: rgba(145, 70, 255, 0.15);
+    --ui-accent-primary-border: rgba(145, 70, 255, 0.4);
+
+    /* Secondary accent - Lighter purple */
+    --ui-accent-secondary: #772ce8;
+    --ui-accent-secondary-hover: #9147ff;
+    --ui-accent-secondary-light: #a970ff;
+    --ui-accent-secondary-text: #bf94ff;
+    --ui-accent-secondary-bg: rgba(119, 44, 232, 0.15);
+    --ui-accent-secondary-border: rgba(119, 44, 232, 0.4);
+
+    --ui-success: #00f593;
+    --ui-success-text: #00fa9a;
+    --ui-success-bg: rgba(0, 245, 147, 0.15);
+    --ui-success-border: rgba(0, 245, 147, 0.4);
+
+    --ui-warning: #ffb31a;
+    --ui-warning-text: #ffc44d;
+    --ui-warning-bg: rgba(255, 179, 26, 0.15);
+    --ui-warning-border: rgba(255, 179, 26, 0.4);
+
+    --ui-danger: #eb0400;
+    --ui-danger-text: #ff5555;
+    --ui-danger-bg: rgba(235, 4, 0, 0.15);
+    --ui-danger-border: rgba(235, 4, 0, 0.4);
+
+    --ui-info: #1f69ff;
+    --ui-info-text: #5c92ff;
+    --ui-info-bg: rgba(31, 105, 255, 0.15);
+    --ui-info-border: rgba(31, 105, 255, 0.4);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #0e0e10;
+    --background-light: #18181b;
+    --background-highlight: #1f1f23;
+    --border-light: #2f2f35;
+    --border-dark: #09090a;
+
+    --text-primary: #efeff1;
+    --text-secondary: #adadb8;
+    --text-muted: #7d7d8a;
+
+    --success: #00f593;
+    --success-light: rgba(0, 245, 147, 0.2);
+    --warning: #ffb31a;
+    --error: #eb0400;
+    --error-light: rgba(235, 4, 0, 0.3);
+
+    --chart-bar: #9146ff;
+    --chart-1: #9146ff;
+    --chart-2: #00f593;
+    --chart-3: #ffb31a;
+    --chart-4: #1f69ff;
+    --chart-5: #ff5555;
+
+    /* Line chart specific colors */
+    --line-chart-1: #9146ff;
+    --line-chart-2: #00f593;
+    --line-chart-3: #ffb31a;
+
+    /* Table-specific colors */
+    --table-header-bg: #18181b;
+    --table-row-bg: #0e0e10;
+    --table-row-alt-bg: #18181b;
+    --table-row-hover-bg: rgba(145, 70, 255, 0.08);
+    --table-border: #2f2f35;
+    --table-text-primary: #efeff1;
+    --table-text-secondary: #adadb8;
+
+    --badge-success-bg: rgba(0, 245, 147, 0.2);
+    --badge-success-text: #00fa9a;
+    --badge-success-border: rgba(0, 245, 147, 0.5);
+
+    --badge-warning-bg: rgba(255, 179, 26, 0.2);
+    --badge-warning-text: #ffc44d;
+    --badge-warning-border: rgba(255, 179, 26, 0.5);
+
+    --badge-error-bg: rgba(235, 4, 0, 0.2);
+    --badge-error-text: #ff5555;
+    --badge-error-border: rgba(235, 4, 0, 0.5);
+
+    --badge-primary-bg: rgba(145, 70, 255, 0.2);
+    --badge-primary-text: #bf94ff;
+    --badge-primary-border: rgba(145, 70, 255, 0.5);
+
+    --value-positive: #00fa9a;
+    --value-negative: #ff5555;
+    --value-neutral: #adadb8;
+}

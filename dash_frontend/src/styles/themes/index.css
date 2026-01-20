@@ -19,6 +19,10 @@
 @import './cyberpunk.css';
 @import './fintech.css';
 @import './vercel.css';
+@import './terminal.css';
+@import './spotify.css';
+@import './synthwave.css';
+@import './twitch.css';
 
 /* Light Themes */
 @import './dawn.css';
