@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { preferencesService } from "@/lib/preferences";
 
-export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight" | "dawn" | "nordic" | "coral" | "crimson" | "neon" | "monokai" | "dracula" | "tokyo-night" | "gruvbox" | "catppuccin" | "cyberpunk" | "github" | "solarized" | "one-light" | "lavender" | "mint" | "cream" | "rose" | "sky";
+export type Theme = "slate" | "ocean" | "forest" | "sunset" | "midnight" | "dawn" | "nordic" | "coral" | "crimson" | "neon" | "monokai" | "dracula" | "tokyo-night" | "gruvbox" | "catppuccin" | "cyberpunk" | "github" | "solarized" | "one-light" | "lavender" | "mint" | "cream" | "rose" | "sky" | "fintech" | "vercel" | "fintech-light" | "vercel-light";
 
 export const THEMES = [
     { id: "slate" as Theme, name: "Slate", colors: ["#2563eb", "#9333ea", "#374151"], category: "dark" },
@@ -19,6 +19,8 @@ export const THEMES = [
     { id: "gruvbox" as Theme, name: "Gruvbox", colors: ["#fe8019", "#b8bb26", "#282828"], category: "dark" },
     { id: "catppuccin" as Theme, name: "Catppuccin", colors: ["#89b4fa", "#f5c2e7", "#1e1e2e"], category: "dark" },
     { id: "cyberpunk" as Theme, name: "Cyberpunk", colors: ["#00ff9f", "#ff2a6d", "#0a0e27"], category: "dark" },
+    { id: "fintech" as Theme, name: "Fintech", colors: ["#00d26a", "#00a8ff", "#0a0e12"], category: "dark" },
+    { id: "vercel" as Theme, name: "Vercel", colors: ["#0070f3", "#888888", "#000000"], category: "dark" },
     { id: "dawn" as Theme, name: "Dawn", colors: ["#db2777", "#a855f7", "#fbcfe8"], category: "light" },
     { id: "nordic" as Theme, name: "Nordic", colors: ["#0ea5e9", "#3b82f6", "#e2e8f0"], category: "light" },
     { id: "coral" as Theme, name: "Coral", colors: ["#f97316", "#f43f5e", "#fed7aa"], category: "light" },
@@ -30,6 +32,8 @@ export const THEMES = [
     { id: "cream" as Theme, name: "Cream", colors: ["#d97706", "#92400e", "#fffbeb"], category: "light" },
     { id: "rose" as Theme, name: "Rose", colors: ["#e11d48", "#9f1239", "#fff1f2"], category: "light" },
     { id: "sky" as Theme, name: "Sky", colors: ["#0ea5e9", "#0284c7", "#f0f9ff"], category: "light" },
+    { id: "fintech-light" as Theme, name: "Fintech Light", colors: ["#00a854", "#0066cc", "#ffffff"], category: "light" },
+    { id: "vercel-light" as Theme, name: "Vercel Light", colors: ["#0070f3", "#171717", "#ffffff"], category: "light" },
 ] as const;
 
 interface ThemeContextType {

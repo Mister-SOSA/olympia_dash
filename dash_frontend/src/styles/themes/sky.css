@@ -1,0 +1,107 @@
+/* Sky Theme */
+.theme-sky {
+    --ui-bg-primary: #f0f9ff;
+    --ui-bg-secondary: #e0f2fe;
+    --ui-bg-tertiary: #bae6fd;
+    --ui-bg-quaternary: #7dd3fc;
+
+    --ui-border-primary: #7dd3fc;
+    --ui-border-secondary: #38bdf8;
+
+    --ui-text-primary: #082f49;
+    --ui-text-secondary: #0c4a6e;
+    --ui-text-muted: #075985;
+
+    --ui-accent-primary: #0ea5e9;
+    --ui-accent-primary-hover: #0284c7;
+    --ui-accent-primary-light: #38bdf8;
+    --ui-accent-primary-text: #075985;
+    --ui-accent-primary-bg: rgba(14, 165, 233, 0.15);
+    --ui-accent-primary-border: rgba(14, 165, 233, 0.4);
+
+    --ui-accent-secondary: #0284c7;
+    --ui-accent-secondary-hover: #0369a1;
+    --ui-accent-secondary-light: #0ea5e9;
+    --ui-accent-secondary-text: #0c4a6e;
+    --ui-accent-secondary-bg: rgba(2, 132, 199, 0.15);
+    --ui-accent-secondary-border: rgba(2, 132, 199, 0.4);
+
+    --ui-success: #16a34a;
+    --ui-success-text: #15803d;
+    --ui-success-bg: rgba(22, 163, 74, 0.1);
+    --ui-success-border: rgba(22, 163, 74, 0.3);
+
+    --ui-warning: #ea580c;
+    --ui-warning-text: #c2410c;
+    --ui-warning-bg: rgba(234, 88, 12, 0.1);
+    --ui-warning-border: rgba(234, 88, 12, 0.3);
+
+    --ui-danger: #dc2626;
+    --ui-danger-text: #b91c1c;
+    --ui-danger-bg: rgba(220, 38, 38, 0.1);
+    --ui-danger-border: rgba(220, 38, 38, 0.3);
+
+    --ui-info: #0ea5e9;
+    --ui-info-text: #38bdf8;
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+
+    --background-dark: #f0fdf4;
+    --background-light: #f0f9ff;
+    --background-highlight: #e0f2fe;
+    --border-light: #7dd3fc;
+    --border-dark: #bae6fd;
+
+    --text-primary: #082f49;
+    --text-secondary: #0c4a6e;
+    --text-muted: #075985;
+
+    --success: #16a34a;
+    --success-light: rgba(22, 163, 74, 0.1);
+    --warning: #ea580c;
+    --error: #dc2626;
+    --error-light: rgba(220, 38, 38, 0.2);
+
+    --chart-bar: #0ea5e9;
+    --chart-1: #0284c7;
+    --chart-2: #0ea5e9;
+    --chart-3: #ea580c;
+    --chart-4: #dc2626;
+    --chart-5: #06b6d4;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #0ea5e9;
+    /* sky blue */
+    --line-chart-2: #f97316;
+    /* orange */
+    --line-chart-3: #10b981;
+    /* emerald */
+
+    --table-header-bg: #e0f2fe;
+    --table-row-bg: #f0f9ff;
+    --table-row-alt-bg: #f0fdf4;
+    --table-row-hover-bg: rgba(14, 165, 233, 0.08);
+    --table-border: #7dd3fc;
+    --table-text-primary: #082f49;
+    --table-text-secondary: #0c4a6e;
+
+    --badge-success-bg: rgba(22, 163, 74, 0.15);
+    --badge-success-text: #15803d;
+    --badge-success-border: rgba(22, 163, 74, 0.4);
+
+    --badge-warning-bg: rgba(234, 88, 12, 0.15);
+    --badge-warning-text: #c2410c;
+    --badge-warning-border: rgba(234, 88, 12, 0.4);
+
+    --badge-error-bg: rgba(220, 38, 38, 0.15);
+    --badge-error-text: #b91c1c;
+    --badge-error-border: rgba(220, 38, 38, 0.4);
+
+    --badge-primary-bg: rgba(14, 165, 233, 0.2);
+    --badge-primary-text: #075985;
+    --badge-primary-border: rgba(14, 165, 233, 0.5);
+
+    --value-positive: #15803d;
+    --value-negative: #b91c1c;
+    --value-neutral: #0c4a6e;
+}

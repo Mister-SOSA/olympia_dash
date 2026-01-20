@@ -1,0 +1,112 @@
+/* Fintech Theme - Bloomberg/Trading Terminal inspired */
+.theme-fintech {
+    /* UI Colors - Deep dark with electric green accents */
+    --ui-bg-primary: #0a0e12;
+    --ui-bg-secondary: #111820;
+    --ui-bg-tertiary: #1a232d;
+    --ui-bg-quaternary: #242f3c;
+
+    --ui-border-primary: #1e2a38;
+    --ui-border-secondary: #2a3a4c;
+
+    --ui-text-primary: #e8edf2;
+    --ui-text-secondary: #8a9bae;
+    --ui-text-muted: #566577;
+
+    /* Primary accent - Electric green (buy/bullish) */
+    --ui-accent-primary: #00d26a;
+    --ui-accent-primary-hover: #00b85d;
+    --ui-accent-primary-light: #33db88;
+    --ui-accent-primary-text: #4ade80;
+    --ui-accent-primary-bg: rgba(0, 210, 106, 0.15);
+    --ui-accent-primary-border: rgba(0, 210, 106, 0.4);
+
+    /* Secondary accent - Cyan/Blue (information/neutral) */
+    --ui-accent-secondary: #00a8ff;
+    --ui-accent-secondary-hover: #0090dd;
+    --ui-accent-secondary-light: #33baff;
+    --ui-accent-secondary-text: #5cc8ff;
+    --ui-accent-secondary-bg: rgba(0, 168, 255, 0.15);
+    --ui-accent-secondary-border: rgba(0, 168, 255, 0.4);
+
+    --ui-success: #00d26a;
+    --ui-success-text: #4ade80;
+    --ui-success-bg: rgba(0, 210, 106, 0.15);
+    --ui-success-border: rgba(0, 210, 106, 0.4);
+
+    --ui-warning: #ffb800;
+    --ui-warning-text: #ffc933;
+    --ui-warning-bg: rgba(255, 184, 0, 0.15);
+    --ui-warning-border: rgba(255, 184, 0, 0.4);
+
+    --ui-danger: #ff3b5c;
+    --ui-danger-text: #ff6680;
+    --ui-danger-bg: rgba(255, 59, 92, 0.15);
+    --ui-danger-border: rgba(255, 59, 92, 0.4);
+
+    --ui-info: #00a8ff;
+    --ui-info-text: #5cc8ff;
+    --ui-info-bg: rgba(0, 168, 255, 0.15);
+    --ui-info-border: rgba(0, 168, 255, 0.4);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #060a0d;
+    --background-light: #0a0e12;
+    --background-highlight: #111820;
+    --border-light: #1e2a38;
+    --border-dark: #0d1318;
+
+    --text-primary: #e8edf2;
+    --text-secondary: #8a9bae;
+    --text-muted: #566577;
+
+    --success: #00d26a;
+    --success-light: rgba(0, 210, 106, 0.2);
+    --warning: #ffb800;
+    --error: #ff3b5c;
+    --error-light: rgba(255, 59, 92, 0.3);
+
+    --chart-bar: #00a8ff;
+    --chart-1: #00d26a;
+    --chart-2: #00a8ff;
+    --chart-3: #ffb800;
+    --chart-4: #ff3b5c;
+    --chart-5: #9d5cff;
+
+    /* Line chart specific colors - trading style */
+    --line-chart-1: #00d26a;
+    /* green - gains */
+    --line-chart-2: #ff3b5c;
+    /* red - losses */
+    --line-chart-3: #00a8ff;
+    /* blue - neutral */
+
+    /* Table-specific colors */
+    --table-header-bg: #111820;
+    --table-row-bg: #0a0e12;
+    --table-row-alt-bg: #0e1419;
+    --table-row-hover-bg: rgba(0, 168, 255, 0.08);
+    --table-border: #1e2a38;
+    --table-text-primary: #e8edf2;
+    --table-text-secondary: #8a9bae;
+
+    --badge-success-bg: rgba(0, 210, 106, 0.2);
+    --badge-success-text: #4ade80;
+    --badge-success-border: rgba(0, 210, 106, 0.5);
+
+    --badge-warning-bg: rgba(255, 184, 0, 0.2);
+    --badge-warning-text: #ffc933;
+    --badge-warning-border: rgba(255, 184, 0, 0.5);
+
+    --badge-error-bg: rgba(255, 59, 92, 0.2);
+    --badge-error-text: #ff6680;
+    --badge-error-border: rgba(255, 59, 92, 0.5);
+
+    --badge-primary-bg: rgba(0, 168, 255, 0.2);
+    --badge-primary-text: #5cc8ff;
+    --badge-primary-border: rgba(0, 168, 255, 0.5);
+
+    --value-positive: #4ade80;
+    --value-negative: #ff6680;
+    --value-neutral: #8a9bae;
+}

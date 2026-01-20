@@ -1,0 +1,110 @@
+/* Forest Theme */
+.theme-forest {
+    /* UI Colors */
+    --ui-bg-primary: #1a2f1a;
+    --ui-bg-secondary: #243b24;
+    --ui-bg-tertiary: #2e4a2e;
+    --ui-bg-quaternary: #3a5a3a;
+
+    --ui-border-primary: #2e4a2e;
+    --ui-border-secondary: #3a5a3a;
+
+    --ui-text-primary: #ffffff;
+    --ui-text-secondary: #a8d5a8;
+    --ui-text-muted: #6b9b6b;
+
+    --ui-accent-primary: #4ade80;
+    --ui-accent-primary-hover: #22c55e;
+    --ui-accent-primary-light: #86efac;
+    --ui-accent-primary-text: #86efac;
+    --ui-accent-primary-bg: rgba(74, 222, 128, 0.2);
+    --ui-accent-primary-border: rgba(74, 222, 128, 0.5);
+
+    --ui-accent-secondary: #fbbf24;
+    --ui-accent-secondary-hover: #f59e0b;
+    --ui-accent-secondary-light: #fcd34d;
+    --ui-accent-secondary-text: #fcd34d;
+    --ui-accent-secondary-bg: rgba(251, 191, 36, 0.2);
+    --ui-accent-secondary-border: rgba(251, 191, 36, 0.5);
+
+    --ui-success: #4ade80;
+    --ui-success-text: #86efac;
+    --ui-success-bg: rgba(74, 222, 128, 0.2);
+    --ui-success-border: rgba(74, 222, 128, 0.5);
+
+    --ui-warning: #fb923c;
+    --ui-warning-text: #fdba74;
+    --ui-warning-bg: rgba(251, 146, 60, 0.2);
+    --ui-warning-border: rgba(251, 146, 60, 0.5);
+
+    --ui-danger: #ef4444;
+    --ui-danger-text: #f87171;
+    --ui-danger-bg: rgba(239, 68, 68, 0.2);
+    --ui-danger-border: rgba(239, 68, 68, 0.5);
+
+    --ui-info: #0ea5e9;
+    --ui-info-text: #38bdf8;
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #0f1f0f;
+    --background-light: #1a2f1a;
+    --background-highlight: #243b24;
+    --border-light: #2e4a2e;
+    --border-dark: #172817;
+
+    --text-primary: #ffffff;
+    --text-secondary: #a8d5a8;
+    --text-muted: #6b9b6b;
+
+    --success: #4ade80;
+    --success-light: rgba(74, 222, 128, 0.2);
+    --warning: #fb923c;
+    --error: #ef4444;
+    --error-light: rgba(239, 68, 68, 0.4);
+
+    --chart-bar: #4ade80;
+    --chart-1: #4ade80;
+    --chart-2: #86efac;
+    --chart-3: #fbbf24;
+    --chart-4: #ef4444;
+    --chart-5: #fb923c;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #86efac;
+    /* mint green */
+    --line-chart-2: #c084fc;
+    /* purple */
+    --line-chart-3: #fb923c;
+    /* orange */
+
+    /* Table-specific colors */
+    --table-header-bg: #243b24;
+    --table-row-bg: #1a2f1a;
+    --table-row-alt-bg: #1f341f;
+    --table-row-hover-bg: rgba(74, 222, 128, 0.1);
+    --table-border: #2e4a2e;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #a8d5a8;
+
+    --badge-success-bg: rgba(74, 222, 128, 0.2);
+    --badge-success-text: #86efac;
+    --badge-success-border: rgba(74, 222, 128, 0.5);
+
+    --badge-warning-bg: rgba(251, 146, 60, 0.2);
+    --badge-warning-text: #fdba74;
+    --badge-warning-border: rgba(251, 146, 60, 0.5);
+
+    --badge-error-bg: rgba(239, 68, 68, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(239, 68, 68, 0.5);
+
+    --badge-primary-bg: rgba(74, 222, 128, 0.2);
+    --badge-primary-text: #86efac;
+    --badge-primary-border: rgba(74, 222, 128, 0.5);
+
+    --value-positive: #86efac;
+    --value-negative: #f87171;
+    --value-neutral: #a8d5a8;
+}

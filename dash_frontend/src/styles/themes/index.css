@@ -1,0 +1,36 @@
+/* Theme System - Index File */
+/* Import base variables and all theme variants */
+
+/* Base variables (:root defaults and .dark) */
+@import './_base.css';
+
+/* Dark Themes */
+@import './ocean.css';
+@import './forest.css';
+@import './sunset.css';
+@import './midnight.css';
+@import './crimson.css';
+@import './neon.css';
+@import './monokai.css';
+@import './dracula.css';
+@import './tokyo-night.css';
+@import './gruvbox.css';
+@import './catppuccin.css';
+@import './cyberpunk.css';
+@import './fintech.css';
+@import './vercel.css';
+
+/* Light Themes */
+@import './dawn.css';
+@import './nordic.css';
+@import './coral.css';
+@import './github.css';
+@import './solarized.css';
+@import './one-light.css';
+@import './lavender.css';
+@import './mint.css';
+@import './cream.css';
+@import './rose.css';
+@import './sky.css';
+@import './fintech-light.css';
+@import './vercel-light.css';
