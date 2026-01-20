@@ -1,7 +1,8 @@
 'use client';
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { Drawer } from "vaul";
 import { User } from "@/lib/auth";
 import { useTheme, THEMES, Theme } from "@/contexts/ThemeContext";
 import { DashboardPreset } from "@/types";
@@ -38,13 +39,13 @@ interface SettingsMenuProps {
 // Main Component
 // =============================================================================
 
-export default function SettingsMenu({ 
-  user, 
-  onLogout, 
-  onClose, 
-  onAdminClick, 
-  presets = [], 
-  initialView = 'account' 
+export default function SettingsMenu({
+  user,
+  onLogout,
+  onClose,
+  onAdminClick,
+  presets = [],
+  initialView = 'account'
 }: SettingsMenuProps) {
   const { theme, setTheme } = useTheme();
   const { settings, updateSetting, isLoaded } = useSettings();
@@ -67,7 +68,7 @@ export default function SettingsMenu({
     message: string;
     onConfirm: () => void;
     type?: 'warning' | 'danger' | 'info';
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, type: 'warning' });
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => { }, type: 'warning' });
   const [nuclearInput, setNuclearInput] = useState('');
   const [showNuclearModal, setShowNuclearModal] = useState(false);
 
@@ -97,116 +98,153 @@ export default function SettingsMenu({
     setActiveView('account');
   };
 
+  // Vaul drawer state for mobile
+  const [isOpen, setIsOpen] = useState(true);
+  const handleOpenChange = useCallback((open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setTimeout(onClose, 300);
+    }
+  }, [onClose]);
+
   if (!isLoaded) {
     return null;
   }
 
   // ==========================================================================
-  // Mobile Layout
+  // Mobile Layout - Vaul Drawer
   // ==========================================================================
   if (isMobile) {
     return (
-      <motion.div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-        className="fixed inset-0 z-50 bg-ui-bg-primary flex flex-col"
-        style={{ willChange: 'transform' }}
+      <Drawer.Root
+        open={isOpen}
+        onOpenChange={handleOpenChange}
+        shouldScaleBackground={false}
       >
-        {/* Mobile Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-ui-border-primary bg-ui-bg-secondary/50 safe-top">
-          {activeView !== 'account' ? (
-            <button
-              onClick={handleMobileBack}
-              className="flex items-center gap-1 text-ui-accent-primary"
-            >
-              <MdChevronLeft className="w-6 h-6" />
-              <span className="text-sm font-medium">Settings</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <MdSettings className="w-5 h-5 text-ui-accent-primary" />
-              <h2 className="text-lg font-semibold text-ui-text-primary">Settings</h2>
-            </div>
-          )}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-ui-bg-tertiary transition-colors"
-            aria-label="Close"
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+          <Drawer.Content
+            className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none"
+            style={{
+              top: "env(safe-area-inset-top, 0px)",
+              backgroundColor: "var(--ui-bg-primary)",
+              borderTopLeftRadius: "0.75rem",
+              borderTopRightRadius: "0.75rem",
+            }}
           >
-            <MdClose className="w-5 h-5 text-ui-text-secondary" />
-          </button>
-        </div>
-
-        {/* Mobile Content */}
-        <div ref={contentRef} className="flex-1 overflow-y-auto">
-          {activeView === 'account' ? (
-            <MobileMainMenu
-              key="main"
-              user={user}
-              onNavigate={setActiveView}
-              onLogout={onLogout}
-              onAdminClick={onAdminClick}
-              privacyEnabled={privacySettings.enabled}
-            />
-          ) : (
-            <div className="p-4 pb-8">
-              <SettingsContent
-                activeView={activeView}
-                user={user}
-                onLogout={onLogout}
-                onAdminClick={onAdminClick}
-                theme={theme}
-                setTheme={setTheme}
-                themeCategory={themeCategory}
-                setThemeCategory={setThemeCategory}
-                settings={settings}
-                updateSetting={updateSetting}
-                privacySettings={privacySettings}
-                updatePrivacySetting={updatePrivacySetting}
-                togglePrivacy={togglePrivacy}
-                localGridColumns={localGridColumns}
-                setLocalGridColumns={setLocalGridColumns}
-                localGridCellHeight={localGridCellHeight}
-                setLocalGridCellHeight={setLocalGridCellHeight}
-                availablePresets={availablePresets}
-                presets={presets}
-                confirmModal={confirmModal}
-                setConfirmModal={setConfirmModal}
-                nuclearInput={nuclearInput}
-                setNuclearInput={setNuclearInput}
-                showNuclearModal={showNuclearModal}
-                setShowNuclearModal={setShowNuclearModal}
-                isMobile={true}
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <Drawer.Handle
+                className="w-10 h-1 rounded-full"
+                style={{ backgroundColor: "var(--ui-border-secondary)" }}
               />
             </div>
-          )}
-        </div>
 
-        {/* Confirmation Modal */}
-        <ConfirmModal
-          isOpen={confirmModal.isOpen}
-          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-          onConfirm={confirmModal.onConfirm}
-          title={confirmModal.title}
-          message={confirmModal.message}
-          type={confirmModal.type}
-          confirmText="Confirm"
-          cancelText="Cancel"
-        />
+            {/* Mobile Header */}
+            <div
+              className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0"
+              style={{ borderColor: "var(--ui-border-primary)" }}
+            >
+              {activeView !== 'account' ? (
+                <button
+                  onClick={handleMobileBack}
+                  className="flex items-center gap-1"
+                  style={{ color: "var(--ui-accent-primary)" }}
+                >
+                  <MdChevronLeft className="w-6 h-6" />
+                  <span className="text-sm font-medium">Settings</span>
+                </button>
+              ) : (
+                <Drawer.Title className="flex items-center gap-2">
+                  <MdSettings className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                  <span className="text-lg font-semibold" style={{ color: "var(--ui-text-primary)" }}>Settings</span>
+                </Drawer.Title>
+              )}
+              <Drawer.Close asChild>
+                <button
+                  className="p-2 rounded-full transition-colors"
+                  style={{ color: "var(--ui-text-secondary)" }}
+                  aria-label="Close"
+                >
+                  <MdClose className="w-5 h-5" />
+                </button>
+              </Drawer.Close>
+            </div>
 
-        {/* Nuclear Modal */}
-        <NuclearModal
-          isOpen={showNuclearModal}
-          onClose={() => {
-            setShowNuclearModal(false);
-            setNuclearInput('');
-          }}
-          nuclearInput={nuclearInput}
-          setNuclearInput={setNuclearInput}
-        />
-      </motion.div>
+            {/* Mobile Content */}
+            <div
+              ref={contentRef}
+              className="flex-1 overflow-y-auto"
+              style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+            >
+              {activeView === 'account' ? (
+                <MobileMainMenu
+                  key="main"
+                  user={user}
+                  onNavigate={setActiveView}
+                  onLogout={onLogout}
+                  onAdminClick={onAdminClick}
+                  privacyEnabled={privacySettings.enabled}
+                />
+              ) : (
+                <div className="p-4 pb-8">
+                  <SettingsContent
+                    activeView={activeView}
+                    user={user}
+                    onLogout={onLogout}
+                    onAdminClick={onAdminClick}
+                    theme={theme}
+                    setTheme={setTheme}
+                    themeCategory={themeCategory}
+                    setThemeCategory={setThemeCategory}
+                    settings={settings}
+                    updateSetting={updateSetting}
+                    privacySettings={privacySettings}
+                    updatePrivacySetting={updatePrivacySetting}
+                    togglePrivacy={togglePrivacy}
+                    localGridColumns={localGridColumns}
+                    setLocalGridColumns={setLocalGridColumns}
+                    localGridCellHeight={localGridCellHeight}
+                    setLocalGridCellHeight={setLocalGridCellHeight}
+                    availablePresets={availablePresets}
+                    presets={presets}
+                    confirmModal={confirmModal}
+                    setConfirmModal={setConfirmModal}
+                    nuclearInput={nuclearInput}
+                    setNuclearInput={setNuclearInput}
+                    showNuclearModal={showNuclearModal}
+                    setShowNuclearModal={setShowNuclearModal}
+                    isMobile={true}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Confirmation Modal */}
+            <ConfirmModal
+              isOpen={confirmModal.isOpen}
+              onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+              onConfirm={confirmModal.onConfirm}
+              title={confirmModal.title}
+              message={confirmModal.message}
+              type={confirmModal.type}
+              confirmText="Confirm"
+              cancelText="Cancel"
+            />
+
+            {/* Nuclear Modal */}
+            <NuclearModal
+              isOpen={showNuclearModal}
+              onClose={() => {
+                setShowNuclearModal(false);
+                setNuclearInput('');
+              }}
+              nuclearInput={nuclearInput}
+              setNuclearInput={setNuclearInput}
+            />
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
     );
   }
 
@@ -250,11 +288,10 @@ export default function SettingsMenu({
                     <button
                       key={item.id}
                       onClick={() => setActiveView(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
                           ? 'bg-ui-accent-primary text-white shadow-sm'
                           : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
-                      }`}
+                        }`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       <span className="flex-1 text-left truncate">{item.label}</span>

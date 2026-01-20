@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, AnimatePresence } from "framer-motion";
 import { User } from "@/lib/auth";
 import { MdChevronRight, MdShield, MdLogout } from "react-icons/md";
 import { NAVIGATION_ITEMS, getBadgeColors, SettingsView } from "./types";
@@ -25,13 +24,7 @@ export function MobileMainMenu({
     privacyEnabled,
 }: MobileMainMenuProps) {
     return (
-        <motion.div
-            key="main-menu"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="p-4"
-        >
+        <div className="p-4">
             {/* User Info Card */}
             <div className="mb-6 p-4 bg-ui-bg-secondary/50 rounded-xl border border-ui-border-primary">
                 <div className="flex items-center gap-3">
@@ -45,8 +38,8 @@ export function MobileMainMenu({
                         <div className="text-sm text-ui-text-secondary truncate">{user?.email}</div>
                         {user?.role && (
                             <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-semibold ${user.role === 'admin'
-                                    ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
-                                    : 'bg-ui-accent-primary/20 text-ui-accent-primary'
+                                ? 'bg-ui-accent-secondary/20 text-ui-accent-secondary'
+                                : 'bg-ui-accent-primary/20 text-ui-accent-primary'
                                 }`}>
                                 {user.role.toUpperCase()}
                             </span>
@@ -111,6 +104,6 @@ export function MobileMainMenu({
                     <span>Logout</span>
                 </button>
             </div>
-        </motion.div>
+        </div>
     );
 }

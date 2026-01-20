@@ -977,7 +977,7 @@ const DetailView = memo(function DetailView({ widgetId, onClose }: DetailViewPro
 });
 
 // ============================================
-// Mobile Widget Picker - Memoized
+// Mobile Widget Picker - Using Vaul Drawer
 // ============================================
 
 interface MobileWidgetPickerProps {
@@ -993,6 +993,7 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
 }: MobileWidgetPickerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<WidgetCategory | "all">("all");
+    const [isOpen, setIsOpen] = useState(true);
     const { filterAccessibleWidgets } = useWidgetPermissions();
 
     const accessibleWidgets = useMemo(
@@ -1028,214 +1029,239 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
         [onToggleWidget]
     );
 
+    const handleOpenChange = useCallback((open: boolean) => {
+        setIsOpen(open);
+        if (!open) {
+            setTimeout(onClose, 300);
+        }
+    }, [onClose]);
+
     return (
-        <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={EASE_OUT_TRANSITION}
-            className="fixed inset-0 z-50 flex flex-col"
-            style={{ backgroundColor: "var(--ui-bg-primary)", willChange: "transform" }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Add widgets"
+        <Drawer.Root
+            open={isOpen}
+            onOpenChange={handleOpenChange}
+            shouldScaleBackground={false}
         >
-            {/* Header */}
-            <div
-                className="flex-shrink-0 border-b safe-top"
-                style={{ borderColor: "var(--ui-border-primary)" }}
-            >
-                <div className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <MdWidgets className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
-                        <div>
-                            <h2
-                                className="text-lg font-semibold"
-                                style={{ color: "var(--ui-text-primary)" }}
-                            >
-                                Add Widgets
-                            </h2>
-                            <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
-                                {enabledSet.size} selected
-                            </p>
-                        </div>
+            <Drawer.Portal>
+                <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+                <Drawer.Content
+                    className="fixed inset-x-0 bottom-0 z-50 flex flex-col outline-none"
+                    style={{
+                        top: "env(safe-area-inset-top, 0px)",
+                        backgroundColor: "var(--ui-bg-primary)",
+                        borderTopLeftRadius: "0.75rem",
+                        borderTopRightRadius: "0.75rem",
+                    }}
+                    aria-label="Add widgets"
+                >
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-3 pb-2">
+                        <Drawer.Handle
+                            className="w-10 h-1 rounded-full"
+                            style={{ backgroundColor: "var(--ui-border-secondary)" }}
+                        />
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 rounded-lg active:scale-95 transition-transform"
-                        style={{ color: "var(--ui-text-secondary)" }}
-                        aria-label="Close"
+
+                    {/* Header */}
+                    <div
+                        className="flex-shrink-0 border-b"
+                        style={{ borderColor: "var(--ui-border-primary)" }}
                     >
-                        <MdClose className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Search */}
-                <div className="px-4 pb-3">
-                    <div className="relative">
-                        <MdSearch
-                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                            style={{ color: "var(--ui-text-muted)" }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search widgets..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
-                            style={{
-                                backgroundColor: "var(--ui-bg-secondary)",
-                                borderColor: "var(--ui-border-primary)",
-                                color: "var(--ui-text-primary)",
-                            }}
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={handleClearSearch}
-                                className="absolute right-3 top-1/2 -translate-y-1/2"
-                                style={{ color: "var(--ui-text-muted)" }}
-                                aria-label="Clear search"
-                            >
-                                <MdClose className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Category Pills */}
-                <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-2" role="tablist" aria-label="Widget categories">
-                        <button
-                            onClick={() => setSelectedCategory("all")}
-                            role="tab"
-                            aria-selected={selectedCategory === "all"}
-                            className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
-                            style={
-                                selectedCategory === "all"
-                                    ? { backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }
-                                    : { backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }
-                            }
-                        >
-                            All
-                        </button>
-                        {categories.map((category) => {
-                            const IconComponent = CATEGORY_ICONS[category];
-                            return (
+                        <div className="px-4 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <MdWidgets className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                                <div>
+                                    <Drawer.Title
+                                        className="text-lg font-semibold"
+                                        style={{ color: "var(--ui-text-primary)" }}
+                                    >
+                                        Add Widgets
+                                    </Drawer.Title>
+                                    <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
+                                        {enabledSet.size} selected
+                                    </p>
+                                </div>
+                            </div>
+                            <Drawer.Close asChild>
                                 <button
-                                    key={category}
-                                    onClick={() => setSelectedCategory(category)}
+                                    className="p-2 rounded-lg active:scale-95 transition-transform"
+                                    style={{ color: "var(--ui-text-secondary)" }}
+                                    aria-label="Close"
+                                >
+                                    <MdClose className="w-5 h-5" />
+                                </button>
+                            </Drawer.Close>
+                        </div>
+
+                        {/* Search */}
+                        <div className="px-4 pb-3">
+                            <div className="relative">
+                                <MdSearch
+                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                                    style={{ color: "var(--ui-text-muted)" }}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Search widgets..."
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                    className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
+                                    style={{
+                                        backgroundColor: "var(--ui-bg-secondary)",
+                                        borderColor: "var(--ui-border-primary)",
+                                        color: "var(--ui-text-primary)",
+                                    }}
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={handleClearSearch}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2"
+                                        style={{ color: "var(--ui-text-muted)" }}
+                                        aria-label="Clear search"
+                                    >
+                                        <MdClose className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Category Pills */}
+                        <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
+                            <div className="flex gap-2" role="tablist" aria-label="Widget categories">
+                                <button
+                                    onClick={() => setSelectedCategory("all")}
                                     role="tab"
-                                    aria-selected={selectedCategory === category}
-                                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
+                                    aria-selected={selectedCategory === "all"}
+                                    className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
                                     style={
-                                        selectedCategory === category
+                                        selectedCategory === "all"
                                             ? { backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }
                                             : { backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }
                                     }
                                 >
-                                    {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
-                                    <span>{category}</span>
+                                    All
                                 </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            </div>
-
-            {/* Widget List */}
-            <div className="flex-1 overflow-y-auto px-4 py-3">
-                {filteredWidgets.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-12">
-                        <MdWidgets
-                            className="w-12 h-12 mb-3 opacity-40"
-                            style={{ color: "var(--ui-text-tertiary)" }}
-                        />
-                        <p className="font-medium" style={{ color: "var(--ui-text-secondary)" }}>
-                            No widgets found
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-2 pb-8">
-                        {filteredWidgets.map((widget) => {
-                            const isEnabled = enabledSet.has(widget.id);
-                            const TypeIcon = getWidgetTypeIcon(widget.id);
-
-                            return (
-                                <motion.button
-                                    key={widget.id}
-                                    onClick={() => handleToggle(widget.id)}
-                                    className="w-full flex items-start gap-3 p-4 rounded-xl border text-left"
-                                    style={
-                                        isEnabled
-                                            ? {
-                                                backgroundColor: "var(--ui-accent-primary-bg)",
-                                                borderColor: "var(--ui-accent-primary-border)",
+                                {categories.map((category) => {
+                                    const IconComponent = CATEGORY_ICONS[category];
+                                    return (
+                                        <button
+                                            key={category}
+                                            onClick={() => setSelectedCategory(category)}
+                                            role="tab"
+                                            aria-selected={selectedCategory === category}
+                                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
+                                            style={
+                                                selectedCategory === category
+                                                    ? { backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }
+                                                    : { backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }
                                             }
-                                            : {
-                                                backgroundColor: "var(--ui-bg-secondary)",
-                                                borderColor: "var(--ui-border-primary)",
-                                            }
-                                    }
-                                    aria-pressed={isEnabled}
-                                    whileTap={{ scale: 0.98 }}
-                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                >
-                                    <div
-                                        className="flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center mt-0.5 transition-all"
-                                        style={
-                                            isEnabled
-                                                ? {
-                                                    backgroundColor: "var(--ui-accent-primary)",
-                                                    borderColor: "var(--ui-accent-primary)",
-                                                }
-                                                : {
-                                                    borderColor: "var(--ui-border-secondary)",
-                                                }
-                                        }
-                                    >
-                                        {isEnabled && <MdCheck className="w-4 h-4 text-white" />}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3
-                                            className="font-semibold truncate"
-                                            style={{
-                                                color: isEnabled
-                                                    ? "var(--ui-accent-primary)"
-                                                    : "var(--ui-text-primary)",
-                                            }}
                                         >
-                                            {widget.title}
-                                        </h3>
-                                        <p
-                                            className="text-sm line-clamp-2"
-                                            style={{ color: "var(--ui-text-muted)" }}
-                                        >
-                                            {widget.description}
-                                        </p>
-                                    </div>
-                                </motion.button>
-                            );
-                        })}
+                                            {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                                            <span>{category}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
 
-            {/* Footer */}
-            <div
-                className="flex-shrink-0 border-t p-4 safe-bottom"
-                style={{ borderColor: "var(--ui-border-primary)" }}
-            >
-                <motion.button
-                    onClick={onClose}
-                    className="w-full py-3 rounded-xl font-semibold"
-                    style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                    Done
-                </motion.button>
-            </div>
-        </motion.div>
+                    {/* Widget List */}
+                    <div className="flex-1 overflow-y-auto px-4 py-3">
+                        {filteredWidgets.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full py-12">
+                                <MdWidgets
+                                    className="w-12 h-12 mb-3 opacity-40"
+                                    style={{ color: "var(--ui-text-tertiary)" }}
+                                />
+                                <p className="font-medium" style={{ color: "var(--ui-text-secondary)" }}>
+                                    No widgets found
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2 pb-8">
+                                {filteredWidgets.map((widget) => {
+                                    const isEnabled = enabledSet.has(widget.id);
+                                    const TypeIcon = getWidgetTypeIcon(widget.id);
+
+                                    return (
+                                        <motion.button
+                                            key={widget.id}
+                                            onClick={() => handleToggle(widget.id)}
+                                            className="w-full flex items-start gap-3 p-4 rounded-xl border text-left"
+                                            style={
+                                                isEnabled
+                                                    ? {
+                                                        backgroundColor: "var(--ui-accent-primary-bg)",
+                                                        borderColor: "var(--ui-accent-primary-border)",
+                                                    }
+                                                    : {
+                                                        backgroundColor: "var(--ui-bg-secondary)",
+                                                        borderColor: "var(--ui-border-primary)",
+                                                    }
+                                            }
+                                            aria-pressed={isEnabled}
+                                            whileTap={{ scale: 0.98 }}
+                                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                        >
+                                            <div
+                                                className="flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center mt-0.5 transition-all"
+                                                style={
+                                                    isEnabled
+                                                        ? {
+                                                            backgroundColor: "var(--ui-accent-primary)",
+                                                            borderColor: "var(--ui-accent-primary)",
+                                                        }
+                                                        : {
+                                                            borderColor: "var(--ui-border-secondary)",
+                                                        }
+                                                }
+                                            >
+                                                {isEnabled && <MdCheck className="w-4 h-4 text-white" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h3
+                                                    className="font-semibold truncate"
+                                                    style={{
+                                                        color: isEnabled
+                                                            ? "var(--ui-accent-primary)"
+                                                            : "var(--ui-text-primary)",
+                                                    }}
+                                                >
+                                                    {widget.title}
+                                                </h3>
+                                                <p
+                                                    className="text-sm line-clamp-2"
+                                                    style={{ color: "var(--ui-text-muted)" }}
+                                                >
+                                                    {widget.description}
+                                                </p>
+                                            </div>
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div
+                        className="flex-shrink-0 border-t p-4 safe-bottom"
+                        style={{ borderColor: "var(--ui-border-primary)" }}
+                    >
+                        <Drawer.Close asChild>
+                            <motion.button
+                                className="w-full py-3 rounded-xl font-semibold"
+                                style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                                whileTap={{ scale: 0.98 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                Done
+                            </motion.button>
+                        </Drawer.Close>
+                    </div>
+                </Drawer.Content>
+            </Drawer.Portal>
+        </Drawer.Root>
     );
 });
 
@@ -1291,75 +1317,89 @@ const PresetNameDialog = memo(function PresetNameDialog({
         [handleSave, onClose]
     );
 
+    const handleOpenChange = useCallback((open: boolean) => {
+        if (!open) {
+            onClose();
+        }
+    }, [onClose]);
+
     if (!isOpen) return null;
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-            onClick={onClose}
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
+        <Drawer.Root
+            open={isOpen}
+            onOpenChange={handleOpenChange}
+            shouldScaleBackground={false}
         >
-            <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="w-full max-w-sm rounded-2xl p-6"
-                style={{ backgroundColor: "var(--ui-bg-primary)" }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                <h3
-                    className="text-lg font-semibold mb-4"
-                    style={{ color: "var(--ui-text-primary)" }}
-                >
-                    {title}
-                </h3>
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Preset name..."
-                    className="w-full px-4 py-3 rounded-lg border text-sm mb-4"
+            <Drawer.Portal>
+                <Drawer.Overlay className="fixed inset-0 z-[100] bg-black/60" />
+                <Drawer.Content
+                    className="fixed inset-x-0 bottom-0 z-[100] flex flex-col outline-none p-4"
                     style={{
-                        backgroundColor: "var(--ui-bg-secondary)",
-                        borderColor: "var(--ui-border-primary)",
-                        color: "var(--ui-text-primary)",
+                        backgroundColor: "var(--ui-bg-primary)",
+                        borderTopLeftRadius: "1rem",
+                        borderTopRightRadius: "1rem",
+                        paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))",
                     }}
-                    maxLength={32}
-                />
-                <div className="flex gap-3">
-                    <motion.button
-                        onClick={onClose}
-                        className="flex-1 py-3 rounded-lg font-medium"
+                    aria-label={title}
+                >
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-1 pb-4">
+                        <Drawer.Handle
+                            className="w-10 h-1 rounded-full"
+                            style={{ backgroundColor: "var(--ui-border-secondary)" }}
+                        />
+                    </div>
+
+                    <Drawer.Title
+                        className="text-lg font-semibold mb-4"
+                        style={{ color: "var(--ui-text-primary)" }}
+                    >
+                        {title}
+                    </Drawer.Title>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Preset name..."
+                        className="w-full px-4 py-3 rounded-lg border text-sm mb-4"
                         style={{
-                            backgroundColor: "var(--ui-bg-tertiary)",
-                            color: "var(--ui-text-secondary)",
+                            backgroundColor: "var(--ui-bg-secondary)",
+                            borderColor: "var(--ui-border-primary)",
+                            color: "var(--ui-text-primary)",
                         }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                        Cancel
-                    </motion.button>
-                    <motion.button
-                        onClick={handleSave}
-                        disabled={!name.trim()}
-                        className="flex-1 py-3 rounded-lg font-medium disabled:opacity-50"
-                        style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                        Save
-                    </motion.button>
-                </div>
-            </motion.div>
-        </motion.div>
+                        maxLength={32}
+                    />
+                    <div className="flex gap-3">
+                        <Drawer.Close asChild>
+                            <motion.button
+                                className="flex-1 py-3 rounded-lg font-medium"
+                                style={{
+                                    backgroundColor: "var(--ui-bg-tertiary)",
+                                    color: "var(--ui-text-secondary)",
+                                }}
+                                whileTap={{ scale: 0.95 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                Cancel
+                            </motion.button>
+                        </Drawer.Close>
+                        <motion.button
+                            onClick={handleSave}
+                            disabled={!name.trim()}
+                            className="flex-1 py-3 rounded-lg font-medium disabled:opacity-50"
+                            style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        >
+                            Save
+                        </motion.button>
+                    </div>
+                </Drawer.Content>
+            </Drawer.Portal>
+        </Drawer.Root>
     );
 });
 
