@@ -33,18 +33,110 @@ function useResponsiveVisibleDays(ref: React.RefObject<HTMLDivElement | null>): 
 }
 
 /* -------------------------------------- */
+/* � Mobile List View                     */
+/* -------------------------------------- */
+interface MobileListViewProps {
+    data: (ProcessedSalesData & { isWeekend?: boolean; isToday?: boolean })[];
+    showWeekendShading: boolean;
+}
+
+const MobileListView: React.FC<MobileListViewProps> = ({ data, showWeekendShading }) => {
+    const maxValue = Math.max(...data.map(d => d.currentPeriodSales));
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+        }}>
+            {reversedData.map((item, index) => {
+                const width = maxValue > 0 ? (item.currentPeriodSales / maxValue) * 100 : 0;
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: item.isToday
+                                ? "var(--ui-accent-primary-bg)"
+                                : item.isWeekend && showWeekendShading
+                                    ? "var(--ui-bg-tertiary)"
+                                    : "var(--ui-bg-secondary)",
+                            borderRadius: "8px",
+                            padding: "8px 10px",
+                            border: item.isToday
+                                ? "1px solid var(--ui-accent-primary-border)"
+                                : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "6px",
+                        }}>
+                            <span style={{
+                                color: item.isToday ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "12px",
+                                fontWeight: item.isToday ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            <span style={{
+                                color: item.isToday ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "13px",
+                                fontWeight: 700
+                            }}>
+                                ${nFormatter(item.currentPeriodSales, 2)}
+                            </span>
+                        </div>
+                        <div style={{
+                            height: "5px",
+                            backgroundColor: "var(--ui-bg-quaternary)",
+                            borderRadius: "2.5px",
+                            overflow: "hidden",
+                        }}>
+                            <div style={{
+                                width: `${width}%`,
+                                height: "100%",
+                                backgroundColor: item.isToday ? "var(--ui-accent-primary)" : "var(--chart-bar)",
+                                borderRadius: "2.5px",
+                                transition: "width 0.3s ease",
+                            }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Bar Chart Component          */
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: (ProcessedSalesData & { isWeekend?: boolean; isToday?: boolean })[];
+    visibleDays: number;
     highlightToday: boolean;
     showWeekendShading: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, highlightToday, showWeekendShading }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleDays, highlightToday, showWeekendShading }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -56,9 +148,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, highlightToday, s
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileListView data={allData} showWeekendShading={showWeekendShading} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible days
+    const data = allData.slice(-visibleDays);
 
     const padding = { top: 32, right: 5, bottom: 38, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -263,7 +367,8 @@ export default function SalesByDayBar() {
                     });
 
                     return <CustomBarChart
-                        data={chartData.slice(-visibleDays)}
+                        data={chartData}
+                        visibleDays={visibleDays}
                         highlightToday={highlightToday}
                         showWeekendShading={showWeekendShading}
                     />;

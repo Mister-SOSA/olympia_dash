@@ -34,18 +34,104 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement | null>)
 }
 
 /* -------------------------------------- */
+/* � Mobile List View                     */
+/* -------------------------------------- */
+interface MobileListViewProps {
+    data: ProcessedSalesData[];
+}
+
+const MobileListView: React.FC<MobileListViewProps> = ({ data }) => {
+    const maxValue = Math.max(...data.map(d => d.currentPeriodSales));
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+        }}>
+            {reversedData.map((item, index) => {
+                const width = (item.currentPeriodSales / maxValue) * 100;
+                const isCurrent = index === 0; // First item is current (newest)
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: isCurrent ? "var(--ui-accent-primary-bg)" : "var(--ui-bg-secondary)",
+                            borderRadius: "10px",
+                            padding: "10px 12px",
+                            border: isCurrent ? "1px solid var(--ui-accent-primary-border)" : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "8px",
+                        }}>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "13px",
+                                fontWeight: isCurrent ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "14px",
+                                fontWeight: 700
+                            }}>
+                                ${nFormatter(item.currentPeriodSales, 2)}
+                            </span>
+                        </div>
+                        <div style={{
+                            height: "6px",
+                            backgroundColor: "var(--ui-bg-tertiary)",
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                        }}>
+                            <div style={{
+                                width: `${width}%`,
+                                height: "100%",
+                                backgroundColor: isCurrent ? "var(--ui-accent-primary)" : "var(--chart-bar)",
+                                borderRadius: "3px",
+                                transition: "width 0.3s ease",
+                            }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Bar Chart Component          */
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    visibleMonths: number;
     showProjection: boolean;
     showYearOverYear: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, showYearOverYear }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleMonths, showProjection, showYearOverYear }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -57,9 +143,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, s
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileListView data={allData} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible months
+    const data = allData.slice(-visibleMonths);
 
     const padding = { top: 32, right: 5, bottom: 32, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -365,7 +463,8 @@ export default function SalesByMonthBar() {
 
     const renderSalesByMonth = useCallback(
         (data: SalesData[]) => {
-            const chartData = data.slice(-visibleMonths).map((entry) => {
+            // Process all data - let CustomBarChart handle slicing based on layout
+            const chartData = data.map((entry) => {
                 const [year, month] = entry.period.split("-");
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 const monthIndex = parseInt(month, 10) - 1;
@@ -378,7 +477,7 @@ export default function SalesByMonthBar() {
                     previousPeriodSales: 0,
                 };
             });
-            return <CustomBarChart data={chartData} showProjection={showProjection} showYearOverYear={showYearOverYear} />;
+            return <CustomBarChart data={chartData} visibleMonths={visibleMonths} showProjection={showProjection} showYearOverYear={showYearOverYear} />;
         },
         [visibleMonths, showProjection, showYearOverYear]
     );

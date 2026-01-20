@@ -36,18 +36,173 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement>): numbe
 }
 
 /* -------------------------------------- */
+/* � Mobile Horizontal Comparison View    */
+/* -------------------------------------- */
+interface MobileComparisonViewProps {
+    data: ProcessedSalesData[];
+    showPercentageDiff: boolean;
+}
+
+const MobileComparisonView: React.FC<MobileComparisonViewProps> = ({ data, showPercentageDiff }) => {
+    const maxValue = Math.max(...data.map(d => Math.max(d.currentPeriodSales, d.previousPeriodSales)));
+
+    // Get current day of month to calculate partial comparison for current month
+    const today = new Date();
+    const currentDayOfMonth = today.getDate();
+    const daysInCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const monthProgressRatio = currentDayOfMonth / daysInCurrentMonth;
+
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+        }}>
+            {reversedData.map((item, index) => {
+                const isCurrent = index === 0; // First item is current (newest)
+                const currentWidth = (item.currentPeriodSales / maxValue) * 100;
+                const previousWidth = (item.previousPeriodSales / maxValue) * 100;
+
+                // Calculate percentage difference
+                const percentDiff = item.previousPeriodSales > 0
+                    ? ((item.currentPeriodSales - item.previousPeriodSales) / item.previousPeriodSales) * 100
+                    : item.currentPeriodSales > 0 ? 100 : 0;
+                const isPositive = percentDiff >= 0;
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: isCurrent ? "var(--ui-accent-primary-bg)" : "var(--ui-bg-secondary)",
+                            borderRadius: "12px",
+                            padding: "12px",
+                            border: isCurrent ? "1px solid var(--ui-accent-primary-border)" : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        {/* Month Header with Percentage */}
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "10px",
+                        }}>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "14px",
+                                fontWeight: isCurrent ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            {showPercentageDiff && (
+                                <span style={{
+                                    color: isPositive ? "var(--value-positive)" : "var(--value-negative)",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    backgroundColor: isPositive ? "var(--ui-success-bg)" : "var(--ui-danger-bg)",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                }}>
+                                    {isPositive ? "+" : ""}{percentDiff.toFixed(1)}%
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Current Year Bar */}
+                        <div style={{ marginBottom: "8px" }}>
+                            <div style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "4px",
+                            }}>
+                                <span style={{ color: "var(--chart-bar)", fontSize: "12px", fontWeight: 500 }}>
+                                    This Year
+                                </span>
+                                <span style={{ color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)", fontSize: "13px", fontWeight: 700 }}>
+                                    ${nFormatter(item.currentPeriodSales, 2)}
+                                </span>
+                            </div>
+                            <div style={{
+                                height: "8px",
+                                backgroundColor: "var(--ui-bg-tertiary)",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    width: `${currentWidth}%`,
+                                    height: "100%",
+                                    backgroundColor: "var(--chart-bar)",
+                                    borderRadius: "4px",
+                                    transition: "width 0.3s ease",
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Previous Year Bar */}
+                        <div>
+                            <div style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "4px",
+                            }}>
+                                <span style={{ color: "var(--chart-1)", fontSize: "12px", fontWeight: 500 }}>
+                                    Last Year
+                                </span>
+                                <span style={{ color: "var(--text-secondary)", fontSize: "13px", fontWeight: 600 }}>
+                                    ${nFormatter(isCurrent ? item.previousPeriodSales * monthProgressRatio : item.previousPeriodSales, 2)}
+                                </span>
+                            </div>
+                            <div style={{
+                                height: "8px",
+                                backgroundColor: "var(--ui-bg-tertiary)",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    width: `${isCurrent ? (item.previousPeriodSales * monthProgressRatio / maxValue) * 100 : previousWidth}%`,
+                                    height: "100%",
+                                    backgroundColor: "var(--chart-1)",
+                                    borderRadius: "4px",
+                                    transition: "width 0.3s ease",
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Comparison Bar Chart         */
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    visibleMonths: number;
     showProjection: boolean;
     showPercentageDiff: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, showPercentageDiff }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleMonths, showProjection, showPercentageDiff }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -59,9 +214,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data, showProjection, s
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileComparisonView data={allData} showPercentageDiff={showPercentageDiff} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible months
+    const data = allData.slice(-visibleMonths);
 
     const padding = { top: 32, right: 5, bottom: 32, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -635,9 +802,10 @@ export default function SalesByMonthComparisonBar() {
 
     const renderSalesComparison = useCallback(
         (data: SalesData[]) => {
-            const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
+            // Process all months - let CustomBarChart handle slicing based on layout
+            const groupedData = processSalesData(data, current.periods);
             const chartData = prepareChartData(groupedData);
-            return <CustomBarChart data={chartData} showProjection={showProjection} showPercentageDiff={showPercentageDiff} />;
+            return <CustomBarChart data={chartData} visibleMonths={visibleMonths} showProjection={showProjection} showPercentageDiff={showPercentageDiff} />;
         },
         [current.periods, visibleMonths, showProjection, showPercentageDiff]
     );

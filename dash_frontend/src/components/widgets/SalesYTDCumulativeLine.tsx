@@ -164,9 +164,130 @@ const LineChart: React.FC<LineChartProps> = ({
     const currentData = data.current;
     const previousData = data.previous;
 
+    // Check for mobile/vertical layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.3 || // Vertical aspect ratio
+        dimensions.width < 320 // Very narrow
+    );
+
     // Don't render until we have dimensions
     if (!currentData.length || dimensions.width === 0 || dimensions.height === 0) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
+    }
+
+    // Mobile summary view for vertical layouts
+    if (useMobileLayout) {
+        const currentTotal = currentData[currentData.length - 1]?.cumulativeSales || 0;
+        const previousTotal = previousData[previousData.length - 1]?.cumulativeSales || 0;
+        const percentChange = previousTotal > 0
+            ? ((currentTotal - previousTotal) / previousTotal) * 100
+            : 0;
+        const isPositive = percentChange >= 0;
+
+        return (
+            <div ref={chartRef} style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                padding: "12px",
+                gap: "12px",
+                overflow: "auto"
+            }}>
+                {/* Current Year Total */}
+                <div style={{
+                    backgroundColor: "var(--ui-bg-secondary)",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    border: "1px solid var(--ui-border-primary)",
+                }}>
+                    <div style={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "4px" }}>
+                        This Year (YTD)
+                    </div>
+                    <div style={{
+                        color: "var(--line-chart-1)",
+                        fontSize: "24px",
+                        fontWeight: 700,
+                        marginBottom: "8px"
+                    }}>
+                        ${nFormatter(currentTotal, 2)}
+                    </div>
+                    <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                    }}>
+                        <span style={{
+                            color: isPositive ? "var(--value-positive)" : "var(--value-negative)",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            backgroundColor: isPositive ? "var(--ui-success-bg)" : "var(--ui-danger-bg)",
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                        }}>
+                            {isPositive ? "+" : ""}{percentChange.toFixed(1)}%
+                        </span>
+                        <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>vs last year</span>
+                    </div>
+                </div>
+
+                {/* Previous Year Total */}
+                {showComparison && (
+                    <div style={{
+                        backgroundColor: "var(--ui-bg-secondary)",
+                        borderRadius: "12px",
+                        padding: "14px",
+                        border: "1px solid var(--ui-border-primary)",
+                    }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "12px", marginBottom: "4px" }}>
+                            Last Year (Same Period)
+                        </div>
+                        <div style={{
+                            color: "var(--line-chart-2)",
+                            fontSize: "20px",
+                            fontWeight: 600
+                        }}>
+                            ${nFormatter(previousTotal, 2)}
+                        </div>
+                    </div>
+                )}
+
+                {/* Mini trend - last few data points */}
+                <div style={{
+                    backgroundColor: "var(--ui-bg-secondary)",
+                    borderRadius: "12px",
+                    padding: "12px",
+                    border: "1px solid var(--ui-border-primary)",
+                    flex: 1,
+                    minHeight: "100px",
+                }}>
+                    <div style={{ color: "var(--text-muted)", fontSize: "11px", marginBottom: "8px" }}>
+                        Recent Trend
+                    </div>
+                    <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                        height: "calc(100% - 24px)",
+                        justifyContent: "space-around"
+                    }}>
+                        {currentData.slice(-5).map((item, idx) => (
+                            <div key={idx} style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                fontSize: "12px",
+                            }}>
+                                <span style={{ color: "var(--text-secondary)" }}>{item.shortLabel}</span>
+                                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>
+                                    ${nFormatter(item.cumulativeSales, 1)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const { padding, strokeWidth, fontSize } = config;
