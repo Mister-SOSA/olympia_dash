@@ -1,10 +1,11 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState, useRef, useEffect } from "react";
 import Widget from "./Widget";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, subMonths, endOfMonth } from "date-fns";
 import { Package, FileText, TrendingUp, Calendar, Award } from "lucide-react";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 const WIDGET_ID = 'TopProductUnitSales';
 
@@ -33,6 +34,24 @@ export default function TopProductUnitSalesTable() {
     const { settings } = useWidgetSettings(WIDGET_ID);
     const highlightTopThree = settings.highlightTopThree as boolean;
     const showPercentageChange = settings.showPercentageChange as boolean;
+
+    const [width, setWidth] = useState(0);
+    const observerRef = useRef<ResizeObserver | null>(null);
+
+    // Callback ref to measure dimensions
+    const measureRef = useCallback((node: HTMLDivElement | null) => {
+        if (node) {
+            if (observerRef.current) observerRef.current.disconnect();
+            observerRef.current = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    setWidth(entry.contentRect.width);
+                }
+            });
+            observerRef.current.observe(node);
+        } else {
+            observerRef.current?.disconnect();
+        }
+    }, []);
 
     // Prepare the widget payload with SQL query.
     // This filter now only returns data for the last 12 complete months.
@@ -85,6 +104,12 @@ export default function TopProductUnitSalesTable() {
             const product = productMap[partCode];
             const monthlyData = product.monthly;
 
+            // Prepare trend data for sparkline (last 12 months)
+            const trendData = months.map(m => ({
+                month: m,
+                value: monthlyData[m] || 0
+            }));
+
             // Helper function: compute raw average for given period
             const computeAvgRaw = (startIndex: number, periodLength: number) => {
                 let sum = 0;
@@ -116,6 +141,7 @@ export default function TopProductUnitSalesTable() {
                 avg6: { value: avg6Raw.toLocaleString(), pct: pct6 },
                 avg9: { value: avg9Raw.toLocaleString(), pct: pct9 },
                 avg12: { value: avg12Raw.toLocaleString() },
+                trendData
             };
         }).sort((a, b) => {
             return parseInt(b.avg12.value.replace(/,/g, "")) - parseInt(a.avg12.value.replace(/,/g, ""));
@@ -131,6 +157,150 @@ export default function TopProductUnitSalesTable() {
             if (pct > -10) return { backgroundColor: 'var(--badge-warning-bg)', color: 'var(--badge-warning-text)', borderColor: 'var(--badge-warning-border)' };
             return { backgroundColor: 'var(--badge-error-bg)', color: 'var(--badge-error-text)', borderColor: 'var(--badge-error-border)' };
         };
+
+        // Determine if we're in compact mode
+        const isCompact = width > 0 && width < 700;
+        const isVeryNarrow = width > 0 && width < 400;
+
+        // --- COMPACT / MOBILE VIEW ---
+        if (isCompact) {
+            return (
+                <ScrollArea className="h-full w-full">
+                    <div className={`flex flex-col ${isVeryNarrow ? 'gap-1' : 'gap-1.5'} pb-1`}>
+                        {tableData.map((row, i) => {
+                            const rank = i + 1;
+                            const isFirst = rank === 1;
+                            const isTop = rank <= 3;
+
+                            return (
+                                <div
+                                    key={i}
+                                    className="relative rounded overflow-hidden"
+                                    style={{
+                                        backgroundColor: 'var(--table-row-bg)',
+                                        border: isFirst ? '1px solid var(--badge-warning-border)' : '1px solid var(--table-border)',
+                                    }}
+                                >
+                                    {/* Header row: Rank + Part Info + Sparkline */}
+                                    <div
+                                        className={`flex items-center ${isVeryNarrow ? 'gap-1 px-1.5 py-1' : 'gap-2 px-2 py-1.5'}`}
+                                        style={{
+                                            backgroundColor: isFirst ? 'var(--badge-warning-bg)' : 'var(--table-header-bg)',
+                                            borderBottom: '1px solid var(--table-border)'
+                                        }}
+                                    >
+                                        {/* Rank */}
+                                        <div
+                                            className={`flex items-center justify-center rounded font-black shrink-0 ${isVeryNarrow ? 'w-4 h-4 text-[10px]' : 'w-5 h-5 text-xs'}`}
+                                            style={{
+                                                backgroundColor: isFirst ? 'var(--badge-warning-bg)' : isTop ? 'var(--ui-bg-secondary)' : 'var(--table-row-bg)',
+                                                color: isFirst ? 'var(--badge-warning-text)' : isTop ? 'var(--table-text-primary)' : 'var(--text-muted)',
+                                                border: `1px solid ${isFirst ? 'var(--badge-warning-border)' : 'var(--table-border)'}`
+                                            }}
+                                        >
+                                            {rank}
+                                        </div>
+
+                                        {/* Part code and description */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-baseline gap-1.5">
+                                                <span className={`font-mono font-bold ${isVeryNarrow ? 'text-[10px]' : 'text-xs'}`} style={{ color: 'var(--table-text-primary)' }}>
+                                                    {row.partCode}
+                                                </span>
+                                                {!isVeryNarrow && (
+                                                    <span
+                                                        className="text-[10px] truncate"
+                                                        style={{ color: 'var(--text-muted)' }}
+                                                        title={row.partDesc}
+                                                    >
+                                                        {row.partDesc}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Mini Sparkline in header */}
+                                        <div className={`shrink-0 ${isVeryNarrow ? 'h-[16px] w-[40px]' : 'h-[20px] w-[60px]'}`}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={row.trendData} margin={{ top: 1, right: 1, left: 1, bottom: 1 }}>
+                                                    <Area
+                                                        type="monotone"
+                                                        dataKey="value"
+                                                        stroke="var(--badge-primary-text)"
+                                                        strokeWidth={1}
+                                                        fill="var(--badge-primary-bg)"
+                                                        animationDuration={500}
+                                                    />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+
+                                    {/* Data row: All 4 averages */}
+                                    <div className={`grid grid-cols-4 ${isVeryNarrow ? 'gap-0.5 px-1 py-1' : 'gap-1 px-2 py-1.5'}`}>
+                                        {/* 3 Mo */}
+                                        <div className="flex flex-col items-center">
+                                            <span className={`font-medium ${isVeryNarrow ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: 'var(--text-muted)' }}>3mo</span>
+                                            <span className={`font-bold tabular-nums ${isVeryNarrow ? 'text-[10px]' : 'text-xs'}`} style={{ color: 'var(--table-text-primary)' }}>{row.avg3.value}</span>
+                                            {showPercentageChange && row.avg3.pct !== null && (
+                                                <span
+                                                    className={`font-semibold tabular-nums ${isVeryNarrow ? 'text-[7px]' : 'text-[9px]'}`}
+                                                    style={{ color: row.avg3.pct > 0 ? 'var(--badge-success-text)' : row.avg3.pct < 0 ? 'var(--badge-error-text)' : 'var(--text-muted)' }}
+                                                >
+                                                    {row.avg3.pct > 0 ? '+' : ''}{row.avg3.pct.toFixed(isVeryNarrow ? 0 : 1)}%
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* 6 Mo */}
+                                        <div className="flex flex-col items-center">
+                                            <span className={`font-medium ${isVeryNarrow ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: 'var(--text-muted)' }}>6mo</span>
+                                            <span className={`font-bold tabular-nums ${isVeryNarrow ? 'text-[10px]' : 'text-xs'}`} style={{ color: 'var(--table-text-primary)' }}>{row.avg6.value}</span>
+                                            {showPercentageChange && row.avg6.pct !== null && (
+                                                <span
+                                                    className={`font-semibold tabular-nums ${isVeryNarrow ? 'text-[7px]' : 'text-[9px]'}`}
+                                                    style={{ color: row.avg6.pct > 0 ? 'var(--badge-success-text)' : row.avg6.pct < 0 ? 'var(--badge-error-text)' : 'var(--text-muted)' }}
+                                                >
+                                                    {row.avg6.pct > 0 ? '+' : ''}{row.avg6.pct.toFixed(isVeryNarrow ? 0 : 1)}%
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* 9 Mo */}
+                                        <div className="flex flex-col items-center">
+                                            <span className={`font-medium ${isVeryNarrow ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: 'var(--text-muted)' }}>9mo</span>
+                                            <span className={`font-bold tabular-nums ${isVeryNarrow ? 'text-[10px]' : 'text-xs'}`} style={{ color: 'var(--table-text-primary)' }}>{row.avg9.value}</span>
+                                            {showPercentageChange && row.avg9.pct !== null && (
+                                                <span
+                                                    className={`font-semibold tabular-nums ${isVeryNarrow ? 'text-[7px]' : 'text-[9px]'}`}
+                                                    style={{ color: row.avg9.pct > 0 ? 'var(--badge-success-text)' : row.avg9.pct < 0 ? 'var(--badge-error-text)' : 'var(--text-muted)' }}
+                                                >
+                                                    {row.avg9.pct > 0 ? '+' : ''}{row.avg9.pct.toFixed(isVeryNarrow ? 0 : 1)}%
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* 12 Mo - highlighted */}
+                                        <div
+                                            className={`flex flex-col items-center rounded ${isVeryNarrow ? 'px-0.5 py-0.5' : 'px-1 py-0.5'}`}
+                                            style={{ backgroundColor: isFirst ? 'var(--badge-warning-bg)' : 'var(--ui-bg-secondary)' }}
+                                        >
+                                            <span className={`font-medium ${isVeryNarrow ? 'text-[8px]' : 'text-[9px]'}`} style={{ color: isFirst ? 'var(--badge-warning-text)' : 'var(--text-muted)' }}>12mo</span>
+                                            <span
+                                                className={`font-black tabular-nums ${isVeryNarrow ? 'text-xs' : 'text-sm'}`}
+                                                style={{ color: isFirst ? 'var(--badge-warning-text)' : 'var(--table-text-primary)' }}
+                                            >
+                                                {row.avg12.value}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </ScrollArea>
+            )
+        }
 
         return (
             <ScrollArea className="h-full w-full border-2 border-border rounded-md">
@@ -258,7 +428,7 @@ export default function TopProductUnitSalesTable() {
                 </Table>
             </ScrollArea>
         );
-    }, [highlightTopThree, showPercentageChange]);
+    }, [highlightTopThree, showPercentageChange, width]);
 
     return (
         <Widget
@@ -271,7 +441,11 @@ export default function TopProductUnitSalesTable() {
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No product data available</div>;
                 }
-                return renderFunction(data);
+                return (
+                    <div ref={measureRef} className="w-full h-full">
+                        {renderFunction(data)}
+                    </div>
+                );
             }}
         </Widget>
     );
