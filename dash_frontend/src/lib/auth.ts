@@ -17,9 +17,27 @@ export interface AuthResponse {
     error?: string;
 }
 
+// ============================================================================
+// OLYMPIA SUITE UNIFIED AUTH
+// These keys are shared across all Olympia Suite apps (dash, chat, etc.)
+// This enables seamless SSO when users navigate between apps on *.olympiasuite.com
+// ============================================================================
+const STORAGE_KEYS = {
+    ACCESS_TOKEN: 'olympia_access_token',
+    REFRESH_TOKEN: 'olympia_refresh_token',
+    TOKEN_EXPIRY: 'olympia_token_expiry',
+    USER: 'olympia_user',
+    IMPERSONATED_USER: 'olympia_impersonated_user',
+    ADMIN_USER: 'olympia_admin_user',
+} as const;
+
+// Token expiry buffer (refresh 5 min before actual expiry)
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
 class AuthService {
     private accessToken: string | null = null;
     private refreshToken: string | null = null;
+    private tokenExpiry: number | null = null;
     private user: User | null = null;
     private impersonatedUser: User | null = null;
     private adminUser: User | null = null;
@@ -27,9 +45,12 @@ class AuthService {
     constructor() {
         // Load tokens from localStorage on initialization
         if (typeof window !== 'undefined') {
-            this.accessToken = localStorage.getItem('access_token');
-            this.refreshToken = localStorage.getItem('refresh_token');
-            const userStr = localStorage.getItem('user');
+            this.accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+            this.refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+            const expiryStr = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
+            this.tokenExpiry = expiryStr ? parseInt(expiryStr, 10) : null;
+
+            const userStr = localStorage.getItem(STORAGE_KEYS.USER);
             if (userStr) {
                 try {
                     this.user = JSON.parse(userStr);
@@ -39,8 +60,8 @@ class AuthService {
             }
 
             // Load impersonation state
-            const impersonatedStr = localStorage.getItem('impersonated_user');
-            const adminStr = localStorage.getItem('admin_user');
+            const impersonatedStr = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_USER);
+            const adminStr = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
             if (impersonatedStr && adminStr) {
                 try {
                     this.impersonatedUser = JSON.parse(impersonatedStr);
@@ -49,6 +70,44 @@ class AuthService {
                     console.error('Failed to parse impersonation data', e);
                 }
             }
+
+            // Listen for storage events from other Olympia Suite apps
+            window.addEventListener('storage', this.handleStorageChange.bind(this));
+        }
+    }
+
+    /**
+     * Handle localStorage changes from other Olympia Suite apps.
+     * This enables real-time SSO sync across dash.olympiasuite.com and chat.olympiasuite.com
+     */
+    private handleStorageChange(event: StorageEvent) {
+        if (!event.key?.startsWith('olympia_')) return;
+
+        switch (event.key) {
+            case STORAGE_KEYS.ACCESS_TOKEN:
+                this.accessToken = event.newValue;
+                break;
+            case STORAGE_KEYS.REFRESH_TOKEN:
+                this.refreshToken = event.newValue;
+                break;
+            case STORAGE_KEYS.TOKEN_EXPIRY:
+                this.tokenExpiry = event.newValue ? parseInt(event.newValue, 10) : null;
+                break;
+            case STORAGE_KEYS.USER:
+                if (event.newValue) {
+                    try {
+                        this.user = JSON.parse(event.newValue);
+                    } catch (e) {
+                        console.error('Failed to parse user from storage event', e);
+                    }
+                } else {
+                    // User logged out from another app - redirect to login
+                    this.user = null;
+                    this.accessToken = null;
+                    this.refreshToken = null;
+                    window.location.href = '/login';
+                }
+                break;
         }
     }
 
@@ -56,24 +115,41 @@ class AuthService {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.user = user;
+        // Calculate expiry (15 min from now, matching backend ACCESS_TOKEN_EXPIRE_MINUTES)
+        this.tokenExpiry = Date.now() + 15 * 60 * 1000;
 
         if (typeof window !== 'undefined') {
-            localStorage.setItem('access_token', accessToken);
-            localStorage.setItem('refresh_token', refreshToken);
-            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+            localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(this.tokenExpiry));
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
         }
     }
 
     clearTokens() {
         this.accessToken = null;
         this.refreshToken = null;
+        this.tokenExpiry = null;
         this.user = null;
+        this.impersonatedUser = null;
+        this.adminUser = null;
 
         if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user');
+            localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
+            localStorage.removeItem(STORAGE_KEYS.USER);
+            localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_USER);
+            localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
         }
+    }
+
+    /**
+     * Check if the access token is expired or about to expire
+     */
+    isTokenExpired(): boolean {
+        if (!this.tokenExpiry) return true;
+        return Date.now() > (this.tokenExpiry - TOKEN_EXPIRY_BUFFER_MS);
     }
 
     getAccessToken(): string | null {
@@ -135,8 +211,14 @@ class AuthService {
 
             if (data.success && data.access_token) {
                 this.accessToken = data.access_token;
+                this.tokenExpiry = Date.now() + 15 * 60 * 1000; // 15 min
                 if (typeof window !== 'undefined') {
-                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
+                    localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(this.tokenExpiry));
+                    if (data.refresh_token) {
+                        this.refreshToken = data.refresh_token;
+                        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+                    }
                 }
                 return true;
             }
@@ -240,7 +322,7 @@ class AuthService {
             if (data.success && data.user) {
                 this.user = data.user;
                 if (typeof window !== 'undefined') {
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
                 }
                 return data.user;
             }
@@ -279,8 +361,8 @@ class AuthService {
                 this.impersonatedUser = data.impersonated_user;
 
                 if (typeof window !== 'undefined') {
-                    localStorage.setItem('admin_user', JSON.stringify(this.adminUser));
-                    localStorage.setItem('impersonated_user', JSON.stringify(this.impersonatedUser));
+                    localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(this.adminUser));
+                    localStorage.setItem(STORAGE_KEYS.IMPERSONATED_USER, JSON.stringify(this.impersonatedUser));
                 }
 
                 // Switch preferences service to impersonated user
@@ -332,8 +414,8 @@ class AuthService {
                 this.adminUser = null;
 
                 if (typeof window !== 'undefined') {
-                    localStorage.removeItem('admin_user');
-                    localStorage.removeItem('impersonated_user');
+                    localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+                    localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_USER);
                 }
 
                 // Switch back to admin's preferences
@@ -351,6 +433,39 @@ class AuthService {
             console.error('❌ End impersonation request failed', error);
             return false;
         }
+    }
+
+    /**
+     * OLYMPIA SUITE SSO
+     * Navigate to another suite app. Auth tokens are already shared via localStorage
+     * using the olympia_* prefixed keys, so the user will be automatically logged in.
+     */
+    navigateToSuiteApp(app: 'dash' | 'chat'): void {
+        const urls: Record<string, string> = {
+            dash: 'https://dash.olympiasuite.com',
+            chat: 'https://chat.olympiasuite.com',
+        };
+        window.location.href = urls[app];
+    }
+
+    /**
+     * Get suite app URLs for navigation components
+     */
+    getSuiteApps(): Array<{ id: string; name: string; url: string; description: string }> {
+        return [
+            {
+                id: 'dash',
+                name: 'Dashboard',
+                url: 'https://dash.olympiasuite.com',
+                description: 'Data visualization & widgets'
+            },
+            {
+                id: 'chat',
+                name: 'Chat',
+                url: 'https://chat.olympiasuite.com',
+                description: 'AI-powered data queries'
+            },
+        ];
     }
 }
 

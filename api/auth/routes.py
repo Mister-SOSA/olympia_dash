@@ -33,7 +33,9 @@ from auth.middleware import (
     validate_domain,
     get_client_ip,
     get_user_agent,
-    rate_limit
+    rate_limit,
+    JWT_ISSUER,
+    JWT_AUDIENCE
 )
 
 auth_bp = Blueprint('auth', __name__)
@@ -46,6 +48,7 @@ REDIRECT_URI = os.getenv('MICROSOFT_REDIRECT_URI')
 AUTHORITY = f'https://login.microsoftonline.com/{TENANT_ID}'
 SCOPE = ['User.Read']
 
+
 def get_msal_app():
     """Get MSAL confidential client application."""
     return msal.ConfidentialClientApplication(
@@ -53,6 +56,53 @@ def get_msal_app():
         authority=AUTHORITY,
         client_credential=CLIENT_SECRET
     )
+
+
+# ============================================================================
+# OLYMPIA SUITE ENDPOINTS
+# These endpoints support cross-app authentication and navigation
+# ============================================================================
+
+@auth_bp.route('/suite/info', methods=['GET'])
+def suite_info():
+    """
+    Get Olympia Suite configuration info.
+    Useful for debugging and verifying suite-wide auth is properly configured.
+    """
+    return jsonify({
+        'success': True,
+        'suite': {
+            'issuer': JWT_ISSUER,
+            'audience': JWT_AUDIENCE,
+            'current_app': 'olympia-dash',
+            'apps': [
+                {'id': 'olympia-dash', 'name': 'Dashboard', 'url': 'https://dash.olympiasuite.com'},
+                {'id': 'olympia-chat', 'name': 'Chat', 'url': 'https://chat.olympiasuite.com'},
+            ]
+        }
+    })
+
+
+@auth_bp.route('/suite/validate', methods=['POST'])
+@require_auth
+def suite_validate():
+    """
+    Validate that a token is valid across the Olympia Suite.
+    Other suite apps can call this to verify tokens.
+    """
+    user = request.current_user
+    return jsonify({
+        'success': True,
+        'valid': True,
+        'user': {
+            'id': user['id'],
+            'email': user['email'],
+            'name': user['name'],
+            'role': user['role']
+        },
+        'validated_by': 'olympia-dash'
+    })
+
 
 @auth_bp.route('/login', methods=['GET'])
 @rate_limit(max_requests=100, window_minutes=1)

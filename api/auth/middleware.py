@@ -1,10 +1,21 @@
 """
 Authentication middleware and utilities.
+
+OLYMPIA SUITE UNIFIED AUTH
+==========================
+This middleware is part of the Olympia Suite unified authentication system.
+All Olympia apps (dash, chat, etc.) use the same JWT structure and secrets,
+enabling seamless SSO across the suite.
+
+Requirements for suite-wide auth:
+1. Same JWT_SECRET environment variable across all apps
+2. Same JWT_ALGORITHM (HS256)
+3. Same token claims structure (user_id, email, role, type, iss, aud)
 """
 
 import jwt
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify
 from auth.database import (
@@ -17,39 +28,92 @@ from auth.database import (
     check_rate_limit
 )
 
-# JWT configuration
-JWT_SECRET = os.getenv('JWT_SECRET', os.urandom(32).hex())
+# ============================================================================
+# OLYMPIA SUITE JWT CONFIGURATION
+# These values MUST match across all Olympia Suite apps for SSO to work
+# ============================================================================
+JWT_SECRET = os.getenv('JWT_SECRET')
+if not JWT_SECRET:
+    raise ValueError(
+        "JWT_SECRET environment variable is required for Olympia Suite auth. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
-def generate_access_token(user_id, email, role):
-    """Generate a JWT access token."""
+# Suite-wide issuer and audience claims
+JWT_ISSUER = 'olympia-suite'
+JWT_AUDIENCE = ['olympia-dash', 'olympia-chat']  # All valid suite apps
+
+
+def generate_access_token(user_id, email, role, app_id='olympia-dash'):
+    """
+    Generate a JWT access token valid across all Olympia Suite apps.
+    
+    Args:
+        user_id: User's database ID
+        email: User's email
+        role: User's role (user/admin)
+        app_id: The app generating this token (for audit purposes)
+    """
+    now = datetime.now(timezone.utc)
     payload = {
         'user_id': user_id,
         'email': email,
         'role': role,
         'type': 'access',
-        'exp': datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
-        'iat': datetime.utcnow()
+        'iss': JWT_ISSUER,           # Issuer: identifies this as an Olympia Suite token
+        'aud': JWT_AUDIENCE,         # Audience: all suite apps can validate this token
+        'app': app_id,               # Which app originally issued this token
+        'exp': now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        'iat': now,
+        'nbf': now,                  # Not valid before now
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-def generate_refresh_token(user_id, email):
-    """Generate a JWT refresh token."""
+
+def generate_refresh_token(user_id, email, app_id='olympia-dash'):
+    """
+    Generate a JWT refresh token valid across all Olympia Suite apps.
+    """
+    now = datetime.now(timezone.utc)
     payload = {
         'user_id': user_id,
         'email': email,
         'type': 'refresh',
-        'exp': datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
-        'iat': datetime.utcnow()
+        'iss': JWT_ISSUER,
+        'aud': JWT_AUDIENCE,
+        'app': app_id,
+        'exp': now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        'iat': now,
+        'nbf': now,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-def decode_token(token):
-    """Decode and verify a JWT token."""
+def decode_token(token, verify_audience=True):
+    """
+    Decode and verify a JWT token from any Olympia Suite app.
+    
+    Args:
+        token: The JWT token string
+        verify_audience: Whether to verify the audience claim (default True)
+    
+    Returns:
+        The decoded payload dict, or None if invalid
+    """
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        options = {}
+        if verify_audience:
+            options['audience'] = JWT_AUDIENCE
+        
+        payload = jwt.decode(
+            token, 
+            JWT_SECRET, 
+            algorithms=[JWT_ALGORITHM],
+            issuer=JWT_ISSUER,
+            options={'verify_aud': verify_audience}
+        )
         return payload
     except jwt.ExpiredSignatureError:
         return None
