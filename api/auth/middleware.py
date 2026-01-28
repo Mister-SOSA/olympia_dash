@@ -103,21 +103,22 @@ def decode_token(token, verify_audience=True):
         The decoded payload dict, or None if invalid
     """
     try:
-        options = {}
-        if verify_audience:
-            options['audience'] = JWT_AUDIENCE
+        decode_options = {'verify_aud': verify_audience}
         
         payload = jwt.decode(
             token, 
             JWT_SECRET, 
             algorithms=[JWT_ALGORITHM],
             issuer=JWT_ISSUER,
-            options={'verify_aud': verify_audience}
+            audience=JWT_AUDIENCE if verify_audience else None,
+            options=decode_options
         )
         return payload
     except jwt.ExpiredSignatureError:
+        print(f"[Auth] Token expired")
         return None
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        print(f"[Auth] Invalid token: {e}")
         return None
 
 def get_token_from_header():

@@ -235,9 +235,10 @@ def refresh():
     """Refresh access token using refresh token."""
     try:
         data = request.get_json()
-        refresh_token = data.get('refresh_token')
+        refresh_token = data.get('refresh_token') if data else None
         
         if not refresh_token:
+            print(f"[Auth] Refresh failed: No refresh token in request body")
             return jsonify({
                 'success': False,
                 'error': 'Refresh token required'
@@ -245,7 +246,15 @@ def refresh():
         
         # Decode refresh token
         payload = decode_token(refresh_token)
-        if not payload or payload.get('type') != 'refresh':
+        if not payload:
+            print(f"[Auth] Refresh failed: Token decode returned None")
+            return jsonify({
+                'success': False,
+                'error': 'Invalid refresh token'
+            }), 401
+        
+        if payload.get('type') != 'refresh':
+            print(f"[Auth] Refresh failed: Token type is '{payload.get('type')}', expected 'refresh'")
             return jsonify({
                 'success': False,
                 'error': 'Invalid refresh token'
@@ -257,6 +266,7 @@ def refresh():
             session = get_device_session_by_refresh_token(refresh_token)
         
         if not session:
+            print(f"[Auth] Refresh failed: No session found for refresh token (user_id={payload.get('user_id')})")
             return jsonify({
                 'success': False,
                 'error': 'Session not found'
