@@ -1,6 +1,6 @@
 Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
 
-Copyright (c) 2026 [Your Name]
+Copyright (c) 2026 Alex Karabetsos
 
 This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
 
