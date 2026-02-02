@@ -8,7 +8,7 @@
  * Also manages global settings that apply to ALL widget instances.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { authService } from '@/lib/auth';
 
 const AC_INFINITY_API = '/api/ac-infinity/controllers';
@@ -99,6 +99,10 @@ interface ACInfinityContextValue {
     // Local optimistic state management
     applyLocalOverride: (deviceId: string, portIndex: number, changes: Partial<PortSettings>) => void;
     getEffectiveSettings: (deviceId: string, portIndex: number) => PortSettings | undefined;
+
+    // Consumer registration - widgets call this to signal they need data
+    registerConsumer: () => () => void;
+    hasActiveConsumers: boolean;
 }
 
 const ACInfinityContext = createContext<ACInfinityContextValue | null>(null);
@@ -157,8 +161,15 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
 
     const [controllers, setControllers] = useState<ACInfinityController[]>([]);
     const [serverSettings, setServerSettings] = useState<Record<string, Record<number, PortSettings>>>({});
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Start false - only load when needed
     const [error, setError] = useState<string | null>(null);
+
+    // Track active consumers (widgets using this context)
+    const [consumerCount, setConsumerCount] = useState(0);
+    const hasActiveConsumers = consumerCount > 0;
+
+    // Track page visibility to pause polling when tab is hidden
+    const [isPageVisible, setIsPageVisible] = useState(true);
 
     // Local overrides for optimistic updates
     const localOverridesRef = useRef<Record<string, Record<number, Partial<PortSettings>>>>({});
@@ -168,6 +179,33 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
     // Debounce timers for settings updates
     const debounceTimerRef = useRef<Record<string, NodeJS.Timeout>>({});
     const pendingSettingsRef = useRef<Record<string, Partial<PortSettings>>>({});
+
+    // Track if initial fetch has been done (to avoid double-fetching)
+    const initialFetchDoneRef = useRef(false);
+
+    // Interval ref for cleanup
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Register/unregister consumers - widgets call this when they mount/unmount
+    const registerConsumer = useCallback(() => {
+        setConsumerCount(c => c + 1);
+        // Return cleanup function
+        return () => {
+            setConsumerCount(c => Math.max(0, c - 1));
+        };
+    }, []);
+
+    // Page visibility handler
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+
+        const handleVisibilityChange = () => {
+            setIsPageVisible(!document.hidden);
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
 
     // Fetch all controllers
     const fetchControllers = useCallback(async () => {
@@ -249,6 +287,7 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
             }
 
             setServerSettings(newSettings);
+            initialFetchDoneRef.current = true;
         } catch (e) {
             console.error('Error refreshing AC Infinity data:', e);
         } finally {
@@ -256,26 +295,55 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
         }
     }, [fetchControllers, fetchAllSettings]);
 
-    // Initial fetch and polling - uses global refresh interval
-    // Only poll when user is authenticated
+    // Smart polling - only poll when:
+    // 1. User is authenticated
+    // 2. At least one FanController widget is mounted (hasActiveConsumers)
+    // 3. Page is visible (not in background tab)
     useEffect(() => {
-        // Initial fetch
-        refresh();
+        // Clear any existing interval
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
 
-        // Only set up polling interval if authenticated
-        if (!authService.isAuthenticated()) {
+        // Check all conditions for polling
+        const shouldPoll = authService.isAuthenticated() && hasActiveConsumers && isPageVisible;
+
+        if (!shouldPoll) {
+            // If we have consumers but page just became hidden, that's ok - just pause
+            // If we have no consumers, no need to poll at all
             return;
         }
 
+        // Do initial fetch if we have consumers and haven't fetched yet
+        if (hasActiveConsumers && !initialFetchDoneRef.current) {
+            refresh();
+        }
+
+        // Set up polling interval
         const intervalMs = globalSettings.refreshInterval * 1000;
-        const id = setInterval(refresh, intervalMs);
-        return () => clearInterval(id);
-    }, [refresh, globalSettings.refreshInterval]);
+        pollingIntervalRef.current = setInterval(() => {
+            // Double-check conditions inside interval callback (auth state might change)
+            if (authService.isAuthenticated() && hasActiveConsumers && !document.hidden) {
+                refresh();
+            }
+        }, intervalMs);
+
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        };
+    }, [hasActiveConsumers, isPageVisible, globalSettings.refreshInterval, refresh]);
 
     // Cleanup debounce timers on unmount
     useEffect(() => {
         return () => {
             Object.values(debounceTimerRef.current).forEach(clearTimeout);
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+            }
         };
     }, []);
 
@@ -420,7 +488,7 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
         });
     }, [applyLocalOverride, refresh]);
 
-    const value: ACInfinityContextValue = {
+    const value: ACInfinityContextValue = useMemo(() => ({
         globalSettings,
         updateGlobalSettings,
         controllers,
@@ -433,7 +501,24 @@ export const ACInfinityProvider: React.FC<ACInfinityProviderProps> = ({ children
         updatePortSettings,
         applyLocalOverride,
         getEffectiveSettings,
-    };
+        registerConsumer,
+        hasActiveConsumers,
+    }), [
+        globalSettings,
+        updateGlobalSettings,
+        controllers,
+        serverSettings,
+        loading,
+        error,
+        refresh,
+        updatePortMode,
+        updatePortSpeed,
+        updatePortSettings,
+        applyLocalOverride,
+        getEffectiveSettings,
+        registerConsumer,
+        hasActiveConsumers,
+    ]);
 
     return (
         <ACInfinityContext.Provider value={value}>

@@ -1241,7 +1241,15 @@ const FanContent: React.FC<{ widgetId: string }> = ({ widgetId }) => {
         updatePortSpeed,
         updatePortSettings,
         getEffectiveSettings,
+        registerConsumer,
     } = useACInfinity();
+
+    // Register this widget as an active consumer of AC Infinity data
+    // This tells the context to start/continue polling
+    useEffect(() => {
+        const unregister = registerConsumer();
+        return () => unregister();
+    }, [registerConsumer]);
 
     const [size, setSize] = useState({ w: 300, h: 200 });
     const ref = useRef<HTMLDivElement>(null);
