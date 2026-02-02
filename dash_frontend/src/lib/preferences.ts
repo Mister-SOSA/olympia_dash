@@ -56,6 +56,9 @@ class PreferencesService {
     // Track if preferences have been loaded from server at least once
     private hasLoadedFromServer: boolean = false;
 
+    // Queue for remote updates that arrive while local operations are in progress
+    private pendingRemoteUpdate: { preferences: Record<string, any>, version: number, changedKeys: string[] } | null = null;
+
     // Interaction lock - when true, ignore remote updates
     private interactionLock: boolean = false;
     private interactionLockTimer: NodeJS.Timeout | null = null;
@@ -70,6 +73,10 @@ class PreferencesService {
     private changeCallbacks: Set<ChangeCallback> = new Set();
     private currentUserId: number | null = null;
     private sessionCount: number = 1;
+
+    // Heartbeat to keep server session alive (prevents stale session cleanup)
+    private heartbeatInterval: NodeJS.Timeout | null = null;
+    private readonly HEARTBEAT_INTERVAL_MS = 60000; // Send heartbeat every 60 seconds
 
     // Generic event emitter for custom events (permissions_updated, etc.)
     private eventListeners: Map<string, Set<() => void>> = new Map();
@@ -276,6 +283,7 @@ class PreferencesService {
         this.socket.on('connect', () => {
             console.log('[Prefs] WebSocket connected');
             this.joinAppropriateRooms();
+            this.startHeartbeat();
         });
 
         this.socket.on('joined', (data: any) => {
@@ -294,6 +302,7 @@ class PreferencesService {
 
         this.socket.on('disconnect', (reason: string) => {
             console.warn('[Prefs] WebSocket disconnected:', reason);
+            this.stopHeartbeat();
         });
 
         // Listen for permission updates from server
@@ -321,30 +330,84 @@ class PreferencesService {
                 return;
             }
 
-            // CRITICAL: Check interaction lock
-            if (this.interactionLock) {
-                console.log('[Prefs] Ignoring remote update - user is interacting');
-                return;
-            }
+            // Detect which keys changed (do this early for queuing)
+            const changedKeys = this.detectChangedKeys(this.preferences, data.preferences);
 
-            // CRITICAL: Check if we have unsaved local changes
-            if (this.dirtyKeys.size > 0) {
-                console.log(`[Prefs] Remote update received but have ${this.dirtyKeys.size} dirty keys - deferring`);
+            // CRITICAL: Check if local operations are in progress
+            // Queue the update instead of dropping it to avoid data loss
+            if (this.interactionLock || this.dirtyKeys.size > 0 || this.isSaving) {
+                const reason = this.interactionLock ? 'interaction lock'
+                    : this.isSaving ? 'save in progress'
+                        : `${this.dirtyKeys.size} dirty keys`;
+                console.log(`[Prefs] Queueing remote update (v${data.version}) - ${reason}`);
+
+                // Queue the latest remote update (only keep most recent)
+                this.pendingRemoteUpdate = {
+                    preferences: data.preferences,
+                    version: data.version,
+                    changedKeys
+                };
                 return;
             }
 
             console.log(`[Prefs] Applying remote update (v${this.version} → v${data.version})`);
-
-            // Detect which keys changed
-            const changedKeys = this.detectChangedKeys(this.preferences, data.preferences);
-
-            this.preferences = data.preferences;
-            this.version = data.version;
-            this.saveToCache();
-
-            // Notify subscribers about the remote change
-            this.notifySubscribers(true, changedKeys);
+            this.applyRemoteUpdate(data.preferences, data.version, changedKeys);
         });
+    }
+
+    /**
+     * Start sending periodic heartbeats to keep the server session alive
+     */
+    private startHeartbeat(): void {
+        this.stopHeartbeat(); // Clear any existing interval
+
+        this.heartbeatInterval = setInterval(() => {
+            if (this.socket?.connected) {
+                this.socket.emit('heartbeat', { timestamp: Date.now() });
+            }
+        }, this.HEARTBEAT_INTERVAL_MS);
+    }
+
+    /**
+     * Stop the heartbeat interval
+     */
+    private stopHeartbeat(): void {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+
+    /**
+     * Apply a remote update to local state
+     */
+    private applyRemoteUpdate(preferences: Record<string, any>, version: number, changedKeys: string[]): void {
+        this.preferences = preferences;
+        this.version = version;
+        this.saveToCache();
+        this.notifySubscribers(true, changedKeys);
+    }
+
+    /**
+     * Check and apply any pending remote update
+     * Called after local operations complete
+     */
+    private checkPendingRemoteUpdate(): void {
+        if (!this.pendingRemoteUpdate) return;
+
+        // Only apply if still newer than our version
+        if (this.pendingRemoteUpdate.version > this.version) {
+            console.log(`[Prefs] Applying queued remote update (v${this.version} → v${this.pendingRemoteUpdate.version})`);
+            this.applyRemoteUpdate(
+                this.pendingRemoteUpdate.preferences,
+                this.pendingRemoteUpdate.version,
+                this.pendingRemoteUpdate.changedKeys
+            );
+        } else {
+            console.log(`[Prefs] Discarding stale queued update (v${this.pendingRemoteUpdate.version} <= v${this.version})`);
+        }
+
+        this.pendingRemoteUpdate = null;
     }
 
     /**
@@ -457,6 +520,11 @@ class PreferencesService {
             this.interactionLockTimer = setTimeout(() => {
                 this.interactionLock = false;
                 this.interactionLockTimer = null;
+
+                // Check for pending remote updates when interaction lock releases
+                if (this.dirtyKeys.size === 0 && !this.isSaving) {
+                    this.checkPendingRemoteUpdate();
+                }
             }, this.INTERACTION_LOCK_MS);
         }
     }
@@ -523,6 +591,7 @@ class PreferencesService {
             clearTimeout(this.interactionLockTimer);
             this.interactionLockTimer = null;
         }
+        this.stopHeartbeat();
     }
 
     /**
@@ -783,6 +852,12 @@ class PreferencesService {
 
                     this.saveToCache();
                     console.log(`[Prefs] Saved successfully (v${this.version})`);
+
+                    // Check for queued remote updates now that save is complete
+                    // Only if no more dirty keys (otherwise next save will handle it)
+                    if (this.dirtyKeys.size === 0) {
+                        this.checkPendingRemoteUpdate();
+                    }
 
                     // Broadcast to other sessions
                     if (this.socket?.connected && this.sessionCount > 1) {

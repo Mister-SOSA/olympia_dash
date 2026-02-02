@@ -119,11 +119,53 @@ socketio = SocketIO(
 
 # Track active sessions per room (module-level for persistence)
 active_sessions: dict[str, set[str]] = {}
+# Track last heartbeat time per SID for stale session cleanup
+session_last_seen: dict[str, float] = {}
+# Session timeout in seconds (5 minutes without heartbeat = stale)
+SESSION_TIMEOUT_SECONDS = 300
+
+import time
+
+def cleanup_stale_sessions():
+    """Remove sessions that haven't sent a heartbeat within the timeout period.
+    
+    Called periodically to prevent memory leaks from abandoned connections.
+    """
+    now = time.time()
+    stale_count = 0
+    
+    for room, sessions in list(active_sessions.items()):
+        for sid in list(sessions):
+            last_seen = session_last_seen.get(sid, 0)
+            if (now - last_seen) > SESSION_TIMEOUT_SECONDS:
+                sessions.discard(sid)
+                session_last_seen.pop(sid, None)
+                stale_count += 1
+                logger.info(f'🧹 Removed stale session {sid[:8]}... from {room}')
+        
+        # Clean up empty rooms
+        if not sessions:
+            del active_sessions[room]
+            logger.info(f'🧹 Removed empty room {room}')
+    
+    if stale_count > 0:
+        logger.info(f'🧹 Cleaned up {stale_count} stale sessions')
 
 # WebSocket handlers
 @socketio.on('connect')
 def handle_connect():
+    # Record initial heartbeat on connect
+    session_last_seen[request.sid] = time.time()  # type: ignore[attr-defined]
     logger.info(f'Client connected: {request.sid}')  # type: ignore[attr-defined]
+
+@socketio.on('heartbeat')
+def handle_heartbeat(data):
+    """Handle heartbeat from client to track session liveness"""
+    session_last_seen[request.sid] = time.time()  # type: ignore[attr-defined]
+    # Periodically cleanup stale sessions (every heartbeat is a good trigger)
+    # Only run cleanup occasionally to avoid overhead
+    if len(session_last_seen) > 10:  # Only cleanup when we have multiple sessions
+        cleanup_stale_sessions()
 
 @socketio.on('join')
 def handle_join(data):
@@ -132,6 +174,9 @@ def handle_join(data):
     user_id = data.get('user_id')
     session_id = data.get('session_id', 'unknown')
     logger.info(f'🔵 JOIN REQUEST - User: {user_id}, Session: {session_id[:8]}..., SID: {request.sid}')  # type: ignore[attr-defined]
+    
+    # Update heartbeat on join
+    session_last_seen[request.sid] = time.time()  # type: ignore[attr-defined]
     
     if user_id:
         room = f'user_{user_id}'
@@ -209,12 +254,17 @@ def handle_test_broadcast(data):
 def handle_disconnect():
     from flask_socketio import emit
     
+    sid = request.sid  # type: ignore[attr-defined]
+    
+    # Clean up heartbeat tracking
+    session_last_seen.pop(sid, None)
+    
     # Clean up session tracking
     for room, sessions in list(active_sessions.items()):
-        if request.sid in sessions:  # type: ignore[attr-defined]
-            sessions.remove(request.sid)  # type: ignore[attr-defined]
+        if sid in sessions:
+            sessions.discard(sid)
             remaining_count = len(sessions)
-            logger.info(f'❌ Client {request.sid} disconnected from {room}')  # type: ignore[attr-defined]
+            logger.info(f'❌ Client {sid[:8]}... disconnected from {room}')
             logger.info(f'   📊 Remaining sessions in {room}: {remaining_count}')
             
             # Notify remaining sessions about count change
@@ -225,8 +275,8 @@ def handle_disconnect():
             if remaining_count == 0:
                 del active_sessions[room]
     
-    if not any(request.sid in sessions for sessions in active_sessions.values()):  # type: ignore[attr-defined]
-        logger.info(f'❌ Client disconnected: {request.sid}')  # type: ignore[attr-defined]
+    if not any(sid in sessions for sessions in active_sessions.values()):
+        logger.info(f'❌ Client disconnected: {sid[:8]}...')
 
 
 def emit_permissions_updated(user_id: int):
