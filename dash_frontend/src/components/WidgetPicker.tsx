@@ -2695,7 +2695,6 @@ export default function WidgetPicker({
                                         />
                                     )
                                 )}
-                                ))}
                             </div>
                         )}
                     </div>
