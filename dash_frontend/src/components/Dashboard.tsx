@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 // Components
@@ -285,14 +285,11 @@ export default function Dashboard() {
     return (
       <>
         {/* Onboarding Flow for new users */}
-        <AnimatePresence>
-          {showOnboarding && (
-            <OnboardingFlow
-              user={user}
-              onComplete={() => setShowOnboarding(false)}
-            />
-          )}
-        </AnimatePresence>
+        <OnboardingFlow
+          isOpen={showOnboarding}
+          user={user}
+          onComplete={() => setShowOnboarding(false)}
+        />
 
         {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
         <div className="dashboard-container mobile" style={isImpersonating ? { paddingTop: '60px' } : {}}>
@@ -305,18 +302,15 @@ export default function Dashboard() {
           />
 
           {/* Settings Menu - Unified responsive component */}
-          <AnimatePresence>
-            {settingsOpen && (
-              <SettingsMenu
-                user={user}
-                onLogout={handleLogout}
-                onClose={() => setSettingsOpen(false)}
-                onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
-                presets={presets}
-                initialView={settingsView}
-              />
-            )}
-          </AnimatePresence>
+          <SettingsMenu
+            isOpen={settingsOpen}
+            user={user}
+            onLogout={handleLogout}
+            onClose={() => setSettingsOpen(false)}
+            onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+            presets={presets}
+            initialView={settingsView}
+          />
         </div>
       </>
     );
@@ -326,14 +320,11 @@ export default function Dashboard() {
   return (
     <>
       {/* Onboarding Flow for new users */}
-      <AnimatePresence>
-        {showOnboarding && (
-          <OnboardingFlow
-            user={user}
-            onComplete={() => setShowOnboarding(false)}
-          />
-        )}
-      </AnimatePresence>
+      <OnboardingFlow
+        isOpen={showOnboarding}
+        user={user}
+        onComplete={() => setShowOnboarding(false)}
+      />
 
       {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
       <div
@@ -453,35 +444,29 @@ export default function Dashboard() {
         />
 
         {/* Widget Menu Modal */}
-        <AnimatePresence>
-          {menuOpen && (
-            <WidgetPicker
-              tempLayout={tempLayout}
-              setTempLayout={setTempLayout}
-              handleSave={handleSave}
-              handleCancel={handleCancel}
-              activePresetName={
-                activePresetIndex !== null && presets[activePresetIndex]
-                  ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
-                  : undefined
-              }
-            />
-          )}
-        </AnimatePresence>
+        <WidgetPicker
+          isOpen={menuOpen}
+          tempLayout={tempLayout}
+          setTempLayout={setTempLayout}
+          handleSave={handleSave}
+          handleCancel={handleCancel}
+          activePresetName={
+            activePresetIndex !== null && presets[activePresetIndex]
+              ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
+              : undefined
+          }
+        />
 
         {/* Settings Menu Modal */}
-        <AnimatePresence>
-          {settingsOpen && (
-            <SettingsMenu
-              user={user}
-              onLogout={handleLogout}
-              onClose={() => setSettingsOpen(false)}
-              onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
-              presets={presets}
-              initialView={settingsView}
-            />
-          )}
-        </AnimatePresence>
+        <SettingsMenu
+          isOpen={settingsOpen}
+          user={user}
+          onLogout={handleLogout}
+          onClose={() => setSettingsOpen(false)}
+          onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+          presets={presets}
+          initialView={settingsView}
+        />
 
         <motion.div
           animate={{ opacity: isTransitioning ? 0 : 1 }}

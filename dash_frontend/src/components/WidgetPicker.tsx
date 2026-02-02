@@ -61,6 +61,8 @@ import {
     isMultiInstanceWidget,
 } from "@/utils/widgetInstanceUtils";
 import { widgetSettingsService } from "@/lib/widgetSettings";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Drawer } from "vaul";
 
 // ============================================
 // Category Icons
@@ -82,6 +84,7 @@ const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: s
 // ============================================
 
 interface WidgetPickerProps {
+    isOpen: boolean;
     tempLayout: Widget[];
     setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
     handleSave: () => void;
@@ -1414,6 +1417,7 @@ QuickActions.displayName = "QuickActions";
 // ============================================
 
 export default function WidgetPicker({
+    isOpen,
     tempLayout,
     setTempLayout,
     handleSave,
@@ -1730,134 +1734,125 @@ export default function WidgetPicker({
     // ============================================
     if (isMobile) {
         return (
-            <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="fixed inset-0 z-50 flex flex-col"
-                style={{ backgroundColor: 'var(--ui-bg-primary)' }}
-            >
-                {/* Mobile Header */}
-                <div
-                    className="flex-shrink-0 border-b safe-top"
-                    style={{
-                        borderColor: 'var(--ui-border-primary)',
-                        backgroundColor: 'var(--ui-bg-primary)'
-                    }}
-                >
-                    <div className="px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Grid3x3 className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
-                            <h2 className="text-lg font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
-                                Widgets
-                            </h2>
+            <Drawer.Root open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+                <Drawer.Portal>
+                    <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
+                    <Drawer.Content
+                        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl outline-none"
+                        style={{
+                            backgroundColor: 'var(--ui-bg-primary)',
+                            height: '95vh',
+                            maxHeight: '95vh'
+                        }}
+                    >
+                        {/* Drag handle */}
+                        <div className="flex justify-center pt-3 pb-2">
+                            <div className="w-10 h-1 rounded-full bg-ui-border-secondary" />
                         </div>
-                        <button
-                            onClick={handleCancel}
-                            className="p-2 rounded-lg"
-                            style={{ color: 'var(--ui-text-secondary)' }}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
 
-                    {/* Status bar */}
-                    <div className="px-4 pb-3 flex items-center gap-2">
-                        <span
-                            className="text-sm font-medium px-2 py-0.5 rounded-md"
+                        {/* Mobile Header */}
+                        <div
+                            className="flex-shrink-0 border-b"
                             style={{
-                                backgroundColor: enabledCount > 0 ? 'var(--ui-success-bg)' : 'var(--ui-bg-tertiary)',
-                                color: enabledCount > 0 ? 'var(--ui-success-text)' : 'var(--ui-text-muted)'
+                                borderColor: 'var(--ui-border-primary)',
+                                backgroundColor: 'var(--ui-bg-primary)'
                             }}
                         >
-                            {enabledCount} active
-                        </span>
-                        {hasChanges && (
-                            <span
-                                className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
-                                style={{
-                                    backgroundColor: 'var(--ui-warning-bg)',
-                                    color: 'var(--ui-warning-text)'
-                                }}
-                            >
-                                <span
-                                    className="w-1.5 h-1.5 rounded-full animate-pulse"
-                                    style={{ backgroundColor: 'var(--ui-warning)' }}
-                                />
-                                Unsaved
-                            </span>
-                        )}
-                        {activePresetName && (
-                            <span
-                                className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
-                                style={{
-                                    backgroundColor: 'var(--ui-accent-primary-bg)',
-                                    color: 'var(--ui-accent-primary)'
-                                }}
-                            >
-                                <Sparkles className="w-3 h-3" />
-                                {activePresetName}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Search */}
-                    <div className="px-4 pb-3">
-                        <div className="relative">
-                            <Search
-                                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                                style={{ color: 'var(--ui-text-muted)' }}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Search widgets..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
-                                style={{
-                                    backgroundColor: 'var(--ui-bg-secondary)',
-                                    borderColor: 'var(--ui-border-primary)',
-                                    color: 'var(--ui-text-primary)'
-                                }}
-                            />
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm("")}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                                    style={{ color: 'var(--ui-text-muted)' }}
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Category Pills */}
-                    <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setSelectedCategory("all")}
-                                className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                                style={selectedCategory === "all" ? {
-                                    backgroundColor: 'var(--ui-accent-primary)',
-                                    color: '#ffffff'
-                                } : {
-                                    backgroundColor: 'var(--ui-bg-tertiary)',
-                                    color: 'var(--ui-text-secondary)'
-                                }}
-                            >
-                                All ({totalCount})
-                            </button>
-                            {categories.map((category) => {
-                                const IconComponent = CATEGORY_ICONS[category];
-                                const stats = categoryStats[category];
-                                return (
+                            <div className="px-4 py-3 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Grid3x3 className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
+                                    <Drawer.Title className="text-lg font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
+                                        Widgets
+                                    </Drawer.Title>
+                                </div>
+                                <Drawer.Close asChild>
                                     <button
-                                        key={category}
-                                        onClick={() => setSelectedCategory(category)}
-                                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
-                                        style={selectedCategory === category ? {
+                                        className="p-2 rounded-lg"
+                                        style={{ color: 'var(--ui-text-secondary)' }}
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </Drawer.Close>
+                            </div>
+
+                            {/* Status bar */}
+                            <div className="px-4 pb-3 flex items-center gap-2">
+                                <span
+                                    className="text-sm font-medium px-2 py-0.5 rounded-md"
+                                    style={{
+                                        backgroundColor: enabledCount > 0 ? 'var(--ui-success-bg)' : 'var(--ui-bg-tertiary)',
+                                        color: enabledCount > 0 ? 'var(--ui-success-text)' : 'var(--ui-text-muted)'
+                                    }}
+                                >
+                                    {enabledCount} active
+                                </span>
+                                {hasChanges && (
+                                    <span
+                                        className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
+                                        style={{
+                                            backgroundColor: 'var(--ui-warning-bg)',
+                                            color: 'var(--ui-warning-text)'
+                                        }}
+                                    >
+                                        <span
+                                            className="w-1.5 h-1.5 rounded-full animate-pulse"
+                                            style={{ backgroundColor: 'var(--ui-warning)' }}
+                                        />
+                                        Unsaved
+                                    </span>
+                                )}
+                                {activePresetName && (
+                                    <span
+                                        className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
+                                        style={{
+                                            backgroundColor: 'var(--ui-accent-primary-bg)',
+                                            color: 'var(--ui-accent-primary)'
+                                        }}
+                                    >
+                                        <Sparkles className="w-3 h-3" />
+                                        {activePresetName}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Search */}
+                            <div className="px-4 pb-3">
+                                <div className="relative">
+                                    <Search
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                                        style={{ color: 'var(--ui-text-muted)' }}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Search widgets..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
+                                        style={{
+                                            backgroundColor: 'var(--ui-bg-secondary)',
+                                            borderColor: 'var(--ui-border-primary)',
+                                            color: 'var(--ui-text-primary)'
+                                        }}
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm("")}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2"
+                                            style={{ color: 'var(--ui-text-muted)' }}
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Category Pills */}
+                            <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setSelectedCategory("all")}
+                                        className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                                        style={selectedCategory === "all" ? {
                                             backgroundColor: 'var(--ui-accent-primary)',
                                             color: '#ffffff'
                                         } : {
@@ -1865,186 +1860,206 @@ export default function WidgetPicker({
                                             color: 'var(--ui-text-secondary)'
                                         }}
                                     >
-                                        {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
-                                        <span>{category}</span>
-                                        {stats && stats.enabled > 0 && (
-                                            <span
-                                                className="text-xs px-1.5 rounded-full"
-                                                style={{
-                                                    backgroundColor: selectedCategory === category
-                                                        ? 'rgba(255,255,255,0.2)'
-                                                        : 'var(--ui-accent-primary-bg)',
-                                                    color: selectedCategory === category
-                                                        ? '#ffffff'
-                                                        : 'var(--ui-accent-primary)'
+                                        All ({totalCount})
+                                    </button>
+                                    {categories.map((category) => {
+                                        const IconComponent = CATEGORY_ICONS[category];
+                                        const stats = categoryStats[category];
+                                        return (
+                                            <button
+                                                key={category}
+                                                onClick={() => setSelectedCategory(category)}
+                                                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+                                                style={selectedCategory === category ? {
+                                                    backgroundColor: 'var(--ui-accent-primary)',
+                                                    color: '#ffffff'
+                                                } : {
+                                                    backgroundColor: 'var(--ui-bg-tertiary)',
+                                                    color: 'var(--ui-text-secondary)'
                                                 }}
                                             >
-                                                {stats.enabled}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Mobile Widget List */}
-                <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3">
-                    {permissionsLoading ? (
-                        <div className="flex flex-col items-center justify-center h-full">
-                            <Loader />
-                            <p className="text-sm mt-3" style={{ color: 'var(--ui-text-muted)' }}>
-                                Loading widgets...
-                            </p>
-                        </div>
-                    ) : filteredWidgets.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full py-12">
-                            <Grid3x3
-                                className="w-12 h-12 mb-3 opacity-40"
-                                style={{ color: 'var(--ui-text-tertiary)' }}
-                            />
-                            <p className="font-medium" style={{ color: 'var(--ui-text-secondary)' }}>
-                                No widgets found
-                            </p>
-                            <p className="text-sm mt-1" style={{ color: 'var(--ui-text-muted)' }}>
-                                {searchTerm ? "Try a different search" : "No widgets in this category"}
-                            </p>
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm("")}
-                                    className="mt-4 px-4 py-2 text-sm rounded-lg"
-                                    style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
-                                >
-                                    Clear search
-                                </button>
-                            )}
-                        </div>
-                    ) : selectedCategory === "all" && !searchTerm ? (
-                        // Grouped by category
-                        <div className="space-y-6 pb-32">
-                            {CATEGORY_ORDER.map((category) => {
-                                const widgets = groupedWidgets[category];
-                                if (!widgets?.length) return null;
-                                const stats = categoryStats[category];
-                                const IconComponent = CATEGORY_ICONS[category];
-
-                                return (
-                                    <div key={category}>
-                                        <div className="flex items-center gap-2 mb-3 sticky top-0 py-2 -mx-4 px-4"
-                                            style={{ backgroundColor: 'var(--ui-bg-primary)' }}
-                                        >
-                                            {IconComponent && (
-                                                <IconComponent
-                                                    className="w-4 h-4"
-                                                    style={{ color: 'var(--ui-text-muted)' }}
-                                                />
-                                            )}
-                                            <span
-                                                className="text-sm font-semibold"
-                                                style={{ color: 'var(--ui-text-primary)' }}
-                                            >
-                                                {CATEGORY_METADATA[category].label}
-                                            </span>
-                                            <span
-                                                className="text-xs"
-                                                style={{ color: 'var(--ui-text-muted)' }}
-                                            >
-                                                {stats?.enabled || 0}/{stats?.total || 0}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {widgets.map((widget) =>
-                                                widget.allowMultiple ? (
-                                                    <MobileMultiInstanceWidgetCard
-                                                        key={widget.id}
-                                                        widget={widget}
-                                                        instances={getWidgetInstances(tempLayout, widget.id)}
-                                                        onAddInstance={() => addWidgetInstance(widget.id)}
-                                                        onRemoveInstance={removeWidgetInstance}
-                                                        canAddMore={canAddInstance(tempLayout, widget.id)}
-                                                    />
-                                                ) : (
-                                                    <MobileWidgetCard
-                                                        key={widget.id}
-                                                        widget={widget}
-                                                        isEnabled={isWidgetEnabled(widget.id)}
-                                                        onToggle={() => toggleWidget(widget.id)}
-                                                    />
-                                                )
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        // Flat list
-                        <div className="space-y-2 pb-32">
-                            <div
-                                className="text-xs mb-3"
-                                style={{ color: 'var(--ui-text-muted)' }}
-                            >
-                                {filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""} • {visibleEnabledCount} selected
+                                                {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                                                <span>{category}</span>
+                                                {stats && stats.enabled > 0 && (
+                                                    <span
+                                                        className="text-xs px-1.5 rounded-full"
+                                                        style={{
+                                                            backgroundColor: selectedCategory === category
+                                                                ? 'rgba(255,255,255,0.2)'
+                                                                : 'var(--ui-accent-primary-bg)',
+                                                            color: selectedCategory === category
+                                                                ? '#ffffff'
+                                                                : 'var(--ui-accent-primary)'
+                                                        }}
+                                                    >
+                                                        {stats.enabled}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            {filteredWidgets.map((widget) =>
-                                widget.allowMultiple ? (
-                                    <MobileMultiInstanceWidgetCard
-                                        key={widget.id}
-                                        widget={widget}
-                                        instances={getWidgetInstances(tempLayout, widget.id)}
-                                        onAddInstance={() => addWidgetInstance(widget.id)}
-                                        onRemoveInstance={removeWidgetInstance}
-                                        canAddMore={canAddInstance(tempLayout, widget.id)}
-                                        showCategory={selectedCategory === "all"}
+                        </div>
+
+                        {/* Mobile Widget List */}
+                        <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3">
+                            {permissionsLoading ? (
+                                <div className="flex flex-col items-center justify-center h-full">
+                                    <Loader />
+                                    <p className="text-sm mt-3" style={{ color: 'var(--ui-text-muted)' }}>
+                                        Loading widgets...
+                                    </p>
+                                </div>
+                            ) : filteredWidgets.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full py-12">
+                                    <Grid3x3
+                                        className="w-12 h-12 mb-3 opacity-40"
+                                        style={{ color: 'var(--ui-text-tertiary)' }}
                                     />
-                                ) : (
-                                    <MobileWidgetCard
-                                        key={widget.id}
-                                        widget={widget}
-                                        isEnabled={isWidgetEnabled(widget.id)}
-                                        onToggle={() => toggleWidget(widget.id)}
-                                        showCategory={selectedCategory === "all"}
-                                    />
-                                )
+                                    <p className="font-medium" style={{ color: 'var(--ui-text-secondary)' }}>
+                                        No widgets found
+                                    </p>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--ui-text-muted)' }}>
+                                        {searchTerm ? "Try a different search" : "No widgets in this category"}
+                                    </p>
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm("")}
+                                            className="mt-4 px-4 py-2 text-sm rounded-lg"
+                                            style={{ backgroundColor: 'var(--ui-bg-tertiary)' }}
+                                        >
+                                            Clear search
+                                        </button>
+                                    )}
+                                </div>
+                            ) : selectedCategory === "all" && !searchTerm ? (
+                                // Grouped by category
+                                <div className="space-y-6 pb-32">
+                                    {CATEGORY_ORDER.map((category) => {
+                                        const widgets = groupedWidgets[category];
+                                        if (!widgets?.length) return null;
+                                        const stats = categoryStats[category];
+                                        const IconComponent = CATEGORY_ICONS[category];
+
+                                        return (
+                                            <div key={category}>
+                                                <div className="flex items-center gap-2 mb-3 sticky top-0 py-2 -mx-4 px-4"
+                                                    style={{ backgroundColor: 'var(--ui-bg-primary)' }}
+                                                >
+                                                    {IconComponent && (
+                                                        <IconComponent
+                                                            className="w-4 h-4"
+                                                            style={{ color: 'var(--ui-text-muted)' }}
+                                                        />
+                                                    )}
+                                                    <span
+                                                        className="text-sm font-semibold"
+                                                        style={{ color: 'var(--ui-text-primary)' }}
+                                                    >
+                                                        {CATEGORY_METADATA[category].label}
+                                                    </span>
+                                                    <span
+                                                        className="text-xs"
+                                                        style={{ color: 'var(--ui-text-muted)' }}
+                                                    >
+                                                        {stats?.enabled || 0}/{stats?.total || 0}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {widgets.map((widget) =>
+                                                        widget.allowMultiple ? (
+                                                            <MobileMultiInstanceWidgetCard
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                instances={getWidgetInstances(tempLayout, widget.id)}
+                                                                onAddInstance={() => addWidgetInstance(widget.id)}
+                                                                onRemoveInstance={removeWidgetInstance}
+                                                                canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                            />
+                                                        ) : (
+                                                            <MobileWidgetCard
+                                                                key={widget.id}
+                                                                widget={widget}
+                                                                isEnabled={isWidgetEnabled(widget.id)}
+                                                                onToggle={() => toggleWidget(widget.id)}
+                                                            />
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                // Flat list
+                                <div className="space-y-2 pb-32">
+                                    <div
+                                        className="text-xs mb-3"
+                                        style={{ color: 'var(--ui-text-muted)' }}
+                                    >
+                                        {filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""} • {visibleEnabledCount} selected
+                                    </div>
+                                    {filteredWidgets.map((widget) =>
+                                        widget.allowMultiple ? (
+                                            <MobileMultiInstanceWidgetCard
+                                                key={widget.id}
+                                                widget={widget}
+                                                instances={getWidgetInstances(tempLayout, widget.id)}
+                                                onAddInstance={() => addWidgetInstance(widget.id)}
+                                                onRemoveInstance={removeWidgetInstance}
+                                                canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                showCategory={selectedCategory === "all"}
+                                            />
+                                        ) : (
+                                            <MobileWidgetCard
+                                                key={widget.id}
+                                                widget={widget}
+                                                isEnabled={isWidgetEnabled(widget.id)}
+                                                onToggle={() => toggleWidget(widget.id)}
+                                                showCategory={selectedCategory === "all"}
+                                            />
+                                        )
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
 
-                {/* Mobile Footer */}
-                <div
-                    className="flex-shrink-0 border-t p-4 safe-bottom"
-                    style={{
-                        borderColor: 'var(--ui-border-primary)',
-                        backgroundColor: 'var(--ui-bg-primary)'
-                    }}
-                >
-                    <div className="flex gap-3">
-                        <button
-                            onClick={handleCancel}
-                            className="flex-1 py-3 rounded-xl font-medium transition-colors"
+                        {/* Mobile Footer */}
+                        <div
+                            className="flex-shrink-0 border-t p-4 safe-bottom"
                             style={{
-                                backgroundColor: 'var(--ui-bg-tertiary)',
-                                color: 'var(--ui-text-secondary)'
+                                borderColor: 'var(--ui-border-primary)',
+                                backgroundColor: 'var(--ui-bg-primary)'
                             }}
                         >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={!hasChanges}
-                            className="flex-1 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
-                            style={{
-                                backgroundColor: hasChanges ? 'var(--ui-accent-primary)' : 'var(--ui-bg-tertiary)',
-                                color: hasChanges ? '#ffffff' : 'var(--ui-text-muted)'
-                            }}
-                        >
-                            Apply Changes
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleCancel}
+                                    className="flex-1 py-3 rounded-xl font-medium transition-colors"
+                                    style={{
+                                        backgroundColor: 'var(--ui-bg-tertiary)',
+                                        color: 'var(--ui-text-secondary)'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={!hasChanges}
+                                    className="flex-1 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
+                                    style={{
+                                        backgroundColor: hasChanges ? 'var(--ui-accent-primary)' : 'var(--ui-bg-tertiary)',
+                                        color: hasChanges ? '#ffffff' : 'var(--ui-text-muted)'
+                                    }}
+                                >
+                                    Apply Changes
+                                </button>
+                            </div>
+                        </div>
+                    </Drawer.Content>
+                </Drawer.Portal>
+            </Drawer.Root>
         );
     }
 
@@ -2052,20 +2067,11 @@ export default function WidgetPicker({
     // Desktop View
     // ============================================
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(8px)'
-        }}>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.15 }}
-                className="rounded-xl border w-full max-w-6xl h-[90vh] max-h-[900px] flex flex-col overflow-hidden shadow-2xl"
-                style={{
-                    backgroundColor: 'var(--ui-bg-primary)',
-                    borderColor: 'var(--ui-border-primary)'
-                }}
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+            <DialogContent
+                size="full"
+                className="w-full max-w-6xl h-[90vh] max-h-[900px] p-0 overflow-hidden flex flex-col"
+                showClose={false}
             >
                 {/* Header - Clean with view modes */}
                 <div className="flex-shrink-0 border-b" style={{ borderColor: 'var(--ui-border-primary)' }}>
@@ -2722,7 +2728,7 @@ export default function WidgetPicker({
                         {filteredWidgets.length} widgets
                     </span>
                 </div>
-            </motion.div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

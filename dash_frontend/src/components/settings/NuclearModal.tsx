@@ -1,8 +1,17 @@
 'use client';
 
-import { motion, AnimatePresence } from "framer-motion";
-import { MdWarning, MdDelete } from "react-icons/md";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { preferencesService } from "@/lib/preferences";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 // =============================================================================
 // Nuclear Modal Component
@@ -21,8 +30,6 @@ export function NuclearModal({
     nuclearInput,
     setNuclearInput,
 }: NuclearModalProps) {
-    if (!isOpen) return null;
-
     const handleConfirm = async () => {
         if (nuclearInput === 'DELETE ALL PREFERENCES') {
             await preferencesService.clearAll();
@@ -31,28 +38,18 @@ export function NuclearModal({
     };
 
     return (
-        <AnimatePresence>
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                    onClick={onClose}
-                />
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative bg-ui-bg-secondary rounded-lg shadow-xl border-2 border-red-500/50 w-full max-w-md overflow-hidden"
-                >
-                    <div className="p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="text-red-500">
-                                <MdWarning size={24} />
-                            </div>
-                            <h3 className="text-lg font-bold text-ui-text-primary">Clear All Preferences</h3>
+        <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <AlertDialogContent className="border-2 border-red-500/50">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2.5 rounded-full bg-red-500/10">
+                            <AlertTriangle className="w-5 h-5 text-red-500" />
                         </div>
+                        <AlertDialogTitle className="text-lg font-bold">
+                            Clear All Preferences
+                        </AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription asChild>
                         <div className="space-y-4">
                             <p className="text-ui-text-secondary text-sm leading-relaxed">
                                 This will permanently delete <strong>ALL</strong> your preferences and cannot be undone!
@@ -77,30 +74,23 @@ export function NuclearModal({
                                 />
                             </div>
                         </div>
-                    </div>
-                    <div className="bg-ui-bg-tertiary px-6 py-4 flex gap-3 justify-end border-t border-ui-border-primary">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleConfirm}
-                            disabled={nuclearInput !== 'DELETE ALL PREFERENCES'}
-                            className={`px-5 py-2 text-sm font-bold rounded-md transition-colors shadow-lg ${nuclearInput === 'DELETE ALL PREFERENCES'
-                                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                                    : 'bg-ui-bg-quaternary text-ui-text-muted cursor-not-allowed'
-                                }`}
-                        >
-                            <div className="flex items-center gap-2">
-                                <MdDelete className="w-4 h-4" />
-                                Wipe Everything
-                            </div>
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        </AnimatePresence>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={onClose}>
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleConfirm}
+                        disabled={nuclearInput !== 'DELETE ALL PREFERENCES'}
+                        variant="danger"
+                        className={nuclearInput !== 'DELETE ALL PREFERENCES' ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Wipe Everything
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }

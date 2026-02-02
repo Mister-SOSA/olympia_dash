@@ -1,9 +1,14 @@
 "use client";
 
-import React, { memo, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { memo, useCallback } from "react";
 import { Widget, PresetType } from "@/types";
-import { MdGridView, MdFullscreen, MdAdd, MdWarning } from "react-icons/md";
+import { Plus, Grid3X3, Maximize2, AlertTriangle } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogBody,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type DialogType = "empty" | "save" | "overwrite";
 
@@ -43,29 +48,14 @@ const PresetDialog = memo(function PresetDialog({
         onClose();
     }, [presetIndex, onLoadPreset, onClose]);
 
-    // Handle ESC key
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                e.preventDefault();
-                onClose();
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, onClose]);
-
     const renderDialogContent = () => {
         switch (dialogType) {
             case "empty":
                 return (
                     <>
                         <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ui-accent-primary-bg mb-3">
-                                <MdAdd className="w-6 h-6 text-ui-accent-primary-text" />
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-ui-accent-primary/10 mb-3">
+                                <Plus className="w-6 h-6 text-ui-accent-primary" />
                             </div>
                             <h3 className="text-lg font-semibold text-ui-text-primary mb-2">
                                 Slot {presetIndex + 1} is Empty
@@ -74,12 +64,13 @@ const PresetDialog = memo(function PresetDialog({
                                 Create a new blank preset or use the widget menu to customize your dashboard first.
                             </p>
                         </div>
-                        <button
+                        <Button
                             onClick={handleCreateBlank}
-                            className="w-full px-4 py-3 rounded-xl bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className="w-full"
+                            size="lg"
                         >
                             Create Blank Preset
-                        </button>
+                        </Button>
                     </>
                 );
 
@@ -97,14 +88,14 @@ const PresetDialog = memo(function PresetDialog({
                         <div className="space-y-2">
                             <button
                                 onClick={() => handleSave("grid")}
-                                className="group w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-ui-accent-primary-bg hover:bg-ui-accent-primary transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="group w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-ui-accent-primary/10 hover:bg-ui-accent-primary border border-ui-accent-primary/20 hover:border-ui-accent-primary transition-all"
                             >
-                                <MdGridView className="w-5 h-5 text-ui-accent-primary-text group-hover:text-white transition-colors" />
+                                <Grid3X3 className="w-5 h-5 text-ui-accent-primary group-hover:text-white transition-colors" />
                                 <div className="text-left flex-1">
-                                    <div className="font-medium text-ui-accent-primary-text group-hover:text-white transition-colors">
+                                    <div className="font-medium text-ui-accent-primary group-hover:text-white transition-colors">
                                         Grid Layout
                                     </div>
-                                    <div className="text-xs text-ui-accent-primary-text/70 group-hover:text-white/70 transition-colors">
+                                    <div className="text-xs text-ui-text-secondary group-hover:text-white/70 transition-colors">
                                         Multiple widgets in a grid
                                     </div>
                                 </div>
@@ -112,14 +103,14 @@ const PresetDialog = memo(function PresetDialog({
 
                             <button
                                 onClick={() => handleSave("fullscreen")}
-                                className="group w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="group w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-ui-accent-secondary/10 hover:bg-ui-accent-secondary border border-ui-accent-secondary/20 hover:border-ui-accent-secondary transition-all"
                             >
-                                <MdFullscreen className="w-5 h-5 text-ui-accent-secondary-text group-hover:text-white transition-colors" />
+                                <Maximize2 className="w-5 h-5 text-ui-accent-secondary group-hover:text-white transition-colors" />
                                 <div className="text-left flex-1">
-                                    <div className="font-medium text-ui-accent-secondary-text group-hover:text-white transition-colors">
+                                    <div className="font-medium text-ui-accent-secondary group-hover:text-white transition-colors">
                                         Fullscreen Widget
                                     </div>
-                                    <div className="text-xs text-ui-accent-secondary-text/70 group-hover:text-white/70 transition-colors">
+                                    <div className="text-xs text-ui-text-secondary group-hover:text-white/70 transition-colors">
                                         Single widget fills screen
                                     </div>
                                 </div>
@@ -132,8 +123,8 @@ const PresetDialog = memo(function PresetDialog({
                 return (
                     <>
                         <div className="text-center">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/20 mb-3">
-                                <MdWarning className="w-6 h-6 text-yellow-500" />
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/10 mb-3">
+                                <AlertTriangle className="w-6 h-6 text-yellow-500" />
                             </div>
                             <h3 className="text-lg font-semibold text-ui-text-primary mb-2">
                                 Overwrite Preset {presetIndex + 1}?
@@ -143,60 +134,43 @@ const PresetDialog = memo(function PresetDialog({
                             </p>
                         </div>
                         <div className="space-y-2">
-                            <button
+                            <Button
                                 onClick={() => handleSave("grid")}
-                                className="w-full px-4 py-3 rounded-xl bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="w-full"
+                                size="lg"
                             >
                                 Save as Grid
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => handleSave("fullscreen")}
-                                className="w-full px-4 py-3 rounded-xl bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                variant="secondary"
+                                className="w-full"
+                                size="lg"
                             >
                                 Save as Fullscreen
-                            </button>
+                            </Button>
                         </div>
                     </>
                 );
-
         }
     };
 
     return (
-        <AnimatePresence mode="wait">
-            {isOpen && (
-                <motion.div
-                    className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    onClick={onClose}
-                >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{
-                            type: "spring",
-                            damping: 25,
-                            stiffness: 400
-                        }}
-                        className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary w-full max-w-md p-6"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {renderDialogContent()}
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent size="sm" showClose={false}>
+                <DialogBody className="p-6">
+                    {renderDialogContent()}
 
-                        <button
-                            onClick={onClose}
-                            className="w-full mt-3 px-4 py-2 text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary transition-colors"
-                        >
-                            Cancel (ESC)
-                        </button>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                    <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        className="w-full mt-3 text-ui-text-secondary"
+                    >
+                        Cancel
+                    </Button>
+                </DialogBody>
+            </DialogContent>
+        </Dialog>
     );
 });
 

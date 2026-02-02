@@ -10,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader } from '@/components/ui/loader';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
-    MdClose, MdAdd, MdDelete, MdPeople, MdEdit, MdSave, MdCancel,
-    MdCheckCircle, MdRemoveCircle
-} from 'react-icons/md';
+    X, Plus, Trash2, Users, Edit3, Save, XCircle,
+    CheckCircle, MinusCircle
+} from 'lucide-react';
 import type { UserGroup, GroupMember } from '@/types';
 
 interface GroupManagerProps {
@@ -209,7 +210,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-ui-text-primary text-2xl flex items-center">
-                            <MdPeople className="mr-2" />
+                            <Users className="mr-2 w-6 h-6" />
                             User Groups Manager
                         </CardTitle>
                         <CardDescription className="text-ui-text-secondary">
@@ -223,7 +224,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                             size="sm"
                             className="border-ui-border-primary hover:bg-ui-bg-tertiary"
                         >
-                            <MdClose className="h-5 w-5" />
+                            <X className="h-5 w-5" />
                         </Button>
                     )}
                 </div>
@@ -238,7 +239,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                 size="sm"
                                 className="bg-ui-accent-primary text-white hover:bg-ui-accent-primary/80"
                             >
-                                <MdAdd className="mr-1" /> New
+                                <Plus className="mr-1 w-4 h-4" /> New
                             </Button>
                         </div>
 
@@ -279,7 +280,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                             size="sm"
                                             className="flex-1 bg-green-500 hover:bg-green-600"
                                         >
-                                            <MdSave className="mr-1" /> Create
+                                            <Save className="mr-1 w-4 h-4" /> Create
                                         </Button>
                                         <Button
                                             onClick={() => setIsCreating(false)}
@@ -287,7 +288,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                             variant="outline"
                                             className="flex-1 border-ui-border-primary"
                                         >
-                                            <MdCancel className="mr-1" /> Cancel
+                                            <XCircle className="mr-1 w-4 h-4" /> Cancel
                                         </Button>
                                     </div>
                                 </div>
@@ -349,7 +350,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                     variant="outline"
                                                     className="border-ui-border-primary hover:bg-ui-bg-tertiary"
                                                 >
-                                                    <MdEdit className="mr-1" /> Edit
+                                                    <Edit3 className="mr-1 w-4 h-4" /> Edit
                                                 </Button>
                                                 <Button
                                                     onClick={() => handleDeleteGroup(selectedGroup.id)}
@@ -357,7 +358,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                     variant="outline"
                                                     className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
                                                 >
-                                                    <MdDelete className="mr-1" /> Delete
+                                                    <Trash2 className="mr-1 w-4 h-4" /> Delete
                                                 </Button>
                                             </>
                                         ) : (
@@ -367,7 +368,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                     size="sm"
                                                     className="bg-green-500 hover:bg-green-600"
                                                 >
-                                                    <MdSave className="mr-1" /> Save
+                                                    <Save className="mr-1 w-4 h-4" /> Save
                                                 </Button>
                                                 <Button
                                                     onClick={() => setIsEditing(false)}
@@ -375,7 +376,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                     variant="outline"
                                                     className="border-ui-border-primary"
                                                 >
-                                                    <MdCancel className="mr-1" /> Cancel
+                                                    <XCircle className="mr-1 w-4 h-4" /> Cancel
                                                 </Button>
                                             </>
                                         )}
@@ -437,7 +438,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                             variant="outline"
                                                             className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
                                                         >
-                                                            <MdRemoveCircle className="mr-1" /> Remove
+                                                            <MinusCircle className="mr-1 w-4 h-4" /> Remove
                                                         </Button>
                                                     </div>
                                                 ))
@@ -468,7 +469,7 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
                                                             size="sm"
                                                             className="bg-ui-accent-primary hover:bg-ui-accent-primary/80"
                                                         >
-                                                            <MdCheckCircle className="mr-1" /> Add
+                                                            <CheckCircle className="mr-1 w-4 h-4" /> Add
                                                         </Button>
                                                     </div>
                                                 ))}
@@ -493,12 +494,12 @@ export function GroupManager({ onClose, onGroupsChanged, inline = false }: Group
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="my-auto w-full max-w-6xl">
-                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+        <Dialog open={true} onOpenChange={() => onClose()}>
+            <DialogContent size="full" showClose={false} className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+                <Card className="bg-ui-bg-secondary border-none">
                     {content}
                 </Card>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

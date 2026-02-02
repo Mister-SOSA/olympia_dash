@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MdClose, MdRefresh, MdSettings, MdAdd, MdDelete, MdContentPaste, MdPublic } from "react-icons/md";
+import { Settings, RefreshCw, Globe, Plus, Trash2, ClipboardPaste, X } from "lucide-react";
 import {
     getWidgetSettingsSchema,
     SettingField,
@@ -12,6 +12,16 @@ import {
 import { widgetSettingsService } from "@/lib/widgetSettings";
 import { authService } from "@/lib/auth";
 import { useACInfinityOptional, ACInfinityGlobalSettings } from "@/contexts/ACInfinityContext";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogBody,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface WidgetSettingsDialogProps {
     widgetId: string;
@@ -125,120 +135,81 @@ export default function WidgetSettingsDialog({
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                    onClick={handleCancel}
-                >
-                    <motion.div
-                        initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                        transition={{ type: 'tween', duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-full max-w-md bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden"
-                        style={{ willChange: 'transform, opacity' }}
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+            <DialogContent size="md" closeOnOutsideClick={true}>
+                <DialogHeader className="bg-ui-bg-secondary/50">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-ui-accent-primary/10 rounded-lg">
+                            <Settings className="w-5 h-5 text-ui-accent-primary" />
+                        </div>
+                        <div>
+                            <DialogTitle>{schema.title}</DialogTitle>
+                            <DialogDescription>{widgetTitle}</DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <DialogBody className="max-h-[60vh]">
+                    {schema.description && (
+                        <p className="text-sm text-ui-text-secondary mb-4">
+                            {schema.description}
+                        </p>
+                    )}
+
+                    <div className="space-y-6">
+                        {schema.sections.map((section, sectionIndex) => {
+                            const isGlobalSection = section.title.toLowerCase().includes('global');
+                            return (
+                                <div
+                                    key={sectionIndex}
+                                    className={isGlobalSection ? 'p-3 -mx-2 rounded-xl bg-ui-accent-primary/5 border border-ui-accent-primary/20' : ''}
+                                >
+                                    <h3 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-1 ${isGlobalSection ? 'text-ui-accent-primary' : 'text-ui-text-secondary'
+                                        }`}>
+                                        {isGlobalSection && <Globe className="w-3.5 h-3.5" />}
+                                        {section.title}
+                                    </h3>
+                                    {section.description && (
+                                        <p className="text-xs text-ui-text-muted mb-3">
+                                            {section.description}
+                                        </p>
+                                    )}
+                                    <div className="space-y-3">
+                                        {section.fields.map((field) => (
+                                            <SettingFieldRenderer
+                                                key={field.key}
+                                                field={field}
+                                                value={settings[field.key]}
+                                                onChange={(value) => handleSettingChange(field.key, value)}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </DialogBody>
+
+                <DialogFooter className="justify-between">
+                    <Button
+                        variant="ghost"
+                        onClick={handleReset}
+                        className="gap-2 text-ui-text-secondary"
                     >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-ui-border-primary bg-ui-bg-secondary/50">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-ui-accent-primary/10 rounded-lg">
-                                    <MdSettings className="w-5 h-5 text-ui-accent-primary" />
-                                </div>
-                                <div>
-                                    <h2 className="text-base font-semibold text-ui-text-primary">
-                                        {schema.title}
-                                    </h2>
-                                    <p className="text-xs text-ui-text-secondary">{widgetTitle}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleCancel}
-                                className="p-2 hover:bg-ui-bg-tertiary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
-                            >
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-5 max-h-[60vh] overflow-y-auto">
-                            {schema.description && (
-                                <p className="text-sm text-ui-text-secondary mb-4">
-                                    {schema.description}
-                                </p>
-                            )}
-
-                            <div className="space-y-6">
-                                {schema.sections.map((section, sectionIndex) => {
-                                    const isGlobalSection = section.title.toLowerCase().includes('global');
-                                    return (
-                                        <div
-                                            key={sectionIndex}
-                                            className={isGlobalSection ? 'p-3 -mx-2 rounded-xl bg-ui-accent-primary/5 border border-ui-accent-primary/20' : ''}
-                                        >
-                                            <h3 className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider mb-1 ${isGlobalSection ? 'text-ui-accent-primary' : 'text-ui-text-secondary'
-                                                }`}>
-                                                {isGlobalSection && <MdPublic className="w-3.5 h-3.5" />}
-                                                {section.title}
-                                            </h3>
-                                            {section.description && (
-                                                <p className="text-xs text-ui-text-muted mb-3">
-                                                    {section.description}
-                                                </p>
-                                            )}
-                                            <div className="space-y-3">
-                                                {section.fields.map((field) => (
-                                                    <SettingFieldRenderer
-                                                        key={field.key}
-                                                        field={field}
-                                                        value={settings[field.key]}
-                                                        onChange={(value) => handleSettingChange(field.key, value)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between px-5 py-4 border-t border-ui-border-primary bg-ui-bg-secondary/30">
-                            <button
-                                onClick={handleReset}
-                                className="flex items-center gap-2 px-3 py-2 text-sm text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary rounded-lg transition-colors"
-                            >
-                                <MdRefresh className="w-4 h-4" />
-                                Reset to Defaults
-                            </button>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleCancel}
-                                    className="px-4 py-2 text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={!hasChanges}
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${hasChanges
-                                        ? 'bg-ui-accent-primary text-white hover:bg-ui-accent-primary-hover'
-                                        : 'bg-ui-bg-tertiary text-ui-text-muted cursor-not-allowed'
-                                        }`}
-                                >
-                                    Save Changes
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                        <RefreshCw className="w-4 h-4" />
+                        Reset to Defaults
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={handleCancel}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSave} disabled={!hasChanges}>
+                            Save Changes
+                        </Button>
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -706,7 +677,7 @@ function ItemListField({
                     disabled={!inputValue.trim()}
                     className="px-3 py-2 bg-ui-accent-primary text-white rounded-lg text-sm font-medium hover:bg-ui-accent-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >
-                    <MdAdd className="w-4 h-4" />
+                    <Plus className="w-4 h-4" />
                 </button>
                 <button
                     type="button"
@@ -717,7 +688,7 @@ function ItemListField({
                         }`}
                     title="Paste multiple items"
                 >
-                    <MdContentPaste className="w-4 h-4" />
+                    <ClipboardPaste className="w-4 h-4" />
                 </button>
             </div>
 
@@ -786,7 +757,7 @@ function ItemListField({
                                         onClick={() => removeItem(index)}
                                         className="w-4 h-4 flex items-center justify-center rounded-full text-ui-text-muted hover:text-ui-text-primary hover:bg-red-500/20 transition-colors"
                                     >
-                                        <MdClose className="w-3 h-3" />
+                                        <X className="w-3 h-3" />
                                     </button>
                                 </motion.div>
                             ))}
@@ -799,7 +770,7 @@ function ItemListField({
                                 onClick={clearAll}
                                 className="text-xs text-ui-text-muted hover:text-red-400 flex items-center gap-1 transition-colors"
                             >
-                                <MdDelete className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5" />
                                 Clear All
                             </button>
                         </div>

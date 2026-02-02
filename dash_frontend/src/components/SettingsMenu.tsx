@@ -10,7 +10,11 @@ import { useSettings } from "@/hooks/useSettings";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { ConfirmModal } from "@/components/ui/modal";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { MdClose, MdSettings, MdChevronLeft } from "react-icons/md";
+import { X, Settings, ChevronLeft } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 // Extracted settings components
 import {
@@ -27,6 +31,7 @@ import type { SettingsView } from "./settings";
 // =============================================================================
 
 interface SettingsMenuProps {
+  isOpen: boolean;
   user: User | null;
   onLogout: () => void;
   onClose: () => void;
@@ -40,6 +45,7 @@ interface SettingsMenuProps {
 // =============================================================================
 
 export default function SettingsMenu({
+  isOpen,
   user,
   onLogout,
   onClose,
@@ -99,11 +105,9 @@ export default function SettingsMenu({
   };
 
   // Vaul drawer state for mobile
-  const [isOpen, setIsOpen] = useState(true);
   const handleOpenChange = useCallback((open: boolean) => {
-    setIsOpen(open);
     if (!open) {
-      setTimeout(onClose, 300);
+      onClose();
     }
   }, [onClose]);
 
@@ -151,12 +155,12 @@ export default function SettingsMenu({
                   className="flex items-center gap-1"
                   style={{ color: "var(--ui-accent-primary)" }}
                 >
-                  <MdChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-6 h-6" />
                   <span className="text-sm font-medium">Settings</span>
                 </button>
               ) : (
                 <Drawer.Title className="flex items-center gap-2">
-                  <MdSettings className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                  <Settings className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
                   <span className="text-lg font-semibold" style={{ color: "var(--ui-text-primary)" }}>Settings</span>
                 </Drawer.Title>
               )}
@@ -166,7 +170,7 @@ export default function SettingsMenu({
                   style={{ color: "var(--ui-text-secondary)" }}
                   aria-label="Close"
                 >
-                  <MdClose className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </Drawer.Close>
             </div>
@@ -252,22 +256,13 @@ export default function SettingsMenu({
   // Desktop Layout
   // ==========================================================================
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.97, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.97, opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-4xl h-[85vh] max-h-[700px] flex"
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        size="xl"
+        className="w-full max-w-4xl h-[85vh] max-h-[700px] p-0 overflow-hidden"
+        showClose={false}
       >
-        <div className="bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden flex w-full">
+        <div className="flex w-full h-full">
           {/* Sidebar Navigation */}
           <div className="w-56 bg-ui-bg-secondary/30 border-r border-ui-border-primary flex flex-col flex-shrink-0">
             {/* Header */}
@@ -289,8 +284,8 @@ export default function SettingsMenu({
                       key={item.id}
                       onClick={() => setActiveView(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-                          ? 'bg-ui-accent-primary text-white shadow-sm'
-                          : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
+                        ? 'bg-ui-accent-primary text-white shadow-sm'
+                        : 'text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary'
                         }`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
@@ -321,7 +316,7 @@ export default function SettingsMenu({
                 onClick={onClose}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-secondary transition-all"
               >
-                <MdClose className="w-4 h-4" />
+                <X className="w-4 h-4" />
                 Close
               </button>
             </div>
@@ -372,30 +367,30 @@ export default function SettingsMenu({
             </div>
           </div>
         </div>
-      </motion.div>
 
-      {/* Confirmation Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-        onConfirm={confirmModal.onConfirm}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        type={confirmModal.type}
-        confirmText="Confirm"
-        cancelText="Cancel"
-      />
+        {/* Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          type={confirmModal.type}
+          confirmText="Confirm"
+          cancelText="Cancel"
+        />
 
-      {/* Nuclear Modal */}
-      <NuclearModal
-        isOpen={showNuclearModal}
-        onClose={() => {
-          setShowNuclearModal(false);
-          setNuclearInput('');
-        }}
-        nuclearInput={nuclearInput}
-        setNuclearInput={setNuclearInput}
-      />
-    </motion.div>
+        {/* Nuclear Modal */}
+        <NuclearModal
+          isOpen={showNuclearModal}
+          onClose={() => {
+            setShowNuclearModal(false);
+            setNuclearInput('');
+          }}
+          nuclearInput={nuclearInput}
+          setNuclearInput={setNuclearInput}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }

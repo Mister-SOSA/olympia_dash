@@ -843,26 +843,24 @@ const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
 // ============================================
 
 interface DetailViewProps {
-    widgetId: string;
+    isOpen: boolean;
+    widgetId: string | null;
     onClose: () => void;
 }
 
-const DetailView = memo(function DetailView({ widgetId, onClose }: DetailViewProps) {
-    const widgetDef = getWidgetById(widgetId);
-    const config = getWidgetConfig(widgetId);
+const DetailView = memo(function DetailView({ isOpen, widgetId, onClose }: DetailViewProps) {
+    const widgetDef = widgetId ? getWidgetById(widgetId) : null;
+    const config = widgetId ? getWidgetConfig(widgetId) : null;
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [isOpen, setIsOpen] = useState(true);
-    const hasSettings = getWidgetSettingsSchema(widgetId) !== null;
-    const title = widgetDef?.title || config?.title || widgetId;
+    const hasSettings = widgetId ? getWidgetSettingsSchema(widgetId) !== null : false;
+    const title = widgetDef?.title || config?.title || widgetId || '';
 
     const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
     const handleCloseSettings = useCallback(() => setSettingsOpen(false), []);
 
     const handleOpenChange = useCallback((open: boolean) => {
-        setIsOpen(open);
         if (!open) {
-            // Delay unmount to allow close animation to complete
-            setTimeout(onClose, 300);
+            onClose();
         }
     }, [onClose]);
 
@@ -964,7 +962,7 @@ const DetailView = memo(function DetailView({ widgetId, onClose }: DetailViewPro
                 </Drawer.Portal>
             </Drawer.Root>
 
-            {hasSettings && (
+            {hasSettings && widgetId && (
                 <WidgetSettingsDialog
                     widgetId={widgetId}
                     widgetTitle={title}
@@ -981,19 +979,20 @@ const DetailView = memo(function DetailView({ widgetId, onClose }: DetailViewPro
 // ============================================
 
 interface MobileWidgetPickerProps {
+    isOpen: boolean;
     enabledWidgetIds: string[];
     onToggleWidget: (widgetId: string) => void;
     onClose: () => void;
 }
 
 const MobileWidgetPicker = memo(function MobileWidgetPicker({
+    isOpen,
     enabledWidgetIds,
     onToggleWidget,
     onClose,
 }: MobileWidgetPickerProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<WidgetCategory | "all">("all");
-    const [isOpen, setIsOpen] = useState(true);
     const { filterAccessibleWidgets } = useWidgetPermissions();
 
     const accessibleWidgets = useMemo(
@@ -1030,9 +1029,8 @@ const MobileWidgetPicker = memo(function MobileWidgetPicker({
     );
 
     const handleOpenChange = useCallback((open: boolean) => {
-        setIsOpen(open);
         if (!open) {
-            setTimeout(onClose, 300);
+            onClose();
         }
     }, [onClose]);
 
@@ -1801,15 +1799,12 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 </div>
 
                 {/* Widget Picker */}
-                <AnimatePresence>
-                    {widgetPickerOpen && (
-                        <MobileWidgetPicker
-                            enabledWidgetIds={enabledWidgetIds}
-                            onToggleWidget={handleToggleWidget}
-                            onClose={handleCloseWidgetPicker}
-                        />
-                    )}
-                </AnimatePresence>
+                <MobileWidgetPicker
+                    isOpen={widgetPickerOpen}
+                    enabledWidgetIds={enabledWidgetIds}
+                    onToggleWidget={handleToggleWidget}
+                    onClose={handleCloseWidgetPicker}
+                />
 
                 <PresetNameDialog
                     isOpen={presetNameDialogOpen}
@@ -2025,22 +2020,19 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             )}
 
             {/* Detail View Modal */}
-            <AnimatePresence>
-                {selectedWidgetId && (
-                    <DetailView widgetId={selectedWidgetId} onClose={handleCloseDetailView} />
-                )}
-            </AnimatePresence>
+            <DetailView
+                isOpen={!!selectedWidgetId}
+                widgetId={selectedWidgetId}
+                onClose={handleCloseDetailView}
+            />
 
             {/* Widget Picker */}
-            <AnimatePresence>
-                {widgetPickerOpen && (
-                    <MobileWidgetPicker
-                        enabledWidgetIds={enabledWidgetIds}
-                        onToggleWidget={handleToggleWidget}
-                        onClose={handleCloseWidgetPicker}
-                    />
-                )}
-            </AnimatePresence>
+            <MobileWidgetPicker
+                isOpen={widgetPickerOpen}
+                enabledWidgetIds={enabledWidgetIds}
+                onToggleWidget={handleToggleWidget}
+                onClose={handleCloseWidgetPicker}
+            />
 
             {/* Preset Name Dialog */}
             <PresetNameDialog

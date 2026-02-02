@@ -12,10 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader } from '@/components/ui/loader';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
-    MdClose, MdSecurity, MdSearch, MdFilterList, MdPerson, MdGroup,
-    MdCheckCircle, MdCancel, MdDelete
-} from 'react-icons/md';
+    Shield, Search, Filter, User as UserIcon, Users,
+    CheckCircle, XCircle, Trash2, X
+} from 'lucide-react';
 import type { UserGroup, WidgetPermission } from '@/types';
 
 interface WidgetPermissionsManagerProps {
@@ -178,11 +179,13 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
         }
 
         return (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <Card className="bg-ui-bg-secondary border-ui-border-primary w-full max-w-6xl max-h-[90vh] overflow-hidden">
-                    {loadingContent}
-                </Card>
-            </div>
+            <Dialog open={true} onOpenChange={() => onClose()}>
+                <DialogContent size="xl" showClose={false} className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
+                    <Card className="bg-ui-bg-secondary border-none">
+                        {loadingContent}
+                    </Card>
+                </DialogContent>
+            </Dialog>
         );
     }
 
@@ -192,7 +195,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-ui-text-primary text-2xl flex items-center">
-                            <MdSecurity className="mr-2" />
+                            <Shield className="mr-2 w-6 h-6" />
                             Widget Permissions Manager
                         </CardTitle>
                         <CardDescription className="text-ui-text-secondary">
@@ -206,7 +209,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                             size="sm"
                             className="border-ui-border-primary hover:bg-ui-bg-tertiary"
                         >
-                            <MdClose className="h-5 w-5" />
+                            <X className="h-5 w-5" />
                         </Button>
                     )}
                 </div>
@@ -230,7 +233,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                     : 'border-ui-border-primary hover:bg-ui-bg-tertiary'
                                     }`}
                             >
-                                <MdPerson className="mr-2" />
+                                <UserIcon className="mr-2 w-4 h-4" />
                                 Users
                             </Button>
                             <Button
@@ -245,7 +248,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                     : 'border-ui-border-primary hover:bg-ui-bg-tertiary'
                                     }`}
                             >
-                                <MdGroup className="mr-2" />
+                                <Users className="mr-2 w-4 h-4" />
                                 Groups
                             </Button>
                         </div>
@@ -361,7 +364,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                                             variant="outline"
                                                             className="border-red-500 text-ui-danger-text hover:bg-red-500/20"
                                                         >
-                                                            <MdDelete className="h-4 w-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 );
@@ -402,7 +405,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                     {/* Search and Filters */}
                                     <div className="flex gap-2 mb-3">
                                         <div className="flex-1 relative">
-                                            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-muted" />
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-muted w-4 h-4" />
                                             <Input
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -471,7 +474,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                             disabled={selectedWidgets.size === 0}
                                             className="flex-1 bg-green-500 hover:bg-green-600 disabled:opacity-50"
                                         >
-                                            <MdCheckCircle className="mr-2" />
+                                            <CheckCircle className="mr-2 w-4 h-4" />
                                             Grant {selectedWidgets.size} Permission{selectedWidgets.size !== 1 ? 's' : ''}
                                         </Button>
                                         <Button
@@ -479,7 +482,7 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
                                             variant="outline"
                                             className="border-ui-border-primary"
                                         >
-                                            <MdCancel className="mr-2" />
+                                            <XCircle className="mr-2 w-4 h-4" />
                                             Clear
                                         </Button>
                                     </div>
@@ -501,12 +504,12 @@ export function WidgetPermissionsManager({ onClose, onPermissionsChanged, inline
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="my-auto w-full max-w-7xl">
-                <Card className="bg-ui-bg-secondary border-ui-border-primary">
+        <Dialog open={true} onOpenChange={() => onClose()}>
+            <DialogContent size="full" showClose={false} className="max-w-7xl max-h-[90vh] overflow-y-auto p-0">
+                <Card className="bg-ui-bg-secondary border-none">
                     {content}
                 </Card>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

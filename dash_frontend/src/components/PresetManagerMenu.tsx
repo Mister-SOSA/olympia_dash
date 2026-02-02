@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { motion } from "framer-motion";
 import { DashboardPreset, Widget, PresetType } from "@/types";
 import {
     X,
@@ -21,6 +20,10 @@ import {
 } from "lucide-react";
 import { generatePresetName } from "@/utils/layoutUtils";
 import PresetDialog from "./PresetDialog";
+import {
+    Dialog,
+    DialogContent,
+} from "@/components/ui/dialog";
 import {
     Tooltip,
     TooltipContent,
@@ -506,29 +509,13 @@ export default function PresetManagerMenu({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, editingIndex, onClose]);
 
-    if (!isOpen) return null;
-
     return (
         <>
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    backdropFilter: 'blur(8px)'
-                }}
-                onClick={onClose}
-            >
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.15 }}
-                    className="rounded-xl border w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
-                    style={{
-                        backgroundColor: 'var(--ui-bg-primary)',
-                        borderColor: 'var(--ui-border-primary)'
-                    }}
-                    onClick={(e) => e.stopPropagation()}
+            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+                <DialogContent
+                    size="xl"
+                    className="w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden p-0"
+                    showClose={false}
                 >
                     {/* Header */}
                     <div className="flex-shrink-0 px-6 py-4 border-b" style={{ borderColor: 'var(--ui-border-primary)' }}>
@@ -648,8 +635,8 @@ export default function PresetManagerMenu({
                             </div>
                         )}
                     </div>
-                </motion.div>
-            </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Preset Dialog */}
             <PresetDialog

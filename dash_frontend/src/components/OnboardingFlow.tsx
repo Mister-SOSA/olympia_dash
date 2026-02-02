@@ -12,16 +12,21 @@ import {
     APPEARANCE_SETTINGS,
 } from '@/constants/settings';
 import {
-    MdCheck,
-    MdArrowForward,
-    MdArrowBack,
-    MdPalette,
-    MdSchedule,
-    MdTune,
-    MdClose,
-} from 'react-icons/md';
+    Check,
+    ArrowRight,
+    ArrowLeft,
+    Palette,
+    Clock,
+    SlidersHorizontal,
+    X,
+} from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+} from '@/components/ui/dialog';
 
 interface OnboardingFlowProps {
+    isOpen: boolean;
     user: User | null;
     onComplete: () => void;
 }
@@ -107,7 +112,7 @@ const WelcomeStep = ({ user, onNext }: { user: User | null; onNext: () => void }
                     className="flex items-center gap-2 px-6 py-2.5 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg font-medium transition-colors"
                 >
                     Get Started
-                    <MdArrowForward className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" />
                 </motion.button>
             </div>
         </StepContainer>
@@ -130,7 +135,7 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                 <div className="px-5 py-4 border-b border-ui-border-primary bg-ui-bg-secondary/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-ui-accent-primary/10 rounded-lg">
-                            <MdPalette className="w-5 h-5 text-ui-accent-primary" />
+                            <Palette className="w-5 h-5 text-ui-accent-primary" />
                         </div>
                         <div>
                             <h2 className="text-base font-semibold text-ui-text-primary">Theme</h2>
@@ -194,7 +199,7 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                                 <div className="px-2 py-1.5 bg-ui-bg-secondary/80 flex items-center justify-between">
                                     <span className="text-[10px] font-medium text-ui-text-primary truncate">{t.name}</span>
                                     {theme === t.id && (
-                                        <MdCheck className="w-3 h-3 text-ui-accent-primary flex-shrink-0" />
+                                        <Check className="w-3 h-3 text-ui-accent-primary flex-shrink-0" />
                                     )}
                                 </div>
                             </button>
@@ -208,7 +213,7 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                         onClick={onBack}
                         className="flex items-center gap-1.5 px-3 py-2 text-sm text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary rounded-lg transition-colors"
                     >
-                        <MdArrowBack className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" />
                         Back
                     </button>
                     <button
@@ -216,7 +221,7 @@ const ThemeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void 
                         className="flex items-center gap-1.5 px-4 py-2 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
                     >
                         Continue
-                        <MdArrowForward className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
@@ -258,7 +263,7 @@ const AppearanceStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => 
                 <div className="px-5 py-4 border-b border-ui-border-primary bg-ui-bg-secondary/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-ui-accent-secondary/10 rounded-lg">
-                            <MdTune className="w-5 h-5 text-ui-accent-secondary" />
+                            <SlidersHorizontal className="w-5 h-5 text-ui-accent-secondary" />
                         </div>
                         <div>
                             <h2 className="text-base font-semibold text-ui-text-primary">Appearance</h2>
@@ -343,7 +348,7 @@ const AppearanceStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => 
                         onClick={onBack}
                         className="flex items-center gap-1.5 px-3 py-2 text-sm text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary rounded-lg transition-colors"
                     >
-                        <MdArrowBack className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" />
                         Back
                     </button>
                     <button
@@ -351,7 +356,7 @@ const AppearanceStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => 
                         className="flex items-center gap-1.5 px-4 py-2 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
                     >
                         Continue
-                        <MdArrowForward className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
@@ -399,7 +404,7 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                 <div className="px-5 py-4 border-b border-ui-border-primary bg-ui-bg-secondary/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-green-500/10 rounded-lg">
-                            <MdSchedule className="w-5 h-5 text-green-500" />
+                            <Clock className="w-5 h-5 text-green-500" />
                         </div>
                         <div>
                             <h2 className="text-base font-semibold text-ui-text-primary">Date & Time</h2>
@@ -486,7 +491,7 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                         onClick={onBack}
                         className="flex items-center gap-1.5 px-3 py-2 text-sm text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary rounded-lg transition-colors"
                     >
-                        <MdArrowBack className="w-4 h-4" />
+                        <ArrowLeft className="w-4 h-4" />
                         Back
                     </button>
                     <button
@@ -494,7 +499,7 @@ const DateTimeStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => vo
                         className="flex items-center gap-1.5 px-4 py-2 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
                     >
                         Continue
-                        <MdArrowForward className="w-4 h-4" />
+                        <ArrowRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
@@ -563,7 +568,7 @@ const CompleteStep = ({ onComplete }: { onComplete: () => void }) => {
                     className="flex items-center gap-2 px-6 py-2.5 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg font-medium transition-colors"
                 >
                     Go to Dashboard
-                    <MdArrowForward className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4" />
                 </motion.button>
             </div>
         </StepContainer>
@@ -571,7 +576,7 @@ const CompleteStep = ({ onComplete }: { onComplete: () => void }) => {
 };
 
 // Main Onboarding Flow Component
-export default function OnboardingFlow({ user, onComplete }: OnboardingFlowProps) {
+export default function OnboardingFlow({ isOpen, user, onComplete }: OnboardingFlowProps) {
     const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
 
     const goNext = useCallback(() => {
@@ -621,62 +626,51 @@ export default function OnboardingFlow({ user, onComplete }: OnboardingFlowProps
     }, [currentStep, goNext, goBack, handleSkip]);
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-                onClick={handleSkip}
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleSkip()}>
+            <DialogContent
+                size="md"
+                className="w-full max-w-lg p-0 overflow-hidden"
+                showClose={false}
             >
-                <motion.div
-                    initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full max-w-lg bg-ui-bg-primary rounded-2xl shadow-2xl border border-ui-border-primary overflow-hidden"
-                >
-                    {/* Header with step indicator and close */}
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-ui-border-primary">
-                        {currentStep !== 'welcome' && currentStep !== 'complete' ? (
-                            <StepIndicator steps={STEPS} currentStep={currentStep} />
-                        ) : (
-                            <div />
-                        )}
-                        {currentStep !== 'complete' && (
-                            <button
-                                onClick={handleSkip}
-                                className="p-1.5 hover:bg-ui-bg-tertiary rounded-lg transition-colors text-ui-text-muted hover:text-ui-text-secondary"
-                                title="Skip setup (Esc)"
-                            >
-                                <MdClose className="w-5 h-5" />
-                            </button>
-                        )}
-                    </div>
+                {/* Header with step indicator and close */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-ui-border-primary">
+                    {currentStep !== 'welcome' && currentStep !== 'complete' ? (
+                        <StepIndicator steps={STEPS} currentStep={currentStep} />
+                    ) : (
+                        <div />
+                    )}
+                    {currentStep !== 'complete' && (
+                        <button
+                            onClick={handleSkip}
+                            className="p-1.5 hover:bg-ui-bg-tertiary rounded-lg transition-colors text-ui-text-muted hover:text-ui-text-secondary"
+                            title="Skip setup (Esc)"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
 
-                    {/* Content */}
-                    <div className="h-[480px]">
-                        <AnimatePresence mode="wait">
-                            {currentStep === 'welcome' && (
-                                <WelcomeStep key="welcome" user={user} onNext={goNext} />
-                            )}
-                            {currentStep === 'theme' && (
-                                <ThemeStep key="theme" onNext={goNext} onBack={goBack} />
-                            )}
-                            {currentStep === 'appearance' && (
-                                <AppearanceStep key="appearance" onNext={goNext} onBack={goBack} />
-                            )}
-                            {currentStep === 'datetime' && (
-                                <DateTimeStep key="datetime" onNext={goNext} onBack={goBack} />
-                            )}
-                            {currentStep === 'complete' && (
-                                <CompleteStep key="complete" onComplete={onComplete} />
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+                {/* Content */}
+                <div className="h-[480px]">
+                    <AnimatePresence mode="wait">
+                        {currentStep === 'welcome' && (
+                            <WelcomeStep key="welcome" user={user} onNext={goNext} />
+                        )}
+                        {currentStep === 'theme' && (
+                            <ThemeStep key="theme" onNext={goNext} onBack={goBack} />
+                        )}
+                        {currentStep === 'appearance' && (
+                            <AppearanceStep key="appearance" onNext={goNext} onBack={goBack} />
+                        )}
+                        {currentStep === 'datetime' && (
+                            <DateTimeStep key="datetime" onNext={goNext} onBack={goBack} />
+                        )}
+                        {currentStep === 'complete' && (
+                            <CompleteStep key="complete" onComplete={onComplete} />
+                        )}
+                    </AnimatePresence>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
