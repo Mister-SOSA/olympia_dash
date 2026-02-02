@@ -78,8 +78,44 @@ CORS(app, resources={
     }
 })
 
+# Determine async mode based on environment
+# - Production (Gunicorn + eventlet): eventlet monkey-patching is done in wsgi.py BEFORE import
+# - Development (python app.py): uses 'threading' for simpler debugging
+def _get_async_mode():
+    """Determine the best async mode for the current environment.
+    
+    IMPORTANT: When running with Gunicorn + eventlet, the monkey_patch() is 
+    called in wsgi.py BEFORE this module is imported. This ensures all 
+    standard library modules are patched before they're used.
+    
+    We detect if eventlet is already patched by checking for its hub.
+    """
+    # Check if eventlet has already been monkey-patched (production mode via wsgi.py)
+    try:
+        import eventlet
+        if eventlet.patcher.is_monkey_patched('socket'):
+            logger.info('eventlet monkey-patching detected (production mode)')
+            return 'eventlet'
+    except ImportError:
+        pass
+    
+    # Development mode - use threading for easier debugging
+    logger.info('Using threading mode (development)')
+    return 'threading'
+
+_async_mode = _get_async_mode()
+
 # Initialize SocketIO for real-time preference sync
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*", 
+    async_mode=_async_mode,
+    ping_timeout=60,
+    ping_interval=25,
+    # Disable verbose logging for Socket.IO internals
+    engineio_logger=False,
+    logger=False
+)
 
 # Track active sessions per room (module-level for persistence)
 active_sessions: dict[str, set[str]] = {}
@@ -244,6 +280,29 @@ def get_version():
     return jsonify({
         'version': APP_VERSION or app.config.get('START_TIME', 'unknown')
     })
+
+
+@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint for container orchestration and load balancers.
+    
+    Returns:
+        200 OK if the service is healthy
+        
+    Used by:
+        - Docker health checks
+        - Kubernetes liveness/readiness probes
+        - Load balancer health checks
+        - Monitoring systems (Datadog, Prometheus, etc.)
+    """
+    return jsonify({
+        'status': 'healthy',
+        'service': 'olympia-api',
+        'version': APP_VERSION or app.config.get('START_TIME', 'unknown'),
+        'websocket_mode': _async_mode
+    }), 200
 
 @app.route('/api/widgets', methods=['POST'])
 @require_auth
@@ -831,5 +890,8 @@ if __name__ == "__main__":
     port = int(os.getenv('FLASK_PORT', '5001'))
     host = os.getenv('FLASK_HOST', '0.0.0.0')  # 0.0.0.0 allows external connections
     
-    # Use socketio.run instead of app.run for WebSocket support
+    # Development mode: Use socketio.run with werkzeug
+    # Production mode: Use Hypercorn via wsgi.py (this block won't run)
+    logger.info(f'Starting development server on {host}:{port} (debug={debug_mode})')
+    logger.info('For production, use: hypercorn --bind 0.0.0.0:5001 wsgi:app')
     socketio.run(app, debug=debug_mode, port=port, host=host, allow_unsafe_werkzeug=True)

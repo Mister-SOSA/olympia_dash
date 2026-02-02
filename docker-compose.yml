@@ -36,6 +36,8 @@ services:
       - FLASK_HOST=0.0.0.0
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      # Gunicorn settings (can override gunicorn.conf.py)
+      - GUNICORN_LOG_LEVEL=info
     networks:
       - olympia_network
     volumes:

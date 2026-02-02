@@ -25,5 +25,14 @@ COPY . .
 # Expose Flask's port
 EXPOSE 5001
 
-# Run Flask app
-CMD ["python", "app.py"]
+# Health check for container orchestration
+# Checks /health endpoint every 30s, timeout 10s, retries 3 times before unhealthy
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:5001/health || exit 1
+
+# Run with Gunicorn + eventlet for production (WebSocket support)
+# --worker-class eventlet: Required for Flask-SocketIO WebSocket support
+# -w 1: MUST be 1 worker for Flask-SocketIO (WebSockets are stateful)
+# -c gunicorn.conf.py: Load configuration from file
+# For scaling, use multiple container replicas with sticky sessions
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "wsgi:app"]
