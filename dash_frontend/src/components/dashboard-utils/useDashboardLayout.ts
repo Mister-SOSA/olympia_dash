@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { Widget, DashboardPreset, PresetType } from "@/types";
 import { preferencesService } from "@/lib/preferences";
 import {
@@ -15,7 +15,7 @@ import {
   generatePresetName,
   type LayoutUpdateSource,
 } from "@/utils/layoutUtils";
-import { createTempLayout, deepClone } from "./types";
+import { deepClone } from "./types";
 
 interface UseDashboardLayoutOptions {
   /** Active preset index */
@@ -28,19 +28,17 @@ interface UseDashboardLayoutOptions {
   setCurrentPresetType: React.Dispatch<React.SetStateAction<PresetType>>;
   /** Set active preset index state */
   setActivePresetIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  /** Current layout state (from useDashboardPresets) */
+  layout: Widget[];
+  /** Set layout state (from useDashboardPresets) */
+  setLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
+  /** Temporary layout for widget menu (from useDashboardPresets) */
+  tempLayout: Widget[];
+  /** Set temporary layout (from useDashboardPresets) */
+  setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
 }
 
 interface UseDashboardLayoutReturn {
-  /** Current layout state */
-  layout: Widget[];
-  /** Set layout state */
-  setLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
-  /** Temporary layout for widget menu */
-  tempLayout: Widget[];
-  /** Set temporary layout */
-  setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
-  /** Update temp layout from current layout (for opening menu) */
-  updateTempLayout: () => void;
   /** Handle layout changes from grid interactions */
   handleExternalLayoutChange: (activeLayout: Widget[], source?: LayoutUpdateSource) => void;
   /** Handle save from widget menu */
@@ -50,13 +48,14 @@ interface UseDashboardLayoutReturn {
 }
 
 /**
- * Hook to manage dashboard layout state
+ * Hook to manage dashboard layout operations
  * 
  * Handles:
- * - Main layout state
- * - Temp layout for widget menu
  * - External layout changes from grid interactions
  * - Menu save/cancel operations
+ * 
+ * Note: Layout state is owned by useDashboardPresets and passed in as props
+ * to ensure a single source of truth and avoid sync issues.
  */
 export function useDashboardLayout({
   activePresetIndex,
@@ -64,15 +63,11 @@ export function useDashboardLayout({
   setPresets,
   setCurrentPresetType,
   setActivePresetIndex,
+  layout,
+  setLayout,
+  tempLayout,
+  setTempLayout,
 }: UseDashboardLayoutOptions): UseDashboardLayoutReturn {
-  const [layout, setLayout] = useState<Widget[]>([]);
-  const [tempLayout, setTempLayout] = useState<Widget[]>([]);
-
-  // Prepare a temporary layout for the widget menu
-  const updateTempLayout = useCallback(() => {
-    setTempLayout(createTempLayout(layout));
-  }, [layout]);
-
   // Handle layout changes from grid interactions
   const handleExternalLayoutChange = useCallback((
     activeLayout: Widget[],
@@ -116,7 +111,7 @@ export function useDashboardLayout({
         return updatedPresets;
       });
     }
-  }, [layout, activePresetIndex, setPresets]);
+  }, [layout, activePresetIndex, setPresets, setLayout]);
 
   // Save/cancel from widget menu
   const handleMenuSave = useCallback(() => {
@@ -174,11 +169,6 @@ export function useDashboardLayout({
   }, []);
 
   return {
-    layout,
-    setLayout,
-    tempLayout,
-    setTempLayout,
-    updateTempLayout,
     handleExternalLayoutChange,
     handleMenuSave,
     handleMenuCancel,

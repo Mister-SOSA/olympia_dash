@@ -99,31 +99,7 @@ export default function Dashboard() {
   const taskbarAutoHide = navSettings.taskbarAutoHide;
 
   // ==========================================================================
-  // Layout Management
-  // ==========================================================================
-  // Note: We need to declare presets first because layout depends on it
-  const [presetsState, setPresetsState] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
-  const [activePresetIndexState, setActivePresetIndexState] = useState<number | null>(null);
-  const [currentPresetTypeState, setCurrentPresetTypeState] = useState<PresetType>("grid");
-
-  const {
-    layout,
-    setLayout,
-    tempLayout,
-    setTempLayout,
-    updateTempLayout,
-    handleExternalLayoutChange,
-    handleMenuSave,
-  } = useDashboardLayout({
-    activePresetIndex: activePresetIndexState,
-    presets: presetsState,
-    setPresets: setPresetsState,
-    setCurrentPresetType: setCurrentPresetTypeState,
-    setActivePresetIndex: setActivePresetIndexState,
-  });
-
-  // ==========================================================================
-  // Presets Management
+  // Presets Management (declared first - provides state to layout hook)
   // ==========================================================================
   const {
     presets,
@@ -143,25 +119,33 @@ export default function Dashboard() {
     handleCreateBlank,
     handleSaveToPreset,
     quickSavePreset,
-  } = useDashboardPresets({
+    // Layout state is co-located with presets to avoid sync issues
     layout,
     setLayout,
+    tempLayout,
     setTempLayout,
+    updateTempLayout,
+  } = useDashboardPresets({
     setIsTransitioning,
   });
 
-  // Sync the split state with the hook state
-  useEffect(() => {
-    setPresetsState(presets);
-  }, [presets]);
-
-  useEffect(() => {
-    setActivePresetIndexState(activePresetIndex);
-  }, [activePresetIndex]);
-
-  useEffect(() => {
-    setCurrentPresetTypeState(currentPresetType);
-  }, [currentPresetType]);
+  // ==========================================================================
+  // Layout Management (uses preset state from above)
+  // ==========================================================================
+  const {
+    handleExternalLayoutChange,
+    handleMenuSave,
+  } = useDashboardLayout({
+    activePresetIndex,
+    presets,
+    setPresets,
+    setCurrentPresetType,
+    setActivePresetIndex,
+    layout,
+    setLayout,
+    tempLayout,
+    setTempLayout,
+  });
 
   // ==========================================================================
   // Preferences & Permissions

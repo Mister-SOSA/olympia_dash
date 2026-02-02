@@ -13,20 +13,24 @@ import {
   normalizeLayout,
   generatePresetName,
 } from "@/utils/layoutUtils";
-import { deepClone, mergePreset } from "./types";
+import { deepClone, mergePreset, createTempLayout } from "./types";
 
 interface UseDashboardPresetsOptions {
-  /** Current layout */
-  layout: Widget[];
-  /** Update layout state */
-  setLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
-  /** Update temp layout for widget menu */
-  setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
   /** Callback when transitioning state changes */
   setIsTransitioning: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface UseDashboardPresetsReturn {
+  /** Current layout state */
+  layout: Widget[];
+  /** Set layout state */
+  setLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
+  /** Temporary layout for widget menu */
+  tempLayout: Widget[];
+  /** Set temporary layout */
+  setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
+  /** Update temp layout from current layout (for opening menu) */
+  updateTempLayout: () => void;
   /** Array of presets (9 slots, null if empty) */
   presets: Array<DashboardPreset | null>;
   /** Set presets state */
@@ -64,19 +68,22 @@ interface UseDashboardPresetsReturn {
 }
 
 /**
- * Hook to manage dashboard presets
+ * Hook to manage dashboard presets and layout state
  * 
  * Handles:
+ * - Layout state (main layout and temp layout for widget menu)
  * - Preset state (presets array, active index, type)
  * - Load/save/create/clear operations
  * - Smooth transitions when switching presets
  */
 export function useDashboardPresets({
-  layout,
-  setLayout,
-  setTempLayout,
   setIsTransitioning,
 }: UseDashboardPresetsOptions): UseDashboardPresetsReturn {
+  // Layout state - owned here to ensure single source of truth
+  const [layout, setLayout] = useState<Widget[]>([]);
+  const [tempLayout, setTempLayout] = useState<Widget[]>([]);
+
+  // Preset state
   const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
   const [presetIndex, setPresetIndex] = useState<number>(0);
   const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
@@ -94,6 +101,11 @@ export function useDashboardPresets({
     presetsRef.current = presets;
     presetIndexRef.current = presetIndex;
   }, [presets, presetIndex]);
+
+  // Prepare a temporary layout for the widget menu
+  const updateTempLayout = useCallback(() => {
+    setTempLayout(createTempLayout(layout));
+  }, [layout]);
 
   // Load a preset with smooth fade transition
   const loadPreset = useCallback(
@@ -258,6 +270,13 @@ export function useDashboardPresets({
   }, []);
 
   return {
+    // Layout state
+    layout,
+    setLayout,
+    tempLayout,
+    setTempLayout,
+    updateTempLayout,
+    // Preset state
     presets,
     setPresets,
     presetIndex,
@@ -266,9 +285,11 @@ export function useDashboardPresets({
     setActivePresetIndex,
     currentPresetType,
     setCurrentPresetType,
+    // Refs for keyboard shortcuts
     presetsRef,
     presetIndexRef,
     loadPresetRef,
+    // Actions
     loadPreset,
     handlePresetClick,
     handlePresetSave,
@@ -278,7 +299,4 @@ export function useDashboardPresets({
   };
 }
 
-// Track transition timers to allow cleanup/cancellation
-const loadPresetFadeOutTimerRef = { current: null as number | null };
-const loadPresetFadeInTimerRef = { current: null as number | null };
 export default useDashboardPresets;
