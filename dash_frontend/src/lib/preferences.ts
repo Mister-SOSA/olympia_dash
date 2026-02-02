@@ -76,15 +76,44 @@ class PreferencesService {
 
     // Heartbeat to keep server session alive (prevents stale session cleanup)
     private heartbeatInterval: NodeJS.Timeout | null = null;
-    private readonly HEARTBEAT_INTERVAL_MS = 60000; // Send heartbeat every 60 seconds
+    private readonly HEARTBEAT_INTERVAL_MS = 30000; // Send heartbeat every 30 seconds
 
     // Generic event emitter for custom events (permissions_updated, etc.)
     private eventListeners: Map<string, Set<() => void>> = new Map();
 
-    // Debounce timings
-    private readonly SAVE_DEBOUNCE_MS = 500;        // Wait 500ms after last change before saving
-    private readonly NOTIFICATION_DEBOUNCE_MS = 50;  // Batch notifications within 50ms
-    private readonly INTERACTION_LOCK_MS = 1000;     // Keep lock for 1s after last interaction
+    // Debounce timings - optimized for instant feel
+    private readonly SAVE_DEBOUNCE_MS = 150;        // Wait 150ms after last change before saving (fast but batches rapid changes)
+    private readonly NOTIFICATION_DEBOUNCE_MS = 16;  // ~1 frame at 60fps - immediate feel
+    private readonly INTERACTION_LOCK_MS = 300;      // Short lock to prevent flickering during drag operations
+
+    /**
+     * Get the WebSocket URL for direct connection to backend.
+     * In production, this goes directly to the API server.
+     * WebSocket connections CANNOT be proxied through Next.js API routes.
+     * 
+     * Supports Cloudflare Tunnels and other reverse proxy setups.
+     */
+    private getWebSocketUrl(): string {
+        if (typeof window === 'undefined') return 'http://localhost:5001';
+
+        // Priority 1: Use explicit API URL if configured (required for Cloudflare Tunnels
+        // when frontend and API are on different subdomains)
+        const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (envUrl && envUrl !== '') {
+            // Ensure we don't have a trailing slash
+            return envUrl.replace(/\/$/, '');
+        }
+
+        // Priority 2: Development mode - API runs on port 5001
+        const origin = window.location.origin;
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            return origin.replace(/:\d+/, ':5001');
+        }
+
+        // Priority 3: Production with same-origin reverse proxy (nginx, Caddy, etc.)
+        // API is expected to be at /api/* on the same domain
+        return origin;
+    }
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -232,25 +261,32 @@ class PreferencesService {
 
     /**
      * Join appropriate WebSocket rooms
+     * 
+     * When impersonating, we join the IMPERSONATED user's room only,
+     * since we're viewing/editing their preferences.
+     * When not impersonating, we join our own room.
      */
     private joinAppropriateRooms(): void {
         if (!this.socket?.connected) return;
 
-        const user = authService.getUser();
-        if (!user?.id) return;
-
-        console.log(`[Prefs] Joining room for user ${user.id}`);
-        this.socket.emit('join', {
-            user_id: user.id,
-            session_id: this.sessionId
-        });
-
+        // When impersonating, we work with the impersonated user's preferences
+        // so we only need to join their room for real-time sync
         if (authService.isImpersonating()) {
             const impersonatedUser = authService.getImpersonatedUser();
             if (impersonatedUser?.id) {
-                console.log(`[Prefs] Also joining room for impersonated user ${impersonatedUser.id}`);
+                console.log(`[Prefs] Impersonation mode: Joining room for impersonated user ${impersonatedUser.id}`);
                 this.socket.emit('join', {
                     user_id: impersonatedUser.id,
+                    session_id: this.sessionId
+                });
+            }
+        } else {
+            // Normal mode: join own room
+            const user = authService.getRealUser();
+            if (user?.id) {
+                console.log(`[Prefs] Joining room for user ${user.id}`);
+                this.socket.emit('join', {
+                    user_id: user.id,
                     session_id: this.sessionId
                 });
             }
@@ -259,6 +295,10 @@ class PreferencesService {
 
     /**
      * Connect to WebSocket for real-time sync
+     * 
+     * IMPORTANT: We connect DIRECTLY to the backend, not through Next.js proxy.
+     * Next.js API routes cannot proxy WebSocket connections (only HTTP).
+     * This is why we use getWebSocketUrl() to get the direct backend URL.
      */
     private connectWebSocket(): void {
         if (this.socket?.connected) return;
@@ -267,17 +307,28 @@ class PreferencesService {
         const user = authService.getUser();
         if (!user?.id) return;
 
-        const wsUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
-        console.log(`[Prefs] Connecting WebSocket to ${wsUrl}`);
+        const wsUrl = this.getWebSocketUrl();
+        console.log(`[Prefs] Connecting WebSocket to ${wsUrl} (direct backend connection)`);
 
         this.socket = io(wsUrl, {
-            transports: ['polling'],
+            // CRITICAL: Use WebSocket first, fall back to polling only if needed
+            // This gives us instant updates instead of polling delays
+            transports: ['websocket', 'polling'],
+            // Upgrade from polling to websocket when available
+            upgrade: true,
+            // Faster reconnection for better UX
             reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            reconnectionAttempts: 5,
-            timeout: 20000,
-            path: '/api/socket.io/'
+            reconnectionDelay: 500,
+            reconnectionDelayMax: 2000,
+            reconnectionAttempts: 10,
+            // Shorter timeout for faster failure detection
+            timeout: 10000,
+            // Direct path to Socket.IO on backend (not through /api/ proxy)
+            path: '/socket.io/',
+            // Force new connection on reconnect to avoid stale state
+            forceNew: false,
+            // Multiplexing for efficiency
+            multiplex: true
         });
 
         this.socket.on('connect', () => {
@@ -303,6 +354,11 @@ class PreferencesService {
         this.socket.on('disconnect', (reason: string) => {
             console.warn('[Prefs] WebSocket disconnected:', reason);
             this.stopHeartbeat();
+            // Clean up broadcast timer to prevent stale broadcasts after reconnect
+            if (this.broadcastDebounceTimer) {
+                clearTimeout(this.broadcastDebounceTimer);
+                this.broadcastDebounceTimer = null;
+            }
         });
 
         // Listen for permission updates from server
@@ -591,6 +647,10 @@ class PreferencesService {
             clearTimeout(this.interactionLockTimer);
             this.interactionLockTimer = null;
         }
+        if (this.broadcastDebounceTimer) {
+            clearTimeout(this.broadcastDebounceTimer);
+            this.broadcastDebounceTimer = null;
+        }
         this.stopHeartbeat();
     }
 
@@ -626,13 +686,15 @@ class PreferencesService {
      * - debounce: Whether to debounce the server save (default: true)
      * - sync: Whether to sync to server at all (default: true)
      * - notifyLocal: Whether to notify local subscribers (default: true)
+     * - broadcast: Whether to immediately broadcast to other sessions (default: true when sync is true)
      */
     set(key: string, value: any, options: {
         debounce?: boolean;
         sync?: boolean;
-        notifyLocal?: boolean
+        notifyLocal?: boolean;
+        broadcast?: boolean;
     } = {}): void {
-        const { debounce = true, sync = true, notifyLocal = true } = options;
+        const { debounce = true, sync = true, notifyLocal = true, broadcast = sync } = options;
 
         // Update local state immediately (optimistic update)
         const keys = key.split('.');
@@ -665,7 +727,13 @@ class PreferencesService {
             this.notifySubscribers(false, [keys[0]]);
         }
 
-        // Schedule server save
+        // INSTANT BROADCAST: Send to other sessions IMMEDIATELY (before debounce)
+        // This makes cross-session sync feel instant for ALL preference changes
+        if (broadcast && this.socket?.connected && this.sessionCount > 1) {
+            this.broadcastToOtherSessions();
+        }
+
+        // Schedule server save (still debounced for batching and persistence)
         if (sync) {
             if (debounce) {
                 this.scheduleSave();
@@ -676,13 +744,59 @@ class PreferencesService {
     }
 
     /**
+     * Broadcast current preferences to other sessions immediately.
+     * This is called on every set() for instant cross-session sync.
+     * Debounced slightly to batch rapid consecutive changes (e.g., typing).
+     */
+    private broadcastDebounceTimer: NodeJS.Timeout | null = null;
+    private readonly BROADCAST_DEBOUNCE_MS = 16; // ~1 frame - batches rapid changes but still instant
+
+    private broadcastToOtherSessions(): void {
+        // Clear any pending broadcast
+        if (this.broadcastDebounceTimer) {
+            clearTimeout(this.broadcastDebounceTimer);
+        }
+
+        // Debounce very slightly to batch rapid changes (typing, dragging)
+        this.broadcastDebounceTimer = setTimeout(() => {
+            this.broadcastDebounceTimer = null;
+
+            if (!this.socket?.connected || this.sessionCount <= 1) {
+                return;
+            }
+
+            const targetUserId = authService.isImpersonating()
+                ? authService.getImpersonatedUser()?.id
+                : authService.getUser()?.id;
+
+            // Safety check: don't broadcast if we can't determine the target user
+            if (!targetUserId) {
+                console.warn('[Prefs] Cannot broadcast: no target user ID');
+                return;
+            }
+
+            // Use optimistic version (current + 1) so other sessions accept the update
+            // The actual version will be confirmed when the server save completes
+            this.socket.emit('broadcast_preferences', {
+                user_id: targetUserId,
+                preferences: this.preferences,
+                version: this.version + 1, // Optimistic version - other sessions will accept this
+                origin_session_id: this.sessionId
+            });
+
+            console.log(`[Prefs] Instant broadcast to ${this.sessionCount - 1} other sessions (v${this.version} → v${this.version + 1} optimistic)`);
+        }, this.BROADCAST_DEBOUNCE_MS);
+    }
+
+    /**
      * Set multiple preferences at once
      */
     setMany(preferences: Record<string, any>, options: {
         sync?: boolean;
-        notifyLocal?: boolean
+        notifyLocal?: boolean;
+        broadcast?: boolean;
     } = {}): void {
-        const { sync = true, notifyLocal = true } = options;
+        const { sync = true, notifyLocal = true, broadcast = sync } = options;
 
         const changedKeys: string[] = [];
 
@@ -719,6 +833,11 @@ class PreferencesService {
             this.notifySubscribers(false, changedKeys);
         }
 
+        // INSTANT BROADCAST: Send to other sessions immediately
+        if (broadcast && this.socket?.connected && this.sessionCount > 1) {
+            this.broadcastToOtherSessions();
+        }
+
         if (sync) {
             this.scheduleSave();
         }
@@ -740,10 +859,25 @@ class PreferencesService {
         delete target[keys[keys.length - 1]];
         this.saveToCache();
 
+        // Broadcast deletion to other sessions immediately
+        if (this.socket?.connected && this.sessionCount > 1) {
+            this.broadcastToOtherSessions();
+        }
+
         if (authService.isAuthenticated()) {
             try {
+                let url = `${API_BASE_URL}/api/preferences/${key}`;
+
+                // Support impersonation
+                if (authService.isImpersonating()) {
+                    const impersonatedId = authService.getImpersonatedUser()?.id;
+                    if (impersonatedId) {
+                        url += `?impersonated_user_id=${impersonatedId}`;
+                    }
+                }
+
                 const response = await authService.fetchWithAuth(
-                    `${API_BASE_URL}/api/preferences/${key}`,
+                    url,
                     { method: 'DELETE' }
                 );
 
@@ -791,7 +925,7 @@ class PreferencesService {
     }
 
     /**
-     * Save preferences to server
+     * Save preferences to server (persistence only - broadcast already happened in set())
      */
     private async saveToServer(useVersionCheck: boolean = true): Promise<boolean> {
         if (!authService.isAuthenticated()) {
@@ -813,9 +947,12 @@ class PreferencesService {
         this.isSaving = true;
         const keysBeingSaved = new Set(this.dirtyKeys);
 
+        // NOTE: Broadcast already happened immediately in set() for instant cross-session sync
+        // This method only handles persistence to database
+
         this.savePromise = (async () => {
             try {
-                console.log(`[Prefs] Saving to server (${keysBeingSaved.size} dirty keys)...`);
+                console.log(`[Prefs] Persisting to server (${keysBeingSaved.size} dirty keys)...`);
 
                 const body: any = {
                     preferences: this.preferences,
@@ -859,20 +996,8 @@ class PreferencesService {
                         this.checkPendingRemoteUpdate();
                     }
 
-                    // Broadcast to other sessions
-                    if (this.socket?.connected && this.sessionCount > 1) {
-                        const targetUserId = authService.isImpersonating()
-                            ? authService.getImpersonatedUser()?.id
-                            : authService.getUser()?.id;
-
-                        this.socket.emit('broadcast_preferences', {
-                            user_id: targetUserId,
-                            preferences: this.preferences,
-                            version: this.version,
-                            origin_session_id: this.sessionId
-                        });
-                        console.log(`[Prefs] Broadcasting to ${this.sessionCount} sessions`);
-                    }
+                    // Note: Broadcast already sent optimistically before save started
+                    // This makes cross-session sync instant instead of waiting for server roundtrip
 
                     return true;
                 } else if (data.conflict) {

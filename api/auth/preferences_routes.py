@@ -194,15 +194,22 @@ def delete_preference(preference_key):
     """
     Delete a specific preference by key.
     Supports dot notation for nested keys (e.g., 'dashboard.layout').
+    Supports admin impersonation via ?impersonated_user_id query param.
     
     Example: DELETE /api/preferences/dashboard.layout
     """
     try:
         user = request.current_user  # type: ignore
+        target_user_id = user['id']
         
-        new_version = delete_user_preferences(user['id'], preference_key)
+        # Support admin impersonation
+        impersonated_user_id = request.args.get('impersonated_user_id', type=int)
+        if impersonated_user_id and user['role'] == 'admin':
+            target_user_id = impersonated_user_id
         
-        log_action(user['id'], 'preferences_deleted', f'Deleted preference: {preference_key}', get_client_ip())
+        new_version = delete_user_preferences(target_user_id, preference_key)
+        
+        log_action(target_user_id, 'preferences_deleted', f'Deleted preference: {preference_key}', get_client_ip())
         
         return jsonify({
             'success': True,

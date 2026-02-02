@@ -288,8 +288,18 @@ export function useDashboardPreferences({
         // Check if this is a structural change (widgets added/removed) for logging
         const structuralChanges = detectStructuralChanges(layout, normalizedLayout);
 
+        // Check the source metadata EARLY to understand WHY the originating session made this change
+        // This is critical for deciding whether to auto-apply or queue structural changes
+        const layoutMeta = preferencesService.get<{ source?: LayoutUpdateSource, sessionId?: string }>('dashboard.layoutMeta');
+        const originalSource: LayoutUpdateSource = layoutMeta?.source || 'remote-sync';
+
+        // Preset loads should ALWAYS auto-apply, even with structural changes
+        // The user explicitly chose to load a preset on the other session
+        const isPresetLoad = originalSource === 'preset-load';
+
         // If the user is editing, queue the latest remote snapshot instead of applying immediately
-        if (isEditing) {
+        // Exception: preset loads should interrupt editing (user action takes priority)
+        if (isEditing && !isPresetLoad) {
           pendingRemoteUpdateRef.current = {
             layout: normalizedLayout,
             presets: queuedPresets,
@@ -305,7 +315,8 @@ export function useDashboardPreferences({
         }
 
         // If structural changes exist (add/remove), require explicit apply to avoid clobbering local intent
-        if (structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved) {
+        // Exception: preset loads should auto-apply (explicit user action from another session)
+        if ((structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved) && !isPresetLoad) {
           pendingRemoteUpdateRef.current = {
             layout: normalizedLayout,
             presets: queuedPresets,
@@ -319,10 +330,6 @@ export function useDashboardPreferences({
           console.log('[Dashboard] Remote structural update queued; awaiting user confirmation.');
           return;
         }
-
-        // Check the source metadata to understand WHY the originating session made this change
-        const layoutMeta = preferencesService.get<{ source?: LayoutUpdateSource, sessionId?: string }>('dashboard.layoutMeta');
-        const originalSource: LayoutUpdateSource = layoutMeta?.source || 'remote-sync';
 
         console.log(`[Dashboard] Remote layout update: originalSource=${describeSource(originalSource)}, structural=${structuralChanges.widgetsAdded || structuralChanges.widgetsRemoved}`);
 
@@ -340,7 +347,11 @@ export function useDashboardPreferences({
         onPresetsUpdate(queuedPresets);
         onPresetTypeUpdate(queuedPresetType);
         onActivePresetIndexUpdate(queuedActivePresetIndex);
+
+        // Clear any pending update state since we just applied the latest
         setPendingRemoteDiff(undefined);
+        setHasPendingRemoteUpdate(false);
+        pendingRemoteUpdateRef.current = null;
       }
 
       // Update user state to reflect impersonation changes
