@@ -1,0 +1,563 @@
+/**
+ * Widget Registry - Auto-discovery and registration system
+ * 
+ * To add a new widget:
+ * 1. Create your widget component in /components/widgets/
+ * 2. Export a `widgetConfig` from your widget file
+ * 3. Import and add it to the WIDGET_CONFIGS array below
+ * 
+ * The widget config should follow the WidgetConfig interface.
+ */
+
+import React from "react";
+
+// ============================================
+// Widget Configuration Interface
+// ============================================
+
+export interface WidgetConfig {
+    /** Unique identifier for the widget type */
+    id: string;
+    /** Display title shown in the picker */
+    title: string;
+    /** Short description of what the widget does */
+    description: string;
+    /** Primary category for grouping */
+    category: WidgetCategory;
+    /** Optional subcategory for finer grouping */
+    subcategory?: string;
+    /** Tags for enhanced search and filtering */
+    tags?: string[];
+    /** Default grid size */
+    defaultSize: {
+        w: number;
+        h: number;
+    };
+    /** Minimum allowed size (optional) */
+    minSize?: {
+        w: number;
+        h: number;
+    };
+    /** Maximum allowed size (optional) */
+    maxSize?: {
+        w: number;
+        h: number;
+    };
+    /** Icon component for the widget (optional) */
+    icon?: React.ComponentType<{ className?: string }>;
+    /** Whether this widget is in beta/experimental */
+    beta?: boolean;
+    /** Whether this widget is deprecated */
+    deprecated?: boolean;
+    /** Version this widget was added */
+    since?: string;
+    /** Search keywords that aren't in title/description */
+    searchKeywords?: string[];
+    /** 
+     * Whether multiple instances of this widget can be added.
+     * When true, users can add multiple copies, each with their own settings.
+     * @default false (singleton widget)
+     */
+    allowMultiple?: boolean;
+    /**
+     * Maximum number of instances allowed (only relevant if allowMultiple is true)
+     * @default undefined (unlimited)
+     */
+    maxInstances?: number;
+    /**
+     * Default display name template for multi-instance widgets.
+     * Use {n} as placeholder for instance number.
+     * @example "Fan Controller {n}"
+     */
+    instanceNameTemplate?: string;
+}
+
+// ============================================
+// Category Definitions
+// ============================================
+
+export type WidgetCategory =
+    | "Sales"
+    | "Purchasing"
+    | "Inventory"
+    | "AP"
+    | "Utilities"
+    | "Reports"
+    | "Analytics"
+    | "Operations";
+
+export const CATEGORY_ORDER: WidgetCategory[] = [
+    "Sales",
+    "Purchasing",
+    "Inventory",
+    "AP",
+    "Analytics",
+    "Reports",
+    "Operations",
+    "Utilities",
+];
+
+export const CATEGORY_METADATA: Record<WidgetCategory, {
+    label: string;
+    description: string;
+    color: string;
+}> = {
+    Sales: {
+        label: "Sales",
+        description: "Sales metrics and customer data",
+        color: "emerald"
+    },
+    Purchasing: {
+        label: "Purchasing",
+        description: "Purchase orders and vendor management",
+        color: "blue"
+    },
+    Inventory: {
+        label: "Inventory",
+        description: "Stock levels and movement tracking",
+        color: "amber"
+    },
+    AP: {
+        label: "Accounts Payable",
+        description: "Vendor payments and accounts",
+        color: "purple"
+    },
+    Analytics: {
+        label: "Analytics",
+        description: "Advanced charts and data analysis",
+        color: "cyan"
+    },
+    Reports: {
+        label: "Reports",
+        description: "Detailed reports and exports",
+        color: "indigo"
+    },
+    Operations: {
+        label: "Operations",
+        description: "Daily operations and workflows",
+        color: "orange"
+    },
+    Utilities: {
+        label: "Utilities",
+        description: "Clocks, weather, and general tools",
+        color: "gray"
+    },
+};
+
+// ============================================
+// Widget Configurations
+// ============================================
+
+/**
+ * All widget configurations.
+ * Add new widgets here - they will automatically appear in the picker.
+ */
+export const WIDGET_CONFIGS: WidgetConfig[] = [
+    // ─────────────────────────────────────────
+    // Sales Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "Overview",
+        title: "Sales Overview",
+        description: "Key sales metrics at a glance - YTD, monthly, weekly, and daily totals",
+        category: "Sales",
+        subcategory: "Metrics",
+        tags: ["kpi", "summary", "dashboard"],
+        defaultSize: { w: 12, h: 2 },
+        minSize: { w: 6, h: 2 },
+        searchKeywords: ["revenue", "performance", "summary"],
+    },
+    {
+        id: "SalesByDayBar",
+        title: "Sales by Day",
+        description: "Daily sales breakdown in a bar chart format",
+        category: "Sales",
+        subcategory: "Charts",
+        tags: ["chart", "bar", "daily", "trend"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 3 },
+    },
+    {
+        id: "SalesByMonthBar",
+        title: "Sales by Month",
+        description: "Monthly sales visualization with bar charts",
+        category: "Sales",
+        subcategory: "Charts",
+        tags: ["chart", "bar", "monthly", "trend"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 3 },
+    },
+    {
+        id: "SalesByMonthComparisonBar",
+        title: "Sales Month Comparison",
+        description: "Compare sales performance across different months",
+        category: "Sales",
+        subcategory: "Charts",
+        tags: ["chart", "comparison", "yoy", "analysis"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 3 },
+        searchKeywords: ["year over year", "compare"],
+    },
+    {
+        id: "TopCustomersThisYearPie",
+        title: "Top Customers",
+        description: "Pie chart showing top customers by sales volume this year",
+        category: "Sales",
+        subcategory: "Customers",
+        tags: ["pie", "chart", "customers", "ranking"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 4 },
+    },
+    {
+        id: "SalesYTDCumulativeLine",
+        title: "YTD Sales (Cumulative)",
+        description: "Cumulative year-to-date sales displayed as a line chart",
+        category: "Sales",
+        subcategory: "Charts",
+        tags: ["chart", "line", "ytd", "cumulative", "trend", "year"],
+        defaultSize: { w: 6, h: 4 },
+        minSize: { w: 3, h: 3 },
+        searchKeywords: ["running total", "year to date", "progress", "annual"],
+    },
+
+    // ─────────────────────────────────────────
+    // Purchasing Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "OutstandingOrdersTable",
+        title: "Outstanding Orders",
+        description: "Table of all outstanding purchase orders awaiting fulfillment",
+        category: "Purchasing",
+        subcategory: "Orders",
+        tags: ["table", "orders", "pending", "po"],
+        defaultSize: { w: 12, h: 5 },
+        minSize: { w: 6, h: 4 },
+        searchKeywords: ["purchase order", "open orders"],
+    },
+    {
+        id: "DailyDueInTable",
+        title: "Daily Due In",
+        description: "Items scheduled to arrive today from all vendors",
+        category: "Purchasing",
+        subcategory: "Receiving",
+        tags: ["table", "receiving", "today", "schedule"],
+        defaultSize: { w: 12, h: 5 },
+        minSize: { w: 6, h: 4 },
+        searchKeywords: ["arrivals", "deliveries", "incoming"],
+    },
+    {
+        id: "DailyDueInHiddenVendTable",
+        title: "Daily Due In (Maintenance)",
+        description: "Maintenance-only items due in today",
+        category: "Purchasing",
+        subcategory: "Receiving",
+        tags: ["table", "maintenance", "hidden", "internal"],
+        defaultSize: { w: 12, h: 5 },
+        minSize: { w: 6, h: 4 },
+    },
+
+    // ─────────────────────────────────────────
+    // Accounts Payable Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "Top5PayablesYTD",
+        title: "Top 5 Payables YTD",
+        description: "Year-to-date breakdown of top 5 vendor payable accounts",
+        category: "AP",
+        subcategory: "Vendors",
+        tags: ["pie", "chart", "vendors", "payables", "ranking"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 4 },
+        searchKeywords: ["accounts payable", "expenses", "spending"],
+    },
+
+    // ─────────────────────────────────────────
+    // Inventory Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "DailyMovesByUser",
+        title: "Daily Moves by User",
+        description: "Track inventory movements grouped by user for the day",
+        category: "Inventory",
+        subcategory: "Movements",
+        tags: ["chart", "users", "activity", "daily"],
+        defaultSize: { w: 6, h: 4 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["warehouse", "staff", "productivity"],
+    },
+    {
+        id: "InventoryMovesLog",
+        title: "Inventory Moves Log",
+        description: "Detailed log of all recent inventory movements",
+        category: "Inventory",
+        subcategory: "Movements",
+        tags: ["table", "log", "history", "audit"],
+        defaultSize: { w: 12, h: 6 },
+        minSize: { w: 8, h: 4 },
+        searchKeywords: ["transactions", "history", "audit trail"],
+    },
+    {
+        id: "DailyProductionPutawaysBar",
+        title: "Daily Production Putaways",
+        description: "Bar chart showing production putaway activity by day",
+        category: "Inventory",
+        subcategory: "Production",
+        tags: ["chart", "bar", "production", "putaway"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 3 },
+    },
+    {
+        id: "TopProductUnitSales",
+        title: "Top Product Sales",
+        description: "Ranking of top selling products by unit volume",
+        category: "Inventory",
+        subcategory: "Products",
+        tags: ["table", "products", "ranking", "units"],
+        defaultSize: { w: 12, h: 6 },
+        minSize: { w: 6, h: 4 },
+        searchKeywords: ["best sellers", "popular", "items"],
+    },
+    {
+        id: "MachineStockStatus",
+        title: "Machine Stock Status",
+        description: "Current stock levels and status for production machines",
+        category: "Inventory",
+        subcategory: "Machines",
+        tags: ["status", "machines", "stock", "levels"],
+        defaultSize: { w: 4, h: 6 },
+        minSize: { w: 3, h: 4 },
+        searchKeywords: ["equipment", "production line"],
+    },
+    {
+        id: "InventoryTracker",
+        title: "Inventory Tracker",
+        description: "Track and monitor inventory levels for specific items",
+        category: "Inventory",
+        subcategory: "Stock Levels",
+        tags: ["table", "stock", "levels", "tracking", "items", "parts"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["parts", "available", "on hand", "on hold", "scheduled", "quantities"],
+    },
+
+    // ─────────────────────────────────────────
+    // Utility Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "ClockWidget",
+        title: "Clock",
+        description: "Digital clock with customizable format and timezone",
+        category: "Utilities",
+        subcategory: "Time",
+        tags: ["clock", "time", "display"],
+        defaultSize: { w: 3, h: 2 },
+        minSize: { w: 2, h: 1 },
+    },
+    {
+        id: "DateWidget",
+        title: "Date",
+        description: "Current date display with formatting options",
+        category: "Utilities",
+        subcategory: "Time",
+        tags: ["date", "calendar", "display"],
+        defaultSize: { w: 3, h: 2 },
+        minSize: { w: 2, h: 1 },
+    },
+    {
+        id: "Humidity",
+        title: "Humidity",
+        description: "Current humidity level from connected sensors",
+        category: "Utilities",
+        subcategory: "Environment",
+        tags: ["sensor", "environment", "monitoring"],
+        defaultSize: { w: 3, h: 2 },
+        minSize: { w: 2, h: 2 },
+        searchKeywords: ["weather", "climate", "conditions"],
+    },
+    {
+        id: "BeefPricesChart",
+        title: "USDA Beef Prices",
+        description: "USDA National beef prices for Chemical Lean Fresh 50% and 85%",
+        category: "Utilities",
+        subcategory: "Market Data",
+        tags: ["chart", "prices", "usda", "market"],
+        defaultSize: { w: 6, h: 4 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["commodity", "meat", "pricing"],
+    },
+
+    // ─────────────────────────────────────────
+    // Operations Widgets
+    // ─────────────────────────────────────────
+    {
+        id: "EntryLogsWidget",
+        title: "Entry Logs",
+        description: "Real-time door access and entry logs from UniFi Access",
+        category: "Operations",
+        subcategory: "Security",
+        tags: ["table", "log", "access", "security", "door", "entry"],
+        defaultSize: { w: 6, h: 5 },
+        minSize: { w: 4, h: 3 },
+        searchKeywords: ["unifi", "badge", "nfc", "face", "building", "who entered"],
+    },
+
+    // ─────────────────────────────────────────
+    // Multi-Instance Widgets (can add multiple)
+    // ─────────────────────────────────────────
+    {
+        id: "FanController",
+        title: "Fan Controller",
+        description: "Monitor and control AC Infinity fan controllers",
+        category: "Operations",
+        subcategory: "Environment",
+        tags: ["fan", "ac infinity", "hvac", "climate", "ventilation"],
+        defaultSize: { w: 4, h: 4 },
+        minSize: { w: 3, h: 2 },
+        maxSize: { w: 6, h: 6 },
+        allowMultiple: true,
+        instanceNameTemplate: "Fan Controller {n}",
+        searchKeywords: ["cloudline", "grow", "exhaust", "ventilation", "temperature", "humidity"],
+    },
+];
+
+// ============================================
+// Widget Component Lazy Loading Map
+// ============================================
+
+/**
+ * Lazy-loaded widget components.
+ * This keeps the initial bundle small by only loading widgets when needed.
+ */
+export const WIDGET_COMPONENTS: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
+    Overview: React.lazy(() => import("./Overview")),
+    SalesByDayBar: React.lazy(() => import("./SalesByDayBar")),
+    SalesByMonthBar: React.lazy(() => import("./SalesByMonthBar")),
+    SalesByMonthComparisonBar: React.lazy(() => import("./SalesByMonthComparisonBar")),
+    TopCustomersThisYearPie: React.lazy(() => import("./TopCustomersThisYearPie")),
+    SalesYTDCumulativeLine: React.lazy(() => import("./SalesYTDCumulativeLine")),
+    OutstandingOrdersTable: React.lazy(() => import("./OutstandingOrdersTable")),
+    DailyDueInTable: React.lazy(() => import("./DailyDueInTable")),
+    DailyDueInHiddenVendTable: React.lazy(() => import("./DailyDueInHiddenVendTable")),
+    Top5PayablesYTD: React.lazy(() => import("./Top5PayablesYTD")),
+    DailyMovesByUser: React.lazy(() => import("./DailyMovesByUser")),
+    InventoryMovesLog: React.lazy(() => import("./InventoryMovesLog")),
+    DailyProductionPutawaysBar: React.lazy(() => import("./DailyProductionPutawaysBar")),
+    TopProductUnitSales: React.lazy(() => import("./TopProductUnitSales")),
+    MachineStockStatus: React.lazy(() => import("./MachineStockStatus")),
+    InventoryTracker: React.lazy(() => import("./InventoryTracker")),
+    ClockWidget: React.lazy(() => import("./ClockWidget")),
+    DateWidget: React.lazy(() => import("./DateWidget")),
+    Humidity: React.lazy(() => import("./Humidity")),
+    BeefPricesChart: React.lazy(() => import("./BeefPricesChart")),
+    EntryLogsWidget: React.lazy(() => import("./EntryLogsWidget")),
+    FanController: React.lazy(() => import("./FanController")),
+};
+
+// ============================================
+// Registry Helper Functions
+// ============================================
+
+/** 
+ * Get a widget config by type ID 
+ * Note: Use this when you have a widget TYPE (e.g., "FanController")
+ */
+export const getWidgetConfig = (id: string): WidgetConfig | undefined => {
+    return WIDGET_CONFIGS.find(w => w.id === id);
+};
+
+/**
+ * Get a widget config by widget ID (handles multi-instance widgets)
+ * This extracts the widget type from instance IDs like "FanController:abc123"
+ * @param widgetId - Either a simple ID ("ClockWidget") or an instance ID ("FanController:abc123")
+ */
+export const getWidgetConfigById = (widgetId: string): WidgetConfig | undefined => {
+    // Extract the widget type from the ID (handles "Type:instanceId" format)
+    const widgetType = widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
+    return WIDGET_CONFIGS.find(w => w.id === widgetType);
+};
+
+/** Get a widget component by ID */
+export const getWidgetComponent = (id: string): React.LazyExoticComponent<React.ComponentType> | undefined => {
+    return WIDGET_COMPONENTS[id];
+};
+
+/**
+ * Get a widget component by widget ID (handles multi-instance widgets)
+ * This extracts the widget type from instance IDs like "FanController:abc123"
+ */
+export const getWidgetComponentById = (widgetId: string): React.LazyExoticComponent<React.ComponentType<any>> | undefined => {
+    const widgetType = widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
+    return WIDGET_COMPONENTS[widgetType];
+};
+
+/** Get all widgets in a category */
+export const getWidgetsByCategory = (category?: WidgetCategory): WidgetConfig[] => {
+    if (!category) return WIDGET_CONFIGS;
+    return WIDGET_CONFIGS.filter(w => w.category === category);
+};
+
+/** Get all unique categories that have widgets */
+export const getAvailableCategories = (): WidgetCategory[] => {
+    const categories = new Set(WIDGET_CONFIGS.map(w => w.category));
+    return CATEGORY_ORDER.filter(c => categories.has(c));
+};
+
+/** Get all unique subcategories within a category */
+export const getSubcategories = (category: WidgetCategory): string[] => {
+    const subcategories = new Set(
+        WIDGET_CONFIGS
+            .filter(w => w.category === category && w.subcategory)
+            .map(w => w.subcategory!)
+    );
+    return Array.from(subcategories).sort();
+};
+
+/** Get all unique tags across all widgets */
+export const getAllTags = (): string[] => {
+    const tags = new Set<string>();
+    WIDGET_CONFIGS.forEach(w => w.tags?.forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+};
+
+/** Search widgets by query string */
+export const searchWidgets = (query: string, widgets: WidgetConfig[] = WIDGET_CONFIGS): WidgetConfig[] => {
+    if (!query.trim()) return widgets;
+
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+    return widgets.filter(widget => {
+        const searchableText = [
+            widget.title,
+            widget.description,
+            widget.category,
+            widget.subcategory,
+            ...(widget.tags || []),
+            ...(widget.searchKeywords || []),
+        ].join(" ").toLowerCase();
+
+        return terms.every(term => searchableText.includes(term));
+    });
+};
+
+/** Group widgets by category */
+export const groupWidgetsByCategory = (widgets: WidgetConfig[] = WIDGET_CONFIGS): Record<WidgetCategory, WidgetConfig[]> => {
+    const grouped = {} as Record<WidgetCategory, WidgetConfig[]>;
+
+    CATEGORY_ORDER.forEach(category => {
+        const categoryWidgets = widgets.filter(w => w.category === category);
+        if (categoryWidgets.length > 0) {
+            grouped[category] = categoryWidgets;
+        }
+    });
+
+    return grouped;
+};
+
+/** Get widget count by category */
+export const getWidgetCountByCategory = (): Record<WidgetCategory, number> => {
+    const counts = {} as Record<WidgetCategory, number>;
+    CATEGORY_ORDER.forEach(category => {
+        counts[category] = WIDGET_CONFIGS.filter(w => w.category === category).length;
+    });
+    return counts;
+};

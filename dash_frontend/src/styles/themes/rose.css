@@ -1,0 +1,107 @@
+/* Rose Theme */
+.theme-rose {
+    --ui-bg-primary: #fff1f2;
+    --ui-bg-secondary: #ffe4e6;
+    --ui-bg-tertiary: #fecdd3;
+    --ui-bg-quaternary: #fda4af;
+
+    --ui-border-primary: #fda4af;
+    --ui-border-secondary: #fb7185;
+
+    --ui-text-primary: #4c0519;
+    --ui-text-secondary: #881337;
+    --ui-text-muted: #9f1239;
+
+    --ui-accent-primary: #e11d48;
+    --ui-accent-primary-hover: #be123c;
+    --ui-accent-primary-light: #f43f5e;
+    --ui-accent-primary-text: #9f1239;
+    --ui-accent-primary-bg: rgba(225, 29, 72, 0.15);
+    --ui-accent-primary-border: rgba(225, 29, 72, 0.4);
+
+    --ui-accent-secondary: #9f1239;
+    --ui-accent-secondary-hover: #881337;
+    --ui-accent-secondary-light: #be123c;
+    --ui-accent-secondary-text: #881337;
+    --ui-accent-secondary-bg: rgba(159, 18, 57, 0.15);
+    --ui-accent-secondary-border: rgba(159, 18, 57, 0.4);
+
+    --ui-success: #16a34a;
+    --ui-success-text: #15803d;
+    --ui-success-bg: rgba(22, 163, 74, 0.1);
+    --ui-success-border: rgba(22, 163, 74, 0.3);
+
+    --ui-warning: #ea580c;
+    --ui-warning-text: #c2410c;
+    --ui-warning-bg: rgba(234, 88, 12, 0.1);
+    --ui-warning-border: rgba(234, 88, 12, 0.3);
+
+    --ui-danger: #dc2626;
+    --ui-danger-text: #b91c1c;
+    --ui-danger-bg: rgba(220, 38, 38, 0.1);
+    --ui-danger-border: rgba(220, 38, 38, 0.3);
+
+    --ui-info: #0ea5e9;
+    --ui-info-text: #38bdf8;
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+
+    --background-dark: #fef2f2;
+    --background-light: #fff1f2;
+    --background-highlight: #ffe4e6;
+    --border-light: #fda4af;
+    --border-dark: #fecdd3;
+
+    --text-primary: #4c0519;
+    --text-secondary: #881337;
+    --text-muted: #9f1239;
+
+    --success: #16a34a;
+    --success-light: rgba(22, 163, 74, 0.1);
+    --warning: #ea580c;
+    --error: #dc2626;
+    --error-light: rgba(220, 38, 38, 0.2);
+
+    --chart-bar: #e11d48;
+    --chart-1: #9f1239;
+    --chart-2: #e11d48;
+    --chart-3: #ea580c;
+    --chart-4: #dc2626;
+    --chart-5: #db2777;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fb7185;
+    /* rose pink */
+    --line-chart-2: #06b6d4;
+    /* cyan */
+    --line-chart-3: #fbbf24;
+    /* amber */
+
+    --table-header-bg: #ffe4e6;
+    --table-row-bg: #fff1f2;
+    --table-row-alt-bg: #fef2f2;
+    --table-row-hover-bg: rgba(225, 29, 72, 0.08);
+    --table-border: #fda4af;
+    --table-text-primary: #4c0519;
+    --table-text-secondary: #881337;
+
+    --badge-success-bg: rgba(22, 163, 74, 0.15);
+    --badge-success-text: #15803d;
+    --badge-success-border: rgba(22, 163, 74, 0.4);
+
+    --badge-warning-bg: rgba(234, 88, 12, 0.15);
+    --badge-warning-text: #c2410c;
+    --badge-warning-border: rgba(234, 88, 12, 0.4);
+
+    --badge-error-bg: rgba(220, 38, 38, 0.15);
+    --badge-error-text: #b91c1c;
+    --badge-error-border: rgba(220, 38, 38, 0.4);
+
+    --badge-primary-bg: rgba(225, 29, 72, 0.2);
+    --badge-primary-text: #9f1239;
+    --badge-primary-border: rgba(225, 29, 72, 0.5);
+
+    --value-positive: #15803d;
+    --value-negative: #b91c1c;
+    --value-neutral: #881337;
+}

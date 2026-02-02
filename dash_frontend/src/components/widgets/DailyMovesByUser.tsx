@@ -1,24 +1,70 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
-/* 🔎 useResponsiveVisibleUsers Hook      */
+/* 🔎 Responsive Hooks                    */
 /* -------------------------------------- */
-function useResponsiveVisibleUsers(ref: React.RefObject<HTMLDivElement | null>): number {
-    const [visibleUsers, setVisibleUsers] = useState(6);
+function useResponsiveConfig(ref: React.RefObject<HTMLDivElement | null>) {
+    const [config, setConfig] = useState({
+        visibleUsers: 8,
+        showSummary: true,
+        showPercentages: true,
+        showLabels: true,
+        compactMode: false,
+    });
 
     useEffect(() => {
         if (!ref.current) return;
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                const { width } = entry.contentRect;
-                if (width >= 1200) setVisibleUsers(16);
-                else if (width >= 800) setVisibleUsers(12);
-                else if (width >= 600) setVisibleUsers(9);
-                else if (width >= 400) setVisibleUsers(6);
-                else setVisibleUsers(3);
+                const { width, height } = entry.contentRect;
+
+                // Determine configuration based on size
+                if (width >= 1200 && height >= 300) {
+                    setConfig({
+                        visibleUsers: 20,
+                        showSummary: true,
+                        showPercentages: true,
+                        showLabels: true,
+                        compactMode: false,
+                    });
+                } else if (width >= 800 && height >= 250) {
+                    setConfig({
+                        visibleUsers: 15,
+                        showSummary: true,
+                        showPercentages: true,
+                        showLabels: true,
+                        compactMode: false,
+                    });
+                } else if (width >= 500 && height >= 200) {
+                    setConfig({
+                        visibleUsers: 10,
+                        showSummary: true,
+                        showPercentages: false,
+                        showLabels: true,
+                        compactMode: false,
+                    });
+                } else if (width >= 350 && height >= 180) {
+                    setConfig({
+                        visibleUsers: 6,
+                        showSummary: false,
+                        showPercentages: false,
+                        showLabels: true,
+                        compactMode: true,
+                    });
+                } else {
+                    // Very small widget
+                    setConfig({
+                        visibleUsers: 4,
+                        showSummary: false,
+                        showPercentages: false,
+                        showLabels: false,
+                        compactMode: true,
+                    });
+                }
             }
         });
 
@@ -28,11 +74,11 @@ function useResponsiveVisibleUsers(ref: React.RefObject<HTMLDivElement | null>):
         };
     }, [ref]);
 
-    return visibleUsers;
+    return config;
 }
 
 /* -------------------------------------- */
-/* 📊 Custom Bar Chart Component          */
+/* 📊 Data Types                          */
 /* -------------------------------------- */
 interface MovesByUserData {
     user_id: number;
@@ -42,13 +88,30 @@ interface MovesByUserData {
 interface ProcessedUserData {
     user: number;
     moves: number;
+    percentage: number;
 }
 
-interface CustomBarChartProps {
+interface SummaryStats {
+    totalMoves: number;
+    activeUsers: number;
+    averageMoves: number;
+}
+
+/* -------------------------------------- */
+/* 📊 Responsive Bar Chart Component      */
+/* -------------------------------------- */
+interface ResponsiveBarChartProps {
     data: ProcessedUserData[];
+    summary: SummaryStats;
+    config: {
+        showSummary: boolean;
+        showPercentages: boolean;
+        showLabels: boolean;
+        compactMode: boolean;
+    };
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const ResponsiveBarChart: React.FC<ResponsiveBarChartProps> = ({ data, summary, config }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -67,17 +130,74 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
 
-    const padding = { top: 32, right: 5, bottom: 32, left: 5 };
+    // Calculate padding based on what's being shown
+    const summaryHeight = config.showSummary ? 55 : 0;
+    const topPadding = config.showSummary ? summaryHeight + 35 : (config.showPercentages ? 35 : 25);
+    const bottomPadding = config.showLabels ? (config.compactMode ? 25 : 40) : 15;
+
+    const padding = {
+        top: topPadding,
+        right: 8,
+        bottom: bottomPadding,
+        left: 8
+    };
     const chartWidth = dimensions.width - padding.left - padding.right;
     const chartHeight = dimensions.height - padding.top - padding.bottom;
 
     const maxValue = Math.max(...data.map(d => d.moves));
     const barWidth = chartWidth / data.length;
-    const barGap = Math.max(barWidth * 0.2, 8);
+    const barGap = Math.max(barWidth * 0.15, config.compactMode ? 4 : 6);
     const actualBarWidth = barWidth - barGap;
 
     return (
         <div ref={chartRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+            {/* Summary Statistics - Only show if config allows */}
+            {config.showSummary && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: "8px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        display: "flex",
+                        gap: "16px",
+                        backgroundColor: "var(--ui-bg-secondary)",
+                        padding: "10px 20px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--ui-border-primary)",
+                        zIndex: 10,
+                        fontSize: "12px",
+                    }}
+                >
+                    <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "3px" }}>
+                            Total
+                        </div>
+                        <div style={{ color: "var(--text-primary)", fontSize: "16px", fontWeight: 700 }}>
+                            {nFormatter(summary.totalMoves, 2)}
+                        </div>
+                    </div>
+                    <div style={{ width: "1px", backgroundColor: "var(--ui-border-primary)" }} />
+                    <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "3px" }}>
+                            Users
+                        </div>
+                        <div style={{ color: "var(--text-primary)", fontSize: "16px", fontWeight: 700 }}>
+                            {summary.activeUsers}
+                        </div>
+                    </div>
+                    <div style={{ width: "1px", backgroundColor: "var(--ui-border-primary)" }} />
+                    <div style={{ textAlign: "center" }}>
+                        <div style={{ color: "var(--text-muted)", fontSize: "10px", marginBottom: "3px" }}>
+                            Avg
+                        </div>
+                        <div style={{ color: "var(--text-primary)", fontSize: "16px", fontWeight: 700 }}>
+                            {nFormatter(summary.averageMoves, 1)}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <svg width={dimensions.width} height={dimensions.height} style={{ overflow: "visible" }}>
                 {/* Grid lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
@@ -89,8 +209,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -109,43 +230,63 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={x}
                                 y={y}
                                 width={actualBarWidth}
-                                height={barHeight}
+                                height={Math.max(barHeight, 2)}
                                 fill={isHovered ? "#42A5F5" : "var(--chart-6)"}
-                                rx="6"
-                                ry="6"
+                                rx={config.compactMode ? "3" : "5"}
+                                ry={config.compactMode ? "3" : "5"}
                                 style={{
                                     cursor: "pointer",
                                     transition: "fill 0.2s ease",
+                                    opacity: 0.95,
                                 }}
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                             />
 
-                            {/* Value label */}
-                            <text
-                                x={x + actualBarWidth / 2}
-                                y={y - 10}
-                                textAnchor="middle"
-                                fill="white"
-                                fontSize="15"
-                                fontWeight="700"
-                                style={{ pointerEvents: "none" }}
-                            >
-                                {nFormatter(item.moves, 2)}
-                            </text>
+                            {/* Value label - only show if not compact or bar is tall enough */}
+                            {(!config.compactMode || barHeight > 20) && (
+                                <text
+                                    x={x + actualBarWidth / 2}
+                                    y={y - (config.showPercentages ? 6 : 8)}
+                                    textAnchor="middle"
+                                    fill="var(--text-primary)"
+                                    fontSize={config.compactMode ? "11" : "14"}
+                                    fontWeight="700"
+                                    style={{ pointerEvents: "none" }}
+                                >
+                                    {nFormatter(item.moves, 1)}
+                                </text>
+                            )}
 
-                            {/* X-axis label (User ID) */}
-                            <text
-                                x={x + actualBarWidth / 2}
-                                y={padding.top + chartHeight + 25}
-                                textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
-                                fontSize="14"
-                                fontWeight="500"
-                                style={{ pointerEvents: "none" }}
-                            >
-                                {item.user}
-                            </text>
+                            {/* Percentage label - only show if config allows */}
+                            {config.showPercentages && (
+                                <text
+                                    x={x + actualBarWidth / 2}
+                                    y={y - 20}
+                                    textAnchor="middle"
+                                    fill="var(--text-secondary)"
+                                    fontSize="10"
+                                    fontWeight="500"
+                                    style={{ pointerEvents: "none" }}
+                                >
+                                    {item.percentage.toFixed(0)}%
+                                </text>
+                            )}
+
+                            {/* User ID label - only show if config allows */}
+                            {config.showLabels && (
+                                <text
+                                    x={x + actualBarWidth / 2}
+                                    y={padding.top + chartHeight + (config.compactMode ? 14 : 20)}
+                                    textAnchor="middle"
+                                    fill="var(--text-secondary)"
+                                    fontSize={config.compactMode ? "11" : "13"}
+                                    fontWeight="600"
+                                    style={{ pointerEvents: "none" }}
+                                >
+                                    #{item.user}
+                                </text>
+                            )}
                         </g>
                     );
                 })}
@@ -156,24 +297,45 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                 <div
                     style={{
                         position: "absolute",
-                        top: padding.top + chartHeight - (data[hoveredIndex].moves / maxValue) * chartHeight - 60,
+                        top: Math.max(
+                            10,
+                            padding.top + chartHeight - (data[hoveredIndex].moves / maxValue) * chartHeight - 70
+                        ),
                         left: padding.left + hoveredIndex * barWidth + barWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
-                        padding: "10px 14px",
+                        backgroundColor: "var(--ui-bg-primary)",
+                        padding: config.compactMode ? "8px 12px" : "12px 16px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
+                        boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "4px" }}>
-                        User {data[hoveredIndex].user}
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "12px", marginBottom: "6px" }}>
+                        User #{data[hoveredIndex].user}
                     </div>
-                    <div style={{ color: "var(--chart-6)", fontSize: "16px", fontWeight: 700 }}>
-                        {nFormatter(data[hoveredIndex].moves, 2)} moves
+                    <div style={{ marginBottom: config.showPercentages ? "4px" : "0" }}>
+                        <span
+                            style={{
+                                color: "var(--chart-6)",
+                                fontSize: "18px",
+                                fontWeight: 700,
+                            }}
+                        >
+                            {nFormatter(data[hoveredIndex].moves, 2)}
+                        </span>
+                        <span style={{ color: "var(--text-muted)", fontSize: "12px", marginLeft: "4px" }}>
+                            moves
+                        </span>
                     </div>
+                    {config.showPercentages && (
+                        <div style={{ color: "var(--text-secondary)", fontSize: "11px" }}>
+                            {data[hoveredIndex].percentage.toFixed(1)}% of total
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -185,7 +347,20 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 /* -------------------------------------- */
 export default function DailyMovesByUser() {
     const containerRef = useRef<HTMLDivElement>(null);
-    const visibleUsers = useResponsiveVisibleUsers(containerRef);
+    const responsiveConfig = useResponsiveConfig(containerRef);
+    const { settings } = useWidgetSettings('DailyMovesByUser');
+
+    // Get functional settings
+    const sortOrder = settings.sortOrder as 'count' | 'name' ?? 'count';
+    const minMovesThreshold = settings.minMovesThreshold as number ?? 1;
+
+    // Apply user settings as overrides to responsive config
+    const config = useMemo(() => ({
+        ...responsiveConfig,
+        showSummary: settings.showSummary ?? responsiveConfig.showSummary,
+        showPercentages: settings.showPercentages ?? responsiveConfig.showPercentages,
+        showLabels: settings.showLabels ?? responsiveConfig.showLabels,
+    }), [responsiveConfig, settings.showSummary, settings.showPercentages, settings.showLabels]);
 
     // Compute today's date as an ISO string (YYYY-MM-DD)
     const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);
@@ -194,24 +369,47 @@ export default function DailyMovesByUser() {
     const widgetPayload = useMemo(
         () => ({
             module: "DailyMovesByUser",
-            table: "inadjinf",
-            columns: ["user_id", "COUNT(*) as moves"],
-            group_by: ["inadjinf.user_id"],
-            filters: `trans_date = '${currentDate}' AND user_id != 'AUTO'`,
-            sort: "moves DESC",
+            queryId: "DailyMovesByUser",
+            params: {
+                currentDate,
+            },
         }),
         [currentDate]
     );
 
     const renderMovesByUser = useCallback(
         (data: MovesByUserData[]) => {
-            const chartData = data.slice(0, visibleUsers).map((item) => ({
+            // Filter by minimum moves threshold
+            let filteredData = data.filter(item => item.moves >= minMovesThreshold);
+
+            // Sort based on user preference
+            if (sortOrder === 'name') {
+                filteredData.sort((a, b) => a.user_id - b.user_id); // Sort by user ID ascending
+            } else {
+                filteredData.sort((a, b) => b.moves - a.moves); // Sort by moves descending (default)
+            }
+
+            // Calculate summary statistics from filtered data
+            const totalMoves = filteredData.reduce((sum, item) => sum + item.moves, 0);
+            const activeUsers = filteredData.length;
+            const averageMoves = activeUsers > 0 ? totalMoves / activeUsers : 0;
+
+            const summary: SummaryStats = {
+                totalMoves,
+                activeUsers,
+                averageMoves,
+            };
+
+            // Process data for visualization
+            const processedData: ProcessedUserData[] = filteredData.slice(0, config.visibleUsers).map((item) => ({
                 user: item.user_id,
                 moves: item.moves,
+                percentage: totalMoves > 0 ? (item.moves / totalMoves) * 100 : 0,
             }));
-            return <CustomBarChart data={chartData} />;
+
+            return <ResponsiveBarChart data={processedData} summary={summary} config={config} />;
         },
-        [visibleUsers]
+        [config, sortOrder, minMovesThreshold]
     );
 
     return (
@@ -223,12 +421,27 @@ export default function DailyMovesByUser() {
                 refreshInterval={5000}
             >
                 {(data: MovesByUserData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading user moves...</div>;
-                    }
-
                     if (!data || data.length === 0) {
-                        return <div className="widget-empty">No user moves data available</div>;
+                        return (
+                            <div
+                                className="widget-empty"
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    height: "100%",
+                                    gap: "8px",
+                                }}
+                            >
+                                <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-secondary)" }}>
+                                    No Activity Today
+                                </div>
+                                <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                                    No user moves recorded yet
+                                </div>
+                            </div>
+                        );
                     }
 
                     return renderMovesByUser(data);

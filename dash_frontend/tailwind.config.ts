@@ -8,6 +8,13 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '480px',
+        'widget-sm': '640px',
+        'widget-md': '800px',
+        'widget-lg': '1024px',
+        'widget-xl': '1280px',
+      },
       fontFamily: {
         sans: [
           'Inter',
@@ -20,6 +27,7 @@ export default {
         sm: 'calc(var(--radius) - 4px)'
       },
       colors: {
+        // Shadcn/UI standard colors
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
@@ -59,9 +67,56 @@ export default {
           '3': 'hsl(var(--chart-3))',
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))'
+        },
+        // Custom theme system - UI/Menu colors
+        ui: {
+          bg: {
+            primary: 'var(--ui-bg-primary)',
+            secondary: 'var(--ui-bg-secondary)',
+            tertiary: 'var(--ui-bg-tertiary)',
+            quaternary: 'var(--ui-bg-quaternary)',
+          },
+          border: {
+            primary: 'var(--ui-border-primary)',
+            secondary: 'var(--ui-border-secondary)',
+          },
+          text: {
+            primary: 'var(--ui-text-primary)',
+            secondary: 'var(--ui-text-secondary)',
+            muted: 'var(--ui-text-muted)',
+          },
+          accent: {
+            primary: 'var(--ui-accent-primary)',
+            'primary-hover': 'var(--ui-accent-primary-hover)',
+            'primary-light': 'var(--ui-accent-primary-light)',
+            'primary-text': 'var(--ui-accent-primary-text)',
+            'primary-bg': 'var(--ui-accent-primary-bg)',
+            'primary-border': 'var(--ui-accent-primary-border)',
+            secondary: 'var(--ui-accent-secondary)',
+            'secondary-hover': 'var(--ui-accent-secondary-hover)',
+            'secondary-light': 'var(--ui-accent-secondary-light)',
+            'secondary-text': 'var(--ui-accent-secondary-text)',
+            'secondary-bg': 'var(--ui-accent-secondary-bg)',
+            'secondary-border': 'var(--ui-accent-secondary-border)',
+          },
+          success: 'var(--ui-success)',
+          'success-text': 'var(--ui-success-text)',
+          'success-bg': 'var(--ui-success-bg)',
+          'success-border': 'var(--ui-success-border)',
+          warning: 'var(--ui-warning)',
+          'warning-text': 'var(--ui-warning-text)',
+          'warning-bg': 'var(--ui-warning-bg)',
+          'warning-border': 'var(--ui-warning-border)',
+          danger: 'var(--ui-danger)',
+          'danger-text': 'var(--ui-danger-text)',
+          'danger-bg': 'var(--ui-danger-bg)',
+          'danger-border': 'var(--ui-danger-border)',
         }
       }
     }
   },
-  plugins: [require("tailwindcss-animate")], // Adds animation utilities from shadcn
+  plugins: [
+    require("tailwindcss-animate"),
+    require("@tailwindcss/container-queries")
+  ], // Adds animation utilities from shadcn
 } satisfies Config;

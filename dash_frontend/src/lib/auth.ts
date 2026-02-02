@@ -1,0 +1,472 @@
+import { API_BASE_URL } from '../config';
+
+export interface User {
+    id: number;
+    email: string;
+    name: string;
+    role: string;
+    created_at?: string;
+    last_login?: string;
+}
+
+export interface AuthResponse {
+    success: boolean;
+    access_token?: string;
+    refresh_token?: string;
+    user?: User;
+    error?: string;
+}
+
+// ============================================================================
+// OLYMPIA SUITE UNIFIED AUTH
+// These keys are shared across all Olympia Suite apps (dash, chat, etc.)
+// This enables seamless SSO when users navigate between apps on *.olympiasuite.com
+// ============================================================================
+const STORAGE_KEYS = {
+    ACCESS_TOKEN: 'olympia_access_token',
+    REFRESH_TOKEN: 'olympia_refresh_token',
+    TOKEN_EXPIRY: 'olympia_token_expiry',
+    USER: 'olympia_user',
+    IMPERSONATED_USER: 'olympia_impersonated_user',
+    ADMIN_USER: 'olympia_admin_user',
+} as const;
+
+// Token expiry buffer (refresh 5 min before actual expiry)
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+class AuthService {
+    private accessToken: string | null = null;
+    private refreshToken: string | null = null;
+    private tokenExpiry: number | null = null;
+    private user: User | null = null;
+    private impersonatedUser: User | null = null;
+    private adminUser: User | null = null;
+
+    constructor() {
+        // Load tokens from localStorage on initialization
+        if (typeof window !== 'undefined') {
+            this.accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+            this.refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+            const expiryStr = localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY);
+            this.tokenExpiry = expiryStr ? parseInt(expiryStr, 10) : null;
+
+            const userStr = localStorage.getItem(STORAGE_KEYS.USER);
+            if (userStr) {
+                try {
+                    this.user = JSON.parse(userStr);
+                } catch (e) {
+                    console.error('Failed to parse user from localStorage', e);
+                }
+            }
+
+            // Load impersonation state
+            const impersonatedStr = localStorage.getItem(STORAGE_KEYS.IMPERSONATED_USER);
+            const adminStr = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
+            if (impersonatedStr && adminStr) {
+                try {
+                    this.impersonatedUser = JSON.parse(impersonatedStr);
+                    this.adminUser = JSON.parse(adminStr);
+                } catch (e) {
+                    console.error('Failed to parse impersonation data', e);
+                }
+            }
+
+            // Listen for storage events from other Olympia Suite apps
+            window.addEventListener('storage', this.handleStorageChange.bind(this));
+        }
+    }
+
+    /**
+     * Handle localStorage changes from other Olympia Suite apps.
+     * This enables real-time SSO sync across dash.olympiasuite.com and chat.olympiasuite.com
+     */
+    private handleStorageChange(event: StorageEvent) {
+        if (!event.key?.startsWith('olympia_')) return;
+
+        switch (event.key) {
+            case STORAGE_KEYS.ACCESS_TOKEN:
+                this.accessToken = event.newValue;
+                break;
+            case STORAGE_KEYS.REFRESH_TOKEN:
+                this.refreshToken = event.newValue;
+                break;
+            case STORAGE_KEYS.TOKEN_EXPIRY:
+                this.tokenExpiry = event.newValue ? parseInt(event.newValue, 10) : null;
+                break;
+            case STORAGE_KEYS.USER:
+                if (event.newValue) {
+                    try {
+                        this.user = JSON.parse(event.newValue);
+                    } catch (e) {
+                        console.error('Failed to parse user from storage event', e);
+                    }
+                } else {
+                    // User logged out from another app - redirect to login
+                    this.user = null;
+                    this.accessToken = null;
+                    this.refreshToken = null;
+                    window.location.href = '/login';
+                }
+                break;
+        }
+    }
+
+    setTokens(accessToken: string, refreshToken: string, user: User) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.user = user;
+        // Calculate expiry (15 min from now, matching backend ACCESS_TOKEN_EXPIRE_MINUTES)
+        this.tokenExpiry = Date.now() + 15 * 60 * 1000;
+
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+            localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(this.tokenExpiry));
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+        }
+    }
+
+    clearTokens() {
+        this.accessToken = null;
+        this.refreshToken = null;
+        this.tokenExpiry = null;
+        this.user = null;
+        this.impersonatedUser = null;
+        this.adminUser = null;
+
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+            localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
+            localStorage.removeItem(STORAGE_KEYS.USER);
+            localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_USER);
+            localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+        }
+    }
+
+    /**
+     * Check if the access token is expired or about to expire
+     */
+    isTokenExpired(): boolean {
+        if (!this.tokenExpiry) return true;
+        return Date.now() > (this.tokenExpiry - TOKEN_EXPIRY_BUFFER_MS);
+    }
+
+    getAccessToken(): string | null {
+        return this.accessToken;
+    }
+
+    getRefreshToken(): string | null {
+        return this.refreshToken;
+    }
+
+    hasRefreshToken(): boolean {
+        return this.refreshToken !== null;
+    }
+
+    getUser(): User | null {
+        // Return impersonated user if active, otherwise real user
+        return this.impersonatedUser || this.user;
+    }
+
+    getRealUser(): User | null {
+        // Always return the actual logged-in user
+        return this.user;
+    }
+
+    getAdminUser(): User | null {
+        return this.adminUser;
+    }
+
+    getImpersonatedUser(): User | null {
+        return this.impersonatedUser;
+    }
+
+    isImpersonating(): boolean {
+        return this.impersonatedUser !== null && this.adminUser !== null;
+    }
+
+    isAuthenticated(): boolean {
+        return this.accessToken !== null && this.user !== null;
+    }
+
+    isAdmin(): boolean {
+        // Check real user role, not impersonated
+        return this.user?.role === 'admin';
+    }
+
+    async refreshAccessToken(): Promise<boolean> {
+        if (!this.refreshToken) return false;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ refresh_token: this.refreshToken }),
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.access_token) {
+                this.accessToken = data.access_token;
+                this.tokenExpiry = Date.now() + 15 * 60 * 1000; // 15 min
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
+                    localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(this.tokenExpiry));
+                    if (data.refresh_token) {
+                        this.refreshToken = data.refresh_token;
+                        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+                    }
+                }
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Failed to refresh token', error);
+            return false;
+        }
+    }
+
+    // Track if we've already redirected to avoid multiple redirects
+    private redirectingToLogin: boolean = false;
+
+    async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+        const headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${this.accessToken}`,
+        };
+
+        let response: Response;
+        try {
+            response = await fetch(url, { ...options, headers });
+        } catch (error) {
+            // Don't log AbortError - these are expected when components unmount
+            if (error instanceof DOMException && error.name === 'AbortError') {
+                throw error;
+            }
+            // Network error - API is likely down, don't redirect
+            console.error('[Auth] Network error fetching:', url, error);
+            throw error;
+        }
+
+        // If token expired, try to refresh
+        if (response.status === 401) {
+            const refreshed = await this.refreshAccessToken();
+            if (refreshed) {
+                headers['Authorization'] = `Bearer ${this.accessToken}`;
+                response = await fetch(url, { ...options, headers });
+            } else {
+                // Refresh failed, clear tokens and redirect to login (only once)
+                this.clearTokens();
+                if (typeof window !== 'undefined' && !this.redirectingToLogin) {
+                    this.redirectingToLogin = true;
+                    window.location.href = '/login';
+                }
+            }
+        }
+
+        return response;
+    }
+
+    async getLoginUrl(state?: string): Promise<string> {
+        const params = state ? `?state=${encodeURIComponent(state)}` : '';
+        const response = await fetch(`${API_BASE_URL}/api/auth/login${params}`);
+        const data = await response.json();
+
+        if (data.success && data.auth_url) {
+            return data.auth_url;
+        }
+
+        throw new Error(data.error || 'Failed to get login URL');
+    }
+
+    async handleCallback(code: string): Promise<AuthResponse> {
+        const response = await fetch(`${API_BASE_URL}/api/auth/callback?code=${code}`);
+        const data = await response.json();
+
+        if (data.success && data.access_token && data.refresh_token && data.user) {
+            this.setTokens(data.access_token, data.refresh_token, data.user);
+        }
+
+        return data;
+    }
+
+    async logout(): Promise<void> {
+        if (this.refreshToken) {
+            try {
+                await this.fetchWithAuth(`${API_BASE_URL}/api/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refresh_token: this.refreshToken }),
+                });
+            } catch (error) {
+                console.error('Logout request failed', error);
+            }
+        }
+
+        this.clearTokens();
+    }
+
+    async getCurrentUser(): Promise<User | null> {
+        if (!this.isAuthenticated()) return null;
+
+        try {
+            const response = await this.fetchWithAuth(`${API_BASE_URL}/api/auth/me`);
+            const data = await response.json();
+
+            if (data.success && data.user) {
+                this.user = data.user;
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(data.user));
+                }
+                return data.user;
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Failed to get current user', error);
+            return null;
+        }
+    }
+
+    async impersonateUser(userId: number): Promise<boolean> {
+        if (!this.isAdmin()) {
+            console.error('❌ Only admins can impersonate');
+            return false;
+        }
+
+        console.log(`🎭 Starting impersonation of user ${userId}...`);
+        console.log(`   Current user: ${this.user?.email} (ID: ${this.user?.id})`);
+
+        try {
+            const response = await this.fetchWithAuth(
+                `${API_BASE_URL}/api/auth/admin/impersonate/${userId}`,
+                { method: 'POST' }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log(`✅ Impersonation approved by server`);
+                console.log(`   Admin: ${data.admin_user.email} (ID: ${data.admin_user.id})`);
+                console.log(`   Impersonating: ${data.impersonated_user.email} (ID: ${data.impersonated_user.id})`);
+
+                // Store admin user and impersonated user
+                this.adminUser = data.admin_user;
+                this.impersonatedUser = data.impersonated_user;
+
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(this.adminUser));
+                    localStorage.setItem(STORAGE_KEYS.IMPERSONATED_USER, JSON.stringify(this.impersonatedUser));
+                }
+
+                // Switch preferences service to impersonated user
+                console.log(`🔄 Switching preferences to user ${this.impersonatedUser.id}...`);
+                const { preferencesService } = await import('./preferences');
+                await preferencesService.switchUser();
+                console.log(`✅ Preferences switched to ${this.impersonatedUser.email}`);
+
+                return true;
+            }
+
+            console.error('❌ Impersonation failed:', data.error);
+            return false;
+        } catch (error) {
+            console.error('❌ Impersonation request failed', error);
+            return false;
+        }
+    }
+
+    async endImpersonation(): Promise<boolean> {
+        if (!this.isImpersonating()) {
+            console.warn('⚠️ Not currently impersonating');
+            return false;
+        }
+
+        console.log(`🎭 Ending impersonation...`);
+        console.log(`   Was impersonating: ${this.impersonatedUser?.email} (ID: ${this.impersonatedUser?.id})`);
+        console.log(`   Returning to: ${this.adminUser?.email} (ID: ${this.adminUser?.id})`);
+
+        try {
+            const impersonatedEmail = this.impersonatedUser?.email;
+
+            const response = await this.fetchWithAuth(
+                `${API_BASE_URL}/api/auth/admin/end-impersonation`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ impersonated_email: impersonatedEmail })
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✅ Server confirmed impersonation end');
+
+                // Clear impersonation state
+                this.impersonatedUser = null;
+                this.adminUser = null;
+
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+                    localStorage.removeItem(STORAGE_KEYS.IMPERSONATED_USER);
+                }
+
+                // Switch back to admin's preferences
+                console.log(`🔄 Switching preferences back to admin (user ${this.user?.id})...`);
+                const { preferencesService } = await import('./preferences');
+                await preferencesService.switchUser();
+                console.log(`✅ Impersonation fully ended`);
+
+                return true;
+            }
+
+            console.error('❌ Server failed to end impersonation:', data.error);
+            return false;
+        } catch (error) {
+            console.error('❌ End impersonation request failed', error);
+            return false;
+        }
+    }
+
+    /**
+     * OLYMPIA SUITE SSO
+     * Navigate to another suite app. Auth tokens are already shared via localStorage
+     * using the olympia_* prefixed keys, so the user will be automatically logged in.
+     */
+    navigateToSuiteApp(app: 'dash' | 'chat'): void {
+        const urls: Record<string, string> = {
+            dash: 'https://dash.olympiasuite.com',
+            chat: 'https://chat.olympiasuite.com',
+        };
+        window.location.href = urls[app];
+    }
+
+    /**
+     * Get suite app URLs for navigation components
+     */
+    getSuiteApps(): Array<{ id: string; name: string; url: string; description: string }> {
+        return [
+            {
+                id: 'dash',
+                name: 'Dashboard',
+                url: 'https://dash.olympiasuite.com',
+                description: 'Data visualization & widgets'
+            },
+            {
+                id: 'chat',
+                name: 'Chat',
+                url: 'https://chat.olympiasuite.com',
+                description: 'AI-powered data queries'
+            },
+        ];
+    }
+}
+
+export const authService = new AuthService();

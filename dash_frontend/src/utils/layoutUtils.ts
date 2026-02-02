@@ -1,17 +1,219 @@
 import { Widget, DashboardPreset } from "@/types";
-import { LOCAL_STORAGE_KEY, COLUMN_COUNT } from "@/constants/dashboard";
+import { DEFAULT_COLUMN_COUNT } from "@/constants/dashboard";
 import { masterWidgetList } from "@/constants/widgets";
+import { preferencesService } from "@/lib/preferences";
+import {
+    type LayoutUpdateSource,
+    type SaveLayoutOptions,
+    shouldReloadGrid as shouldReloadGridHelper,
+    detectStructuralChanges,
+    describeSource
+} from "@/types/layout";
+import {
+    getWidgetType,
+    isMultiInstanceWidget,
+    validateWidgetInstances,
+    deduplicateSingletonWidgets,
+    normalizeWidgetIds,
+} from "@/utils/widgetInstanceUtils";
+import { getWidgetConfig } from "@/components/widgets/registry";
+
+// Re-export for convenience
+export type { LayoutUpdateSource, SaveLayoutOptions, LayoutUpdate } from "@/types/layout";
+export { shouldReloadGridHelper as shouldReloadGrid, detectStructuralChanges, describeSource };
 
 /**
- * Reads the saved layout from localStorage.
+ * Generate a smart default name for a preset based on its widgets
+ */
+export const generatePresetName = (layout: Widget[]): string => {
+    const enabledWidgets = layout.filter(w => w.enabled);
+
+    if (enabledWidgets.length === 0) return "Empty Preset";
+    if (enabledWidgets.length === 1) {
+        return enabledWidgets[0].displayName || enabledWidgets[0].id;
+    }
+
+    // Try to identify common patterns
+    const names = enabledWidgets.map(w => w.displayName || w.id);
+    const categories = enabledWidgets
+        .map(w => w.category)
+        .filter((c, i, arr) => c && arr.indexOf(c) === i); // unique categories
+
+    // If all widgets are from the same category, use that
+    if (categories.length === 1 && categories[0]) {
+        return `${categories[0]} Dashboard`;
+    }
+
+    // Check for common themes
+    const hasSales = names.some(n => n.toLowerCase().includes('sales'));
+    const hasInventory = names.some(n => n.toLowerCase().includes('inventory') || n.toLowerCase().includes('stock'));
+    const hasOrders = names.some(n => n.toLowerCase().includes('order'));
+
+    if (hasSales && hasInventory) return "Sales & Inventory";
+    if (hasSales && hasOrders) return "Sales & Orders";
+    if (hasSales) return "Sales Overview";
+    if (hasInventory) return "Inventory Overview";
+    if (hasOrders) return "Orders Overview";
+
+    // Default to count
+    return `Dashboard (${enabledWidgets.length} widgets)`;
+};
+
+/**
+ * Normalize a layout to ensure consistency.
+ * 
+ * For SINGLETON widgets: Ensures all defined singleton widgets exist (disabled if not present).
+ * For MULTI-INSTANCE widgets: Preserves all instances as-is (they're stored by full ID).
+ * 
+ * This function:
+ * 1. Validates widget instances (removes invalid/orphaned)
+ * 2. Ensures singleton widgets don't have duplicate instances
+ * 3. Normalizes widget IDs
+ * 4. Ensures all singleton widget types are present (even if disabled)
+ */
+export const normalizeLayout = (layout: Widget[]): Widget[] => {
+    // Step 1: Validate and clean up instances
+    let normalized = validateWidgetInstances(layout);
+    normalized = deduplicateSingletonWidgets(normalized);
+    normalized = normalizeWidgetIds(normalized);
+
+    // Step 2: Create a map of existing widgets by ID
+    const layoutMap = new Map(normalized.map(widget => [widget.id, widget]));
+
+    // Step 3: Collect all multi-instance widgets (these are preserved as-is)
+    const multiInstanceWidgets = normalized.filter(w => isMultiInstanceWidget(w.id));
+
+    // Step 4: Process singleton widgets from master list
+    const singletonWidgets = masterWidgetList
+        .filter(widgetDef => {
+            const config = getWidgetConfig(widgetDef.id);
+            return !config?.allowMultiple;
+        })
+        .map((widgetDef) => {
+            const existing = layoutMap.get(widgetDef.id);
+
+            if (existing) {
+                return {
+                    ...widgetDef,
+                    ...existing,
+                    enabled: existing.enabled ?? true,
+                };
+            }
+
+            return {
+                ...widgetDef,
+                enabled: false,
+            };
+        });
+
+    // Step 5: Combine singleton and multi-instance widgets
+    // Singletons come first (for consistent ordering), then multi-instance
+    return [...singletonWidgets, ...multiInstanceWidgets];
+};
+
+/**
+ * Merge an active layout (containing only enabled widgets) into the current
+ * canonical layout, preserving disabled widgets and metadata.
+ * 
+ * Handles both singleton and multi-instance widgets properly.
+ */
+export const mergeLayoutWithActive = (currentLayout: Widget[], activeLayout: Widget[]): Widget[] => {
+    const normalizedCurrent = normalizeLayout(currentLayout);
+    const activeMap = new Map(activeLayout.map(widget => [widget.id, widget]));
+
+    // Start with normalized current layout
+    const result = normalizedCurrent.map((widget) => {
+        const active = activeMap.get(widget.id);
+
+        if (!active) {
+            return {
+                ...widget,
+                enabled: false,
+            };
+        }
+
+        return {
+            ...widget,
+            ...active,
+            enabled: true,
+        };
+    });
+
+    // Add any new multi-instance widgets from activeLayout that weren't in current
+    const resultIdSet = new Set(result.map(w => w.id));
+    for (const activeWidget of activeLayout) {
+        if (!resultIdSet.has(activeWidget.id) && isMultiInstanceWidget(activeWidget.id)) {
+            result.push({ ...activeWidget, enabled: true });
+        }
+    }
+
+    return result;
+};
+
+/**
+ * Deep comparison between two layouts.
+ * Handles both singleton and multi-instance widgets.
+ */
+export const areLayoutsEqual = (layoutA: Widget[], layoutB: Widget[]): boolean => {
+    const normalizedA = normalizeLayout(layoutA);
+    const normalizedB = normalizeLayout(layoutB);
+
+    if (normalizedA.length !== normalizedB.length) {
+        return false;
+    }
+
+    const layoutBMap = new Map(normalizedB.map(widget => [widget.id, widget]));
+
+    return normalizedA.every((widgetA) => {
+        const widgetB = layoutBMap.get(widgetA.id);
+        if (!widgetB) {
+            return false;
+        }
+
+        return (
+            widgetA.enabled === widgetB.enabled &&
+            widgetA.x === widgetB.x &&
+            widgetA.y === widgetB.y &&
+            widgetA.w === widgetB.w &&
+            widgetA.h === widgetB.h
+        );
+    });
+};
+
+/**
+ * Migrate old preset format to new format with names
+ */
+const migratePreset = (preset: any, index: number): DashboardPreset | null => {
+    if (!preset) return null;
+
+    // Already in new format
+    if (preset.name !== undefined || preset.createdAt !== undefined) {
+        return preset as DashboardPreset;
+    }
+
+    // Old format - add name and timestamps
+    const layout = preset.layout || preset;
+    const name = generatePresetName(layout);
+
+    return {
+        type: preset.type || "grid",
+        layout: layout,
+        name: name,
+        description: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+};
+
+/**
+ * Reads the saved layout from preferences service.
  * Falls back to the master widget list with all widgets disabled.
  */
 export const readLayoutFromStorage = (): Widget[] => {
-    const savedLayout = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const savedLayout = preferencesService.get<Widget[]>('dashboard.layout');
     if (savedLayout) {
         try {
-            const parsedLayout: Widget[] = JSON.parse(savedLayout);
-            return parsedLayout;
+            return normalizeLayout(savedLayout);
         } catch (error) {
             console.error("Error parsing saved layout:", error);
         }
@@ -20,16 +222,49 @@ export const readLayoutFromStorage = (): Widget[] => {
 };
 
 /**
- * Saves the full layout to localStorage.
+ * Saves the full layout to preferences service.
+ * 
+ * @param layout - The layout to save
+ * @param options - Optional configuration for the save operation:
+ *   - source: The source of this layout change (default: 'local-interaction')
+ *   - sync: Whether to sync to server (default: true)
+ *   - notifyLocal: Whether to notify local subscribers. 
+ *     Defaults to false for 'local-interaction' to prevent feedback loops,
+ *     true for other sources.
  */
-export const saveLayoutToStorage = (layout: Widget[]) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(layout));
+export const saveLayoutToStorage = (
+    layout: Widget[],
+    options: Partial<SaveLayoutOptions> = {}
+) => {
+    const {
+        source = 'local-interaction',
+        sync = true,
+        // Default notifyLocal based on source - local interactions shouldn't notify
+        // to prevent Dashboard from re-rendering GridDashboard unnecessarily
+        notifyLocal = source !== 'local-interaction' && source !== 'compact'
+    } = options;
+
+    console.log(`[Layout] Saving layout (source: ${describeSource(source)}, sync: ${sync}, notifyLocal: ${notifyLocal})`);
+
+    // Store the source in metadata for remote subscribers to access
+    // This MUST sync so remote sessions know the source of the change
+    preferencesService.set('dashboard.layoutMeta', {
+        source,
+        timestamp: Date.now(),
+        sessionId: preferencesService.getDebugInfo().sessionId
+    }, { sync: true, notifyLocal: false });
+
+    // Save the actual layout - this triggers the broadcast to other sessions
+    preferencesService.set('dashboard.layout', normalizeLayout(layout), {
+        sync,
+        notifyLocal
+    });
 };
 
 /**
  * Ensures that each widget fits within the given column count.
  */
-export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_COUNT): Widget[] =>
+export const validateLayout = (layout: Widget[], columnCount: number = DEFAULT_COLUMN_COUNT): Widget[] =>
     layout.map((widget) => ({
         ...widget,
         w: Math.min(widget.w, columnCount),
@@ -38,47 +273,48 @@ export const validateLayout = (layout: Widget[], columnCount: number = COLUMN_CO
 
 // --- Preset Functions ---
 
-const PRESETS_KEY = "dashboard_presets";
-const CURRENT_PRESET_TYPE_KEY = "dashboard_current_preset_type";
-
 /**
- * Saves the current preset type to localStorage.
+ * Saves the current preset type to preferences service.
  */
 export const saveCurrentPresetType = (type: string) => {
-    localStorage.setItem(CURRENT_PRESET_TYPE_KEY, type);
+    preferencesService.set('dashboard.currentPresetType', type);
 };
 
 /**
- * Reads the current preset type from localStorage.
+ * Reads the current preset type from preferences service.
  */
 export const readCurrentPresetType = (): string => {
-    return localStorage.getItem(CURRENT_PRESET_TYPE_KEY) || "grid";
+    const stored = preferencesService.get<string>('dashboard.currentPresetType', 'grid');
+    return stored ?? 'grid';
 };
 
 /**
- * Reads an array of 9 preset layouts from localStorage.
+ * Reads an array of 9 preset layouts from preferences service.
  * If nothing is saved yet, returns an array with 9 null entries.
  * Now supports both old format (Widget[]) and new format (DashboardPreset).
+ * Automatically migrates old presets to include names and timestamps.
  */
 export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
-    const saved = localStorage.getItem(PRESETS_KEY);
+    const saved = preferencesService.get<Array<DashboardPreset | null>>('dashboard.presets');
     if (saved) {
         try {
-            const presets = JSON.parse(saved);
-            if (Array.isArray(presets) && presets.length === 9) {
-                // Convert old format to new format
-                return presets.map(preset => {
-                    if (!preset) return null;
-                    // Check if it's already in the new format
-                    if (preset.type && preset.layout) {
-                        return preset as DashboardPreset;
-                    }
-                    // Convert old format (Widget[]) to new format
-                    return {
-                        type: "grid" as const,
-                        layout: preset
-                    };
+            if (Array.isArray(saved) && saved.length === 9) {
+                // Migrate each preset to new format
+                const migrated = saved.map((preset, index) => migratePreset(preset, index));
+
+                // Check if any migration happened
+                const hasChanged = migrated.some((preset, index) => {
+                    const original = saved[index];
+                    return preset && original && !original.name && preset.name;
                 });
+
+                // If migration happened, save the migrated presets
+                if (hasChanged) {
+                    console.log("Migrating presets to include names and timestamps");
+                    savePresetsToStorage(migrated);
+                }
+
+                return migrated;
             }
         } catch (e) {
             console.error("Error parsing presets", e);
@@ -88,8 +324,23 @@ export const readPresetsFromStorage = (): Array<DashboardPreset | null> => {
 };
 
 /**
- * Saves an array of 9 preset layouts into localStorage.
+ * Saves an array of 9 preset layouts into preferences service.
  */
 export const savePresetsToStorage = (presets: Array<DashboardPreset | null>) => {
-    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    preferencesService.set('dashboard.presets', presets);
+};
+
+/**
+ * Save the currently active preset index
+ */
+export const saveActivePresetIndex = (index: number | null) => {
+    preferencesService.set('dashboard.activePresetIndex', index);
+};
+
+/**
+ * Read the currently active preset index
+ */
+export const readActivePresetIndex = (): number | null => {
+    const stored = preferencesService.get<number | null>('dashboard.activePresetIndex', null);
+    return stored ?? null;
 };

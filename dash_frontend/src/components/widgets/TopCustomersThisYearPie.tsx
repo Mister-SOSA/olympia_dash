@@ -16,17 +16,23 @@ import { nFormatter } from "@/utils/helpers";
 import config from "@/config";
 import { CustomerData } from "@/types";
 import { PieChartLegend } from "./PieChartLegend";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { obfuscateName } from "@/utils/privacyUtils";
+import { useChartColors } from "@/hooks/useChartColors";
 
 // Constants
 const PARENT_MAPPING = config.PARENT_COMPANY_MAPPING;
-const CHART_COLORS = [
-    "#4CAF50", // Green
-    "#2196F3", // Blue
-    "#FFC107", // Amber
-    "#FF5722", // Deep Orange
-    "#9C27B0", // Purple
-    "#E91E63", // Pink
-    "#78909C", // Blue Grey (Other)
+
+// Fallback colors (used if CSS vars not yet loaded)
+const FALLBACK_COLORS = [
+    "#4CAF50",
+    "#2196F3",
+    "#FFC107",
+    "#FF5722",
+    "#9C27B0",
+    "#E91E63",
+    "#78909C",
 ];
 
 // Map a business name to its parent company using the config mapping.
@@ -41,7 +47,7 @@ const mapToParentCompany = (businessName: string): string => {
 };
 
 // Combine data transformation steps into one function.
-const processCustomerData = (data: CustomerData[]): CustomerData[] => {
+const processCustomerData = (data: CustomerData[], chartColors: string[], maxShown: number = 6, showOther: boolean = true, sortOrder: 'value' | 'name' = 'value'): CustomerData[] => {
     if (!data || data.length === 0) return [];
 
     // Aggregate data by parent company.
@@ -62,35 +68,48 @@ const processCustomerData = (data: CustomerData[]): CustomerData[] => {
 
     let aggregatedData = Object.values(aggregated);
 
-    // Merge entries beyond the top 6 into an "Other" category.
-    const LIMIT = 6;
-    if (aggregatedData.length > LIMIT) {
+    // Sort by total sales descending first to determine top customers
+    aggregatedData.sort((a, b) => b.totalSales - a.totalSales);
+
+    // Merge entries beyond the limit into an "Other" category if enabled
+    if (showOther && aggregatedData.length > maxShown) {
         const otherTotal = aggregatedData
-            .slice(LIMIT)
+            .slice(maxShown)
             .reduce((acc, { totalSales }) => acc + totalSales, 0);
         aggregatedData = [
-            ...aggregatedData.slice(0, LIMIT),
+            ...aggregatedData.slice(0, maxShown),
             {
                 id: "other",
                 timestamp: new Date(),
                 businessName: "Other",
                 totalSales: otherTotal,
-                color: CHART_COLORS[CHART_COLORS.length - 1],
+                color: chartColors[chartColors.length - 1] || "#78909C",
             },
         ];
+    } else {
+        // Just limit to max shown without "Other" category
+        aggregatedData = aggregatedData.slice(0, maxShown);
     }
 
-    // Sort so that "Other" is always last and the rest are in descending order.
+    // Final sort based on user preference
     aggregatedData.sort((a, b) => {
+        // "Other" is always last
         if (a.businessName === "Other") return 1;
         if (b.businessName === "Other") return -1;
-        return b.totalSales - a.totalSales;
+
+        // Apply user sort preference
+        if (sortOrder === 'name') {
+            return a.businessName.localeCompare(b.businessName);
+        }
+        return b.totalSales - a.totalSales; // default: by value descending
     });
 
-    // Assign colors to each slice.
+    // Assign colors to each slice - "Other" always gets grey
     return aggregatedData.map((item, index) => ({
         ...item,
-        color: CHART_COLORS[index] || CHART_COLORS[CHART_COLORS.length - 1],
+        color: item.businessName === "Other"
+            ? chartColors[chartColors.length - 1] || "#78909C" // Grey for Other
+            : chartColors[index] || chartColors[0] || "#4CAF50",
     }));
 };
 
@@ -123,8 +142,20 @@ function useContainerDimensions(ref: React.RefObject<HTMLElement | null>) {
 function calculateOptimalLayout(width: number, height: number, itemCount: number) {
     const aspectRatio = width / height;
 
-    // Calculate space requirements for each layout option
+    // Check if we should use bar layout (small cards or very wide)
     const minPieSize = 180; // Minimum acceptable pie diameter
+    const useBarLayout = height < 200 || width < 300 || (aspectRatio > 2.5 && height < 250);
+
+    if (useBarLayout) {
+        return {
+            type: "bar" as const,
+            position: "bottom" as const,
+            legendSize: 0,
+            pieSize: 0,
+        };
+    }
+
+    // Calculate space requirements for each layout option
 
     // Option 1: Legend on right (vertical)
     const rightLegendWidth = 200; // Fixed width for vertical legend
@@ -143,12 +174,14 @@ function calculateOptimalLayout(width: number, height: number, itemCount: number
     // Choose layout with largest pie size
     if (rightLayoutScore > bottomLayoutScore && aspectRatio > 1.2 && width > 500) {
         return {
+            type: "pie" as const,
             position: "right" as const,
             legendSize: rightLegendWidth,
             pieSize: rightLayoutPieSize,
         };
     } else {
         return {
+            type: "pie" as const,
             position: "bottom" as const,
             legendSize: bottomLegendHeight,
             pieSize: bottomLayoutPieSize,
@@ -165,16 +198,195 @@ interface ProcessedCustomerData {
 
 interface CustomerPieChartProps {
     data: CustomerData[];
+    maxCustomersShown: number;
+    showOtherCategory: boolean;
+    showPercentages: boolean;
+    sortOrder: 'value' | 'name';
+    privacyEnabled: boolean;
 }
 
+// Bar Chart Component for small sizes
+const PartitionedBar: React.FC<{ data: ProcessedCustomerData[]; showPercentages: boolean; privacyEnabled: boolean }> = ({ data, showPercentages: showPercents, privacyEnabled }) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [availableHeight, setAvailableHeight] = useState(0);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        const updateHeight = () => {
+            const { height } = containerRef.current!.getBoundingClientRect();
+            setAvailableHeight(height);
+        };
+        updateHeight();
+        const resizeObserver = new ResizeObserver(updateHeight);
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    // Intelligent text shortening for readability
+    const shortenName = (name: string, maxLength: number = 20): string => {
+        if (name.length <= maxLength) return name;
+
+        // Remove common business suffixes
+        const cleaned = name
+            .replace(/,?\s+(INC\.?|LLC\.?|CORP\.?|CORPORATION|LIMITED|LTD\.?|CO\.?)$/i, '')
+            .trim();
+
+        if (cleaned.length <= maxLength) return cleaned;
+
+        // Extract initials from multi-word names if still too long
+        const words = cleaned.split(/\s+/);
+        if (words.length > 2 && cleaned.length > maxLength) {
+            // Keep first word + initials (e.g., "AMERICAN EAGLE PACKAGING" -> "AMERICAN E.P.")
+            return words[0] + ' ' + words.slice(1).map(w => w[0] + '.').join('');
+        }
+
+        return cleaned.substring(0, maxLength) + '...';
+    };
+
+    // Apply privacy obfuscation to names
+    const getDisplayName = (name: string, maxLength?: number): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return shortenName(name, maxLength);
+    };
+
+    // Calculate optimal bar height based on available space
+    const barHeight = Math.min(Math.max(availableHeight * 0.4, 50), 120);
+    const showPercentages = showPercents && barHeight >= 70; // Only show percentages if bar is tall enough and enabled
+    const showInlineLabels = showPercents && barHeight >= 90; // Show labels inside bar if tall enough and enabled
+
+    return (
+        <div ref={containerRef} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.625rem", padding: "0.5rem" }}>
+            {/* Bar */}
+            <div style={{ display: "flex", width: "100%", height: `${barHeight}px`, borderRadius: "0.5rem", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+                {data.map((item, index) => (
+                    <div
+                        key={index}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        style={{
+                            flex: item.percent,
+                            backgroundColor: item.color,
+                            opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
+                            transition: "opacity 0.2s ease",
+                            cursor: "pointer",
+                            position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.25rem",
+                            padding: "0.25rem",
+                        }}
+                        title={`${getDisplayName(item.name)}: $${nFormatter(item.value, 2)} (${item.percent.toFixed(1)}%)`}
+                    >
+                        {showInlineLabels && item.percent > 12 && (
+                            <>
+                                <span style={{
+                                    fontSize: "0.75rem",
+                                    fontWeight: 700,
+                                    color: "rgba(255, 255, 255, 0.95)",
+                                    textShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                                    lineHeight: 1.1,
+                                    textAlign: "center",
+                                    maxWidth: "100%",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                }}>
+                                    {getDisplayName(item.name, 15)}
+                                </span>
+                                <span style={{
+                                    fontSize: "1rem",
+                                    fontWeight: 800,
+                                    color: "rgba(255, 255, 255, 0.98)",
+                                    textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                                }}>
+                                    {Math.round(item.percent)}%
+                                </span>
+                            </>
+                        )}
+                        {!showInlineLabels && showPercentages && item.percent > 8 && (
+                            <span style={{
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                color: "rgba(255, 255, 255, 0.95)",
+                                textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                            }}>
+                                {Math.round(item.percent)}%
+                            </span>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Labels */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", justifyContent: "center", alignItems: "center" }}>
+                {data.map((item, index) => (
+                    <div
+                        key={index}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            cursor: "pointer",
+                            opacity: hoveredIndex === null || hoveredIndex === index ? 1 : 0.4,
+                            transition: "opacity 0.2s ease",
+                            padding: "0.125rem 0",
+                        }}
+                    >
+                        <div style={{
+                            width: "0.75rem",
+                            height: "0.75rem",
+                            borderRadius: "0.125rem",
+                            backgroundColor: item.color,
+                            flexShrink: 0,
+                            boxShadow: hoveredIndex === index ? `0 0 0 2px ${item.color}50` : 'none',
+                            transition: "box-shadow 0.2s ease",
+                        }} />
+                        <span style={{
+                            fontSize: "0.8125rem",
+                            fontWeight: 700,
+                            color: "var(--text-primary)",
+                            whiteSpace: "nowrap",
+                            letterSpacing: "-0.01em",
+                        }}>
+                            {getDisplayName(item.name)}
+                        </span>
+                        <span style={{
+                            fontSize: "0.75rem",
+                            color: "var(--text-secondary)",
+                            fontWeight: 600,
+                        }}>
+                            ${nFormatter(item.value, 1)}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 // Main chart component with intelligent layout
-const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
+const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data, maxCustomersShown, showOtherCategory, showPercentages, sortOrder, privacyEnabled }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const { width, height } = useContainerDimensions(containerRef);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const chartColors = useChartColors();
+
+    // Helper to obfuscate names when privacy is enabled
+    const getDisplayName = useCallback((name: string): string => {
+        if (privacyEnabled) {
+            return obfuscateName(name, true);
+        }
+        return name;
+    }, [privacyEnabled]);
 
     const processedData = useMemo(() => {
-        const transformed = processCustomerData(data).map((item) => ({
+        const transformed = processCustomerData(data, chartColors, maxCustomersShown, showOtherCategory, sortOrder).map((item) => ({
             name: item.businessName,
             value: item.totalSales,
             color: item.color,
@@ -186,7 +398,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
             ...item,
             percent: (item.value / total) * 100,
         }));
-    }, [data]);
+    }, [data, chartColors, maxCustomersShown, showOtherCategory, sortOrder]);
 
     // Calculate optimal layout
     const layout = useMemo(
@@ -196,6 +408,15 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
 
     if (!processedData.length) {
         return <div>No data available for chart</div>;
+    }
+
+    // Use bar layout for small cards
+    if (layout.type === "bar") {
+        return (
+            <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+                <PartitionedBar data={processedData} showPercentages={showPercentages} privacyEnabled={privacyEnabled} />
+            </div>
+        );
     }
 
     const onPieEnter = (_: any, index: number) => {
@@ -250,24 +471,24 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                     return (
                                         <div
                                             style={{
-                                                backgroundColor: "rgba(22, 30, 40, 0.96)",
-                                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                                backgroundColor: "var(--ui-bg-primary)",
+                                                border: "1px solid var(--ui-border-primary)",
                                                 borderRadius: "0.5rem",
                                                 padding: "0.875rem",
                                                 backdropFilter: "blur(12px)",
-                                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+                                                boxShadow: "0 4px 12px var(--shadow-dark)",
                                             }}
                                         >
                                             <div style={{
                                                 fontWeight: 700,
                                                 marginBottom: "0.375rem",
                                                 fontSize: "0.9375rem",
-                                                color: "rgba(255, 255, 255, 0.95)",
+                                                color: "var(--ui-text-primary)",
                                             }}>
-                                                {data.name}
+                                                {getDisplayName(data.name)}
                                             </div>
                                             <div style={{
-                                                color: "rgba(255, 255, 255, 0.85)",
+                                                color: "var(--ui-text-primary)",
                                                 fontSize: "1rem",
                                                 fontWeight: 600,
                                                 marginBottom: "0.25rem",
@@ -276,7 +497,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                             </div>
                                             <div
                                                 style={{
-                                                    color: "rgba(255, 255, 255, 0.6)",
+                                                    color: "var(--ui-text-secondary)",
                                                     fontSize: "0.8125rem",
                                                     fontWeight: 500,
                                                 }}
@@ -307,11 +528,7 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
                                             activeIndex === null || activeIndex === index ? 1 : 0.3
                                         }
                                         style={{
-                                            filter:
-                                                activeIndex === index
-                                                    ? "brightness(1.15) drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))"
-                                                    : "none",
-                                            transition: "opacity 0.2s ease, filter 0.2s ease",
+                                            transition: "opacity 0.2s ease",
                                             cursor: "pointer",
                                             stroke: "var(--background-light)",
                                             strokeWidth: 2,
@@ -349,6 +566,14 @@ const CustomerPieChart: React.FC<CustomerPieChartProps> = ({ data }) => {
 // Main component to render the widget.
 export default function TopCustomersThisYearPie() {
     const currentYear = new Date().getFullYear();
+    const { settings: widgetSettings } = useWidgetSettings('TopCustomersThisYearPie');
+    const { settings: privacySettings } = usePrivacy();
+
+    const showOtherCategory = widgetSettings.showOtherCategory ?? true;
+    const maxCustomersShown = widgetSettings.maxCustomersShown ?? 5;
+    const showPercentages = widgetSettings.showPercentages ?? true;
+    const sortOrder = widgetSettings.sortOrder as 'value' | 'name' ?? 'value';
+
     const startOfYear = useMemo(
         () => new Date(currentYear, 0, 1).toISOString().split("T")[0],
         [currentYear]
@@ -358,28 +583,25 @@ export default function TopCustomersThisYearPie() {
     const widgetPayload = useMemo(
         () => ({
             module: "TopCustomersThisYearPie",
-            table: "sumsales",
-            columns: [
-                "sumsales.cust_code",
-                "orderfrom.bus_name AS businessName",
-                "SUM(sumsales.sales_dol) AS totalSales",
-                "SUM(sumsales.qty_sold) AS total_quantity_sold",
-            ],
-            filters: `(sumsales.sale_date >= '${startOfYear}' AND sumsales.sale_date <= '${today}')`,
-            join: {
-                table: "orderfrom",
-                on: "sumsales.cust_code = orderfrom.cust_code",
-                type: "LEFT",
+            queryId: "TopCustomersThisYearPie",
+            params: {
+                startOfYear,
+                endDate: today,
             },
-            group_by: ["sumsales.cust_code", "orderfrom.bus_name"],
-            sort: ["totalSales DESC"],
         }),
         [startOfYear, today]
     );
 
     const renderChart = useCallback((data: CustomerData[]) => (
-        <CustomerPieChart data={data} />
-    ), []);
+        <CustomerPieChart
+            data={data}
+            maxCustomersShown={maxCustomersShown}
+            showOtherCategory={showOtherCategory}
+            showPercentages={showPercentages}
+            sortOrder={sortOrder}
+            privacyEnabled={privacySettings.enabled && privacySettings.obfuscateNames}
+        />
+    ), [maxCustomersShown, showOtherCategory, showPercentages, sortOrder, privacySettings]);
 
     return (
         <Widget
@@ -389,10 +611,6 @@ export default function TopCustomersThisYearPie() {
             refreshInterval={300000}
         >
             {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading customer data...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No customer data available</div>;
                 }

@@ -1,13 +1,31 @@
 # Olympia Dashboard
 
-A full-stack dashboard application with a Flask backend and Next.js frontend, featuring customizable widgets and real-time data visualization.
+A full-stack dashboard application with a Flask backend and Next.js frontend, featuring customizable widgets, real-time data visualization, and secure authentication with Microsoft OAuth.
+
+<img width="1682" height="902" alt="image" src="https://github.com/user-attachments/assets/b592a58d-7e84-468d-b41e-3a2ef89f69c1" />
+
+
 
 ## Architecture
 
 - **Backend**: Flask API (`/api`) - Handles data processing and API endpoints
 - **Frontend**: Next.js dashboard (`/dash_frontend`) - Modern React-based UI with drag-and-drop widgets
-- **Database**: SQL Server integration for data storage
+- **Authentication**: Microsoft OAuth 2.0 with JWT tokens and device pairing for TV dashboards
+- **Database**: SQL Server integration for data storage + SQLite for authentication
 - **Deployment**: Docker Compose for containerized deployment
+
+## 🔐 Authentication System
+
+This dashboard includes a comprehensive authentication system with:
+
+- ✅ **Microsoft OAuth Login** - Secure single sign-on with Microsoft accounts
+- ✅ **Device Pairing** - Netflix-style pairing for TV dashboards
+- ✅ **Role-Based Access Control** - User and Admin roles
+- ✅ **Admin Dashboard** - User management and permissions
+- ✅ **Session Management** - Track and revoke active sessions
+- ✅ **Audit Logging** - Complete audit trail of user actions
+
+**📚 [View Authentication Documentation](./docs/AUTHENTICATION.md)**
 
 ## Quick Start
 
@@ -67,6 +85,8 @@ olympia_dash/
 
 ## Features
 
+- **🔐 Secure Authentication**: Microsoft OAuth with device pairing for TV displays
+- **👤 User Management**: Admin dashboard for managing users and permissions
 - **Real-time Dashboard**: Live data updates and customizable layouts
 - **Widget System**: Modular widget architecture for easy extensibility
 - **Grid Layout**: Drag-and-drop dashboard with resizable widgets

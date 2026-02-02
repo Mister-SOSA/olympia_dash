@@ -1,0 +1,108 @@
+/* Github Theme */
+.theme-github {
+    /* UI Colors */
+    --ui-bg-primary: #ffffff;
+    --ui-bg-secondary: #f6f8fa;
+    --ui-bg-tertiary: #e1e4e8;
+    --ui-bg-quaternary: #d1d5da;
+
+    --ui-border-primary: #d1d5da;
+    --ui-border-secondary: #959da5;
+
+    --ui-text-primary: #24292e;
+    --ui-text-secondary: #586069;
+    --ui-text-muted: #6a737d;
+
+    --ui-accent-primary: #0969da;
+    --ui-accent-primary-hover: #0550ae;
+    --ui-accent-primary-light: #218bff;
+    --ui-accent-primary-text: #0550ae;
+    --ui-accent-primary-bg: rgba(9, 105, 218, 0.1);
+    --ui-accent-primary-border: rgba(9, 105, 218, 0.3);
+
+    --ui-accent-secondary: #6e7781;
+    --ui-accent-secondary-hover: #57606a;
+    --ui-accent-secondary-light: #8c959f;
+    --ui-accent-secondary-text: #57606a;
+    --ui-accent-secondary-bg: rgba(110, 119, 129, 0.1);
+    --ui-accent-secondary-border: rgba(110, 119, 129, 0.3);
+
+    --ui-success: #1a7f37;
+    --ui-success-text: #116329;
+    --ui-success-bg: rgba(26, 127, 55, 0.1);
+    --ui-success-border: rgba(26, 127, 55, 0.3);
+
+    --ui-warning: #9a6700;
+    --ui-warning-text: #744500;
+    --ui-warning-bg: rgba(154, 103, 0, 0.1);
+    --ui-warning-border: rgba(154, 103, 0, 0.3);
+
+    --ui-danger: #cf222e;
+    --ui-danger-text: #a40e26;
+    --ui-danger-bg: rgba(207, 34, 46, 0.1);
+    --ui-danger-border: rgba(207, 34, 46, 0.3);
+
+    --ui-info: #0ea5e9;
+    --ui-info-text: #38bdf8;
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+
+    --background-dark: #fafbfc;
+    --background-light: #ffffff;
+    --background-highlight: #f6f8fa;
+    --border-light: #d1d5da;
+    --border-dark: #e1e4e8;
+
+    --text-primary: #24292e;
+    --text-secondary: #586069;
+    --text-muted: #6a737d;
+
+    --success: #1a7f37;
+    --success-light: rgba(26, 127, 55, 0.1);
+    --warning: #9a6700;
+    --error: #cf222e;
+    --error-light: rgba(207, 34, 46, 0.2);
+
+    --chart-bar: #0969da;
+    --chart-1: #1a7f37;
+    --chart-2: #0969da;
+    --chart-3: #9a6700;
+    --chart-4: #cf222e;
+    --chart-5: #8250df;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #0969da;
+    /* github blue */
+    --line-chart-2: #9a6700;
+    /* brown/gold */
+    --line-chart-3: #1a7f37;
+    /* green */
+
+    --table-header-bg: #f6f8fa;
+    --table-row-bg: #ffffff;
+    --table-row-alt-bg: #fafbfc;
+    --table-row-hover-bg: rgba(9, 105, 218, 0.05);
+    --table-border: #d1d5da;
+    --table-text-primary: #24292e;
+    --table-text-secondary: #586069;
+
+    --badge-success-bg: rgba(26, 127, 55, 0.15);
+    --badge-success-text: #116329;
+    --badge-success-border: rgba(26, 127, 55, 0.4);
+
+    --badge-warning-bg: rgba(154, 103, 0, 0.15);
+    --badge-warning-text: #744500;
+    --badge-warning-border: rgba(154, 103, 0, 0.4);
+
+    --badge-error-bg: rgba(207, 34, 46, 0.15);
+    --badge-error-text: #a40e26;
+    --badge-error-border: rgba(207, 34, 46, 0.4);
+
+    --badge-primary-bg: rgba(9, 105, 218, 0.15);
+    --badge-primary-text: #0550ae;
+    --badge-primary-border: rgba(9, 105, 218, 0.4);
+
+    --value-positive: #116329;
+    --value-negative: #a40e26;
+    --value-neutral: #586069;
+}

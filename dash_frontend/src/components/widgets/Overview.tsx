@@ -3,6 +3,7 @@ import Widget from "./Widget";
 import { nFormatter, calculatePercentageChange } from "@/utils/helpers";
 import { SalesData } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 📊 Types & Interfaces                  */
@@ -175,48 +176,76 @@ const MetricCard = ({ metric }: { metric: MetricData }) => {
 /* 📊 OverviewWidget Component            */
 /* -------------------------------------- */
 
-const OverviewWidget = ({ data }: { data: SalesData[] }) => {
+interface OverviewWidgetProps {
+    data: SalesData[];
+    showYTD: boolean;
+    showThisMonth: boolean;
+    showLast7Days: boolean;
+    showToday: boolean;
+    showComparison: boolean;
+}
+
+const OverviewWidget = ({ data, showYTD, showThisMonth, showLast7Days, showToday, showComparison }: OverviewWidgetProps) => {
     const now = new Date();
     const todayGMT = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const metrics = useMemo(() => calculateMetrics(data, todayGMT), [data, todayGMT]);
 
-    const metricsData: MetricData[] = useMemo(
-        () => [
+    const metricsData: MetricData[] = useMemo(() => {
+        const allMetrics = [
             {
-                title: "Sales YTD",
-                value: metrics.totalSalesYTD,
-                changePercent: calculatePercentageChange(metrics.totalSalesYTD, metrics.totalSalesPreviousYTD),
-                tooltip: "Compared to same period last year (YTD)",
+                key: 'ytd',
+                show: showYTD,
+                data: {
+                    title: "Sales YTD",
+                    value: metrics.totalSalesYTD,
+                    changePercent: showComparison ? calculatePercentageChange(metrics.totalSalesYTD, metrics.totalSalesPreviousYTD) : "",
+                    tooltip: "Compared to same period last year (YTD)",
+                },
             },
             {
-                title: "Sales This Month",
-                value: metrics.totalSalesCurrentMonth,
-                changePercent: calculatePercentageChange(
-                    metrics.totalSalesCurrentMonth,
-                    metrics.totalSalesPreviousMonth
-                ),
-                tooltip: "Compared to same month last year (month-to-date)",
+                key: 'month',
+                show: showThisMonth,
+                data: {
+                    title: "Sales This Month",
+                    value: metrics.totalSalesCurrentMonth,
+                    changePercent: showComparison ? calculatePercentageChange(
+                        metrics.totalSalesCurrentMonth,
+                        metrics.totalSalesPreviousMonth
+                    ) : "",
+                    tooltip: "Compared to same month last year (month-to-date)",
+                },
             },
             {
-                title: "Sales Last 7 Days",
-                value: metrics.totalSalesRolling7Days,
-                changePercent: calculatePercentageChange(
-                    metrics.totalSalesRolling7Days,
-                    metrics.totalSalesPreviousRolling7Days
-                ),
-                tooltip: "Compared to previous 7 days",
+                key: '7days',
+                show: showLast7Days,
+                data: {
+                    title: "Sales Last 7 Days",
+                    value: metrics.totalSalesRolling7Days,
+                    changePercent: showComparison ? calculatePercentageChange(
+                        metrics.totalSalesRolling7Days,
+                        metrics.totalSalesPreviousRolling7Days
+                    ) : "",
+                    tooltip: "Compared to previous 7 days",
+                },
             },
             {
-                title: "Sales Today",
-                value: metrics.totalSalesToday,
-                changePercent: "",
-                isToday: true,
-                tooltip: "",
+                key: 'today',
+                show: showToday,
+                data: {
+                    title: "Sales Today",
+                    value: metrics.totalSalesToday,
+                    changePercent: "",
+                    isToday: true,
+                    tooltip: "",
+                },
             },
-        ],
-        [metrics]
-    );
+        ];
+
+        return allMetrics
+            .filter(m => m.show)
+            .map(m => m.data);
+    }, [metrics, showYTD, showThisMonth, showLast7Days, showToday, showComparison]);
 
     return (
         <div className="overview-widget-container">
@@ -234,53 +263,20 @@ const OverviewWidget = ({ data }: { data: SalesData[] }) => {
 /* -------------------------------------- */
 
 export default function Overview() {
-    const previousYearStart = useMemo(
-        () => new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split("T")[0],
-        []
-    );
-    const currentDate = useMemo(() => new Date().toISOString().split("T")[0], []);
-    const sevenDaysAgoDate = useMemo(() => {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        return sevenDaysAgo.toISOString().split("T")[0];
-    }, []);
+    const { settings } = useWidgetSettings('Overview');
+
+    const showYTD = settings.showYTD ?? true;
+    const showThisMonth = settings.showThisMonth ?? true;
+    const showLast7Days = settings.showLast7Days ?? true;
+    const showToday = settings.showToday ?? true;
+    const showComparison = settings.showComparison ?? true;
 
     const widgetPayload = useMemo(
         () => ({
             module: "Overview",
-            raw_query: `
-        -- Fetch sales data for the last 7 days from orditem
-        SELECT 
-            FORMAT(duedate, 'yyyy-MM-dd') AS period,
-            SUM(ext_price) AS total
-        FROM 
-            orditem
-        WHERE 
-            duedate >= '${sevenDaysAgoDate}'
-            AND duedate <= '${currentDate}'
-        GROUP BY 
-            FORMAT(duedate, 'yyyy-MM-dd')
-
-        UNION ALL
-
-        -- Fetch sales data beyond the last 7 days (within the full year) from sumsales
-        SELECT 
-            FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-            SUM(sales_dol) AS total
-        FROM 
-            sumsales
-        WHERE 
-            sale_date >= '${previousYearStart}'
-            AND sale_date < '${sevenDaysAgoDate}'
-            AND sale_date <= '${currentDate}'
-        GROUP BY 
-            FORMAT(sale_date, 'yyyy-MM-dd')
-
-        ORDER BY 
-            period ASC;
-      `,
+            queryId: "Overview"
         }),
-        [sevenDaysAgoDate, currentDate, previousYearStart]
+        []
     );
 
     return (
@@ -291,15 +287,20 @@ export default function Overview() {
             refreshInterval={300000}
         >
             {(data: SalesData[], loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading sales data...</div>;
-                }
-
                 if (!data || data.length === 0) {
                     return <div className="widget-empty">No sales data available</div>;
                 }
 
-                return <OverviewWidget data={data} />;
+                return (
+                    <OverviewWidget
+                        data={data}
+                        showYTD={showYTD}
+                        showThisMonth={showThisMonth}
+                        showLast7Days={showLast7Days}
+                        showToday={showToday}
+                        showComparison={showComparison}
+                    />
+                );
             }}
         </Widget>
     );

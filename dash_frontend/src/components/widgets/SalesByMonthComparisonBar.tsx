@@ -7,6 +7,7 @@ import {
     nFormatter,
 } from "@/utils/helpers";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
@@ -35,16 +36,173 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement>): numbe
 }
 
 /* -------------------------------------- */
+/* � Mobile Horizontal Comparison View    */
+/* -------------------------------------- */
+interface MobileComparisonViewProps {
+    data: ProcessedSalesData[];
+    showPercentageDiff: boolean;
+}
+
+const MobileComparisonView: React.FC<MobileComparisonViewProps> = ({ data, showPercentageDiff }) => {
+    const maxValue = Math.max(...data.map(d => Math.max(d.currentPeriodSales, d.previousPeriodSales)));
+
+    // Get current day of month to calculate partial comparison for current month
+    const today = new Date();
+    const currentDayOfMonth = today.getDate();
+    const daysInCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const monthProgressRatio = currentDayOfMonth / daysInCurrentMonth;
+
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+        }}>
+            {reversedData.map((item, index) => {
+                const isCurrent = index === 0; // First item is current (newest)
+                const currentWidth = (item.currentPeriodSales / maxValue) * 100;
+                const previousWidth = (item.previousPeriodSales / maxValue) * 100;
+
+                // Calculate percentage difference
+                const percentDiff = item.previousPeriodSales > 0
+                    ? ((item.currentPeriodSales - item.previousPeriodSales) / item.previousPeriodSales) * 100
+                    : item.currentPeriodSales > 0 ? 100 : 0;
+                const isPositive = percentDiff >= 0;
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: isCurrent ? "var(--ui-accent-primary-bg)" : "var(--ui-bg-secondary)",
+                            borderRadius: "12px",
+                            padding: "12px",
+                            border: isCurrent ? "1px solid var(--ui-accent-primary-border)" : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        {/* Month Header with Percentage */}
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "10px",
+                        }}>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "14px",
+                                fontWeight: isCurrent ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            {showPercentageDiff && (
+                                <span style={{
+                                    color: isPositive ? "var(--value-positive)" : "var(--value-negative)",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    backgroundColor: isPositive ? "var(--ui-success-bg)" : "var(--ui-danger-bg)",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                }}>
+                                    {isPositive ? "+" : ""}{percentDiff.toFixed(1)}%
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Current Year Bar */}
+                        <div style={{ marginBottom: "8px" }}>
+                            <div style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "4px",
+                            }}>
+                                <span style={{ color: "var(--chart-bar)", fontSize: "12px", fontWeight: 500 }}>
+                                    This Year
+                                </span>
+                                <span style={{ color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)", fontSize: "13px", fontWeight: 700 }}>
+                                    ${nFormatter(item.currentPeriodSales, 2)}
+                                </span>
+                            </div>
+                            <div style={{
+                                height: "8px",
+                                backgroundColor: "var(--ui-bg-tertiary)",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    width: `${currentWidth}%`,
+                                    height: "100%",
+                                    backgroundColor: "var(--chart-bar)",
+                                    borderRadius: "4px",
+                                    transition: "width 0.3s ease",
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* Previous Year Bar */}
+                        <div>
+                            <div style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "4px",
+                            }}>
+                                <span style={{ color: "var(--chart-1)", fontSize: "12px", fontWeight: 500 }}>
+                                    Last Year
+                                </span>
+                                <span style={{ color: "var(--text-secondary)", fontSize: "13px", fontWeight: 600 }}>
+                                    ${nFormatter(isCurrent ? item.previousPeriodSales * monthProgressRatio : item.previousPeriodSales, 2)}
+                                </span>
+                            </div>
+                            <div style={{
+                                height: "8px",
+                                backgroundColor: "var(--ui-bg-tertiary)",
+                                borderRadius: "4px",
+                                overflow: "hidden",
+                            }}>
+                                <div style={{
+                                    width: `${isCurrent ? (item.previousPeriodSales * monthProgressRatio / maxValue) * 100 : previousWidth}%`,
+                                    height: "100%",
+                                    backgroundColor: "var(--chart-1)",
+                                    borderRadius: "4px",
+                                    transition: "width 0.3s ease",
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Comparison Bar Chart         */
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    visibleMonths: number;
+    showProjection: boolean;
+    showPercentageDiff: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleMonths, showProjection, showPercentageDiff }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -56,9 +214,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileComparisonView data={allData} showPercentageDiff={showPercentageDiff} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible months
+    const data = allData.slice(-visibleMonths);
 
     const padding = { top: 32, right: 5, bottom: 32, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -96,8 +266,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -145,7 +316,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                         x={prevX + barWidth / 2}
                                         y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight - 8}
                                         textAnchor="middle"
-                                        fill="rgba(255, 255, 255, 0.9)"
+                                        fill="var(--text-secondary)"
                                         fontSize="14"
                                         fontWeight="600"
                                         style={{ pointerEvents: "none" }}
@@ -173,7 +344,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                         x={currX + barWidth / 2}
                                         y={currY - 8}
                                         textAnchor="middle"
-                                        fill="white"
+                                        fill="var(--text-primary)"
                                         fontSize="15"
                                         fontWeight="700"
                                         style={{ pointerEvents: "none" }}
@@ -230,64 +401,119 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                     onMouseEnter={() => setHoveredIndex(index)}
                                                     onMouseLeave={() => setHoveredIndex(null)}
                                                 />
-                                                {/* Label positioning based on partial vs full amount ratio */}
-                                                {partialPrevious / fullPrevious > 0.75 ? (
-                                                    // If partial is more than 75% of full, put labels inside bars to avoid overlap
-                                                    <>
-                                                        {/* Full month label - inside the faded top portion */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight + 20}
-                                                            textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.7)"
-                                                            fontSize="13"
-                                                            fontWeight="500"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(fullPrevious, 2)}
-                                                        </text>
-                                                        {/* Partial amount label - inside the solid bottom portion */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight + 20}
-                                                            textAnchor="middle"
-                                                            fill="white"
-                                                            fontSize="14"
-                                                            fontWeight="600"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(partialPrevious, 2)}
-                                                        </text>
-                                                    </>
-                                                ) : (
-                                                    // If partial is less than 75% of full, put labels above bars with safe spacing
-                                                    <>
-                                                        {/* Full month label at the very top */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight - 8}
-                                                            textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.5)"
-                                                            fontSize="13"
-                                                            fontWeight="500"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(fullPrevious, 2)}
-                                                        </text>
-                                                        {/* Partial amount label at partial bar top */}
-                                                        <text
-                                                            x={prevX + barWidth / 2}
-                                                            y={padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight - 8}
-                                                            textAnchor="middle"
-                                                            fill="rgba(255, 255, 255, 0.9)"
-                                                            fontSize="14"
-                                                            fontWeight="600"
-                                                            style={{ pointerEvents: "none" }}
-                                                        >
-                                                            ${nFormatter(partialPrevious, 2)}
-                                                        </text>
-                                                    </>
-                                                )}
+                                                {/* Label positioning based on available space */}
+                                                {(() => {
+                                                    const fullY = padding.top + chartHeight - (fullPrevious / maxValue) * chartHeight;
+                                                    const partialY = padding.top + chartHeight - (partialPrevious / maxValue) * chartHeight;
+                                                    const spaceBetween = partialY - fullY;
+                                                    const minSpaceNeeded = 35;
+                                                    const partialHeight = (partialPrevious / maxValue) * chartHeight;
+                                                    const remainingHeight = (remainingPrevious / maxValue) * chartHeight;
+
+                                                    if (spaceBetween >= minSpaceNeeded) {
+                                                        // Enough space between labels - show both outside
+                                                        return (
+                                                            <>
+                                                                {/* Full month label at the very top */}
+                                                                <text
+                                                                    x={prevX + barWidth / 2}
+                                                                    y={fullY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-muted)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ${nFormatter(fullPrevious, 2)}
+                                                                </text>
+                                                                {/* Partial amount label at partial bar top */}
+                                                                {partialHeight < 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-secondary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-secondary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else {
+                                                        // Not enough space - use inside positioning for both
+                                                        return (
+                                                            <>
+                                                                {/* Full month label - inside the faded top portion if tall enough */}
+                                                                {remainingHeight >= 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={fullY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-muted)"
+                                                                        fontSize="13"
+                                                                        fontWeight="500"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(fullPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={fullY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-muted)"
+                                                                        fontSize="13"
+                                                                        fontWeight="500"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(fullPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                                {/* Partial amount label - inside the solid bottom portion if tall enough */}
+                                                                {partialHeight >= 30 ? (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                ) : (
+                                                                    <text
+                                                                        x={prevX + barWidth / 2}
+                                                                        y={partialY - 8}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="14"
+                                                                        fontWeight="600"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(partialPrevious, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    }
+                                                })()}
 
                                                 {/* Current period bar (solid, blinking) */}
                                                 <rect
@@ -347,52 +573,95 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                                     }}
                                                 />
 
-                                                {/* Current value label */}
-                                                {item.currentPeriodSales > 0 && (
-                                                    <>
-                                                        {currentBarHeight < 40 ? (
-                                                            // If bar is too short, put label above
-                                                            <text
-                                                                x={currX + barWidth / 2}
-                                                                y={currY - 8}
-                                                                textAnchor="middle"
-                                                                fill="white"
-                                                                fontSize="15"
-                                                                fontWeight="700"
-                                                                style={{ pointerEvents: "none" }}
-                                                            >
-                                                                ${nFormatter(item.currentPeriodSales, 2)}
-                                                            </text>
-                                                        ) : (
-                                                            // If bar is tall enough, put inside
-                                                            <text
-                                                                x={currX + barWidth / 2}
-                                                                y={currY + 20}
-                                                                textAnchor="middle"
-                                                                fill="white"
-                                                                fontSize="15"
-                                                                fontWeight="700"
-                                                                style={{ pointerEvents: "none" }}
-                                                            >
-                                                                ${nFormatter(item.currentPeriodSales, 2)}
-                                                            </text>
-                                                        )}
-                                                    </>
-                                                )}
+                                                {/* Current value label and Projected value label with smart spacing */}
+                                                {(() => {
+                                                    const projectedY = padding.top + chartHeight - projectedHeight;
+                                                    const currentY = currY;
+                                                    const spaceBetween = currentY - projectedY;
+                                                    const minSpaceNeeded = 35;
 
-                                                {/* Projected value label with indicator */}
-                                                <text
-                                                    x={currX + barWidth / 2}
-                                                    y={padding.top + chartHeight - projectedHeight - 8}
-                                                    textAnchor="middle"
-                                                    fill="rgba(255, 255, 255, 0.8)"
-                                                    fontSize="13"
-                                                    fontWeight="500"
-                                                    fontStyle="italic"
-                                                    style={{ pointerEvents: "none" }}
-                                                >
-                                                    ~${nFormatter(projectedTotal, 2)}
-                                                </text>
+                                                    if (spaceBetween >= minSpaceNeeded) {
+                                                        // Enough space - show both labels outside
+                                                        return (
+                                                            <>
+                                                                {/* Projected value label above projection */}
+                                                                <text
+                                                                    x={currX + barWidth / 2}
+                                                                    y={projectedY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-secondary)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    fontStyle="italic"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ~${nFormatter(projectedTotal, 2)}
+                                                                </text>
+                                                                {/* Current value label */}
+                                                                {item.currentPeriodSales > 0 && (
+                                                                    currentBarHeight < 40 ? (
+                                                                        <text
+                                                                            x={currX + barWidth / 2}
+                                                                            y={currentY - 8}
+                                                                            textAnchor="middle"
+                                                                            fill="var(--text-primary)"
+                                                                            fontSize="15"
+                                                                            fontWeight="700"
+                                                                            style={{ pointerEvents: "none" }}
+                                                                        >
+                                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                                        </text>
+                                                                    ) : (
+                                                                        <text
+                                                                            x={currX + barWidth / 2}
+                                                                            y={currentY + 20}
+                                                                            textAnchor="middle"
+                                                                            fill="var(--text-primary)"
+                                                                            fontSize="15"
+                                                                            fontWeight="700"
+                                                                            style={{ pointerEvents: "none" }}
+                                                                        >
+                                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                                        </text>
+                                                                    )
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else {
+                                                        // Not enough space - put current inside, projected above
+                                                        return (
+                                                            <>
+                                                                {/* Projected value label above projection */}
+                                                                <text
+                                                                    x={currX + barWidth / 2}
+                                                                    y={projectedY - 8}
+                                                                    textAnchor="middle"
+                                                                    fill="var(--text-secondary)"
+                                                                    fontSize="13"
+                                                                    fontWeight="500"
+                                                                    fontStyle="italic"
+                                                                    style={{ pointerEvents: "none" }}
+                                                                >
+                                                                    ~${nFormatter(projectedTotal, 2)}
+                                                                </text>
+                                                                {/* Current value label inside bar */}
+                                                                {item.currentPeriodSales > 0 && (
+                                                                    <text
+                                                                        x={currX + barWidth / 2}
+                                                                        y={currentY + 20}
+                                                                        textAnchor="middle"
+                                                                        fill="var(--text-primary)"
+                                                                        fontSize="15"
+                                                                        fontWeight="700"
+                                                                        style={{ pointerEvents: "none" }}
+                                                                    >
+                                                                        ${nFormatter(item.currentPeriodSales, 2)}
+                                                                    </text>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    }
+                                                })()}
                                             </>
                                         );
                                     })()}
@@ -404,7 +673,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={groupX + (barWidth * 2 + barGap) / 2}
                                 y={padding.top + chartHeight + 25}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
+                                fill="var(--text-secondary)"
                                 fontSize="14"
                                 fontWeight="500"
                                 style={{ pointerEvents: "none" }}
@@ -424,16 +693,17 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                         top: padding.top - 10,
                         left: padding.left + hoveredIndex * groupWidth + groupWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
+                        backgroundColor: "var(--ui-bg-primary)",
                         padding: "10px 14px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "6px", fontWeight: 500 }}>
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "13px", marginBottom: "6px", fontWeight: 500 }}>
                         {data[hoveredIndex].periodLabel}
                     </div>
                     {hoveredIndex === data.length - 1 ? (
@@ -441,18 +711,18 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             <div style={{ color: "var(--chart-1)", fontSize: "14px", fontWeight: 600, marginBottom: "2px" }}>
                                 Last Year (MTD): ${nFormatter(data[hoveredIndex].previousPeriodSales * monthProgressRatio, 2)}
                             </div>
-                            <div style={{ color: "rgba(76, 175, 80, 0.6)", fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>
+                            <div style={{ color: "var(--ui-text-muted)", fontSize: "12px", fontWeight: 500, marginBottom: "4px", opacity: 0.8 }}>
                                 Remaining: ${nFormatter(data[hoveredIndex].previousPeriodSales * (1 - monthProgressRatio), 2)}
                             </div>
                             <div style={{ color: "var(--chart-bar)", fontSize: "15px", fontWeight: 700, marginBottom: "4px" }}>
                                 This Year (MTD): ${nFormatter(data[hoveredIndex].currentPeriodSales, 2)}
                             </div>
                             <div style={{
-                                color: "rgba(255, 255, 255, 0.7)",
+                                color: "var(--ui-text-secondary)",
                                 fontSize: "13px",
                                 fontWeight: 500,
                                 fontStyle: "italic",
-                                borderTop: "1px solid rgba(255, 255, 255, 0.2)",
+                                borderTop: "1px solid var(--ui-border-primary)",
                                 paddingTop: "4px",
                                 marginTop: "2px"
                             }}>
@@ -491,6 +761,10 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByMonthComparisonBar() {
     const containerRef = useRef<HTMLDivElement>(document.createElement('div'));
     const visibleMonths = useResponsiveVisibleMonths(containerRef);
+    const { settings } = useWidgetSettings('SalesByMonthComparisonBar');
+
+    const showProjection = settings.showProjection ?? true;
+    const showPercentageDiff = settings.showPercentageDiff ?? true;
 
     // Calculate date ranges for the current and last year (12-month period).
     const { current, lastYear } = useMemo(
@@ -498,32 +772,42 @@ export default function SalesByMonthComparisonBar() {
         []
     );
 
+    const currentRange = useMemo(
+        () => ({
+            start: current.start.toISOString().split("T")[0],
+            end: current.end.toISOString().split("T")[0],
+        }),
+        [current]
+    );
+
+    const lastYearRange = useMemo(
+        () => ({
+            start: lastYear.start.toISOString().split("T")[0],
+            end: lastYear.end.toISOString().split("T")[0],
+        }),
+        [lastYear]
+    );
+
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByMonthComparisonBar",
-            table: "sumsales",
-            columns: [
-                "FORMAT(sale_date, 'yyyy-MM') AS period",
-                "SUM(sales_dol) AS total",
-                "YEAR(sale_date) AS year",
-            ],
-            filters: `(
-        (sale_date >= '${current.start.toISOString().split("T")[0]}' AND sale_date <= '${current.end.toISOString().split("T")[0]}') 
-        OR (sale_date >= '${lastYear.start.toISOString().split("T")[0]}' AND sale_date <= '${lastYear.end.toISOString().split("T")[0]}')
-      )`,
-            group_by: ["FORMAT(sale_date, 'yyyy-MM')", "YEAR(sale_date)"],
-            sort: ["period ASC", "year ASC"],
+            queryId: "SalesByMonthComparisonBar",
+            params: {
+                current: currentRange,
+                lastYear: lastYearRange,
+            },
         }),
-        [current, lastYear]
+        [currentRange, lastYearRange]
     );
 
     const renderSalesComparison = useCallback(
         (data: SalesData[]) => {
-            const groupedData = processSalesData(data, current.periods.slice(-visibleMonths));
+            // Process all months - let CustomBarChart handle slicing based on layout
+            const groupedData = processSalesData(data, current.periods);
             const chartData = prepareChartData(groupedData);
-            return <CustomBarChart data={chartData} />;
+            return <CustomBarChart data={chartData} visibleMonths={visibleMonths} showProjection={showProjection} showPercentageDiff={showPercentageDiff} />;
         },
-        [current.periods, visibleMonths]
+        [current.periods, visibleMonths, showProjection, showPercentageDiff]
     );
 
     return (
@@ -535,9 +819,6 @@ export default function SalesByMonthComparisonBar() {
                 refreshInterval={300000}
             >
                 {(data, loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading sales data...</div>;
-                    }
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No sales data available</div>;
                     }

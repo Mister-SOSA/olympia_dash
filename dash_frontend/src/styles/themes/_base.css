@@ -1,0 +1,225 @@
+:root {
+    /* ===== THEME SYSTEM - UI/Menu Colors ===== */
+    /* Based on PresetManagerMenu design - gray backgrounds with purple/blue accents */
+
+    /* UI Backgrounds - Layered from darkest to lightest */
+    --ui-bg-primary: #111827;
+    /* gray-900 - Main modals, overlays */
+    --ui-bg-secondary: #1f2937;
+    /* gray-800 - Secondary panels, footers */
+    --ui-bg-tertiary: #374151;
+    /* gray-700 - Tertiary elements, hover states */
+    --ui-bg-quaternary: #4b5563;
+    /* gray-600 - Lighter hover states */
+
+    /* UI Borders */
+    --ui-border-primary: #374151;
+    /* gray-700 - Main borders */
+    --ui-border-secondary: #4b5563;
+    /* gray-600 - Secondary borders */
+
+    /* UI Text Colors */
+    --ui-text-primary: #ffffff;
+    /* white - Primary text */
+    --ui-text-secondary: #9ca3af;
+    /* gray-400 - Secondary text */
+    --ui-text-muted: #6b7280;
+    /* gray-500 - Muted text */
+
+    /* UI Primary Accent (Blue) - Primary actions, grid mode */
+    --ui-accent-primary: #2563eb;
+    /* blue-600 - Main accent */
+    --ui-accent-primary-hover: #1d4ed8;
+    /* blue-700 - Hover state */
+    --ui-accent-primary-light: #3b82f6;
+    /* blue-500 - Light variant */
+    --ui-accent-primary-text: #60a5fa;
+    /* blue-400 - Text on dark */
+    --ui-accent-primary-bg: rgba(37, 99, 235, 0.2);
+    /* blue-600/20 - Subtle backgrounds */
+    --ui-accent-primary-border: rgba(37, 99, 235, 0.5);
+    /* blue-600/50 - Subtle borders */
+
+    /* UI Secondary Accent (Purple) - Fullscreen mode, admin features */
+    --ui-accent-secondary: #9333ea;
+    /* purple-600 - Main accent */
+    --ui-accent-secondary-hover: #7e22ce;
+    /* purple-700 - Hover state */
+    --ui-accent-secondary-light: #a855f7;
+    /* purple-500 - Light variant */
+    --ui-accent-secondary-text: #c084fc;
+    /* purple-400 - Text on dark */
+    --ui-accent-secondary-bg: rgba(147, 51, 234, 0.2);
+    /* purple-600/20 - Subtle backgrounds */
+    --ui-accent-secondary-border: rgba(147, 51, 234, 0.5);
+    /* purple-600/50 - Subtle borders */
+
+    /* UI Action Colors */
+    --ui-success: #16a34a;
+    /* green-600 */
+    --ui-success-text: #4ade80;
+    /* green-400 */
+    --ui-success-bg: rgba(22, 163, 74, 0.2);
+    /* green-600/20 */
+    --ui-success-border: rgba(22, 163, 74, 0.5);
+    /* green-600/50 */
+
+    --ui-warning: #ea580c;
+    /* orange-600 */
+    --ui-warning-text: #fb923c;
+    /* orange-400 */
+    --ui-warning-bg: rgba(234, 88, 12, 0.2);
+    /* orange-600/20 */
+    --ui-warning-border: rgba(234, 88, 12, 0.5);
+    /* orange-600/50 */
+
+    --ui-danger: #dc2626;
+    /* red-600 */
+    --ui-danger-text: #f87171;
+    /* red-400 */
+    --ui-danger-bg: rgba(220, 38, 38, 0.2);
+    /* red-600/20 */
+    --ui-danger-border: rgba(220, 38, 38, 0.5);
+    /* red-600/50 */
+
+    --ui-info: #0ea5e9;
+    /* sky-500 */
+    --ui-info-text: #38bdf8;
+    /* sky-400 */
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    /* sky-500/20 */
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+    /* sky-500/50 */
+
+    /* ===== WIDGET/DASHBOARD Colors ===== */
+    /* Widget backgrounds and borders */
+    --background-dark: #08121a;
+    --background-light: #161e28;
+    --background-highlight: #23303d;
+    --border-light: #202D3C;
+    --border-dark: #1A1A1A;
+
+    /* Widget text */
+    --text-primary: #FFFFFF;
+    --text-secondary: #B0B0B0;
+    --text-muted: #757575;
+
+    /* Widget data visualization colors */
+    --success: #4CAF50;
+    --success-light: rgba(76, 175, 80, 0.2);
+    --warning: #ff8307;
+    --error: #F44336;
+    --error-light: rgba(244, 67, 54, 0.4);
+
+    /* Chart colors */
+    --chart-bar: #2196F3;
+    --chart-1: #4CAF50;
+    --chart-2: #2196F3;
+    --chart-3: #FFC107;
+    --chart-4: #FF5722;
+    --chart-5: #9C27B0;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #fbbf24;
+    /* amber */
+    --line-chart-2: #a78bfa;
+    /* purple */
+    --line-chart-3: #ef4444;
+    /* red */
+    --chart-6: #E91E63;
+    --chart-7: #00BCD4;
+    --chart-8: #8BC34A;
+    --chart-9: #FF9800;
+    --chart-10: #673AB7;
+    --chart-11: #3F51B5;
+    --chart-12: #F44336;
+    --chart-13: #607D8B;
+    --chart-14: #795548;
+    --chart-15: #BDBDBD;
+    --chart-other: #9E9E9E;
+
+    /* Shadows */
+    --shadow-light: rgba(0, 0, 0, 0.2);
+    --shadow-dark: rgba(0, 0, 0, 0.4);
+
+    /* Table-specific colors */
+    --table-header-bg: #1f2937;
+    --table-row-bg: #161e28;
+    --table-row-alt-bg: #1a2332;
+    --table-row-hover-bg: rgba(255, 255, 255, 0.05);
+    --table-border: #202D3C;
+    --table-text-primary: #FFFFFF;
+    --table-text-secondary: #B0B0B0;
+
+    /* Status badge colors - dark mode optimized */
+    --badge-success-bg: rgba(76, 175, 80, 0.2);
+    --badge-success-text: #4ade80;
+    --badge-success-border: rgba(76, 175, 80, 0.5);
+
+    --badge-warning-bg: rgba(255, 131, 7, 0.2);
+    --badge-warning-text: #fbbf24;
+    --badge-warning-border: rgba(255, 131, 7, 0.5);
+
+    --badge-error-bg: rgba(244, 67, 54, 0.2);
+    --badge-error-text: #f87171;
+    --badge-error-border: rgba(244, 67, 54, 0.5);
+
+    --badge-primary-bg: rgba(33, 150, 243, 0.2);
+    --badge-primary-text: #60a5fa;
+    --badge-primary-border: rgba(33, 150, 243, 0.5);
+
+    /* Conditional value colors */
+    --value-positive: #4ade80;
+    --value-negative: #f87171;
+    --value-neutral: #94a3b8;
+
+    /* ===== Shadcn/UI HSL Variables ===== */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 217 91% 60%;
+    /* blue-500 for consistency */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 271 91% 65%;
+    /* purple-500 for consistency */
+    --secondary-foreground: 0 0% 9%;
+    --muted: 220 13% 46%;
+    --muted-foreground: 0 0% 45.1%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+}
+
+.dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    /* blue-500 */
+    --primary-foreground: 0 0% 9%;
+    --secondary: 271 91% 65%;
+    /* purple-500 */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 220 13% 28%;
+    --muted-foreground: 0 0% 63.9%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+}
+
+/* ===== THEME VARIANTS ===== */
+
+/* Theme: Slate (Default) - Modern gray with blue/purple accents */
+/* Slate theme uses the default :root values */
+

@@ -1,88 +1,79 @@
-"use client";
-
 import React, { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Widget } from "@/types";
-
-import { WIDGETS, getWidgetsByCategory, WidgetDefinition } from "@/constants/widgets";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    MdAdd,
-    MdRemove,
-    MdSearch,
-    MdClear,
-    MdSelectAll,
-    MdInfo,
-    MdClose,
-    MdCheck,
-    MdSave
-} from "react-icons/md";
+import { Loader } from "@/components/ui/loader";
+import { WIDGETS, getWidgetsByCategory, CATEGORY_ICONS } from "@/constants/widgets";
+import { MdClose, MdSearch, MdCheck, MdSelectAll, MdDeselect, MdClear, MdSwapVert } from "react-icons/md";
+import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
+import { isMultiInstanceWidget } from "@/utils/widgetInstanceUtils";
+import { widgetSettingsService } from "@/lib/widgetSettings";
 
 interface ImprovedWidgetMenuProps {
     tempLayout: Widget[];
     setTempLayout: React.Dispatch<React.SetStateAction<Widget[]>>;
     handleSave: () => void;
     handleCancel: () => void;
+    activePresetName?: string;
 }
 
-export default function ImprovedWidgetMenu({
+function ImprovedWidgetMenu({
     tempLayout,
     setTempLayout,
     handleSave,
     handleCancel,
+    activePresetName,
 }: ImprovedWidgetMenuProps) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
-    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+    // ✅ FIX: Get widget permissions
+    const { filterAccessibleWidgets, loading: permissionsLoading } = useWidgetPermissions();
 
     const widgetsByCategory = getWidgetsByCategory();
     const categories = Object.keys(widgetsByCategory);
 
-    // Filter widgets based on search and category
     const filteredWidgets = useMemo(() => {
-        let widgets = WIDGETS;
+        // ✅ FIX: Filter widgets by permissions first
+        let widgets = filterAccessibleWidgets(WIDGETS, 'view');
 
-        // Filter by category
         if (selectedCategory !== "all") {
-            widgets = widgets.filter(w => w.category === selectedCategory);
+            widgets = widgets.filter((w) => w.category === selectedCategory);
         }
 
-        // Filter by search term
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            widgets = widgets.filter(w =>
-                w.title.toLowerCase().includes(term) ||
-                w.description?.toLowerCase().includes(term) ||
-                w.category.toLowerCase().includes(term)
+            widgets = widgets.filter(
+                (w) =>
+                    w.title.toLowerCase().includes(term) ||
+                    w.description?.toLowerCase().includes(term)
             );
         }
 
         return widgets;
-    }, [searchTerm, selectedCategory]);
+    }, [searchTerm, selectedCategory, filterAccessibleWidgets]);
 
     const isWidgetEnabled = (widgetId: string) => {
-        return tempLayout.find(w => w.id === widgetId)?.enabled || false;
+        return tempLayout.find((w) => w.id === widgetId)?.enabled || false;
     };
 
-    const enabledCount = tempLayout.filter(w => w.enabled).length;
-
     const toggleWidget = (widgetId: string) => {
-        const widgetDef = WIDGETS.find(w => w.id === widgetId);
+        const widgetDef = WIDGETS.find((w) => w.id === widgetId);
         if (!widgetDef) return;
 
-        const existingWidget = tempLayout.find(w => w.id === widgetId);
+        const existingWidget = tempLayout.find((w) => w.id === widgetId);
         const isCurrentlyEnabled = existingWidget?.enabled || false;
 
         if (existingWidget) {
-            // Update existing widget
-            setTempLayout(prev =>
-                prev.map(w =>
-                    w.id === widgetId
-                        ? { ...w, enabled: !isCurrentlyEnabled }
-                        : w
-                )
+            // Reset to default size when re-enabling a previously disabled widget
+            setTempLayout((prev) =>
+                prev.map((w) => (w.id === widgetId ? {
+                    ...w,
+                    enabled: !isCurrentlyEnabled,
+                    w: widgetDef.defaultSize.w,
+                    h: widgetDef.defaultSize.h,
+                } : w))
             );
         } else {
-            // Add new widget
             const newWidget: Widget = {
                 id: widgetId,
                 x: 0,
@@ -92,373 +83,301 @@ export default function ImprovedWidgetMenu({
                 enabled: true,
                 displayName: widgetDef.title,
                 category: widgetDef.category,
-                description: widgetDef.description
+                description: widgetDef.description,
             };
-
-            setTempLayout(prev => [...prev, newWidget]);
+            setTempLayout((prev) => [...prev, newWidget]);
         }
     };
 
-    const selectAll = () => {
-        const allWidgets = WIDGETS.map(widget => {
-            const existing = tempLayout.find(w => w.id === widget.id);
-            return existing ? { ...existing, enabled: true } : {
-                id: widget.id,
-                x: 0,
-                y: 0,
-                w: widget.defaultSize.w,
-                h: widget.defaultSize.h,
-                enabled: true,
-                displayName: widget.title,
-                category: widget.category,
-                description: widget.description
-            };
+    // Bulk actions for filtered widgets
+    const selectAllVisible = () => {
+        const visibleWidgetIds = filteredWidgets.map((w) => w.id);
+
+        setTempLayout((prev) => {
+            const updated = [...prev];
+
+            visibleWidgetIds.forEach((widgetId) => {
+                const existingIndex = updated.findIndex((w) => w.id === widgetId);
+
+                if (existingIndex >= 0) {
+                    updated[existingIndex] = { ...updated[existingIndex], enabled: true };
+                } else {
+                    const widgetDef = WIDGETS.find((w) => w.id === widgetId);
+                    if (widgetDef) {
+                        updated.push({
+                            id: widgetId,
+                            x: 0,
+                            y: 0,
+                            w: widgetDef.defaultSize.w,
+                            h: widgetDef.defaultSize.h,
+                            enabled: true,
+                            displayName: widgetDef.title,
+                            category: widgetDef.category,
+                            description: widgetDef.description,
+                        });
+                    }
+                }
+            });
+
+            return updated;
         });
-        setTempLayout(allWidgets);
+    };
+
+    const deselectAllVisible = () => {
+        const visibleWidgetIds = filteredWidgets.map((w) => w.id);
+        setTempLayout((prev) =>
+            prev.map((w) =>
+                visibleWidgetIds.includes(w.id) ? { ...w, enabled: false } : w
+            )
+        );
     };
 
     const clearAll = () => {
-        setTempLayout(prev => prev.map(w => ({ ...w, enabled: false })));
-    };
-
-    const selectCategory = (category: string) => {
-        const categoryWidgets = widgetsByCategory[category] || [];
-        setTempLayout(prev => {
-            return prev.map(widget => {
-                const isInCategory = categoryWidgets.some(cw => cw.id === widget.id);
-                return isInCategory ? { ...widget, enabled: true } : widget;
+        setTempLayout((prev) => {
+            // Clean up settings for instance widgets being removed
+            prev.forEach((w) => {
+                if (isMultiInstanceWidget(w.id)) {
+                    widgetSettingsService.deleteInstanceSettings(w.id);
+                }
             });
+            // Remove instance widgets entirely, disable singleton widgets
+            return prev
+                .filter((w) => !isMultiInstanceWidget(w.id))
+                .map((w) => ({ ...w, enabled: false }));
         });
     };
 
+    const invertSelection = () => {
+        const visibleWidgetIds = filteredWidgets.map((w) => w.id);
+
+        setTempLayout((prev) => {
+            const updated = [...prev];
+
+            visibleWidgetIds.forEach((widgetId) => {
+                const existingIndex = updated.findIndex((w) => w.id === widgetId);
+
+                if (existingIndex >= 0) {
+                    updated[existingIndex] = {
+                        ...updated[existingIndex],
+                        enabled: !updated[existingIndex].enabled,
+                    };
+                } else {
+                    const widgetDef = WIDGETS.find((w) => w.id === widgetId);
+                    if (widgetDef) {
+                        updated.push({
+                            id: widgetId,
+                            x: 0,
+                            y: 0,
+                            w: widgetDef.defaultSize.w,
+                            h: widgetDef.defaultSize.h,
+                            enabled: true,
+                            displayName: widgetDef.title,
+                            category: widgetDef.category,
+                            description: widgetDef.description,
+                        });
+                    }
+                }
+            });
+
+            return updated;
+        });
+    };
+
+    const enabledCount = tempLayout.filter((w) => w.enabled).length;
+    const visibleEnabledCount = filteredWidgets.filter((w) => isWidgetEnabled(w.id)).length;
+
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        >
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-2xl shadow-2xl overflow-hidden w-full max-w-5xl max-h-[90vh] overflow-y-auto"
-                style={{
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
-                }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-ui-bg-primary rounded-xl shadow-2xl border border-ui-border-primary w-full max-w-4xl max-h-[90vh] flex flex-col"
             >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 px-6 py-4 border-b border-gray-600 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-green-600/10"></div>
-                    <div className="relative flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2 bg-gray-700/50 rounded-xl">
-                                <MdSelectAll className="w-6 h-6 text-blue-400" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-white">Widget Library</h2>
-                                <p className="text-gray-400 text-sm">
-                                    {enabledCount} of {WIDGETS.length} widgets selected
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleCancel}
-                            className="p-2 hover:bg-gray-700/50 rounded-xl transition-colors text-gray-400 hover:text-white"
-                        >
-                            <MdClose className="w-5 h-5" />
-                        </button>
+                <div className="flex items-center justify-between p-4 border-b border-ui-border-primary">
+                    <div>
+                        <h2 className="text-lg font-semibold text-ui-text-primary">Widgets</h2>
+                        <p className="text-sm text-ui-text-secondary">
+                            {enabledCount} of {WIDGETS.length} enabled
+                            {filteredWidgets.length < WIDGETS.length &&
+                                ` • ${visibleEnabledCount} of ${filteredWidgets.length} visible`
+                            }
+                        </p>
                     </div>
+                    <button
+                        onClick={handleCancel}
+                        className="p-2 hover:bg-ui-bg-secondary rounded-lg transition-colors text-ui-text-secondary hover:text-ui-text-primary"
+                    >
+                        <MdClose className="w-5 h-5" />
+                    </button>
                 </div>
 
-                {/* Controls */}
-                <div className="px-6 py-4 bg-gray-800/30 border-b border-gray-700">
-                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                        {/* Search */}
-                        <div className="flex-1 relative">
-                            <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Search widgets..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all backdrop-blur-sm"
-                            />
-                        </div>
-
-                        {/* View Mode Toggle */}
-                        <div className="flex bg-gray-700/50 rounded-xl p-1">
-                            <button
-                                onClick={() => setViewMode("grid")}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "grid"
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-400 hover:text-white"
-                                    }`}
-                            >
-                                Grid
-                            </button>
-                            <button
-                                onClick={() => setViewMode("list")}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === "list"
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-400 hover:text-white"
-                                    }`}
-                            >
-                                List
-                            </button>
+                {/* Active Preset Context Banner */}
+                {activePresetName && (
+                    <div className="px-4 py-3 border-b border-ui-border-primary bg-ui-accent-primary-bg/30 border-ui-accent-primary-border">
+                        <div className="text-sm text-ui-text-primary font-medium">
+                            Active preset: {activePresetName}
                         </div>
                     </div>
+                )}
 
-                    {/* Category Filter */}
-                    <div className="flex flex-wrap gap-2 mb-4">
+                {/* Search & Filters */}
+                <div className="p-4 border-b border-ui-border-primary space-y-3">
+                    <div className="relative">
+                        <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-ui-text-secondary w-4 h-4" />
+                        <input
+                            type="text"
+                            placeholder="Search widgets..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-ui-bg-secondary border border-ui-border-primary rounded-lg text-ui-text-primary text-sm placeholder-ui-text-muted focus:border-ui-accent-primary focus:ring-1 focus:ring-ui-accent-primary transition-all"
+                        />
+                    </div>
+
+                    {/* Bulk Actions */}
+                    <div className="flex gap-2 flex-wrap items-center">
+                        <span className="text-xs text-ui-text-muted font-medium">Quick actions:</span>
                         <button
-                            onClick={() => setSelectedCategory("all")}
-                            className={`px-4 py-2 rounded-xl font-medium transition-all ${selectedCategory === "all"
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                                : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 hover:text-white border border-gray-600"
-                                }`}
+                            onClick={selectAllVisible}
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-ui-success-bg hover:bg-ui-success-bg border border-ui-success-border text-ui-success-text rounded-lg text-xs font-medium transition-colors"
+                            title="Enable all visible widgets"
                         >
-                            All Categories
+                            <MdSelectAll className="w-3.5 h-3.5" />
+                            Select Visible
                         </button>
-                        {categories.map(category => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-4 py-2 rounded-xl font-medium transition-all capitalize ${selectedCategory === category
-                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                                    : "bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 hover:text-white border border-gray-600"
-                                    }`}
-                            >
-                                {category}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="flex flex-wrap gap-2">
                         <button
-                            onClick={selectAll}
-                            className="px-4 py-2 rounded-xl text-sm font-medium bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 hover:border-green-500/50 transition-all flex items-center gap-2"
+                            onClick={deselectAllVisible}
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-ui-warning-bg hover:bg-ui-warning-bg border border-ui-warning-border text-ui-warning-text rounded-lg text-xs font-medium transition-colors"
+                            title="Disable all visible widgets"
                         >
-                            <MdSelectAll size={16} />
-                            Select All
+                            <MdDeselect className="w-3.5 h-3.5" />
+                            Deselect Visible
+                        </button>
+                        <button
+                            onClick={invertSelection}
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-ui-accent-secondary-bg hover:bg-ui-accent-secondary-bg border border-ui-accent-secondary-border text-ui-accent-secondary-text rounded-lg text-xs font-medium transition-colors"
+                            title="Invert selection of visible widgets"
+                        >
+                            <MdSwapVert className="w-3.5 h-3.5" />
+                            Invert
                         </button>
                         <button
                             onClick={clearAll}
-                            className="px-4 py-2 rounded-xl text-sm font-medium bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 hover:border-red-500/50 transition-all flex items-center gap-2"
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-ui-danger-bg hover:bg-ui-danger-bg border border-ui-danger-border text-ui-danger-text rounded-lg text-xs font-medium transition-colors"
+                            title="Disable all widgets"
                         >
-                            <MdClear size={16} />
+                            <MdClear className="w-3.5 h-3.5" />
                             Clear All
                         </button>
-                        {selectedCategory !== "all" && (
-                            <button
-                                onClick={() => selectCategory(selectedCategory)}
-                                className="px-4 py-2 rounded-xl text-sm font-medium bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 hover:border-blue-500/50 transition-all flex items-center gap-2"
-                            >
-                                <MdAdd size={16} />
-                                Add {selectedCategory}
-                            </button>
-                        )}
+                    </div>
+
+                    <div className="flex gap-2 flex-wrap">
+                        <button
+                            onClick={() => setSelectedCategory("all")}
+                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${selectedCategory === "all"
+                                ? "bg-ui-accent-primary text-white"
+                                : "bg-ui-bg-secondary text-ui-text-secondary hover:bg-ui-bg-tertiary"
+                                }`}
+                        >
+                            All
+                        </button>
+                        {categories.map((category) => {
+                            const IconComponent = CATEGORY_ICONS[category];
+                            return (
+                                <button
+                                    key={category}
+                                    onClick={() => setSelectedCategory(category)}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${selectedCategory === category
+                                        ? "bg-ui-accent-primary text-white"
+                                        : "bg-ui-bg-secondary text-ui-text-secondary hover:bg-ui-bg-tertiary"
+                                        }`}
+                                >
+                                    {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
+                                    {category}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Widget Grid */}
-                <div className="p-6 overflow-y-auto max-h-[50vh]">
-                    {filteredWidgets.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400">
-                            <MdSearch size={48} className="mx-auto mb-4 opacity-50" />
-                            <p className="text-lg">No widgets found</p>
-                            <p className="text-sm">Try adjusting your search or category filter</p>
+                {/* Widget List */}
+                <div className="flex-1 overflow-y-auto p-4">
+                    {permissionsLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                            <Loader />
+                            <p className="text-ui-text-muted mt-3">Loading permissions...</p>
+                        </div>
+                    ) : filteredWidgets.length === 0 ? (
+                        <div className="text-center py-12 text-ui-text-muted">
+                            <p>No widgets available</p>
+                            <p className="text-xs mt-2">Contact your administrator for access</p>
                         </div>
                     ) : (
-                        <div className={`grid gap-4 ${viewMode === "grid"
-                            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                            : "grid-cols-1"
-                            }`}>
-                            {filteredWidgets.map((widget) => (
-                                <WidgetCard
-                                    key={widget.id}
-                                    widget={widget}
-                                    isEnabled={isWidgetEnabled(widget.id)}
-                                    onToggle={() => toggleWidget(widget.id)}
-                                    viewMode={viewMode}
-                                />
-                            ))}
+                        <div className="space-y-2">
+                            {filteredWidgets.map((widget) => {
+                                const isEnabled = isWidgetEnabled(widget.id);
+                                return (
+                                    <button
+                                        key={widget.id}
+                                        className={`w-full text-left p-3 rounded-lg border transition-all ${isEnabled
+                                            ? "bg-ui-accent-primary-bg border-ui-accent-primary-border hover:bg-ui-accent-primary-bg"
+                                            : "bg-ui-bg-secondary/50 border-ui-border-primary hover:bg-ui-bg-secondary hover:border-ui-accent-primary"
+                                            }`}
+                                        onClick={() => toggleWidget(widget.id)}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-medium text-ui-text-primary text-sm mb-1">
+                                                    {widget.title}
+                                                </h3>
+                                                <p className="text-xs text-ui-text-secondary line-clamp-2">
+                                                    {widget.description || "No description"}
+                                                </p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded">
+                                                        {widget.defaultSize.w}×{widget.defaultSize.h}
+                                                    </span>
+                                                    <span className="text-xs bg-ui-bg-tertiary text-ui-text-secondary px-2 py-0.5 rounded capitalize">
+                                                        {widget.category}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div
+                                                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${isEnabled
+                                                    ? "bg-ui-accent-primary border-ui-accent-primary"
+                                                    : "border-ui-border-secondary"
+                                                    }`}
+                                            >
+                                                {isEnabled && <MdCheck className="w-4 h-4 text-white" />}
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-800/30 border-t border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                                <span>{enabledCount} of {WIDGETS.length} widgets selected</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <MdSave className="w-4 h-4" />
-                                <span>Changes applied instantly</span>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleCancel}
-                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm font-medium"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                            >
-                                <MdCheck size={16} />
-                                Apply Changes
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-}
-
-interface WidgetCardProps {
-    widget: WidgetDefinition;
-    isEnabled: boolean;
-    onToggle: () => void;
-    viewMode: "grid" | "list";
-}
-
-function WidgetCard({ widget, isEnabled, onToggle, viewMode }: WidgetCardProps) {
-    const [showInfo, setShowInfo] = useState(false);
-
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`group relative cursor-pointer transition-all duration-300 overflow-hidden ${isEnabled
-                ? "bg-blue-600/20 border-blue-500/50 ring-2 ring-blue-500/30 shadow-lg shadow-blue-500/10"
-                : "bg-gray-800/50 border-gray-600 hover:border-gray-500 hover:bg-gray-700/50"
-                } border-2 rounded-xl p-4 backdrop-blur-sm ${viewMode === "list" ? "flex items-center" : ""}`}
-            onClick={onToggle}
-        >
-            {/* Background Gradient Overlay */}
-            <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none ${isEnabled
-                    ? "bg-gradient-to-br from-blue-500/5 to-purple-500/5"
-                    : "bg-gradient-to-br from-gray-500/5 to-gray-400/5"
-                }`} />
-
-            {/* Status Indicator */}
-            <div className={`absolute top-3 right-3 w-3 h-3 rounded-full shadow-sm ${isEnabled ? "bg-green-500 shadow-green-500/30" : "bg-gray-500"
-                }`} />
-
-            <div className={`relative z-10 ${viewMode === "list" ? "flex-1" : ""}`}>
-                {/* Widget Title */}
-                <h3 className="font-bold text-white text-lg mb-2 pr-6 group-hover:text-blue-300 transition-colors">
-                    {widget.title}
-                </h3>
-
-                {/* Widget Description */}
-                <p className="text-gray-300 text-sm mb-3 line-clamp-2 group-hover:text-gray-200 transition-colors">
-                    {widget.description || "No description available"}
-                </p>
-
-                {/* Widget Details */}
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs bg-gray-700/50 text-gray-300 px-2 py-1 rounded-lg font-medium backdrop-blur-sm">
-                            {widget.defaultSize.w}×{widget.defaultSize.h}
-                        </span>
-                        <span className="text-xs text-gray-400 capitalize bg-gray-600/30 px-2 py-1 rounded-lg">
-                            {widget.category}
-                        </span>
-                    </div>
-
+                <div className="p-4 border-t border-ui-border-primary flex justify-end gap-3">
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowInfo(!showInfo);
-                        }}
-                        className="p-1 text-gray-400 hover:text-blue-400 transition-colors rounded-lg hover:bg-gray-700/50"
+                        onClick={handleCancel}
+                        className="px-4 py-2 bg-ui-bg-secondary hover:bg-ui-bg-tertiary text-white rounded-lg text-sm font-medium transition-colors"
                     >
-                        <MdInfo size={16} />
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-4 py-2 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                        Apply Changes
                     </button>
                 </div>
-
-                {/* Action Button */}
-                <div className="relative">
-                    <div className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-semibold transition-all ${isEnabled
-                        ? "bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 hover:border-red-500/50"
-                        : "bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30 hover:border-green-500/50"
-                        } backdrop-blur-sm shadow-sm`}>
-                        {isEnabled ? (
-                            <>
-                                <MdRemove size={16} />
-                                Remove
-                            </>
-                        ) : (
-                            <>
-                                <MdAdd size={16} />
-                                Add Widget
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Info Popup */}
-            <AnimatePresence>
-                {showInfo && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute top-full left-0 right-0 mt-2 bg-gray-900/95 backdrop-blur-md border border-gray-600 rounded-xl p-4 shadow-2xl z-20"
-                        style={{
-                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h4 className="font-bold text-white mb-2">{widget.title}</h4>
-                        <p className="text-gray-300 text-sm mb-3">{widget.description}</p>
-                        <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">Category: <span className="text-blue-400 capitalize">{widget.category}</span></span>
-                            <span className="text-gray-400">Size: <span className="text-green-400">{widget.defaultSize.w}×{widget.defaultSize.h}</span></span>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
-    );
-}
-
-// Enhanced stats component
-function MenuStats({ enabledCount, totalCount }: { enabledCount: number; totalCount: number }) {
-    const percentage = Math.round((enabledCount / totalCount) * 100);
-
-    return (
-        <div className="bg-gray-800 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-300 font-medium">Dashboard Status</span>
-                <span className="text-blue-400 font-bold">{percentage}%</span>
-            </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
-                <motion.div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${percentage}%` }}
-                    transition={{ duration: 0.5 }}
-                />
-            </div>
-            <div className="flex justify-between text-xs text-gray-400 mt-2">
-                <span>{enabledCount} enabled</span>
-                <span>{totalCount - enabledCount} available</span>
-            </div>
+            </motion.div>
         </div>
     );
 }
+
+// Memoize to prevent unnecessary re-renders when parent updates
+export default React.memo(ImprovedWidgetMenu);

@@ -1,0 +1,107 @@
+/* Solarized Theme */
+.theme-solarized {
+    --ui-bg-primary: #fdf6e3;
+    --ui-bg-secondary: #eee8d5;
+    --ui-bg-tertiary: #d3cbb7;
+    --ui-bg-quaternary: #b8b09a;
+
+    --ui-border-primary: #d3cbb7;
+    --ui-border-secondary: #93a1a1;
+
+    --ui-text-primary: #002b36;
+    --ui-text-secondary: #586e75;
+    --ui-text-muted: #839496;
+
+    --ui-accent-primary: #268bd2;
+    --ui-accent-primary-hover: #1e6aa7;
+    --ui-accent-primary-light: #3fa9f5;
+    --ui-accent-primary-text: #1e6aa7;
+    --ui-accent-primary-bg: rgba(38, 139, 210, 0.1);
+    --ui-accent-primary-border: rgba(38, 139, 210, 0.3);
+
+    --ui-accent-secondary: #2aa198;
+    --ui-accent-secondary-hover: #1f7972;
+    --ui-accent-secondary-light: #46c7bb;
+    --ui-accent-secondary-text: #1f7972;
+    --ui-accent-secondary-bg: rgba(42, 161, 152, 0.1);
+    --ui-accent-secondary-border: rgba(42, 161, 152, 0.3);
+
+    --ui-success: #859900;
+    --ui-success-text: #586e75;
+    --ui-success-bg: rgba(133, 153, 0, 0.1);
+    --ui-success-border: rgba(133, 153, 0, 0.3);
+
+    --ui-warning: #b58900;
+    --ui-warning-text: #7e5f00;
+    --ui-warning-bg: rgba(181, 137, 0, 0.1);
+    --ui-warning-border: rgba(181, 137, 0, 0.3);
+
+    --ui-danger: #dc322f;
+    --ui-danger-text: #a42421;
+    --ui-danger-bg: rgba(220, 50, 47, 0.1);
+    --ui-danger-border: rgba(220, 50, 47, 0.3);
+
+    --ui-info: #0ea5e9;
+    --ui-info-text: #38bdf8;
+    --ui-info-bg: rgba(14, 165, 233, 0.2);
+    --ui-info-border: rgba(14, 165, 233, 0.5);
+
+    --background-dark: #f7f0d9;
+    --background-light: #fdf6e3;
+    --background-highlight: #eee8d5;
+    --border-light: #d3cbb7;
+    --border-dark: #e3dcca;
+
+    --text-primary: #002b36;
+    --text-secondary: #586e75;
+    --text-muted: #839496;
+
+    --success: #859900;
+    --success-light: rgba(133, 153, 0, 0.1);
+    --warning: #b58900;
+    --error: #dc322f;
+    --error-light: rgba(220, 50, 47, 0.2);
+
+    --chart-bar: #268bd2;
+    --chart-1: #2aa198;
+    --chart-2: #268bd2;
+    --chart-3: #b58900;
+    --chart-4: #dc322f;
+    --chart-5: #6c71c4;
+
+    /* Line chart specific colors - high contrast pairs */
+    --line-chart-1: #268bd2;
+    /* solarized blue */
+    --line-chart-2: #cb4b16;
+    /* solarized orange */
+    --line-chart-3: #859900;
+    /* solarized green */
+
+    --table-header-bg: #eee8d5;
+    --table-row-bg: #fdf6e3;
+    --table-row-alt-bg: #f7f0d9;
+    --table-row-hover-bg: rgba(38, 139, 210, 0.05);
+    --table-border: #d3cbb7;
+    --table-text-primary: #002b36;
+    --table-text-secondary: #586e75;
+
+    --badge-success-bg: rgba(133, 153, 0, 0.15);
+    --badge-success-text: #586e75;
+    --badge-success-border: rgba(133, 153, 0, 0.4);
+
+    --badge-warning-bg: rgba(181, 137, 0, 0.15);
+    --badge-warning-text: #7e5f00;
+    --badge-warning-border: rgba(181, 137, 0, 0.4);
+
+    --badge-error-bg: rgba(220, 50, 47, 0.15);
+    --badge-error-text: #a42421;
+    --badge-error-border: rgba(220, 50, 47, 0.4);
+
+    --badge-primary-bg: rgba(38, 139, 210, 0.15);
+    --badge-primary-text: #1e6aa7;
+    --badge-primary-border: rgba(38, 139, 210, 0.4);
+
+    --value-positive: #586e75;
+    --value-negative: #a42421;
+    --value-neutral: #586e75;
+}

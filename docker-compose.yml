@@ -16,6 +16,8 @@ services:
       - NODE_ENV=production
     depends_on:
       - backend
+    networks:
+      - olympia_network
     restart: unless-stopped
 
   backend:
@@ -34,4 +36,16 @@ services:
       - FLASK_HOST=0.0.0.0
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+    networks:
+      - olympia_network
+    volumes:
+      # Persist SQLite auth database in a directory
+      - auth_data:/app/data
     restart: unless-stopped
+
+networks:
+  olympia_network:
+    driver: bridge
+
+volumes:
+  auth_data:

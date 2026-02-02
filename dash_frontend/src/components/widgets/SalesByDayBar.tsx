@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect, useMemo } from "react";
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
-import { format } from "date-fns";
+import { format, isWeekend, isToday } from "date-fns";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleDays Hook        */
@@ -32,16 +33,110 @@ function useResponsiveVisibleDays(ref: React.RefObject<HTMLDivElement | null>): 
 }
 
 /* -------------------------------------- */
+/* � Mobile List View                     */
+/* -------------------------------------- */
+interface MobileListViewProps {
+    data: (ProcessedSalesData & { isWeekend?: boolean; isToday?: boolean })[];
+    showWeekendShading: boolean;
+}
+
+const MobileListView: React.FC<MobileListViewProps> = ({ data, showWeekendShading }) => {
+    const maxValue = Math.max(...data.map(d => d.currentPeriodSales));
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+        }}>
+            {reversedData.map((item, index) => {
+                const width = maxValue > 0 ? (item.currentPeriodSales / maxValue) * 100 : 0;
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: item.isToday
+                                ? "var(--ui-accent-primary-bg)"
+                                : item.isWeekend && showWeekendShading
+                                    ? "var(--ui-bg-tertiary)"
+                                    : "var(--ui-bg-secondary)",
+                            borderRadius: "8px",
+                            padding: "8px 10px",
+                            border: item.isToday
+                                ? "1px solid var(--ui-accent-primary-border)"
+                                : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "6px",
+                        }}>
+                            <span style={{
+                                color: item.isToday ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "12px",
+                                fontWeight: item.isToday ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            <span style={{
+                                color: item.isToday ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "13px",
+                                fontWeight: 700
+                            }}>
+                                ${nFormatter(item.currentPeriodSales, 2)}
+                            </span>
+                        </div>
+                        <div style={{
+                            height: "5px",
+                            backgroundColor: "var(--ui-bg-quaternary)",
+                            borderRadius: "2.5px",
+                            overflow: "hidden",
+                        }}>
+                            <div style={{
+                                width: `${width}%`,
+                                height: "100%",
+                                backgroundColor: item.isToday ? "var(--ui-accent-primary)" : "var(--chart-bar)",
+                                borderRadius: "2.5px",
+                                transition: "width 0.3s ease",
+                            }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Bar Chart Component          */
 /* -------------------------------------- */
 interface CustomBarChartProps {
-    data: ProcessedSalesData[];
+    data: (ProcessedSalesData & { isWeekend?: boolean; isToday?: boolean })[];
+    visibleDays: number;
+    highlightToday: boolean;
+    showWeekendShading: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleDays, highlightToday, showWeekendShading }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -53,9 +148,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileListView data={allData} showWeekendShading={showWeekendShading} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible days
+    const data = allData.slice(-visibleDays);
 
     const padding = { top: 32, right: 5, bottom: 38, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -79,8 +186,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -92,6 +200,8 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                     const y = padding.top + chartHeight - barHeight;
                     const isHovered = hoveredIndex === index;
                     const isLast = index === data.length - 1;
+                    const isTodayBar = item.isToday && highlightToday;
+                    const isWeekendBar = item.isWeekend && showWeekendShading;
 
                     return (
                         <g key={index}>
@@ -107,8 +217,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 style={{
                                     cursor: "pointer",
                                     transition: "fill 0.2s ease",
+                                    opacity: isWeekendBar ? 0.5 : 1,
                                 }}
-                                className={isLast ? "bar-blink" : ""}
+                                className={isTodayBar ? "bar-blink" : ""}
                                 onMouseEnter={() => setHoveredIndex(index)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                             />
@@ -118,7 +229,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={x + actualBarWidth / 2}
                                 y={y - 10}
                                 textAnchor="middle"
-                                fill="white"
+                                fill="var(--text-primary)"
                                 fontSize="15"
                                 fontWeight="700"
                                 style={{ pointerEvents: "none" }}
@@ -131,7 +242,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={x + actualBarWidth / 2}
                                 y={padding.top + chartHeight + 20}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
+                                fill="var(--text-secondary)"
                                 fontSize="14"
                                 fontWeight="500"
                                 style={{ pointerEvents: "none" }}
@@ -142,7 +253,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={x + actualBarWidth / 2}
                                 y={padding.top + chartHeight + 38}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.6)"
+                                fill="var(--text-muted)"
                                 fontSize="13"
                                 fontWeight="400"
                                 style={{ pointerEvents: "none" }}
@@ -162,16 +273,17 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                         top: padding.top + chartHeight - (data[hoveredIndex].currentPeriodSales / maxValue) * chartHeight - 60,
                         left: padding.left + hoveredIndex * barWidth + barWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
+                        backgroundColor: "var(--ui-bg-primary)",
                         padding: "10px 14px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "4px" }}>
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "13px", marginBottom: "4px" }}>
                         {data[hoveredIndex].periodLabel}
                     </div>
                     <div style={{ color: "var(--chart-bar)", fontSize: "16px", fontWeight: 700 }}>
@@ -199,44 +311,16 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByDayBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleDays = useResponsiveVisibleDays(containerRef);
+    const { settings } = useWidgetSettings('SalesByDayBar');
 
-    // Memoize the widget payload.
+    const highlightToday = settings.highlightToday ?? true;
+    const showWeekendShading = settings.showWeekendShading ?? false;
+
+    // Memoize the widget payload via the query registry.
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByDayBar",
-            raw_query: `
-        -- Fetch sales data for the last 3 days from orditem
-        SELECT 
-          FORMAT(duedate, 'yyyy-MM-dd') AS period,
-          SUM(ext_price) AS total
-        FROM 
-          orditem
-        WHERE 
-          duedate >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-          AND duedate >= DATEADD(DAY, -3, GETDATE()) -- Only the last 3 days
-          AND duedate <= GETDATE()
-        GROUP BY 
-          FORMAT(duedate, 'yyyy-MM-dd')
-
-        UNION ALL
-
-        -- Fetch sales data older than 3 days but within 30 days from sumsales
-        SELECT 
-          FORMAT(sale_date, 'yyyy-MM-dd') AS period,
-          SUM(sales_dol) AS total
-        FROM 
-          sumsales
-        WHERE 
-          sale_date >= DATEADD(DAY, -30, GETDATE()) -- Limit to the last 30 days
-          AND sale_date < DATEADD(DAY, -3, GETDATE()) -- Beyond the last 3 days
-          AND sale_date <= GETDATE()
-        GROUP BY 
-          FORMAT(sale_date, 'yyyy-MM-dd')
-
-        -- Combine and aggregate the data for consistent results
-        ORDER BY 
-          period ASC;
-      `,
+            queryId: "SalesByDayBar"
         }),
         []
     );
@@ -250,10 +334,6 @@ export default function SalesByDayBar() {
                 refreshInterval={60000}
             >
                 {(data: SalesData[], loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading sales data...</div>;
-                    }
-
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No sales data available</div>;
                     }
@@ -272,7 +352,7 @@ export default function SalesByDayBar() {
                     }
 
                     // Build the complete dataset with zero sales for missing dates.
-                    const chartData: ProcessedSalesData[] = allDates.map((date) => {
+                    const chartData = allDates.map((date) => {
                         const formattedDate = format(date, "yyyy-MM-dd");
                         const entry = data.find((item) => item.period === formattedDate);
                         const formattedLabel = `${format(date, "EEE")} (${format(date, "MMM d")})`;
@@ -281,10 +361,17 @@ export default function SalesByDayBar() {
                             periodLabel: formattedLabel,
                             currentPeriodSales: entry?.total || 0,
                             previousPeriodSales: 0,
+                            isWeekend: isWeekend(date),
+                            isToday: isToday(date),
                         };
                     });
 
-                    return <CustomBarChart data={chartData.slice(-visibleDays)} />;
+                    return <CustomBarChart
+                        data={chartData}
+                        visibleDays={visibleDays}
+                        highlightToday={highlightToday}
+                        showWeekendShading={showWeekendShading}
+                    />;
                 }}
             </Widget>
         </div>

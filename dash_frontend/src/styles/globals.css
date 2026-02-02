@@ -3,12 +3,36 @@
 @tailwind utilities;
 
 @import 'gridstack/dist/gridstack.css';
-@import 'gridstack/dist/gridstack-extra.css';
-@import './theme.css';
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
+@import './themes/index.css';
+
+/* Widget loading container with minimum height */
+.widget-loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  width: 100%;
+  animation: fadeIn 0.2s ease-out;
+}
 
 /* Base styles */
 nextjs-portal {
   display: none;
+}
+
+/* Scrollbar utilities */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Improved Widget Menu Styles */
@@ -26,13 +50,153 @@ nextjs-portal {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
-/* Disable context menu on grid-stack handles to prevent conflicts */
-.grid-stack-item .ui-resizable-handle {
-  pointer-events: none;
+/* ============================================
+   SIMPLE RESIZE INDICATORS - Just glow the border
+   ============================================ */
+
+/* Hide GridStack's default resize visuals */
+.grid-stack-item>.ui-resizable-handle {
+  background: none !important;
+  border: none !important;
 }
 
-.grid-stack-item:hover .ui-resizable-handle {
-  pointer-events: auto;
+.grid-stack-item>.ui-resizable-handle::before,
+.grid-stack-item>.ui-resizable-handle::after {
+  display: none !important;
+}
+
+/* Disable top edge resizing */
+.grid-stack-item>.ui-resizable-n,
+.grid-stack-item>.ui-resizable-nw,
+.grid-stack-item>.ui-resizable-ne {
+  display: none !important;
+}
+
+/* Resize handle hit areas */
+.grid-stack-item>.ui-resizable-s {
+  height: 8px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  cursor: s-resize;
+}
+
+.grid-stack-item>.ui-resizable-e {
+  width: 8px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  cursor: e-resize;
+}
+
+.grid-stack-item>.ui-resizable-w {
+  width: 8px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  cursor: w-resize;
+}
+
+.grid-stack-item>.ui-resizable-se {
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.grid-stack-item>.ui-resizable-sw {
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+/* Border glow on hover - uses theme accent colors */
+.grid-stack-item-content {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.grid-stack-item:hover .grid-stack-item-content {
+  box-shadow: 0 0 0 1px var(--ui-accent-primary-bg);
+}
+
+.grid-stack-item:has(> .ui-resizable-s:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-e:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-w:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-se:hover) .grid-stack-item-content,
+.grid-stack-item:has(> .ui-resizable-sw:hover) .grid-stack-item-content {
+  box-shadow:
+    0 0 0 1px var(--ui-accent-primary-border),
+    0 0 12px var(--ui-accent-primary-bg);
+}
+
+/* Active resize glow */
+.grid-stack-item.ui-resizable-resizing .grid-stack-item-content {
+  box-shadow:
+    0 0 0 2px var(--ui-accent-primary),
+    0 0 20px var(--ui-accent-primary-bg) !important;
+}
+
+/* Hide handles during drag */
+.grid-stack-item.ui-draggable-dragging>.ui-resizable-handle {
+  display: none !important;
+}
+
+/* Drag-to-Add Widget Styles */
+.draggable-widget-item {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.draggable-widget-item:active {
+  cursor: grabbing !important;
+}
+
+/* GridStack drag helper (clone) styling */
+.grid-stack-item.ui-draggable-dragging {
+  opacity: 0.8;
+  z-index: 1000;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  transform: scale(1.02);
+  transition: transform 0.2s ease;
+}
+
+/* Disable GridStack animations during preset transitions */
+.transitioning-preset .grid-stack .grid-stack-item {
+  transition: none !important;
+}
+
+.transitioning-preset .grid-stack .grid-stack-item-content {
+  transition: none !important;
+}
+
+.transitioning-preset .grid-stack * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Placeholder when dragging widget from menu */
+.grid-stack-placeholder {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.6) !important;
+  border-radius: 1rem !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 body {
@@ -104,6 +268,333 @@ main {
   position: relative;
   padding: 0;
   margin: 0;
+  /* Allow drag handle to overflow above */
+  overflow: visible;
+  /* Create stacking context - drag handle will be above all content */
+  isolation: isolate;
+}
+
+/* Widget Drag Handle Container - clips the handle at the top edge */
+.widget-drag-handle-container {
+  position: absolute;
+  /* Offset by parent padding (0.7rem) + border (2px) to align with actual widget edge */
+  top: calc(-0.7rem - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 40px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Widget Drag Handle - Edge-Activated Sliding Design */
+/* Handle slides down from behind the top edge on hover */
+.widget-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 16px;
+  min-width: 60px;
+  cursor: grab;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease;
+  border-radius: 0 0 14px 14px;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.15);
+  border-top: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
+  will-change: opacity, transform;
+}
+
+/* Inner dots - 3 dots with generous spacing */
+.widget-drag-handle::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow:
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.widget-drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.widget-drag-handle:hover::after {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.widget-drag-handle:active {
+  cursor: grabbing;
+  transform: translateX(-50%) translateY(0) scale(0.97);
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.widget-drag-handle:active::after {
+  transform: scale(0.9);
+}
+
+/* Ensure grid items don't show move cursor except on handle */
+.grid-stack-item {
+  cursor: default !important;
+  overflow: visible;
+}
+
+.grid-stack-item.ui-draggable-dragging {
+  cursor: grabbing !important;
+}
+
+.grid-stack-item .widget-drag-handle {
+  cursor: grab !important;
+}
+
+.grid-stack-item .widget-drag-handle:active {
+  cursor: grabbing !important;
+}
+
+/* Prevent accidental text selection during drag */
+.grid-stack-item-content {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Hide the old drag icon if present */
+.widget-drag-handle .drag-icon {
+  display: none;
+}
+
+/* Show drag handle on widget hover - smooth slide down */
+.grid-stack-item:hover .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
+.grid-stack-item:hover .widget-drag-handle {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Always show drag handle when actively dragging */
+.grid-stack-item.ui-draggable-dragging .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
+.grid-stack-item.ui-draggable-dragging .widget-drag-handle {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  cursor: grabbing;
+}
+
+/* ============================================
+   DRAG HANDLE SETTINGS OVERRIDES
+   ============================================ */
+
+/* CSS Custom Properties for drag handle settings */
+.grid-stack {
+  --drag-handle-opacity: 0.6;
+  --drag-handle-hover-delay: 0ms;
+}
+
+/* Always show drag handles mode */
+.drag-handles-always-visible .grid-stack-item .widget-drag-handle-container {
+  pointer-events: auto;
+}
+
+.drag-handles-always-visible .grid-stack-item .widget-drag-handle {
+  opacity: var(--drag-handle-opacity);
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.drag-handles-always-visible .grid-stack-item:hover .widget-drag-handle {
+  opacity: 1;
+}
+
+/* Hide resize handles mode */
+.hide-resize-handles .grid-stack-item>.ui-resizable-handle {
+  display: none !important;
+}
+
+.hide-resize-handles .grid-stack-item:hover .grid-stack-item-content {
+  box-shadow: none;
+}
+
+/* Hover delay support */
+.grid-stack-item:hover .widget-drag-handle {
+  transition-delay: var(--drag-handle-hover-delay);
+}
+
+/* ============================================
+   DRAG HANDLE SIZE VARIANTS
+   ============================================ */
+
+/* Small size */
+.drag-handle-size-small .widget-drag-handle {
+  padding: 4px 12px;
+  min-width: 50px;
+  border-radius: 0 0 10px 10px;
+}
+
+.drag-handle-size-small .widget-drag-handle::after {
+  width: 3px;
+  height: 3px;
+  box-shadow:
+    -9px 0 0 rgba(255, 255, 255, 0.7),
+    9px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Medium size (default) */
+.drag-handle-size-medium .widget-drag-handle {
+  padding: 6px 16px;
+  min-width: 70px;
+  border-radius: 0 0 14px 14px;
+}
+
+.drag-handle-size-medium .widget-drag-handle::after {
+  width: 4px;
+  height: 4px;
+  box-shadow:
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Large size */
+.drag-handle-size-large .widget-drag-handle {
+  padding: 8px 24px;
+  min-width: 90px;
+  border-radius: 0 0 18px 18px;
+}
+
+.drag-handle-size-large .widget-drag-handle::after {
+  width: 5px;
+  height: 5px;
+  box-shadow:
+    -14px 0 0 rgba(255, 255, 255, 0.7),
+    14px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* ============================================
+   DRAG HANDLE STYLE VARIANTS
+   ============================================ */
+
+/* Pill style (default) - three dots in a row */
+/* Uses default ::after which already has 3 dots - no override needed */
+
+/* Bar style - single horizontal line */
+.drag-handle-style-bar .widget-drag-handle::after {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* Dots style - five dots need wider container */
+.drag-handle-style-dots .widget-drag-handle {
+  min-width: 100px;
+}
+
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle {
+  min-width: 70px;
+}
+
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle {
+  min-width: 100px;
+}
+
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle {
+  min-width: 120px;
+}
+
+/* Dots style - five dots - need size-specific overrides */
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle::after {
+  box-shadow:
+    -18px 0 0 rgba(255, 255, 255, 0.7),
+    -9px 0 0 rgba(255, 255, 255, 0.7),
+    9px 0 0 rgba(255, 255, 255, 0.7),
+    18px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle::after {
+  box-shadow:
+    -24px 0 0 rgba(255, 255, 255, 0.7),
+    -12px 0 0 rgba(255, 255, 255, 0.7),
+    12px 0 0 rgba(255, 255, 255, 0.7),
+    24px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle::after {
+  box-shadow:
+    -28px 0 0 rgba(255, 255, 255, 0.7),
+    -14px 0 0 rgba(255, 255, 255, 0.7),
+    14px 0 0 rgba(255, 255, 255, 0.7),
+    28px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+/* Dots hover states */
+.drag-handle-style-dots.drag-handle-size-small .widget-drag-handle:hover::after {
+  box-shadow:
+    -18px 0 0 rgba(255, 255, 255, 0.95),
+    -9px 0 0 rgba(255, 255, 255, 0.95),
+    9px 0 0 rgba(255, 255, 255, 0.95),
+    18px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.drag-handle-style-dots.drag-handle-size-medium .widget-drag-handle:hover::after {
+  box-shadow:
+    -24px 0 0 rgba(255, 255, 255, 0.95),
+    -12px 0 0 rgba(255, 255, 255, 0.95),
+    12px 0 0 rgba(255, 255, 255, 0.95),
+    24px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+.drag-handle-style-dots.drag-handle-size-large .widget-drag-handle:hover::after {
+  box-shadow:
+    -28px 0 0 rgba(255, 255, 255, 0.95),
+    -14px 0 0 rgba(255, 255, 255, 0.95),
+    14px 0 0 rgba(255, 255, 255, 0.95),
+    28px 0 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Minimal style - subtle, barely visible */
+.drag-handle-style-minimal .widget-drag-handle {
+  padding: 4px 16px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.drag-handle-style-minimal .widget-drag-handle::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.drag-handle-style-minimal .widget-drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.drag-handle-style-minimal .widget-drag-handle:hover::after {
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .widget-header {
@@ -113,6 +604,10 @@ main {
   padding: 0;
   margin: 0;
   flex-shrink: 0;
+  min-height: 2rem;
+  /* reserve space to avoid loader reflow when title appears */
+  position: relative;
+  z-index: 1;
 }
 
 .widget-content {
@@ -120,6 +615,11 @@ main {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  /* Create stacking context to contain child z-indices */
+  position: relative;
+  z-index: 0;
+  /* Clip any content that might overflow into drag handle area */
+  overflow: hidden;
 }
 
 .widget-data-container {
@@ -129,10 +629,14 @@ main {
   width: 100%;
   overflow: hidden;
   padding: 0.5rem;
+  animation: fadeIn 0.4s ease-in;
+  /* Create stacking context to isolate child z-indices from the drag handle */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 
-/* Center-aligned content for simple widgets (charts, loaders, errors) */
-.widget-loading,
+/* Center-aligned content for empty state */
 .widget-empty {
   display: flex;
   align-items: center;
@@ -143,6 +647,25 @@ main {
   font-weight: 600;
   color: var(--text-primary);
   opacity: 0.7;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Widget data container with smooth entrance */
+.widget-data-container {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ================================== */
+/* Loader                             */
+/* ================================== */
+
+.loader {
+  height: 20vh;
+  width: 20vh;
+  max-height: 480px;
+  min-width: 480px;
+  animation: fadeIn 0.3s ease-in;
+  color: var(--loader-color, #2ed891);
 }
 
 /* ================================== */
@@ -255,13 +778,15 @@ main {
 }
 
 .overview-metric-change--positive {
-  background-color: var(--success);
-  color: var(--text-primary);
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-text);
+  border: 1px solid var(--badge-success-border);
 }
 
 .overview-metric-change--negative {
-  background-color: var(--error);
-  color: var(--text-primary);
+  background-color: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  border: 1px solid var(--badge-error-border);
 }
 
 .overview-metric-change--neutral {
@@ -438,6 +963,709 @@ main {
   display: flex;
 }
 
+/* ========================================
+   MOBILE DASHBOARD STYLES
+   ======================================== */
+
+.mobile-dashboard {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-dashboard-empty {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-bg-primary);
+}
+
+.mobile-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Top Navigation Bar */
+.mobile-top-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: linear-gradient(to bottom, var(--ui-bg-secondary) 0%, transparent 100%);
+  padding: env(safe-area-inset-top) 0 0 0;
+}
+
+.mobile-top-nav-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.mobile-widget-title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mobile-nav-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  color: var(--ui-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mobile-nav-button:hover {
+  background: var(--ui-bg-tertiary-hover);
+  border-color: var(--ui-border-secondary);
+  transform: scale(1.05);
+}
+
+.mobile-nav-button:active {
+  transform: scale(0.95);
+}
+
+/* Widget Container */
+.mobile-widget-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  /* Critical: prevents scrolling during transitions */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: pan-y;
+  /* Allow vertical scrolling within widgets, but enable horizontal swipe detection */
+}
+
+.mobile-widget-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  padding-top: calc(1rem + env(safe-area-inset-top));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  will-change: transform, opacity;
+  /* Optimize for animations */
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-widget-content {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-border-primary) transparent;
+  /* Prevent scroll bounce from interfering with swipe gestures */
+  overscroll-behavior: contain;
+  /* Enable GPU acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Allow touch events to pass through for parent drag detection */
+  touch-action: pan-y;
+  /* Only allow vertical scrolling, let parent handle horizontal swipe */
+  pointer-events: auto;
+}
+
+.mobile-widget-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mobile-widget-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mobile-widget-content::-webkit-scrollbar-thumb {
+  background: var(--ui-border-primary);
+  border-radius: 3px;
+}
+
+.mobile-widget-content::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-border-secondary);
+}
+
+.mobile-widget-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.loader-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ui-border-primary);
+  border-top-color: var(--ui-accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Navigation Arrows */
+.mobile-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 50%;
+  padding: 0.75rem;
+  color: var(--ui-text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-arrow:hover {
+  background: var(--ui-bg-tertiary);
+  border-color: var(--ui-border-secondary);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.mobile-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.mobile-arrow-left {
+  left: 1rem;
+}
+
+.mobile-arrow-right {
+  right: 1rem;
+}
+
+/* Bottom Navigation Dots */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: linear-gradient(to top, var(--ui-bg-secondary) 0%, transparent 100%);
+  padding: 0 0 env(safe-area-inset-bottom) 0;
+}
+
+.mobile-dots-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  flex-wrap: wrap;
+  max-width: 100vw;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-dot {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: transparent;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.mobile-dot-inactive {
+  background: var(--ui-border-primary);
+}
+
+.mobile-dot-inactive:hover {
+  background: var(--ui-border-secondary);
+  transform: scale(1.2);
+}
+
+.mobile-dot-active {
+  background: transparent;
+  width: 16px;
+  height: 16px;
+}
+
+.mobile-dot-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--ui-accent-primary);
+  box-shadow: 0 0 12px var(--ui-accent-primary);
+}
+
+/* Swipe Hint */
+.mobile-swipe-hint {
+  position: fixed;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  right: 1.5rem;
+  z-index: 5;
+  pointer-events: none;
+  animation: fadeOut 4s forwards;
+}
+
+@keyframes fadeOut {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.mobile-swipe-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile-specific widget overrides */
+@media (max-width: 768px) {
+
+  /* Ensure widgets scale properly */
+  .widget-container {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Hide desktop-only elements on mobile */
+  .dashboard-container:not(.mobile) {
+    display: none;
+  }
+
+  /* Make tables more mobile-friendly */
+  .widget-container table {
+    font-size: 0.75rem;
+  }
+
+  .widget-container th,
+  .widget-container td {
+    padding: 0.5rem;
+  }
+
+  /* Charts should be responsive */
+  .widget-container canvas,
+  .widget-container svg {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* Improve readability */
+  .widget-container {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  /* Card padding adjustments */
+  .widget-container .card {
+    padding: 0.75rem;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-top-nav-content {
+    padding: 0.5rem 1rem;
+  }
+
+  .mobile-bottom-nav {
+    padding: 0.75rem 0 env(safe-area-inset-bottom) 0;
+  }
+
+  .mobile-dots-container {
+    padding: 0.75rem;
+  }
+
+  .mobile-widget-slide {
+    padding: 0.5rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top));
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ========================================
+   MOBILE DASHBOARD GRID (Home Screen View)
+   ======================================== */
+
+.mobile-dashboard-grid {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Swiper overrides for mobile dashboard */
+.mobile-dashboard-grid .swiper {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mobile-dashboard-grid .swiper-wrapper {
+  /* Smooth spring-like transition for native feel */
+  transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+.mobile-dashboard-grid .swiper-slide {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Preset tabs styling */
+.preset-tabs-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+.preset-tab {
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Grid Header */
+.mobile-grid-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--ui-border-primary);
+  background: var(--ui-bg-primary);
+}
+
+.mobile-header-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  color: var(--ui-text-secondary);
+  transition: all 0.2s;
+}
+
+.mobile-header-button:active {
+  transform: scale(0.95);
+  background: var(--ui-bg-secondary);
+}
+
+/* Grid Content Area */
+.mobile-grid-content {
+  padding: 1rem;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+
+/* Widget Grid - 2 columns */
+.mobile-widget-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+/* Widget Card - Clean Tile Design */
+.mobile-widget-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0.875rem;
+  border-radius: 1rem;
+  border: 1px solid var(--ui-border-primary);
+  background: var(--ui-bg-secondary);
+  min-height: 110px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  overflow: hidden;
+}
+
+.mobile-widget-card:active:not(.mobile-widget-card-dragging) {
+  transform: scale(0.97);
+}
+
+.mobile-widget-card-dragging {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  opacity: 1;
+  transform: scale(1.05);
+  cursor: grabbing;
+}
+
+/* Card Header - Icon + Title inline */
+.mobile-widget-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mobile-widget-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  background: var(--ui-accent-primary);
+  color: white;
+  flex-shrink: 0;
+}
+
+/* Card Title - inline with icon */
+.mobile-widget-card-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ui-text-secondary);
+  line-height: 1.2;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Complication Display */
+.widget-complication {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+.widget-complication-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-size: 1.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ui-text-primary);
+}
+
+.widget-complication-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.widget-complication-trend.up {
+  color: var(--ui-success);
+}
+
+.widget-complication-trend.down {
+  color: var(--ui-danger);
+}
+
+.widget-complication-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ui-text-muted);
+  line-height: 1.2;
+  margin-top: 0.25rem;
+}
+
+/* Status indicator dot */
+.widget-complication-status {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.widget-complication-status.good {
+  background: var(--ui-success);
+  box-shadow: 0 0 6px var(--ui-success);
+}
+
+.widget-complication-status.warning {
+  background: var(--ui-warning);
+  box-shadow: 0 0 6px var(--ui-warning);
+}
+
+.widget-complication-status.error {
+  background: var(--ui-danger);
+  box-shadow: 0 0 6px var(--ui-danger);
+}
+
+.widget-complication-container {
+  flex: 1;
+  display: grid;
+  grid-template-areas: "content";
+  align-items: end;
+}
+
+.widget-complication-container>* {
+  grid-area: content;
+}
+
+.widget-complication-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+/* Skeleton loading animation */
+.widget-complication-skeleton {
+  height: 1.625rem;
+  width: 60%;
+  background: linear-gradient(90deg,
+      var(--ui-bg-tertiary) 25%,
+      var(--ui-bg-secondary) 50%,
+      var(--ui-bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.25rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Drop placeholder - dashed outline where the dragged item will land */
+.mobile-widget-card-placeholder {
+  min-height: 110px;
+  border-radius: 1rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 2px dashed rgba(59, 130, 246, 0.5);
+  animation: placeholder-pulse 1s ease-in-out infinite;
+}
+
+@keyframes placeholder-pulse {
+
+  0%,
+  100% {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+
+  50% {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+}
+
+/* Larger screens - still 2 columns but more spacious */
+@media (min-width: 480px) and (max-width: 768px) {
+  .mobile-widget-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .mobile-widget-card {
+    min-height: 120px;
+    padding: 1rem;
+  }
+
+  .widget-complication-value {
+    font-size: 1.875rem;
+  }
+
+  .mobile-widget-card-icon {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-grid-header {
+    padding: 0.5rem 1rem;
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .mobile-grid-content {
+    padding: 0.5rem 1rem;
+  }
+
+  .mobile-widget-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .mobile-widget-card {
+    min-height: 80px;
+    padding: 0.625rem;
+  }
+
+  .mobile-widget-card-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .widget-complication-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Disable mobile dashboard on desktop */
+@media (min-width: 769px) {
+
+  .mobile-dashboard,
+  .mobile-dashboard-empty {
+    display: none;
+  }
+
+  .dashboard-container.mobile {
+    display: none;
+  }
+}
+
+
 .widget-menu {
   position: fixed;
   width: 30rem;
@@ -485,6 +1713,16 @@ main {
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }
 
@@ -554,42 +1792,31 @@ tbody>tr:nth-child(odd) {
   background-color: var(--success-light) !important;
 }
 
-.loader-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 5rem;
-}
-
-.timer-container {
+/* Persistent Widget Refresh Indicator */
+.widget-refresh-indicator {
   position: absolute;
-  top: 0;
-  right: 0;
-  height: 1rem;
-  width: 1rem;
+  top: 0rem;
+  right: 0rem;
   z-index: 10;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
 }
 
-.timer-container>* {
-  height: 2rem !important;
-  width: 2rem !important;
+.widget-refresh-indicator:hover {
+  opacity: 0.9;
 }
 
-.timer-container>div {
-  display: flex;
-  align-items: baseline;
-  justify-content: end;
-  padding-right: .5rem;
-  height: 2rem;
-  width: 2rem;
-  position: absolute;
+.refresh-ring {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.3));
 }
 
-.timer-container>div>svg {
-  height: 1rem;
-  width: 1rem;
+.refresh-ring-progress {
+  transition: stroke-dashoffset 0.2s linear;
+}
+
+.refresh-ring-progress.no-transition {
+  transition: none;
 }
 
 .Toastify__toast-container {
@@ -617,49 +1844,255 @@ tbody>tr:nth-child(odd) {
   animation: flashAnim .5s ease-out;
 }
 
+/* New Inventory Move Row Animation */
+@keyframes newInventoryRow {
+  0% {
+    background-color: rgba(59, 130, 246, 0.25);
+    border-left-color: rgba(59, 130, 246, 1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+
+  15% {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-left-color: rgba(59, 130, 246, 0.9);
+  }
+
+  100% {
+    background-color: transparent;
+    border-left-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.inventory-new-row {
+  animation: newInventoryRow 6s ease-out forwards;
+  border-left: 4px solid rgba(59, 130, 246, 1);
+  position: relative;
+}
+
+/* Add a subtle pulse glow effect */
+@keyframes newRowGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.inventory-new-row-glow {
+  animation: newRowGlow 2s ease-in-out 3;
+}
+
+/* ============================================
+   Mobile Table Card Styles
+   Professional card layout for table widgets
+   in compact/mobile mode
+   ============================================ */
+
+/* Mobile card container scrolling optimization */
+.mobile-card-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ================================================== */
+/* MOBILE TABLE CARDS                                 */
+/* ================================================== */
+
+.mobile-table-card {
+  background-color: var(--table-row-bg);
+  border: 1px solid var(--table-border);
+  border-radius: 6px;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.mobile-table-card:last-child {
+  margin-bottom: 0;
+}
+
+.mobile-table-card:hover {
+  background-color: var(--table-row-hover-bg);
+}
+
+/* Status indicator - left edge */
+.mobile-table-card>.absolute.left-0 {
+  width: 3px;
+  border-radius: 0;
+}
+
+/* State variants */
+.mobile-table-card.overdue {
+  background-color: var(--error-light);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.mobile-table-card.received {
+  background-color: var(--success-light);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.mobile-table-card.cancelled {
+  background-color: var(--error-light);
+  opacity: 0.6;
+}
+
+/* Container for mobile card list */
+.mobile-cards-container {
+  padding: 8px;
+}
+
+/* Empty state for mobile cards */
+.mobile-cards-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.mobile-cards-empty-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.75rem;
+  opacity: 0.5;
+}
+
+/* Container for mobile card list */
+.mobile-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 380px) {
+  .mobile-table-card {
+    padding: 0.625rem;
+  }
+
+  .mobile-table-card .text-sm {
+    font-size: 0.8125rem;
+  }
+
+  .mobile-table-card .text-xs {
+    font-size: 0.6875rem;
+  }
+
+  .mobile-cards-container {
+    gap: 0.375rem;
+    padding: 0.375rem;
+  }
+}
+
+/* Stacked badge styling for mobile */
+.mobile-card-badge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+/* Truncation for long text on mobile */
+.mobile-card-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 @keyframes newStatusVPulse {
 
   0%,
   100% {
-    outline: 4px solid rgba(34, 197, 94, 0);
-    outline-offset: -4px;
+    outline: 3px solid rgba(34, 197, 94, 0);
+    outline-offset: -3px;
   }
 
   50% {
-    outline: 4px solid rgba(34, 197, 94, 1);
-    outline-offset: -4px;
+    outline: 3px solid rgba(34, 197, 94, 0.8);
+    outline-offset: -3px;
   }
 }
 
 .new-status-v-row {
-  animation: newStatusVPulse 0.8s ease-in-out 5 !important;
+  animation: newStatusVPulse 0.6s ease-in-out 5 !important;
+  /* Use will-change to optimize animation performance */
+  will-change: outline;
+  /* Force GPU acceleration */
+  transform: translateZ(0);
+}
+
+/* Overdue alert row styling - highlight rows that exceed the overdue threshold */
+.overdue-alert-row {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+.overdue-alert-row:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Dark mode adjustment for overdue alert */
+[data-theme="dark"] .overdue-alert-row {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+}
+
+[data-theme="dark"] .overdue-alert-row:hover {
+  background-color: rgba(239, 68, 68, 0.2) !important;
 }
 
 .badge {
-  background-color: var(--shadow-dark);
-  color: white;
   padding: 0.25rem 0.45rem;
   border-radius: 0.5rem;
   font-size: 0.8rem;
   font-weight: 800;
   align-content: center;
-  border: 2px solid var(--shadow-dark);
+  border: 1px solid;
 }
 
 .badge-success {
-  background-color: var(--success);
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-text);
+  border-color: var(--badge-success-border);
 }
 
 .badge-danger {
-  background-color: var(--error);
+  background-color: var(--badge-error-bg);
+  color: var(--badge-error-text);
+  border-color: var(--badge-error-border);
 }
 
 .badge-warning {
-  background-color: var(--warning);
+  background-color: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+  border-color: var(--badge-warning-border);
 }
 
 .badge-primary {
-  background-color: var(--success-light);
+  background-color: var(--badge-primary-bg);
+  color: var(--badge-primary-text);
+  border-color: var(--badge-primary-border);
+}
+
+/* Table theming overrides - Fix white headers in light mode */
+thead th {
+  color: var(--table-text-primary) !important;
+}
+
+tbody td {
+  color: var(--table-text-primary);
+}
+
+/* Override shadcn's default muted-foreground color for table headers */
+.outstanding-orders-table th,
+.inventory-moves-log-table th {
+  color: var(--table-text-primary) !important;
 }
 
 .table-dollars {
@@ -768,4 +2201,907 @@ tbody>tr:nth-child(odd) {
 
 .pie-chart-legend::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Preset Change Toast Styling - Larger and positioned away from dock */
+[data-sonner-toast] {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  padding: 1rem 1.5rem !important;
+  min-width: 280px !important;
+  border-radius: 0.75rem !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+}
+
+/* ============================================
+   MOBILE WIDGET MENU STYLES
+   ============================================ */
+
+.mobile-widget-menu {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-widget-menu-header {
+  flex-shrink: 0;
+  padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  background: var(--ui-bg-primary);
+  border-bottom: 1px solid var(--ui-border-primary);
+}
+
+.mobile-widget-menu-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-widget-menu-footer {
+  flex-shrink: 0;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  background: var(--ui-bg-primary);
+  border-top: 1px solid var(--ui-border-primary);
+  display: flex;
+  gap: 0.75rem;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-widget-menu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+
+/* Mobile Icon Button */
+.mobile-icon-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.5rem;
+  color: var(--ui-text-secondary);
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-icon-button:active {
+  background: var(--ui-bg-tertiary);
+  transform: scale(0.95);
+}
+
+/* Mobile Search Input */
+.mobile-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  color: var(--ui-text-primary);
+  font-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.mobile-search-input::placeholder {
+  color: var(--ui-text-tertiary);
+}
+
+.mobile-search-input:focus {
+  outline: none;
+  border-color: var(--ui-accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Mobile Category Scroll */
+.mobile-category-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 0.5rem;
+  margin-bottom: -0.5rem;
+}
+
+.mobile-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-category-pill {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 9999px;
+  color: var(--ui-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-category-pill:active {
+  transform: scale(0.95);
+}
+
+.mobile-category-pill-active {
+  background: var(--ui-accent-primary);
+  border-color: var(--ui-accent-primary);
+  color: white;
+}
+
+/* Mobile Widget Picker Card (different from dashboard widget cards) */
+.mobile-picker-widget-card {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--ui-bg-secondary);
+  border: 2px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.mobile-picker-widget-card:active {
+  transform: scale(0.98);
+  background: var(--ui-bg-tertiary);
+}
+
+.mobile-picker-widget-card-enabled {
+  background: var(--ui-accent-primary-bg);
+  border-color: var(--ui-accent-primary-border);
+}
+
+/* Mobile Widget Checkbox */
+.mobile-widget-checkbox {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--ui-border-secondary);
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.mobile-widget-checkbox-checked {
+  background: var(--ui-accent-primary);
+  border-color: var(--ui-accent-primary);
+}
+
+/* Mobile Widget Tag */
+.mobile-widget-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: var(--ui-bg-tertiary);
+  color: var(--ui-text-secondary);
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Mobile Buttons */
+.mobile-button-primary {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  background: var(--ui-accent-primary);
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-button-primary:active {
+  background: var(--ui-accent-primary-hover);
+  transform: scale(0.98);
+}
+
+.mobile-button-secondary {
+  flex: 1;
+  padding: 0.875rem 1.5rem;
+  background: var(--ui-bg-secondary);
+  color: var(--ui-text-primary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-button-secondary:active {
+  background: var(--ui-bg-tertiary);
+  transform: scale(0.98);
+}
+
+/* Loading Spinner */
+.loader-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--ui-border-primary);
+  border-top-color: var(--ui-accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   MOBILE SETTINGS MENU STYLES
+   ============================================ */
+
+.mobile-settings-menu {
+  position: fixed;
+  inset: 0;
+  background: var(--ui-bg-primary);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-settings-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-settings-header {
+  flex-shrink: 0;
+  padding: 1rem;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  background: var(--ui-bg-primary);
+  border-bottom: 1px solid var(--ui-border-primary);
+  position: relative;
+}
+
+.mobile-settings-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-menu-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+}
+
+.mobile-menu-button:active {
+  background: var(--ui-bg-tertiary);
+  transform: scale(0.98);
+}
+
+.mobile-menu-icon {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ui-accent-primary-bg);
+  border: 1px solid var(--ui-accent-primary-border);
+  border-radius: 0.5rem;
+  color: var(--ui-accent-primary);
+}
+
+.mobile-settings-action-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  border: 1px solid;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  color: white;
+}
+
+.mobile-settings-action-button:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Mobile Theme Card */
+.mobile-theme-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-bg-secondary);
+  border: 2px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-theme-card:active {
+  transform: scale(0.95);
+}
+
+.mobile-theme-card-active {
+  border-color: var(--ui-accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mobile-theme-preview {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-theme-name {
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--ui-bg-secondary);
+  border-top: 1px solid var(--ui-border-primary);
+  font-size: 0.875rem;
+}
+
+/* Mobile Settings Group */
+.mobile-settings-group {
+  padding: 1rem;
+  background: var(--ui-bg-secondary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.75rem;
+}
+
+/* Mobile Toggle Switch */
+.mobile-toggle {
+  position: relative;
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-toggle-active {
+  background: var(--ui-accent-primary);
+  border-color: var(--ui-accent-primary);
+}
+
+.mobile-toggle-knob {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile Select Dropdown */
+.mobile-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--ui-bg-tertiary);
+  border: 1px solid var(--ui-border-primary);
+  border-radius: 0.5rem;
+  color: var(--ui-text-primary);
+  font-size: 1rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.mobile-select:focus {
+  outline: none;
+  border-color: var(--ui-accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ============================================
+   USER SETTINGS - Applied via SettingsContext
+   ============================================ */
+
+/* Font Size Settings */
+:root {
+  --base-font-size: 16px;
+}
+
+html.font-size-small {
+  font-size: 14px;
+}
+
+html.font-size-medium {
+  font-size: 16px;
+}
+
+html.font-size-large {
+  font-size: 18px;
+}
+
+/* Compact Mode - Reduces padding and margins throughout the UI */
+html.compact-mode .widget-data-container {
+  padding: 0.25rem;
+}
+
+html.compact-mode .widget-header {
+  min-height: 1.5rem;
+}
+
+html.compact-mode .grid-stack {
+  padding: 0.5rem;
+}
+
+html.compact-mode .grid-stack>.grid-stack-item {
+  padding: 2px;
+}
+
+/* Reduce Motion - Respects user's animations setting */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Also respect prefers-reduced-motion media query */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   PRIVACY MODE STYLES
+   ============================================ */
+
+/* Blur style - CSS-based obfuscation */
+.privacy-blur {
+  filter: blur(6px);
+  transition: filter 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Allow revealing on hover (optional - can be toggled) */
+.privacy-blur:hover {
+  filter: blur(6px);
+  /* Keep blurred even on hover for true privacy */
+}
+
+/* Hidden style - for non-blur obfuscation methods */
+.privacy-hidden {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Global body class when privacy mode is active */
+body.privacy-mode-active .sensitive-data {
+  filter: blur(6px);
+}
+
+/* Privacy indicator animation */
+@keyframes privacyPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(139, 92, 246, 0);
+  }
+}
+
+.privacy-indicator-pulse {
+  animation: privacyPulse 2s ease-in-out infinite;
+}
+
+/* Table cells with sensitive data */
+.table-dollars .privacy-blur,
+.table-dollars .privacy-hidden {
+  display: inline-block;
+}
+
+/* Charts with privacy mode */
+.privacy-mode-chart text.privacy-blur {
+  filter: blur(4px);
+}
+
+/* Ensure blur doesn't affect layout */
+[data-privacy-active="true"] {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+/* Print styles - always hide sensitive data when printing if privacy mode is on */
+@media print {
+
+  body.privacy-mode-active .privacy-blur,
+  body.privacy-mode-active [data-privacy-active="true"] {
+    visibility: hidden !important;
+  }
+
+  body.privacy-mode-active [data-privacy-active="true"]::after {
+    content: "[HIDDEN]";
+    visibility: visible;
+    color: #999;
+    font-style: italic;
+  }
+}
+
+/* Privacy overlay for charts (SVG/Canvas) */
+.privacy-chart-overlay {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 10px,
+      rgba(128, 128, 128, 0.1) 10px,
+      rgba(128, 128, 128, 0.1) 20px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Dark/light theme adjustments for privacy mode */
+[data-theme="light"] .privacy-blur {
+  filter: blur(5px);
+}
+
+[data-theme="dark"] .privacy-blur {
+  filter: blur(6px);
+}
+
+/* ============================================
+   REACT-GRID-LAYOUT OVERRIDES
+   ============================================ */
+
+/* Main grid dashboard container */
+.grid-dashboard {
+  min-height: 100vh;
+  height: auto;
+  width: 100%;
+  position: relative;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* React Grid Layout base styles */
+.react-grid-layout {
+  position: relative;
+  /* Disable container height transition to prevent jolt */
+  transition: none;
+}
+
+/* Grid items - default state with smooth transitions for layout shifts */
+.react-grid-layout>div {
+  transition: transform 200ms ease;
+  /* Allow drag handles to overflow outside the grid item bounds */
+  overflow: visible !important;
+}
+
+/* CRITICAL: Disable ALL transitions during active resize */
+.react-grid-layout>div.react-resizable-resizing {
+  transition: none !important;
+  z-index: 100;
+  opacity: 0.95;
+}
+
+/* Disable transitions on the item being dragged */
+.react-grid-layout>div.react-draggable-dragging {
+  transition: none !important;
+  z-index: 100;
+  cursor: grabbing;
+  opacity: 0.9;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Disable transitions on all OTHER items while one is being resized/dragged */
+.react-grid-layout.resizing-active>div:not(.react-resizable-resizing),
+.react-grid-layout.dragging-active>div:not(.react-draggable-dragging) {
+  transition: transform 100ms ease;
+}
+
+/* CRITICAL: Content container must fill the grid item */
+.react-grid-layout .grid-stack-item-content {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Allow drag handle to overflow above the widget */
+  overflow: visible;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* CRITICAL: Widget inside content must fill it */
+.react-grid-layout .grid-stack-item-content>.widget {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  /* Allow drag handle to overflow above widget */
+  overflow: visible;
+}
+
+/* Placeholder styling - make it snappy */
+.react-grid-layout .react-grid-placeholder {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.6) !important;
+  border-radius: 1rem !important;
+  opacity: 1 !important;
+  transition: all 100ms ease !important;
+  z-index: 2;
+}
+
+/* ============================================
+   CUSTOM RESIZE HANDLES - Apple-style minimal design
+   ============================================ */
+
+/* Base custom handle styles - invisible by default */
+.custom-resize-handle {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Only show handles on direct widget hover - very subtle */
+.grid-stack-item:hover .custom-resize-handle {
+  opacity: 0.4;
+}
+
+/* Full visibility only when hovering the handle itself */
+.custom-resize-handle:hover {
+  opacity: 1;
+}
+
+/* Always show handles during resize */
+.react-resizable-resizing .custom-resize-handle {
+  opacity: 1;
+}
+
+/* === CORNER BRACKETS (L-shaped) - smaller, more subtle === */
+.corner-bracket {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  transition: all 0.2s ease;
+}
+
+/* SE corner - bottom-right L */
+.corner-bracket-se {
+  right: 3px;
+  bottom: 3px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 2px 0;
+}
+
+.custom-resize-handle-se:hover .corner-bracket-se {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* SW corner - bottom-left L */
+.corner-bracket-sw {
+  left: 3px;
+  bottom: 3px;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 0 0 2px;
+}
+
+.custom-resize-handle-sw:hover .corner-bracket-sw {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* NE corner - top-right L */
+.corner-bracket-ne {
+  right: 3px;
+  top: 3px;
+  border-right: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 0 2px 0 0;
+}
+
+.custom-resize-handle-ne:hover .corner-bracket-ne {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* NW corner - top-left L */
+.corner-bracket-nw {
+  left: 3px;
+  top: 3px;
+  border-left: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px 0 0 0;
+}
+
+.custom-resize-handle-nw:hover .corner-bracket-nw {
+  border-color: rgba(255, 255, 255, 0.7);
+  width: 10px;
+  height: 10px;
+}
+
+/* === EDGE PILLS - very subtle thin lines === */
+/* Horizontal pill (for S and N edges) */
+.edge-pill-horizontal {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1.5px;
+  transition: all 0.2s ease;
+}
+
+.custom-resize-handle-s .edge-pill-horizontal {
+  bottom: 3px;
+}
+
+.custom-resize-handle-n .edge-pill-horizontal {
+  top: 3px;
+}
+
+.custom-resize-handle:hover .edge-pill-horizontal {
+  background: rgba(255, 255, 255, 0.6);
+  width: 32px;
+}
+
+/* Vertical pill (for E and W edges) */
+.edge-pill-vertical {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1.5px;
+  transition: all 0.2s ease;
+}
+
+.custom-resize-handle-e .edge-pill-vertical {
+  right: 3px;
+}
+
+.custom-resize-handle-w .edge-pill-vertical {
+  left: 3px;
+}
+
+.custom-resize-handle:hover .edge-pill-vertical {
+  background: rgba(255, 255, 255, 0.6);
+  height: 32px;
+}
+
+/* === Handle hover glow on widget border - very subtle === */
+.react-grid-layout .grid-stack-item:has(.custom-resize-handle:hover) .grid-stack-item-content {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Active resize glow on widget border - subtle feedback */
+.react-grid-layout>div.react-resizable-resizing .grid-stack-item-content {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Active drag glow on widget border */
+.react-grid-layout>div.react-draggable-dragging .grid-stack-item-content {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    0 8px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Hide resize handles during drag */
+.react-grid-layout>div.react-draggable-dragging .custom-resize-handle {
+  opacity: 0 !important;
+}
+
+/* Hide resize handles when setting is off */
+.hide-resize-handles .custom-resize-handle {
+  display: none !important;
+}
+
+/* Drag handle icon styles for react-grid-layout */
+.grid-dashboard .widget-drag-handle .drag-handle-icon {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.grid-dashboard .widget-drag-handle:hover .drag-handle-icon {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Hide the default drag handle icon when using dots pattern */
+.drag-handle-style-pill .drag-handle-icon,
+.drag-handle-style-bar .drag-handle-icon,
+.drag-handle-style-dots .drag-handle-icon,
+.drag-handle-style-minimal .drag-handle-icon {
+  display: none;
+}
+
+/* ============================================
+   MOBILE SAFE AREA UTILITIES
+   ============================================ */
+
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

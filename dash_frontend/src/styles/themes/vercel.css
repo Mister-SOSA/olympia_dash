@@ -1,0 +1,112 @@
+/* Vercel Theme - Clean black and white modern minimalist */
+.theme-vercel {
+    /* UI Colors - Pure black with subtle grays */
+    --ui-bg-primary: #000000;
+    --ui-bg-secondary: #0a0a0a;
+    --ui-bg-tertiary: #171717;
+    --ui-bg-quaternary: #262626;
+
+    --ui-border-primary: #262626;
+    --ui-border-secondary: #333333;
+
+    --ui-text-primary: #ededed;
+    --ui-text-secondary: #a1a1aa;
+    --ui-text-muted: #71717a;
+
+    /* Primary accent - Vercel blue (for interactive elements) */
+    --ui-accent-primary: #0070f3;
+    --ui-accent-primary-hover: #0060d3;
+    --ui-accent-primary-light: #3291ff;
+    --ui-accent-primary-text: #3291ff;
+    --ui-accent-primary-bg: rgba(0, 112, 243, 0.15);
+    --ui-accent-primary-border: rgba(0, 112, 243, 0.4);
+
+    /* Secondary accent - Light gray */
+    --ui-accent-secondary: #888888;
+    --ui-accent-secondary-hover: #666666;
+    --ui-accent-secondary-light: #a1a1aa;
+    --ui-accent-secondary-text: #ededed;
+    --ui-accent-secondary-bg: rgba(255, 255, 255, 0.08);
+    --ui-accent-secondary-border: rgba(255, 255, 255, 0.2);
+
+    --ui-success: #50e3c2;
+    --ui-success-text: #79ffe1;
+    --ui-success-bg: rgba(80, 227, 194, 0.15);
+    --ui-success-border: rgba(80, 227, 194, 0.4);
+
+    --ui-warning: #f5a623;
+    --ui-warning-text: #f7b955;
+    --ui-warning-bg: rgba(245, 166, 35, 0.15);
+    --ui-warning-border: rgba(245, 166, 35, 0.4);
+
+    --ui-danger: #ee0000;
+    --ui-danger-text: #ff4444;
+    --ui-danger-bg: rgba(238, 0, 0, 0.15);
+    --ui-danger-border: rgba(238, 0, 0, 0.4);
+
+    --ui-info: #0070f3;
+    --ui-info-text: #3291ff;
+    --ui-info-bg: rgba(0, 112, 243, 0.15);
+    --ui-info-border: rgba(0, 112, 243, 0.4);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #000000;
+    --background-light: #0a0a0a;
+    --background-highlight: #171717;
+    --border-light: #262626;
+    --border-dark: #141414;
+
+    --text-primary: #ededed;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+
+    --success: #50e3c2;
+    --success-light: rgba(80, 227, 194, 0.2);
+    --warning: #f5a623;
+    --error: #ee0000;
+    --error-light: rgba(238, 0, 0, 0.3);
+
+    --chart-bar: #0070f3;
+    --chart-1: #ededed;
+    --chart-2: #0070f3;
+    --chart-3: #50e3c2;
+    --chart-4: #f5a623;
+    --chart-5: #a1a1aa;
+
+    /* Line chart specific colors */
+    --line-chart-1: #ededed;
+    /* light gray */
+    --line-chart-2: #0070f3;
+    /* vercel blue */
+    --line-chart-3: #50e3c2;
+    /* teal */
+
+    /* Table-specific colors */
+    --table-header-bg: #0a0a0a;
+    --table-row-bg: #000000;
+    --table-row-alt-bg: #0a0a0a;
+    --table-row-hover-bg: rgba(0, 112, 243, 0.08);
+    --table-border: #262626;
+    --table-text-primary: #ededed;
+    --table-text-secondary: #a1a1aa;
+
+    --badge-success-bg: rgba(80, 227, 194, 0.2);
+    --badge-success-text: #79ffe1;
+    --badge-success-border: rgba(80, 227, 194, 0.5);
+
+    --badge-warning-bg: rgba(245, 166, 35, 0.2);
+    --badge-warning-text: #f7b955;
+    --badge-warning-border: rgba(245, 166, 35, 0.5);
+
+    --badge-error-bg: rgba(238, 0, 0, 0.2);
+    --badge-error-text: #ff4444;
+    --badge-error-border: rgba(238, 0, 0, 0.5);
+
+    --badge-primary-bg: rgba(0, 112, 243, 0.2);
+    --badge-primary-text: #3291ff;
+    --badge-primary-border: rgba(0, 112, 243, 0.5);
+
+    --value-positive: #79ffe1;
+    --value-negative: #ff4444;
+    --value-neutral: #a1a1aa;
+}

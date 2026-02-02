@@ -5,13 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     MdDelete,
     MdRefresh,
-    MdSettings,
-    MdFullscreen,
-    MdFullscreenExit,
     MdInfo,
-    MdContentCopy,
-    MdEdit
+    MdSettings,
+    MdPhotoSizeSelectSmall,
+    MdPhotoSizeSelectLarge,
 } from "react-icons/md";
+import { widgetHasSettings } from "@/constants/widgetSettings";
 
 interface ContextMenuProps {
     x: number;
@@ -24,6 +23,7 @@ interface ContextMenuProps {
     onRefresh: (widgetId: string) => void;
     onResize: (widgetId: string, size: 'small' | 'medium' | 'large') => void;
     onInfo: (widgetId: string) => void;
+    onSettings?: (widgetId: string) => void;
 }
 
 export default function WidgetContextMenu({
@@ -36,10 +36,10 @@ export default function WidgetContextMenu({
     onDelete,
     onRefresh,
     onResize,
-    onInfo
+    onInfo,
+    onSettings
 }: ContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
-    const [submenuOpen, setSubmenuOpen] = useState<string | null>(null);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -68,8 +68,8 @@ export default function WidgetContextMenu({
 
     // Adjust menu position to stay within viewport
     const getMenuPosition = () => {
-        const menuWidth = 280;
-        const menuHeight = 320;
+        const menuWidth = 220;
+        const menuHeight = 280;
 
         // Check if we're in the browser
         if (typeof window === 'undefined') {
@@ -97,183 +97,126 @@ export default function WidgetContextMenu({
 
     const position = getMenuPosition();
 
-    const menuItems = [
-        {
-            id: 'info',
-            label: 'Widget Info',
-            icon: <MdInfo size={18} />,
-            action: () => {
-                onInfo(widgetId);
-            },
-            color: 'text-blue-400 hover:bg-blue-600/20'
-        },
-        {
-            id: 'refresh',
-            label: 'Refresh Now',
-            icon: <MdRefresh size={18} />,
-            action: () => {
-                onRefresh(widgetId);
-                onClose();
-            },
-            color: 'text-green-400 hover:bg-green-600/20'
-        },
-        {
-            id: 'resize',
-            label: 'Resize Widget',
-            icon: <MdFullscreen size={18} />,
-            submenu: [
-                {
-                    label: 'Small (2×2)',
-                    action: () => {
-                        onResize(widgetId, 'small');
-                        onClose();
-                    }
-                },
-                {
-                    label: 'Medium (4×4)',
-                    action: () => {
-                        onResize(widgetId, 'medium');
-                        onClose();
-                    }
-                },
-                {
-                    label: 'Large (6×4)',
-                    action: () => {
-                        onResize(widgetId, 'large');
-                        onClose();
-                    }
-                }
-            ],
-            color: 'text-purple-400 hover:bg-purple-600/20'
-        },
-        {
-            id: 'separator1',
-            separator: true
-        },
-        {
-            id: 'delete',
-            label: 'Remove Widget',
-            icon: <MdDelete size={18} />,
-            action: () => {
-                onDelete(widgetId);
-            },
-            color: 'text-red-400 hover:bg-red-600/20'
-        }
-    ];
+    const MenuItem = ({
+        icon: Icon,
+        label,
+        onClick,
+        variant = 'default'
+    }: {
+        icon: React.ElementType;
+        label: string;
+        onClick: () => void;
+        variant?: 'default' | 'danger';
+    }) => (
+        <button
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClick();
+            }}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors ${variant === 'danger'
+                    ? 'text-red-400 hover:bg-red-500/10'
+                    : 'text-ui-text-primary hover:bg-ui-bg-tertiary'
+                }`}
+        >
+            <Icon className="w-4 h-4" />
+            <span>{label}</span>
+        </button>
+    );
 
     return (
         <AnimatePresence>
             {isVisible && (
                 <motion.div
                     ref={menuRef}
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                    transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.2 }}
-                    // NOTE: was `overflow-hidden` which prevented the resize submenu (absolutely positioned with left-full) from being visible.
-                    // Using overflow-visible so the submenu can extend outside the main menu bounds.
-                    className="fixed z-[9999] bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl overflow-visible"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="fixed z-[9999] bg-ui-bg-primary border border-ui-border-primary rounded-lg shadow-2xl overflow-hidden"
                     style={{
                         left: position.x,
                         top: position.y,
-                        minWidth: '280px'
+                        minWidth: '200px'
                     }}
                 >
                     {/* Menu Header */}
-                    <div className="bg-gradient-to-r from-gray-800 to-gray-700 px-4 py-3 border-b border-gray-600">
-                        <h3 className="font-semibold text-white text-sm truncate">
+                    <div className="px-3 py-2 border-b border-ui-border-primary bg-ui-bg-secondary">
+                        <p className="text-xs font-medium text-ui-text-secondary truncate">
                             {widgetTitle}
-                        </h3>
-                        <p className="text-gray-400 text-xs">Widget Actions</p>
+                        </p>
                     </div>
 
                     {/* Menu Items */}
-                    <div className="py-2">
-                        {menuItems.map((item, index) => {
-                            if (item.separator) {
-                                return (
-                                    <div
-                                        key={item.id}
-                                        className="border-t border-gray-700 my-2"
-                                    />
-                                );
-                            }
+                    <div className="py-1">
+                        <MenuItem
+                            icon={MdInfo}
+                            label="Info"
+                            onClick={() => {
+                                onInfo(widgetId);
+                                onClose();
+                            }}
+                        />
+                        {widgetHasSettings(widgetId) && onSettings && (
+                            <MenuItem
+                                icon={MdSettings}
+                                label="Settings"
+                                onClick={() => {
+                                    onSettings(widgetId);
+                                    onClose();
+                                }}
+                            />
+                        )}
+                        <MenuItem
+                            icon={MdRefresh}
+                            label="Refresh"
+                            onClick={() => {
+                                onRefresh(widgetId);
+                                onClose();
+                            }}
+                        />
 
-                            return (
-                                <div key={item.id} className="relative">
-                                    <button
-                                        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-all duration-150 ${item.color}`}
-                                        onClick={item.submenu ? () => {
-                                            console.log('Toggling submenu for:', item.id);
-                                            setSubmenuOpen(submenuOpen === item.id ? null : item.id);
-                                        } : item.action}
-                                        onMouseEnter={() => {
-                                            if (item.submenu) {
-                                                console.log('Mouse enter submenu:', item.id);
-                                                setSubmenuOpen(item.id);
-                                            }
-                                        }}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <span className="opacity-80">
-                                                {item.icon}
-                                            </span>
-                                            <span className="font-medium">
-                                                {item.label}
-                                            </span>
-                                        </div>
-                                        {item.submenu && (
-                                            <span className="text-gray-500">
-                                                ▶
-                                            </span>
-                                        )}
-                                    </button>
+                        <div className="border-t border-ui-border-primary my-1" />
 
-                                    {/* Submenu */}
-                                    {item.submenu && submenuOpen === item.id && (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -10 }}
-                                            transition={{ type: "spring", damping: 30, stiffness: 400, duration: 0.15 }}
-                                            className="absolute left-full top-0 ml-2 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl overflow-hidden min-w-[200px] z-[10000]"
-                                            style={{
-                                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
-                                            }}
-                                        >
-                                            <div className="bg-gray-800 px-3 py-2 border-b border-gray-600">
-                                                <p className="text-xs text-gray-400 font-medium">Resize Options</p>
-                                            </div>
-                                            {item.submenu.map((subItem, subIndex) => (
-                                                <button
-                                                    key={subIndex}
-                                                    className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-between"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        subItem.action();
-                                                        setSubmenuOpen(null);
-                                                        onClose();
-                                                    }}
-                                                >
-                                                    <span>{subItem.label}</span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {subItem.label.includes('Small') ? '📱' :
-                                                            subItem.label.includes('Medium') ? '💻' : '🖥️'}
-                                                    </span>
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                        <div className="px-3 py-1">
+                            <p className="text-xs text-ui-text-muted">Resize</p>
+                        </div>
+                        <MenuItem
+                            icon={MdPhotoSizeSelectSmall}
+                            label="Small (2×2)"
+                            onClick={() => {
+                                onResize(widgetId, 'small');
+                                onClose();
+                            }}
+                        />
+                        <MenuItem
+                            icon={MdPhotoSizeSelectSmall}
+                            label="Medium (4×4)"
+                            onClick={() => {
+                                onResize(widgetId, 'medium');
+                                onClose();
+                            }}
+                        />
+                        <MenuItem
+                            icon={MdPhotoSizeSelectLarge}
+                            label="Large (6×4)"
+                            onClick={() => {
+                                onResize(widgetId, 'large');
+                                onClose();
+                            }}
+                        />
 
-                    {/* Menu Footer */}
-                    <div className="bg-gray-800/50 px-4 py-2 border-t border-gray-700">
-                        <p className="text-xs text-gray-500 text-center">
-                            Right-click for widget options
-                        </p>
+                        <div className="border-t border-ui-border-primary my-1" />
+
+                        <MenuItem
+                            icon={MdDelete}
+                            label="Remove"
+                            onClick={() => {
+                                onDelete(widgetId);
+                                onClose();
+                            }}
+                            variant="danger"
+                        />
                     </div>
                 </motion.div>
             )}

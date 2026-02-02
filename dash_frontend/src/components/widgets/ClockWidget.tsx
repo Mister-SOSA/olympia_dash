@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import Widget from "./Widget";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+
+const WIDGET_ID = 'ClockWidget';
 
 const DateTimeContent: React.FC = () => {
     const [currentDateTime, setCurrentDateTime] = useState<Date>(new Date());
     const [fontSize, setFontSize] = useState<string>("16px");
     const containerRef = useRef<HTMLDivElement | null>(null);
+
+    // Use widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const clockFormat = settings.clockFormat as '12h' | '24h';
+    const showSeconds = settings.showSeconds as boolean;
+    const timezone = settings.timezone as string;
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -29,15 +38,18 @@ const DateTimeContent: React.FC = () => {
     }, []);
 
     const formatTime = (time: Date): string => {
-        let hours = time.getHours();
-        const minutes = time.getMinutes();
-        const seconds = time.getSeconds();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const options: Intl.DateTimeFormatOptions = {
+            timeZone: timezone,
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: clockFormat === '12h',
+        };
 
-        hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        if (showSeconds) {
+            options.second = '2-digit';
+        }
 
-        return `${hours < 10 ? "0" + hours : hours}:${minutes < 10 ? "0" + minutes : minutes}:${seconds < 10 ? "0" + seconds : seconds} ${ampm}`;
+        return new Intl.DateTimeFormat('en-US', options).format(time);
     };
 
     return (

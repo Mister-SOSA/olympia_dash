@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useEffect, useState } from "react";
+import React, { useMemo, useRef, useState, memo, useEffect } from "react";
 import Widget from "./Widget";
 import config from "@/config";
 import { POItemData } from "@/types";
@@ -11,8 +11,14 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { format } from "date-fns-tz";
 import { playNotificationSound } from "@/utils/soundUtils";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { SensitiveCurrency, SensitiveName } from "@/components/ui/SensitiveValue";
+import { STATUS_COLORS, BADGE_STYLES } from "@/components/ui/MobileTableCard";
+
+const WIDGET_ID = 'DailyDueInTable';
 
 
 /* -------------------------------------- */
@@ -25,13 +31,23 @@ const STATUS_CODES: { [key: string]: string } = {
     "14": "V", // Received from Vendor
     "16": "C", // Closed
     "18": "I", // Vendor Invoice Received
+    X: "X",
+    E: "E",
+    R: "R",
+    V: "V",
+    C: "C",
+    I: "I",
 };
+
+const RECEIVED_STATUSES = new Set(["V", "C"]);
+
+const normalizeStatus = (statusCode: string): string => STATUS_CODES[statusCode] ?? statusCode;
 
 const RECENT_ORDER_THRESHOLD_DAYS = 30;
 const YESTERDAY_OFFSET = 1;
 
 const statusBadge = (statusCode: string) => {
-    const status = STATUS_CODES[statusCode];
+    const status = normalizeStatus(statusCode);
     const badgeClass =
         status === "X"
             ? "badge-danger"
@@ -43,48 +59,92 @@ const statusBadge = (statusCode: string) => {
 
 /**
  * Deduplicate rows by (po_number, item_no). If a duplicate is found,
- * prefer the row with a valid date_rcv.
+ * prefer the row with the most "complete" status:
+ * 1. Prefer received statuses (V, C) over non-received
+ * 2. Among same status category, prefer the row with a valid date_rcv
+ * 
+ * FIX: The database returns duplicate rows with different statuses.
+ * This ensures we always pick the most accurate/complete status.
  */
 function deduplicateData(data: POItemData[]): POItemData[] {
     const dedupedMap = new Map<string, POItemData>();
+
+    // Helper to determine which item is "better" (more complete)
+    const isBetterItem = (newItem: POItemData, existingItem: POItemData): boolean => {
+        const newStatus = normalizeStatus(newItem.po_status);
+        const existingStatus = normalizeStatus(existingItem.po_status);
+        const newIsReceived = RECEIVED_STATUSES.has(newStatus);
+        const existingIsReceived = RECEIVED_STATUSES.has(existingStatus);
+
+        // Prefer received status over non-received
+        if (newIsReceived && !existingIsReceived) return true;
+        if (!newIsReceived && existingIsReceived) return false;
+
+        // If both same category, prefer the one with receive date
+        if (newItem.date_rcv && !existingItem.date_rcv) return true;
+        if (!newItem.date_rcv && existingItem.date_rcv) return false;
+
+        // If still tied, prefer the one with higher qty_recvd
+        if ((newItem.qty_recvd || 0) > (existingItem.qty_recvd || 0)) return true;
+
+        return false;
+    };
+
     data.forEach((item) => {
         const key = `${item.po_number}-${item.item_no}`;
         if (!dedupedMap.has(key)) {
             dedupedMap.set(key, item);
         } else {
-            const existing = dedupedMap.get(key);
-            if (existing && !existing.date_rcv && item.date_rcv) {
+            const existing = dedupedMap.get(key)!;
+            if (isBetterItem(item, existing)) {
                 dedupedMap.set(key, item);
             }
         }
     });
+
     return Array.from(dedupedMap.values());
 }
 
 /**
  * For each order, find the previous order (if any) for the same part code,
  * and attach its date and unit price.
+ * 
+ * FIX: Returns NEW objects to avoid mutating original data (which caused
+ * inconsistent renders when React compared old vs new data).
  */
 function computePreviousOrderDetails(data: POItemData[]): POItemData[] {
+    const ordersByPartCode = new Map<string, POItemData[]>();
+
     data.forEach((item) => {
-        const currentDate = new Date(item.date_orderd);
-        const previousOrders = data.filter(
-            (o) =>
-                o.part_code === item.part_code &&
-                new Date(o.date_orderd) < currentDate
-        );
-        if (previousOrders.length > 0) {
-            const lastOrder = previousOrders.reduce((prev, curr) =>
-                new Date(curr.date_orderd) > new Date(prev.date_orderd) ? curr : prev
-            );
-            item.last_order_date = lastOrder.date_orderd;
-            item.last_order_unit_price = lastOrder.unit_price;
-        } else {
-            item.last_order_date = null;
-            item.last_order_unit_price = null;
+        if (!ordersByPartCode.has(item.part_code)) {
+            ordersByPartCode.set(item.part_code, []);
         }
+        ordersByPartCode.get(item.part_code)!.push(item);
     });
-    return data;
+
+    ordersByPartCode.forEach((orders) => {
+        orders.sort((a, b) => new Date(a.date_orderd).getTime() - new Date(b.date_orderd).getTime());
+    });
+
+    // Return NEW objects instead of mutating
+    return data.map((item) => {
+        const ordersForPart = ordersByPartCode.get(item.part_code)!;
+        const currentDate = new Date(item.date_orderd).getTime();
+
+        let lastOrder: POItemData | null = null;
+        for (let i = ordersForPart.length - 1; i >= 0; i--) {
+            if (new Date(ordersForPart[i].date_orderd).getTime() < currentDate) {
+                lastOrder = ordersForPart[i];
+                break;
+            }
+        }
+
+        return {
+            ...item,
+            last_order_date: lastOrder ? lastOrder.date_orderd : null,
+            last_order_unit_price: lastOrder ? lastOrder.unit_price : null,
+        };
+    });
 }
 
 /**
@@ -120,16 +180,25 @@ function removeHiddenVendors(data: POItemData[]): POItemData[] {
 }
 
 /**
- * Sort the orders alphabetically by vendor name, then by PO number,
- * and finally by part code.
+ * Sort orders based on user preference.
+ * 
+ * FIX: Returns a NEW sorted array to avoid mutating original data.
  */
-function sortOrders(data: POItemData[]): POItemData[] {
-    return data.sort((a, b) => {
-        const vendorComparison = a.vend_name.localeCompare(b.vend_name);
-        if (vendorComparison !== 0) return vendorComparison;
-        const poComparison = a.po_number.localeCompare(b.po_number);
-        if (poComparison !== 0) return poComparison;
-        return a.part_code.localeCompare(b.part_code);
+function sortOrders(data: POItemData[], sortBy: 'vendor' | 'date' | 'poNumber' = 'vendor'): POItemData[] {
+    return [...data].sort((a, b) => {
+        switch (sortBy) {
+            case 'date':
+                return new Date(b.date_orderd).getTime() - new Date(a.date_orderd).getTime();
+            case 'poNumber':
+                return a.po_number.localeCompare(b.po_number);
+            case 'vendor':
+            default:
+                const vendorComparison = a.vend_name.localeCompare(b.vend_name);
+                if (vendorComparison !== 0) return vendorComparison;
+                const poComparison = a.po_number.localeCompare(b.po_number);
+                if (poComparison !== 0) return poComparison;
+                return a.part_code.localeCompare(b.part_code);
+        }
     });
 }
 
@@ -144,7 +213,7 @@ function formatDate(date: any): string {
 interface TableRowData {
     isGrouped: boolean;
     poNumber: string;
-    poStatus: string;
+    poStatusLabel: string;
     vendName: string;
     partCode: string;
     partDescription: string;
@@ -155,15 +224,135 @@ interface TableRowData {
     lastOrderUnitPrice: string;
     qtyOrdered: string;
     qtyRecvd: string;
-    itemNo: string; // Add unique identifier
+    itemNo: string;
 }
+
+// Memoized table row component
+const MemoizedTableRow = memo(({
+    row,
+    isHighlighted
+}: {
+    row: TableRowData;
+    isHighlighted: boolean;
+}) => {
+    return (
+        <TableRow
+            className={`
+                ${row.poStatusLabel === "X" ? "cancelled-po" : ""}
+                ${row.isGrouped ? "grouped-po" : ""}
+                ${RECEIVED_STATUSES.has(row.poStatusLabel) ? "received-po" : ""}
+                ${isHighlighted ? "new-status-v-row" : ""}
+            `}
+        >
+            <TableCell className="font-black" style={{ color: 'var(--table-text-primary)' }}>{row.poNumber}</TableCell>
+            <TableCell className="font-black">{statusBadge(row.poStatusLabel)}</TableCell>
+            <TableCell style={{ color: 'var(--table-text-primary)' }}>
+                <SensitiveName value={row.vendName} />
+            </TableCell>
+            <TableCell style={{ color: 'var(--table-text-primary)' }}>{row.partCode}</TableCell>
+            <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyOrdered}</TableCell>
+            <TableCell className="text-right" style={{ color: 'var(--table-text-primary)' }}>{row.qtyRecvd}</TableCell>
+            <TableCell className="text-right" style={{ color: 'var(--table-text-secondary)' }}>{row.dateOrdered}</TableCell>
+            <TableCell className="text-right" style={{ color: 'var(--table-text-secondary)' }}>{row.lastOrderDate}</TableCell>
+            <TableCell className="text-right row-secondary">
+                <div className="table-dollars">
+                    <SensitiveCurrency value={`$${row.recentUnitPrice}`} style={{ color: 'var(--table-text-primary)' }} />
+                </div>
+            </TableCell>
+            <TableCell className="text-right row-secondary">
+                <div className="table-dollars">
+                    <SensitiveCurrency value={`$${row.lastOrderUnitPrice}`} style={{ color: 'var(--table-text-primary)' }} />
+                </div>
+            </TableCell>
+        </TableRow>
+    );
+});
+
+// Helper to get status badge style
+const getStatusBadgeStyle = (status: string) => {
+    if (status === 'X') return BADGE_STYLES.error;
+    if (RECEIVED_STATUSES.has(status)) return BADGE_STYLES.success;
+    return BADGE_STYLES.primary;
+};
+
+// Helper to get status indicator color
+const getStatusIndicatorColor = (status: string) => {
+    if (status === 'X') return STATUS_COLORS.cancelled;
+    if (RECEIVED_STATUSES.has(status)) return STATUS_COLORS.received;
+    if (status === 'R') return STATUS_COLORS.released;
+    if (status === 'E') return STATUS_COLORS.entered;
+    return STATUS_COLORS.default;
+};
+
+// Memoized mobile card component for compact view
+const MobileCardRow = memo(({
+    row,
+    isHighlighted
+}: {
+    row: TableRowData;
+    isHighlighted: boolean;
+}) => {
+    const isReceived = RECEIVED_STATUSES.has(row.poStatusLabel);
+    const isCancelled = row.poStatusLabel === 'X';
+
+    return (
+        <div
+            className={`
+                mobile-table-card
+                ${isHighlighted ? "new-status-v-row" : ""}
+                ${isCancelled ? "cancelled" : ""}
+                ${isReceived ? "received" : ""}
+            `}
+        >
+            {/* Status indicator */}
+            <div
+                className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-md"
+                style={{ backgroundColor: getStatusIndicatorColor(row.poStatusLabel) }}
+            />
+
+            <div className="pl-3 pr-3 py-2">
+                {/* Row 1: Vendor + Status */}
+                <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        <SensitiveName value={row.vendName} />
+                    </span>
+                    <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                        style={getStatusBadgeStyle(row.poStatusLabel)}
+                    >
+                        {row.poStatusLabel}
+                    </span>
+                </div>
+
+                {/* Row 2: Part + Qty + Price */}
+                <div className="flex items-center justify-between gap-2 mt-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono" style={{ color: 'var(--text-muted)' }}>{row.partCode}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                            {row.qtyOrdered}{row.qtyRecvd !== '-' && <span style={{ color: 'var(--value-positive)' }}> → {row.qtyRecvd}</span>}
+                        </span>
+                    </div>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                        <SensitiveCurrency value={`$${row.recentUnitPrice}`} />
+                    </span>
+                </div>
+
+                {/* Row 3: PO + Date */}
+                <div className="flex items-center justify-between gap-2 mt-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span className="font-mono">PO {row.poNumber}</span>
+                    <span>{row.dateOrdered}</span>
+                </div>
+            </div>
+        </div>
+    );
+});
+MobileCardRow.displayName = 'MobileCardRow';
 
 /**
  * Map the processed data into the format expected by the table.
  */
-function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
+function mapToTableData(data: POItemData[]): TableRowData[] {
     return data.map((item) => {
-        // Adjust vendor promise date: add one day before formatting.
         const correctedVendPromDate = item.vend_prom_date
             ? formatDate(
                 new Date(
@@ -176,7 +365,7 @@ function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
         return {
             isGrouped: item.isGrouped,
             poNumber: item.po_number,
-            poStatus: item.po_status,
+            poStatusLabel: normalizeStatus(item.po_status),
             vendName: item.vend_name,
             partCode: item.part_code,
             partDescription: item.part_desc,
@@ -217,144 +406,204 @@ function mapToTableData(data: POItemData[], timeZone: string): TableRowData[] {
                 item.qty_recvd !== undefined && item.uom && item.qty_recvd > 0
                     ? `${new Intl.NumberFormat("en-US").format(item.qty_recvd)} ${item.uom}`
                     : "-",
-            itemNo: `${item.po_number}-${item.item_no}`, // Unique identifier
+            itemNo: `${item.po_number}-${item.item_no}`,
         };
     });
 }
 
+/**
+ * Process raw API data into table-ready format.
+ * This is a pure function with no side effects.
+ */
+function processRawData(rawData: POItemData[], sortBy: 'vendor' | 'date' | 'poNumber'): TableRowData[] {
+    let processedData = deduplicateData(rawData);
+    processedData = computePreviousOrderDetails(processedData);
+    const recentOrders = filterRecentOrders(processedData);
+    let mergedData = removeHiddenVendors(recentOrders);
+    mergedData = sortOrders(mergedData, sortBy);
+    return mapToTableData(mergedData);
+}
+
 /* -------------------------------------- */
-/* DailyDueInTable Component              */
+/* Inner Table Component (handles data)   */
 /* -------------------------------------- */
-export default function DailyDueInTable() {
+interface DailyDueInTableContentProps {
+    data: POItemData[] | null;
+    loading: boolean;
+}
+
+/**
+ * FIX: Separated the table content into its own memoized component.
+ * This prevents the infinite render loop that was caused by calling
+ * state updates inside the render callback.
+ * 
+ * The previous code had:
+ *   renderTable -> processData -> setTimeout(setTableData) -> re-render -> renderTable...
+ * 
+ * Now we use useMemo for data processing, which only runs when data actually changes.
+ */
+const DailyDueInTableContent = memo(({ data, loading }: DailyDueInTableContentProps) => {
+    // Widget-specific settings
+    const { settings } = useWidgetSettings(WIDGET_ID);
+    const playSoundOnReceived = settings.playSoundOnReceived as boolean;
+    const sortBy = settings.sortBy as 'vendor' | 'date' | 'poNumber';
+    const maxRows = settings.maxRows as number;
+
     // Track previous order statuses to detect changes
     const previousStatusesRef = useRef<Map<string, string>>(new Map());
+    const lastTriggeredRef = useRef<Map<string, number>>(new Map());
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const hasInitializedRef = useRef(false);
+
     const [newStatusVRows, setNewStatusVRows] = useState<Set<string>>(new Set());
 
-    // Memoize the widget payload.
-    const widgetPayload = useMemo(
-        () => ({
-            module: "DailyDueInTable",
-            raw_query: `
-        SELECT
-          p.po_number,
-          ph.po_status,
-          p.vend_code,
-          p.vend_name,
-          p.part_code,
-          p.part_desc,
-          p.unit_price,
-          p.date_orderd,
-          p.vend_prom_date,
-          p.item_no,
-          p.part_type,
-          p.date_rcv,
-          p.qty_ord,
-          p.qty_recvd,
-          p.uom
-        FROM
-          poitem p
-        LEFT JOIN
-          pohead ph ON p.po_number = ph.po_number
-        WHERE
-          p.date_orderd >= DATEADD(DAY, -90, GETDATE());
-      `,
-        }),
-        []
-    );
+    // Cooldown period to prevent re-triggering for oscillating data
+    const TRIGGER_COOLDOWN_MS = 60000; // 1 minute cooldown
 
-    // Process and transform data for the table.
-    const renderFunction = useCallback((data: POItemData[]) => {
-        let processedData = deduplicateData(data);
-        processedData = computePreviousOrderDetails(processedData);
-        const recentOrders = filterRecentOrders(processedData);
-        let mergedData = removeHiddenVendors(recentOrders);
-        mergedData = sortOrders(mergedData);
+    // Process data with useMemo - only recomputes when data or sortBy changes
+    // This is the KEY FIX for the infinite render loop
+    const tableData = useMemo(() => {
+        if (!data || data.length === 0) {
+            return [];
+        }
+        return processRawData(data, sortBy);
+    }, [data, sortBy]);
 
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const tableData = mapToTableData(mergedData, timeZone);
+    // Handle status change detection in useEffect (not during render!)
+    useEffect(() => {
+        if (tableData.length === 0) return;
 
-        // Check for status changes to "V" (status code "14")
+        // Skip the first data load - we only want to detect CHANGES, not initial state
+        if (!hasInitializedRef.current) {
+            tableData.forEach((row) => {
+                previousStatusesRef.current.set(row.itemNo, row.poStatusLabel);
+            });
+            hasInitializedRef.current = true;
+            return;
+        }
+
         const newStatusVSet = new Set<string>();
+        const now = Date.now();
+
         tableData.forEach((row) => {
             const itemKey = row.itemNo;
-            const currentStatus = row.poStatus;
+            const currentStatus = row.poStatusLabel;
             const previousStatus = previousStatusesRef.current.get(itemKey);
+            const lastTriggered = lastTriggeredRef.current.get(itemKey) || 0;
 
-            // If status changed to "14" (V) and wasn't "14" before
-            if (currentStatus === "14" && previousStatus && previousStatus !== "14") {
+            // Only trigger if:
+            // 1. We have a previous status (not a brand new item)
+            // 2. Current status is received (V or C)
+            // 3. Previous status was NOT received
+            // 4. We haven't triggered for this item within the cooldown period
+            if (
+                previousStatus !== undefined &&
+                RECEIVED_STATUSES.has(currentStatus) &&
+                !RECEIVED_STATUSES.has(previousStatus) &&
+                (now - lastTriggered) > TRIGGER_COOLDOWN_MS
+            ) {
                 newStatusVSet.add(itemKey);
+                lastTriggeredRef.current.set(itemKey, now);
             }
 
-            // Update the status tracking
             previousStatusesRef.current.set(itemKey, currentStatus);
         });
 
-        // Update the state with new status V rows and play sound once
         if (newStatusVSet.size > 0) {
-            playNotificationSound(); // Play once for all status changes
+            if (playSoundOnReceived) {
+                playNotificationSound();
+            }
+
             setNewStatusVRows(newStatusVSet);
 
-            // Clear the highlight after animation completes (5 pulses * 0.8s = 4 seconds)
-            setTimeout(() => {
-                setNewStatusVRows(new Set());
-            }, 4000);
-        }
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
 
-        return (
-            <ScrollArea className="h-full w-full border-2 border-border rounded-md">
-                <Table className="text-left text-white outstanding-orders-table">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>PO Number</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Part Code</TableHead>
-                            <TableHead className="text-right">Qty Ordered</TableHead>
-                            <TableHead className="text-right">Qty Received</TableHead>
-                            <TableHead className="text-right">Date Ordered</TableHead>
-                            <TableHead className="text-right">Prev. Order</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Prev. Price</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {tableData.map((row, index) => (
-                            <TableRow
-                                key={row.itemNo}
-                                className={`
-                  ${STATUS_CODES[row.poStatus] === "X" ? "cancelled-po" : ""}
-                  ${row.isGrouped ? "grouped-po" : ""}
-                  ${["V", "C"].includes(STATUS_CODES[row.poStatus]) ? "received-po" : ""}
-                  ${newStatusVRows.has(row.itemNo) ? "new-status-v-row" : ""}
-                `}
-                            >
-                                <TableCell className="font-black">{row.poNumber}</TableCell>
-                                <TableCell className="font-black">{statusBadge(row.poStatus)}</TableCell>
-                                <TableCell>{row.vendName}</TableCell>
-                                <TableCell>{row.partCode}</TableCell>
-                                <TableCell className="text-right">{row.qtyOrdered}</TableCell>
-                                <TableCell className="text-right">{row.qtyRecvd}</TableCell>
-                                <TableCell className="text-right">{row.dateOrdered}</TableCell>
-                                <TableCell className="text-right">{row.lastOrderDate}</TableCell>
-                                <TableCell className="text-right row-secondary">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.recentUnitPrice}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="text-right row-secondary">
-                                    <div className="table-dollars">
-                                        <span className="dollar-sign">$</span>
-                                        <span className="dollar-value">{row.lastOrderUnitPrice}</span>
-                                    </div>
-                                </TableCell>
+            timeoutRef.current = setTimeout(() => {
+                setNewStatusVRows(new Set());
+            }, 3000);
+        }
+    }, [tableData, playSoundOnReceived]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
+    if (!data || data.length === 0) {
+        return <div className="widget-empty">No orders found</div>;
+    }
+
+    if (tableData.length === 0) {
+        return <div className="widget-empty">No orders due today</div>;
+    }
+
+    // Apply maxRows limit if set (0 means unlimited)
+    const displayData = maxRows > 0 ? tableData.slice(0, maxRows) : tableData;
+
+    return (
+        <ScrollArea className="h-full w-full border-2 border-border rounded-md @container">
+            <TooltipProvider delayDuration={200}>
+                {/* Mobile Card View - shown at smaller sizes */}
+                <div className="@2xl:hidden mobile-cards-container">
+                    {displayData.map((row) => (
+                        <MobileCardRow
+                            key={row.itemNo}
+                            row={row}
+                            isHighlighted={newStatusVRows.has(row.itemNo)}
+                        />
+                    ))}
+                </div>
+
+                {/* Table View - shown at larger sizes */}
+                <div className="hidden @2xl:block">
+                    <Table className="text-left outstanding-orders-table" style={{ color: 'var(--table-text-primary)' }}>
+                        <TableHeader className="sticky top-0 z-10" style={{ backgroundColor: 'var(--table-header-bg)' }}>
+                            <TableRow>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>PO Number</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Status</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Vendor</TableHead>
+                                <TableHead style={{ color: 'var(--table-text-primary)' }}>Part Code</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Ordered</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Qty Received</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Date Ordered</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Order</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Unit Price</TableHead>
+                                <TableHead className="text-right" style={{ color: 'var(--table-text-primary)' }}>Prev. Price</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </ScrollArea>
-        );
-    }, [newStatusVRows]);
+                        </TableHeader>
+                        <TableBody>
+                            {displayData.map((row) => (
+                                <MemoizedTableRow
+                                    key={row.itemNo}
+                                    row={row}
+                                    isHighlighted={newStatusVRows.has(row.itemNo)}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </TooltipProvider>
+        </ScrollArea>
+    );
+});
+
+/* -------------------------------------- */
+/* DailyDueInTable Component (wrapper)    */
+/* -------------------------------------- */
+export default function DailyDueInTable() {
+    const widgetPayload = useMemo(
+        () => ({
+            module: "DailyDueInTable",
+            queryId: "DailyDueInTable"
+        }),
+        []
+    );
 
     return (
         <Widget
@@ -363,15 +612,9 @@ export default function DailyDueInTable() {
             title="Daily Due In"
             refreshInterval={8000}
         >
-            {(data, loading) => {
-                if (loading) {
-                    return <div className="widget-loading">Loading orders...</div>;
-                }
-                if (!data || data.length === 0) {
-                    return <div className="widget-empty">No orders found</div>;
-                }
-                return renderFunction(data);
-            }}
+            {(data: POItemData[] | null, loading: boolean) => (
+                <DailyDueInTableContent data={data} loading={loading} />
+            )}
         </Widget>
     );
 }

@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useMemo, useCallback } from "react"
 import Widget from "./Widget";
 import { nFormatter } from "@/utils/helpers";
 import { SalesData, ProcessedSalesData } from "@/types";
+import { useWidgetSettings } from "@/hooks/useWidgetSettings";
 
 /* -------------------------------------- */
 /* 🔎 useResponsiveVisibleMonths Hook      */
@@ -33,16 +34,104 @@ function useResponsiveVisibleMonths(ref: React.RefObject<HTMLDivElement | null>)
 }
 
 /* -------------------------------------- */
+/* � Mobile List View                     */
+/* -------------------------------------- */
+interface MobileListViewProps {
+    data: ProcessedSalesData[];
+}
+
+const MobileListView: React.FC<MobileListViewProps> = ({ data }) => {
+    const maxValue = Math.max(...data.map(d => d.currentPeriodSales));
+    // Reverse to show newest first
+    const reversedData = [...data].reverse();
+
+    return (
+        <div style={{
+            width: "100%",
+            height: "100%",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+        }}>
+            {reversedData.map((item, index) => {
+                const width = (item.currentPeriodSales / maxValue) * 100;
+                const isCurrent = index === 0; // First item is current (newest)
+
+                return (
+                    <div
+                        key={index}
+                        style={{
+                            backgroundColor: isCurrent ? "var(--ui-accent-primary-bg)" : "var(--ui-bg-secondary)",
+                            borderRadius: "10px",
+                            padding: "10px 12px",
+                            border: isCurrent ? "1px solid var(--ui-accent-primary-border)" : "1px solid var(--ui-border-primary)",
+                        }}
+                    >
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "8px",
+                        }}>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "13px",
+                                fontWeight: isCurrent ? 700 : 600,
+                            }}>
+                                {item.periodLabel}
+                            </span>
+                            <span style={{
+                                color: isCurrent ? "var(--ui-accent-primary-text)" : "var(--text-primary)",
+                                fontSize: "14px",
+                                fontWeight: 700
+                            }}>
+                                ${nFormatter(item.currentPeriodSales, 2)}
+                            </span>
+                        </div>
+                        <div style={{
+                            height: "6px",
+                            backgroundColor: "var(--ui-bg-tertiary)",
+                            borderRadius: "3px",
+                            overflow: "hidden",
+                        }}>
+                            <div style={{
+                                width: `${width}%`,
+                                height: "100%",
+                                backgroundColor: isCurrent ? "var(--ui-accent-primary)" : "var(--chart-bar)",
+                                borderRadius: "3px",
+                                transition: "width 0.3s ease",
+                            }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+/* -------------------------------------- */
 /* 📊 Custom Bar Chart Component          */
 /* -------------------------------------- */
 interface CustomBarChartProps {
     data: ProcessedSalesData[];
+    visibleMonths: number;
+    showProjection: boolean;
+    showYearOverYear: boolean;
 }
 
-const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
+const CustomBarChart: React.FC<CustomBarChartProps> = ({ data: allData, visibleMonths, showProjection, showYearOverYear }) => {
     const chartRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    // Determine if we should use mobile layout
+    const useMobileLayout = dimensions.width > 0 && (
+        dimensions.height > dimensions.width * 1.2 || // Vertical aspect ratio
+        dimensions.width < 350 // Very narrow
+    );
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -54,9 +143,21 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
         return () => resizeObserver.disconnect();
     }, []);
 
-    if (!data.length || !dimensions.width) {
+    if (!allData.length || !dimensions.width) {
         return <div ref={chartRef} style={{ width: "100%", height: "100%" }} />;
     }
+
+    // Use mobile layout for vertical or narrow containers - show ALL data
+    if (useMobileLayout) {
+        return (
+            <div ref={chartRef} style={{ width: "100%", height: "100%" }}>
+                <MobileListView data={allData} />
+            </div>
+        );
+    }
+
+    // For regular chart view, slice to visible months
+    const data = allData.slice(-visibleMonths);
 
     const padding = { top: 32, right: 5, bottom: 32, left: 5 };
     const chartWidth = dimensions.width - padding.left - padding.right;
@@ -93,8 +194,9 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             y1={y}
                             x2={dimensions.width - padding.right}
                             y2={y}
-                            stroke="rgba(255, 255, 255, 0.08)"
+                            stroke="var(--border-light)"
                             strokeWidth="1"
+                            opacity="0.3"
                         />
                     );
                 })}
@@ -136,7 +238,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             />
 
                             {/* Projection section for last month */}
-                            {isLast && projectedRemaining > 0 && (
+                            {isLast && showProjection && projectedRemaining > 0 && (
                                 <>
                                     {/* Projected remaining (striped pattern) */}
                                     <path
@@ -181,55 +283,100 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                             )}
 
                             {/* Value labels */}
-                            {isLast && projectedRemaining > 0 ? (
+                            {isLast && showProjection && projectedRemaining > 0 ? (
                                 <>
-                                    {/* Current value label */}
-                                    {barHeight < 40 ? (
-                                        <text
-                                            x={x + actualBarWidth / 2}
-                                            y={y - 10}
-                                            textAnchor="middle"
-                                            fill="white"
-                                            fontSize="15"
-                                            fontWeight="700"
-                                            style={{ pointerEvents: "none" }}
-                                        >
-                                            ${nFormatter(item.currentPeriodSales, 2)}
-                                        </text>
-                                    ) : (
-                                        <text
-                                            x={x + actualBarWidth / 2}
-                                            y={y + 20}
-                                            textAnchor="middle"
-                                            fill="white"
-                                            fontSize="15"
-                                            fontWeight="700"
-                                            style={{ pointerEvents: "none" }}
-                                        >
-                                            ${nFormatter(item.currentPeriodSales, 2)}
-                                        </text>
-                                    )}
+                                    {(() => {
+                                        // Calculate space between projected top and current bar top
+                                        const projectedY = padding.top + chartHeight - projectedHeight;
+                                        const currentY = y;
+                                        const spaceBetween = currentY - projectedY;
+                                        const minSpaceNeeded = 35; // Minimum pixels needed for both labels
 
-                                    {/* Projected value label (always above) */}
-                                    <text
-                                        x={x + actualBarWidth / 2}
-                                        y={padding.top + chartHeight - projectedHeight - 10}
-                                        textAnchor="middle"
-                                        fill="rgba(255, 255, 255, 0.8)"
-                                        fontSize="13"
-                                        fontWeight="500"
-                                        fontStyle="italic"
-                                        style={{ pointerEvents: "none" }}
-                                    >
-                                        ~${nFormatter(projectedTotal, 2)}
-                                    </text>
+                                        // If there's enough space, show both labels outside their bars
+                                        if (spaceBetween >= minSpaceNeeded) {
+                                            return (
+                                                <>
+                                                    {/* Projected value label above projection */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={projectedY - 10}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-secondary)"
+                                                        fontSize="13"
+                                                        fontWeight="500"
+                                                        fontStyle="italic"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ~${nFormatter(projectedTotal, 2)}
+                                                    </text>
+                                                    {/* Current value label */}
+                                                    {barHeight < 40 ? (
+                                                        <text
+                                                            x={x + actualBarWidth / 2}
+                                                            y={currentY - 10}
+                                                            textAnchor="middle"
+                                                            fill="var(--text-primary)"
+                                                            fontSize="15"
+                                                            fontWeight="700"
+                                                            style={{ pointerEvents: "none" }}
+                                                        >
+                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                        </text>
+                                                    ) : (
+                                                        <text
+                                                            x={x + actualBarWidth / 2}
+                                                            y={currentY + 20}
+                                                            textAnchor="middle"
+                                                            fill="var(--text-primary)"
+                                                            fontSize="15"
+                                                            fontWeight="700"
+                                                            style={{ pointerEvents: "none" }}
+                                                        >
+                                                            ${nFormatter(item.currentPeriodSales, 2)}
+                                                        </text>
+                                                    )}
+                                                </>
+                                            );
+                                        } else {
+                                            // Not enough space - put current inside bar, projected above
+                                            return (
+                                                <>
+                                                    {/* Projected value label above projection */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={projectedY - 10}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-secondary)"
+                                                        fontSize="13"
+                                                        fontWeight="500"
+                                                        fontStyle="italic"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ~${nFormatter(projectedTotal, 2)}
+                                                    </text>
+                                                    {/* Current value label inside current bar */}
+                                                    <text
+                                                        x={x + actualBarWidth / 2}
+                                                        y={currentY + 20}
+                                                        textAnchor="middle"
+                                                        fill="var(--text-primary)"
+                                                        fontSize="15"
+                                                        fontWeight="700"
+                                                        style={{ pointerEvents: "none" }}
+                                                    >
+                                                        ${nFormatter(item.currentPeriodSales, 2)}
+                                                    </text>
+                                                </>
+                                            );
+                                        }
+                                    })()}
                                 </>
                             ) : (
                                 <text
                                     x={x + actualBarWidth / 2}
                                     y={y - 10}
                                     textAnchor="middle"
-                                    fill="white"
+                                    fill="var(--text-primary)"
                                     fontSize="15"
                                     fontWeight="700"
                                     style={{ pointerEvents: "none" }}
@@ -243,7 +390,7 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                                 x={x + actualBarWidth / 2}
                                 y={padding.top + chartHeight + 25}
                                 textAnchor="middle"
-                                fill="rgba(255, 255, 255, 0.8)"
+                                fill="var(--text-secondary)"
                                 fontSize="14"
                                 fontWeight="500"
                                 style={{ pointerEvents: "none" }}
@@ -263,16 +410,17 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
                         top: padding.top + chartHeight - (data[hoveredIndex].currentPeriodSales / maxValue) * chartHeight - 60,
                         left: padding.left + hoveredIndex * barWidth + barWidth / 2,
                         transform: "translateX(-50%)",
-                        backgroundColor: "rgba(0, 0, 0, 0.95)",
+                        backgroundColor: "var(--ui-bg-primary)",
                         padding: "10px 14px",
                         borderRadius: "8px",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        border: "1px solid var(--ui-border-primary)",
                         pointerEvents: "none",
                         zIndex: 1000,
                         whiteSpace: "nowrap",
+                        backdropFilter: "blur(12px)",
                     }}
                 >
-                    <div style={{ color: "#fff", fontSize: "13px", marginBottom: "4px" }}>
+                    <div style={{ color: "var(--ui-text-primary)", fontSize: "13px", marginBottom: "4px" }}>
                         {data[hoveredIndex].periodLabel}
                     </div>
                     <div style={{ color: "var(--chart-bar)", fontSize: "16px", fontWeight: 700 }}>
@@ -300,22 +448,23 @@ const CustomBarChart: React.FC<CustomBarChartProps> = ({ data }) => {
 export default function SalesByMonthBar() {
     const containerRef = useRef<HTMLDivElement>(null);
     const visibleMonths = useResponsiveVisibleMonths(containerRef);
+    const { settings } = useWidgetSettings('SalesByMonthBar');
+
+    const showProjection = settings.showProjection ?? true;
+    const showYearOverYear = settings.showYearOverYear ?? true;
 
     const widgetPayload = useMemo(
         () => ({
             module: "SalesByMonthBar",
-            table: "sumsales",
-            columns: ["FORMAT(sale_date, 'yyyy-MM') AS period", "SUM(sales_dol) AS total"],
-            filters: `(sale_date >= DATEADD(MONTH, -12, GETDATE()) AND sale_date <= GETDATE())`,
-            group_by: ["FORMAT(sale_date, 'yyyy-MM')"],
-            sort: ["period ASC"],
+            queryId: "SalesByMonthBar"
         }),
         []
     );
 
     const renderSalesByMonth = useCallback(
         (data: SalesData[]) => {
-            const chartData = data.slice(-visibleMonths).map((entry) => {
+            // Process all data - let CustomBarChart handle slicing based on layout
+            const chartData = data.map((entry) => {
                 const [year, month] = entry.period.split("-");
                 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 const monthIndex = parseInt(month, 10) - 1;
@@ -328,9 +477,9 @@ export default function SalesByMonthBar() {
                     previousPeriodSales: 0,
                 };
             });
-            return <CustomBarChart data={chartData} />;
+            return <CustomBarChart data={chartData} visibleMonths={visibleMonths} showProjection={showProjection} showYearOverYear={showYearOverYear} />;
         },
-        [visibleMonths]
+        [visibleMonths, showProjection, showYearOverYear]
     );
 
     return (
@@ -342,10 +491,6 @@ export default function SalesByMonthBar() {
                 refreshInterval={300000}
             >
                 {(data, loading) => {
-                    if (loading) {
-                        return <div className="widget-loading">Loading sales data...</div>;
-                    }
-
                     if (!data || data.length === 0) {
                         return <div className="widget-empty">No sales data available</div>;
                     }

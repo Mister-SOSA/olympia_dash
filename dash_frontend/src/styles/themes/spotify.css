@@ -1,0 +1,109 @@
+/* Spotify Theme - Signature green on dark gray */
+.theme-spotify {
+    /* UI Colors - Spotify's dark grays */
+    --ui-bg-primary: #121212;
+    --ui-bg-secondary: #181818;
+    --ui-bg-tertiary: #282828;
+    --ui-bg-quaternary: #333333;
+
+    --ui-border-primary: #282828;
+    --ui-border-secondary: #404040;
+
+    --ui-text-primary: #ffffff;
+    --ui-text-secondary: #b3b3b3;
+    --ui-text-muted: #6a6a6a;
+
+    /* Primary accent - Spotify green */
+    --ui-accent-primary: #1DB954;
+    --ui-accent-primary-hover: #1ed760;
+    --ui-accent-primary-light: #1ed760;
+    --ui-accent-primary-text: #1DB954;
+    --ui-accent-primary-bg: rgba(29, 185, 84, 0.15);
+    --ui-accent-primary-border: rgba(29, 185, 84, 0.4);
+
+    /* Secondary accent - Light gray */
+    --ui-accent-secondary: #535353;
+    --ui-accent-secondary-hover: #636363;
+    --ui-accent-secondary-light: #b3b3b3;
+    --ui-accent-secondary-text: #ffffff;
+    --ui-accent-secondary-bg: rgba(255, 255, 255, 0.1);
+    --ui-accent-secondary-border: rgba(255, 255, 255, 0.2);
+
+    --ui-success: #1DB954;
+    --ui-success-text: #1ed760;
+    --ui-success-bg: rgba(29, 185, 84, 0.15);
+    --ui-success-border: rgba(29, 185, 84, 0.4);
+
+    --ui-warning: #f59b23;
+    --ui-warning-text: #ffa42b;
+    --ui-warning-bg: rgba(245, 155, 35, 0.15);
+    --ui-warning-border: rgba(245, 155, 35, 0.4);
+
+    --ui-danger: #e91429;
+    --ui-danger-text: #f15e6c;
+    --ui-danger-bg: rgba(233, 20, 41, 0.15);
+    --ui-danger-border: rgba(233, 20, 41, 0.4);
+
+    --ui-info: #2e77d0;
+    --ui-info-text: #509bf5;
+    --ui-info-bg: rgba(46, 119, 208, 0.15);
+    --ui-info-border: rgba(46, 119, 208, 0.4);
+
+    /* Widget/Dashboard Colors */
+    --background-dark: #121212;
+    --background-light: #181818;
+    --background-highlight: #282828;
+    --border-light: #282828;
+    --border-dark: #0d0d0d;
+
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-muted: #6a6a6a;
+
+    --success: #1DB954;
+    --success-light: rgba(29, 185, 84, 0.2);
+    --warning: #f59b23;
+    --error: #e91429;
+    --error-light: rgba(233, 20, 41, 0.3);
+
+    --chart-bar: #1DB954;
+    --chart-1: #509bf5;
+    --chart-2: #f59b23;
+    --chart-3: #f59b23;
+    --chart-4: #e91429;
+    --chart-5: #b3b3b3;
+
+    /* Line chart specific colors */
+    --line-chart-1: #1DB954;
+    --line-chart-2: #509bf5;
+    --line-chart-3: #f59b23;
+
+    /* Table-specific colors */
+    --table-header-bg: #181818;
+    --table-row-bg: #121212;
+    --table-row-alt-bg: #181818;
+    --table-row-hover-bg: rgba(29, 185, 84, 0.08);
+    --table-border: #282828;
+    --table-text-primary: #ffffff;
+    --table-text-secondary: #b3b3b3;
+
+    --badge-success-bg: rgba(29, 185, 84, 0.2);
+    --badge-success-text: #1ed760;
+    --badge-success-border: rgba(29, 185, 84, 0.5);
+
+    --badge-warning-bg: rgba(245, 155, 35, 0.2);
+    --badge-warning-text: #ffa42b;
+    --badge-warning-border: rgba(245, 155, 35, 0.5);
+
+    --badge-error-bg: rgba(233, 20, 41, 0.2);
+    --badge-error-text: #f15e6c;
+    --badge-error-border: rgba(233, 20, 41, 0.5);
+
+    --badge-primary-bg: rgba(29, 185, 84, 0.2);
+    --badge-primary-text: #1ed760;
+    --badge-primary-border: rgba(29, 185, 84, 0.5);
+
+    --value-positive: #1ed760;
+    --value-negative: #f15e6c;
+    --value-neutral: #b3b3b3;
+}

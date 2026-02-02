@@ -1,310 +1,537 @@
 "use client";
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
+
+// Components
 import GridDashboard, { GridDashboardHandle } from "./GridDashboard";
-import ImprovedWidgetMenu from "./ImprovedWidgetMenu";
-import PresetMenu from "./PresetMenu";
-import { Widget, DashboardPreset, PresetType } from "@/types";
+import MobileDashboard from "./MobileDashboard";
+import DashboardDock from "./DashboardDock";
+import DashboardTaskbar, { TASKBAR_HEIGHTS } from "./DashboardTaskbar";
+import WidgetPicker from "./WidgetPicker";
+import PresetDialog from "./PresetDialog";
+import PresetManagerMenu from "./PresetManagerMenu";
+import SettingsMenu from "./SettingsMenu";
+import OnboardingFlow from "./OnboardingFlow";
+import { ImpersonationBanner } from "./ImpersonationBanner";
+import { Loader } from "./ui/loader";
+
+// Dashboard extracted components and hooks
 import {
-    readLayoutFromStorage,
-    saveLayoutToStorage,
-    readPresetsFromStorage,
-    savePresetsToStorage,
-    saveCurrentPresetType,
-    readCurrentPresetType,
+  FullscreenWidget,
+  useDashboardAuth,
+  useDashboardPreferences,
+  useDashboardPresets,
+  useDashboardLayout,
+  useDashboardKeyboard,
+  deepClone,
+} from "./dashboard-utils";
+
+import type {
+  SettingsViewType,
+  PresetDialogType,
+} from "./dashboard-utils";
+
+// Hooks
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
+import { usePrivacy } from "@/contexts/PrivacyContext";
+import { useSettings } from "@/hooks/useSettings";
+
+// Utils
+import {
+  savePresetsToStorage,
+  saveLayoutToStorage,
+  normalizeLayout,
+  generatePresetName,
 } from "@/utils/layoutUtils";
-import { masterWidgetList, getWidgetById } from "@/constants/widgets";
-import { Flip, toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-
-// Utility: deep clone an object
-const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
-
-/**
- * Merges a preset layout (which might define only a subset of widgets)
- * with the master widget list.
- */
-const mergePreset = (preset: Widget[]): Widget[] =>
-    masterWidgetList.map((widget) => {
-        const presetItem = preset.find((p) => p.id === widget.id);
-        return presetItem ? { ...widget, ...presetItem } : { ...widget, enabled: false };
-    });
-
-/**
- * Finds the next available preset index given a direction.
- */
-const findNextPresetIndex = (
-    presets: Array<DashboardPreset | null>,
-    currentIndex: number,
-    direction: number
-): number => {
-    let newIndex = currentIndex;
-    do {
-        newIndex = (newIndex + direction + presets.length) % presets.length;
-    } while (!presets[newIndex] && newIndex !== currentIndex);
-    return newIndex;
-};
-
-/**
- * Deep comparison of two layouts.
- */
-const layoutsEqual = (l1: Widget[], l2: Widget[]): boolean => {
-    if (l1.length !== l2.length) return false;
-    return l1.every((widget1) => {
-        const widget2 = l2.find((w) => w.id === widget1.id);
-        return (
-            widget2 &&
-            widget1.x === widget2.x &&
-            widget1.y === widget2.y &&
-            widget1.w === widget2.w &&
-            widget1.h === widget2.h &&
-            widget1.enabled === widget2.enabled
-        );
-    });
-};
+import { PresetType, DashboardPreset, Widget } from "@/types";
 
 export default function Dashboard() {
-    const [layout, setLayout] = useState<Widget[]>([]);
-    const [tempLayout, setTempLayout] = useState<Widget[]>([]);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [presets, setPresets] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
-    const [presetIndex, setPresetIndex] = useState<number>(0);
-    const [currentPresetType, setCurrentPresetType] = useState<PresetType>("grid");
-    const [presetsOpen, setPresetsOpen] = useState<boolean>(false);
-    const [transitionPhase, setTransitionPhase] = useState<"none" | "fadeIn" | "fadeOut">("none");
-    const gridDashboardRef = useRef<GridDashboardHandle>(null);
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const gridDashboardRef = useRef<GridDashboardHandle>(null);
+  const layoutRef = useRef<Widget[]>([]);
 
-    // Initialize layout and presets on mount
-    useEffect(() => {
-        const storedLayout = readLayoutFromStorage();
-        if (storedLayout) {
-            setLayout(storedLayout);
-        } else {
-            setLayout(masterWidgetList.map((w) => ({ ...w, enabled: false })));
-        }
-        setPresets(readPresetsFromStorage());
+  // ==========================================================================
+  // Authentication
+  // ==========================================================================
+  const {
+    checkingAuth,
+    isAuthenticated,
+    user,
+    isImpersonating,
+    setUser,
+    setIsImpersonating,
+    handleLogout,
+    handleEndImpersonation,
+  } = useDashboardAuth();
 
-        // Restore the last used preset type
-        const storedPresetType = readCurrentPresetType();
-        setCurrentPresetType(storedPresetType as PresetType);
-    }, []);
+  // ==========================================================================
+  // UI State
+  // ==========================================================================
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsView, setSettingsView] = useState<SettingsViewType>('account');
+  const [presetManagerOpen, setPresetManagerOpen] = useState(false);
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+  const [presetDialogType, setPresetDialogType] = useState<PresetDialogType>("save");
+  const [presetDialogIndex, setPresetDialogIndex] = useState<number>(0);
+  const [isDockVisible, setIsDockVisible] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-    // Prepare a temporary layout for the widget menu
-    const updateTempLayout = useCallback(() => {
-        setTempLayout(
-            masterWidgetList.map((widget) => {
-                const existing = layout.find((w) => w.id === widget.id);
-                return existing || { ...widget, enabled: false };
-            })
-        );
-    }, [layout]);
+  // Track whether the user is actively editing (to defer remote updates safely)
+  const isEditingRef = useRef(false);
+  useEffect(() => {
+    isEditingRef.current = menuOpen || settingsOpen || presetManagerOpen || presetDialogOpen || isTransitioning;
+  }, [menuOpen, settingsOpen, presetManagerOpen, presetDialogOpen, isTransitioning]);
 
-    // Load a preset with fade transition
-    const loadPreset = useCallback(
-        (index: number) => {
-            toast(`Loaded Dash ${index + 1}`, { type: "info", delay: 0 });
-            setTransitionPhase("fadeIn");
-            setTimeout(() => {
-                const preset = presets[index];
-                if (!preset) {
-                    toast(`Dash ${index + 1} is empty`, { type: "error", delay: 0 });
-                    setTransitionPhase("none");
-                    return;
-                }
+  // Privacy mode
+  const { toggle: togglePrivacy, isPrivate } = usePrivacy();
 
-                const merged = mergePreset(deepClone(preset.layout));
-                setLayout(merged);
-                setTempLayout(merged);
-                setPresetIndex(index);
-                setCurrentPresetType(preset.type);
+  // Navigation settings
+  const { settings: navSettings } = useSettings();
+  const navigationMode = navSettings.navigationMode;
+  const taskbarPosition = navSettings.taskbarPosition;
+  const taskbarSize = navSettings.taskbarSize;
+  const taskbarAutoHide = navSettings.taskbarAutoHide;
 
-                // Save the preset type so it persists across page reloads
-                saveCurrentPresetType(preset.type);
+  // ==========================================================================
+  // Layout Management
+  // ==========================================================================
+  // Note: We need to declare presets first because layout depends on it
+  const [presetsState, setPresetsState] = useState<Array<DashboardPreset | null>>(new Array(9).fill(null));
+  const [activePresetIndexState, setActivePresetIndexState] = useState<number | null>(null);
+  const [currentPresetTypeState, setCurrentPresetTypeState] = useState<PresetType>("grid");
 
-                setTransitionPhase("fadeOut");
-                setTimeout(() => setTransitionPhase("none"), 300);
-            }, 300);
-        },
-        [presets]
-    );    // Global keybindings: F = menu, X = compact, P = toggle presets, 1–9 / Shift+1–9
-    const handleKeyDown = useCallback(
-        (e: KeyboardEvent) => {
-            const key = e.key.toLowerCase();
-            if (key === "f") {
-                setMenuOpen((prev) => !prev);
-                updateTempLayout();
-            } else if (key === "x") {
-                if (gridDashboardRef.current) {
-                    gridDashboardRef.current.compact();
-                    toast("Dash Compacted!", { type: "warning" });
-                }
-            } else if (key === "p") {
-                setPresetsOpen((prev) => !prev);
-            } else if (
-                (!e.shiftKey && key >= "0" && key <= "9") ||
-                (e.shiftKey && e.code.startsWith("Digit"))
-            ) {
-                let digit: number;
-                if (e.shiftKey) {
-                    digit = parseInt(e.code.replace("Digit", ""), 10);
-                } else {
-                    digit = parseInt(key, 10);
-                }
-                if (digit === 0) {
-                    window.location.reload();
-                } else if (digit >= 1 && digit <= 9) {
-                    const index = digit - 1;
-                    if (e.shiftKey) {
-                        const liveLayout = readLayoutFromStorage();
-                        if (liveLayout) {
-                            const newPresets = [...presets];
-                            // Save as grid preset by default when using keyboard shortcut
-                            newPresets[index] = {
-                                type: "grid",
-                                layout: deepClone(liveLayout)
-                            };
-                            setPresets(newPresets);
-                            savePresetsToStorage(newPresets);
-                            toast(`Saved Layout ${index + 1}`, { type: "success", delay: 0 });
-                        }
-                    } else {
-                        loadPreset(index);
-                    }
-                }
-            } else if (key === "arrowleft") {
-                const newIndex = findNextPresetIndex(presets, presetIndex, -1);
-                if (newIndex !== presetIndex) loadPreset(newIndex);
-            } else if (key === "arrowright") {
-                const newIndex = findNextPresetIndex(presets, presetIndex, 1);
-                if (newIndex !== presetIndex) loadPreset(newIndex);
-            }
-        },
-        [layout, presets, presetIndex, loadPreset, updateTempLayout]
-    );
+  const {
+    layout,
+    setLayout,
+    tempLayout,
+    setTempLayout,
+    updateTempLayout,
+    handleExternalLayoutChange,
+    handleMenuSave,
+  } = useDashboardLayout({
+    activePresetIndex: activePresetIndexState,
+    presets: presetsState,
+    setPresets: setPresetsState,
+    setCurrentPresetType: setCurrentPresetTypeState,
+    setActivePresetIndex: setActivePresetIndexState,
+  });
 
-    useEffect(() => {
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [handleKeyDown]);
+  // ==========================================================================
+  // Presets Management
+  // ==========================================================================
+  const {
+    presets,
+    setPresets,
+    presetIndex,
+    setPresetIndex,
+    activePresetIndex,
+    setActivePresetIndex,
+    currentPresetType,
+    setCurrentPresetType,
+    presetsRef,
+    presetIndexRef,
+    loadPresetRef,
+    loadPreset,
+    handlePresetClick: presetClickHandler,
+    handlePresetSave: presetSaveHandler,
+    handleCreateBlank,
+    handleSaveToPreset,
+    quickSavePreset,
+  } = useDashboardPresets({
+    layout,
+    setLayout,
+    setTempLayout,
+    setIsTransitioning,
+  });
 
-    // Save/cancel from widget menu
-    const handleSave = useCallback(() => {
-        saveLayoutToStorage(tempLayout);
-        setMenuOpen(false);
-        if (!layoutsEqual(layout, tempLayout)) {
-            setLayout([...tempLayout]);
-            // When manually editing widgets, switch to grid mode
-            setCurrentPresetType("grid");
-            saveCurrentPresetType("grid");
-        }
-    }, [tempLayout, layout]);
+  // Sync the split state with the hook state
+  useEffect(() => {
+    setPresetsState(presets);
+  }, [presets]);
 
-    const handleCancel = useCallback(() => {
-        setMenuOpen(false);
-    }, []);
+  useEffect(() => {
+    setActivePresetIndexState(activePresetIndex);
+  }, [activePresetIndex]);
 
+  useEffect(() => {
+    setCurrentPresetTypeState(currentPresetType);
+  }, [currentPresetType]);
+
+  // ==========================================================================
+  // Preferences & Permissions
+  // ==========================================================================
+  const {
+    preferencesReady,
+    loadingStage,
+    showOnboarding,
+    setShowOnboarding,
+    permissionsLoading,
+    refreshPreferences,
+  } = useDashboardPreferences({
+    isAuthenticated,
+    user,
+    layout,
+    onLayoutUpdate: setLayout,
+    onPresetsUpdate: setPresets,
+    onPresetTypeUpdate: setCurrentPresetType,
+    onActivePresetIndexUpdate: setActivePresetIndex,
+    onUserStateUpdate: (newUser, impersonating) => {
+      setUser(newUser);
+      setIsImpersonating(impersonating);
+    },
+    isEditingRef,
+  });
+
+  // ==========================================================================
+  // Preset Auto-Cycle
+  // ==========================================================================
+  usePresetAutoCycle({
+    presets,
+    currentPresetIndex: activePresetIndex,
+    onLoadPreset: (index) => loadPresetRef.current?.(index),
+    isAnyModalOpen: menuOpen || settingsOpen || presetManagerOpen || presetDialogOpen,
+  });
+
+  // ==========================================================================
+  // Keyboard Shortcuts
+  // ==========================================================================
+  useDashboardKeyboard({
+    gridDashboardRef,
+    presetsRef,
+    presetIndexRef,
+    layoutRef,
+    menuOpen,
+    settingsOpen,
+    presetManagerOpen,
+    presetDialogOpen,
+    onToggleMenu: () => {
+      if (!menuOpen) {
+        updateTempLayout();
+      }
+      setMenuOpen(prev => !prev);
+    },
+    onTogglePresetManager: () => setPresetManagerOpen(prev => !prev),
+    onToggleSettings: () => {
+      setSettingsView('account');
+      setSettingsOpen(prev => !prev);
+    },
+    onLoadPreset: loadPreset,
+    onSavePreset: quickSavePreset,
+    onUpdateTempLayout: updateTempLayout,
+    onTogglePrivacy: togglePrivacy,
+    isPrivate,
+  });
+
+  // Keep a live ref of layout for keyboard quick-saves
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
+
+  // ==========================================================================
+  // Event Handlers
+  // ==========================================================================
+
+  // Handle preset click with intelligent dialog
+  const handlePresetClick = useCallback((index: number) => {
+    const result = presetClickHandler(index);
+    if (result.action === 'empty') {
+      setPresetDialogType("empty");
+      setPresetDialogIndex(index);
+      setPresetDialogOpen(true);
+    }
+  }, [presetClickHandler]);
+
+  // Handle preset save (right-click)
+  const handlePresetSave = useCallback((index: number) => {
+    const result = presetSaveHandler(index);
+    setPresetDialogType(result.action === 'save' ? "save" : "overwrite");
+    setPresetDialogIndex(index);
+    setPresetDialogOpen(true);
+  }, [presetSaveHandler]);
+
+  // Handle save from widget menu
+  const handleSave = useCallback(() => {
+    handleMenuSave();
+    setMenuOpen(false);
+
+    // Show toast if preset was updated
+    if (activePresetIndex !== null && presets[activePresetIndex]) {
+      toast.success(`Saved Preset ${activePresetIndex + 1}`);
+    }
+  }, [handleMenuSave, activePresetIndex, presets]);
+
+  const handleCancel = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+
+  // ==========================================================================
+  // Render
+  // ==========================================================================
+
+  // Loading state
+  if (checkingAuth || !preferencesReady) {
     return (
-        <div className="dashboard-container">
-            <AnimatePresence>
-                {menuOpen && (
-                    <ImprovedWidgetMenu
-                        tempLayout={tempLayout}
-                        setTempLayout={setTempLayout}
-                        handleSave={handleSave}
-                        handleCancel={handleCancel}
-                    />
-                )}
-            </AnimatePresence>
-
-            {!menuOpen && (
-                <button
-                    onClick={() => {
-                        setMenuOpen(true);
-                        updateTempLayout();
-                    }}
-                    className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 md:hidden"
-                    aria-label="Open Widget Menu"
-                >
-                    ⚙️
-                </button>
-            )}
-
-            <PresetMenu
-                presets={presets}
-                loadPreset={loadPreset}
-                presetsOpen={presetsOpen}
-                setPresetsOpen={setPresetsOpen}
-                currentLayout={layout}
-                onSavePreset={(index, layoutToSave, presetType) => {
-                    const newPresets = [...presets];
-                    newPresets[index] = {
-                        type: presetType,
-                        layout: deepClone(layoutToSave)
-                    };
-                    setPresets(newPresets);
-                    savePresetsToStorage(newPresets);
-                    toast(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Layout ${index + 1}`, { type: "success", delay: 0 });
-                }}
-                onClearPreset={(index) => {
-                    const newPresets = [...presets];
-                    newPresets[index] = null;
-                    setPresets(newPresets);
-                    savePresetsToStorage(newPresets);
-                    toast(`Cleared Preset ${index + 1}`, { type: "warning", delay: 0 });
-                }}
-            />
-
-            <GridDashboard
-                ref={gridDashboardRef}
-                layout={layout.filter((widget) => widget.enabled)}
-                onExternalLayoutChange={setLayout}
-            />
-
-            {/* Fullscreen Widget Overlay */}
-            {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
-                <div className="fixed inset-0 z-40 bg-gray-950">
-                    {(() => {
-                        const enabledWidget = layout.find(w => w.enabled);
-                        if (!enabledWidget) return null;
-
-                        const widgetDef = getWidgetById(enabledWidget.id);
-                        if (!widgetDef) return null;
-
-                        const WidgetComponent = widgetDef.component;
-
-                        return (
-                            <div className="w-full h-full overflow-auto">
-                                <WidgetComponent />
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
-
-            {transitionPhase !== "none" && (
-                <motion.div
-                    initial={{ opacity: transitionPhase === "fadeIn" ? 0 : 1 }}
-                    animate={{ opacity: transitionPhase === "fadeIn" ? 1 : 0 }}
-                    transition={{ duration: 0.3 }}
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100vw",
-                        height: "100vh",
-                        backgroundColor: "black",
-                        zIndex: 9999,
-                    }}
-                />
-            )}
-
-            <ToastContainer
-                position="bottom-center"
-                autoClose={1000}
-                pauseOnHover
-                theme="colored"
-                transition={Flip}
-            />
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-ui-bg-primary text-ui-text-primary">
+        <Loader />
+        <div className="text-sm opacity-80">{loadingStage || 'Loading your dashboard...'}</div>
+        {!checkingAuth && !permissionsLoading && (
+          <button
+            className="px-3 py-1 text-sm rounded bg-ui-surface-2 border border-ui-border hover:bg-ui-surface-3"
+            onClick={refreshPreferences}
+          >
+            Retry
+          </button>
+        )}
+      </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Mobile Experience - Independent layout management
+  if (isMobile) {
+    return (
+      <>
+        {/* Onboarding Flow for new users */}
+        <AnimatePresence>
+          {showOnboarding && (
+            <OnboardingFlow
+              user={user}
+              onComplete={() => setShowOnboarding(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
+        <div className="dashboard-container mobile" style={isImpersonating ? { paddingTop: '60px' } : {}}>
+          {/* Mobile Dashboard - Self-contained with its own layout management */}
+          <MobileDashboard
+            onSettingsClick={() => {
+              setSettingsView('account');
+              setSettingsOpen(true);
+            }}
+          />
+
+          {/* Settings Menu - Unified responsive component */}
+          <AnimatePresence>
+            {settingsOpen && (
+              <SettingsMenu
+                user={user}
+                onLogout={handleLogout}
+                onClose={() => setSettingsOpen(false)}
+                onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+                presets={presets}
+                initialView={settingsView}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop Experience - Original Grid Layout
+  return (
+    <>
+      {/* Onboarding Flow for new users */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingFlow
+            user={user}
+            onComplete={() => setShowOnboarding(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {isImpersonating && <ImpersonationBanner onEndImpersonation={handleEndImpersonation} />}
+      <div
+        className="dashboard-container"
+        style={{
+          ...(isImpersonating ? { paddingTop: '60px' } : {}),
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'top' && !taskbarAutoHide
+            ? { paddingTop: isImpersonating ? `${60 + TASKBAR_HEIGHTS[taskbarSize]}px` : `${TASKBAR_HEIGHTS[taskbarSize]}px` }
+            : {}),
+          ...(navigationMode === 'taskbar' && taskbarPosition === 'bottom' && !taskbarAutoHide
+            ? { paddingBottom: `${TASKBAR_HEIGHTS[taskbarSize]}px` }
+            : {}),
+        }}
+      >
+        {/* Navigation - Dock or Taskbar based on user preference */}
+        {navigationMode === 'dock' ? (
+          <DashboardDock
+            presets={presets}
+            activePresetIndex={activePresetIndex}
+            onWidgetsClick={() => {
+              setMenuOpen(true);
+              updateTempLayout();
+            }}
+            onPresetManagerClick={() => setPresetManagerOpen(true)}
+            onPresetClick={handlePresetClick}
+            onPresetSave={handlePresetSave}
+            onSettingsClick={(view?: SettingsViewType) => {
+              setSettingsView(view || 'account');
+              setSettingsOpen(true);
+            }}
+            onVisibilityChange={setIsDockVisible}
+          />
+        ) : (
+          <DashboardTaskbar
+            presets={presets}
+            activePresetIndex={activePresetIndex}
+            onWidgetsClick={() => {
+              setMenuOpen(true);
+              updateTempLayout();
+            }}
+            onPresetManagerClick={() => setPresetManagerOpen(true)}
+            onPresetClick={handlePresetClick}
+            onPresetSave={handlePresetSave}
+            onSettingsClick={(view?: SettingsViewType) => {
+              setSettingsView(view || 'account');
+              setSettingsOpen(true);
+            }}
+            onVisibilityChange={setIsDockVisible}
+          />
+        )}
+
+        {/* Preset Manager */}
+        <PresetManagerMenu
+          isOpen={presetManagerOpen}
+          onClose={() => setPresetManagerOpen(false)}
+          presets={presets}
+          activePresetIndex={activePresetIndex}
+          onLoadPreset={loadPreset}
+          onSavePreset={(index, layoutToSave, presetType, name, description) => {
+            const newPresets = [...presets];
+            const existingPreset = newPresets[index];
+            const now = new Date().toISOString();
+            const normalizedLayout = normalizeLayout(layoutToSave);
+
+            newPresets[index] = {
+              type: presetType,
+              layout: deepClone(normalizedLayout),
+              name: name || generatePresetName(normalizedLayout),
+              description: description || "",
+              createdAt: existingPreset?.createdAt || now,
+              updatedAt: now
+            };
+            setPresets(newPresets);
+            savePresetsToStorage(newPresets);
+            setActivePresetIndex(index);
+            setPresetIndex(index);
+            setLayout(normalizedLayout);
+            saveLayoutToStorage(normalizedLayout, { source: 'preset-load' });
+            toast.success(`Saved ${presetType === "fullscreen" ? "Fullscreen" : "Grid"} Preset ${index + 1}`);
+          }}
+          onUpdatePreset={(index, updates) => {
+            const newPresets = [...presets];
+            if (newPresets[index]) {
+              newPresets[index] = {
+                ...newPresets[index]!,
+                ...updates,
+                updatedAt: new Date().toISOString()
+              };
+              setPresets(newPresets);
+              savePresetsToStorage(newPresets);
+              toast.success(`Updated Preset ${index + 1}`);
+            }
+          }}
+          onClearPreset={(index) => {
+            const newPresets = [...presets];
+            newPresets[index] = null;
+            setPresets(newPresets);
+            savePresetsToStorage(newPresets);
+            if (activePresetIndex === index) {
+              setActivePresetIndex(null);
+            }
+            toast.warning(`Cleared Preset ${index + 1}`);
+          }}
+          currentLayout={layout}
+        />
+
+        {/* Intelligent Preset Dialog */}
+        <PresetDialog
+          isOpen={presetDialogOpen}
+          onClose={() => setPresetDialogOpen(false)}
+          dialogType={presetDialogType}
+          presetIndex={presetDialogIndex}
+          currentLayout={layout}
+          onCreateBlank={handleCreateBlank}
+          onSavePreset={handleSaveToPreset}
+          onLoadPreset={loadPreset}
+        />
+
+        {/* Widget Menu Modal */}
+        <AnimatePresence>
+          {menuOpen && (
+            <WidgetPicker
+              tempLayout={tempLayout}
+              setTempLayout={setTempLayout}
+              handleSave={handleSave}
+              handleCancel={handleCancel}
+              activePresetName={
+                activePresetIndex !== null && presets[activePresetIndex]
+                  ? presets[activePresetIndex]!.name || `Preset ${activePresetIndex + 1}`
+                  : undefined
+              }
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Settings Menu Modal */}
+        <AnimatePresence>
+          {settingsOpen && (
+            <SettingsMenu
+              user={user}
+              onLogout={handleLogout}
+              onClose={() => setSettingsOpen(false)}
+              onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
+              presets={presets}
+              initialView={settingsView}
+            />
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          animate={{ opacity: isTransitioning ? 0 : 1 }}
+          transition={{
+            duration: 0.2,
+            ease: [0.4, 0.0, 0.2, 1] // Apple-like ease curve
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
+          className={isTransitioning ? 'transitioning-preset' : ''}
+        >
+          <GridDashboard
+            ref={gridDashboardRef}
+            layout={layout.filter((widget) => widget.enabled)}
+            onExternalLayoutChange={handleExternalLayoutChange}
+            onAddWidget={() => {
+              setMenuOpen(true);
+              updateTempLayout();
+            }}
+            onOpenSettings={() => {
+              setSettingsView('account');
+              setSettingsOpen(true);
+            }}
+            isDockVisible={isDockVisible}
+          />
+
+          {/* Fullscreen Widget Overlay */}
+          {currentPresetType === "fullscreen" && layout.filter(w => w.enabled).length === 1 && (
+            <FullscreenWidget layout={layout} />
+          )}
+        </motion.div>
+      </div>
+    </>
+  );
 }
