@@ -143,8 +143,8 @@ export default function WidgetSettingsDialog({
 
     return (
         <Drawer open={isOpen} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
-            <DrawerContent 
-                className="z-[200] max-h-[90vh]" 
+            <DrawerContent
+                className="z-[200] max-h-[90vh]"
                 showHandle={true}
             >
                 <DrawerHeader className="bg-ui-bg-secondary/50">

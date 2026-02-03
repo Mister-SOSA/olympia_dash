@@ -164,116 +164,360 @@ const vibrate = (pattern: number | number[] = 10) => {
 };
 
 // ============================================
-// Widget Complication (Mini Preview) - Memoized
+// Widget Complication Previews
+// Each widget can have a custom preview component
 // ============================================
 
+interface ComplicationPreviewProps {
+    data: {
+        value?: string;
+        label?: string;
+        trend?: 'up' | 'down' | 'neutral';
+        trendValue?: string;
+        status?: 'good' | 'warning' | 'error' | 'neutral';
+        secondaryValue?: string;
+        icon?: string;
+        chartData?: number[];
+    };
+}
+
+// --- Clock Preview: Live analog clock ---
+const ClockPreview = memo(function ClockPreview({ data }: ComplicationPreviewProps) {
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+        const interval = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const hours = time.getHours() % 12;
+    const minutes = time.getMinutes();
+    const seconds = time.getSeconds();
+
+    const hourDeg = (hours * 30) + (minutes * 0.5);
+    const minuteDeg = minutes * 6;
+    const secondDeg = seconds * 6;
+
+    return (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-16 h-16">
+                {/* Face */}
+                <div
+                    className="absolute inset-0 rounded-full border-2"
+                    style={{
+                        borderColor: 'var(--ui-border-primary)',
+                        background: 'var(--ui-bg-primary)'
+                    }}
+                />
+                {/* Hour markers */}
+                {[0, 90, 180, 270].map((deg) => (
+                    <div
+                        key={deg}
+                        className="absolute w-0.5 h-1.5 left-1/2"
+                        style={{
+                            background: 'var(--ui-text-muted)',
+                            top: '4px',
+                            transformOrigin: 'center 28px',
+                            transform: `translateX(-50%) rotate(${deg}deg)`,
+                        }}
+                    />
+                ))}
+                {/* Hour hand */}
+                <div
+                    className="absolute w-1 h-4 rounded-full left-1/2 top-1/2 origin-bottom"
+                    style={{
+                        background: 'var(--ui-text-primary)',
+                        transform: `translateX(-50%) translateY(-100%) rotate(${hourDeg}deg)`
+                    }}
+                />
+                {/* Minute hand */}
+                <div
+                    className="absolute w-0.5 h-5 rounded-full left-1/2 top-1/2 origin-bottom"
+                    style={{
+                        background: 'var(--ui-text-secondary)',
+                        transform: `translateX(-50%) translateY(-100%) rotate(${minuteDeg}deg)`
+                    }}
+                />
+                {/* Second hand */}
+                <div
+                    className="absolute w-px h-5 rounded-full left-1/2 top-1/2 origin-bottom"
+                    style={{
+                        background: 'var(--ui-accent-primary)',
+                        transform: `translateX(-50%) translateY(-100%) rotate(${secondDeg}deg)`
+                    }}
+                />
+                {/* Center */}
+                <div
+                    className="absolute w-2 h-2 rounded-full left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                    style={{ background: 'var(--ui-text-primary)' }}
+                />
+            </div>
+        </div>
+    );
+});
+
+// --- Date Preview: Calendar page style ---
+const DatePreview = memo(function DatePreview({ data }: ComplicationPreviewProps) {
+    const now = new Date();
+    const dayName = now.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const dayNum = now.getDate();
+    const month = now.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+
+    return (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-14 h-16 rounded-lg overflow-hidden" style={{ boxShadow: '0 4px 12px var(--shadow-dark)' }}>
+                {/* Header */}
+                <div
+                    className="h-5 flex items-center justify-center"
+                    style={{ background: 'var(--ui-danger)' }}
+                >
+                    <span className="text-[9px] font-bold text-white tracking-wider">{dayName}</span>
+                </div>
+                {/* Body */}
+                <div
+                    className="h-11 flex flex-col items-center justify-center"
+                    style={{ background: 'var(--ui-bg-tertiary)' }}
+                >
+                    <span className="text-2xl font-bold leading-none" style={{ color: 'var(--ui-text-primary)' }}>{dayNum}</span>
+                    <span className="text-[8px] font-semibold tracking-wider" style={{ color: 'var(--ui-text-muted)' }}>{month}</span>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+// --- Gauge Preview: Circular progress for humidity/percentages ---
+const GaugePreview = memo(function GaugePreview({ data }: ComplicationPreviewProps) {
+    const numericMatch = data.value?.match(/(\d+)/);
+    const percentage = numericMatch ? Math.min(100, Math.max(0, parseInt(numericMatch[1], 10))) : 50;
+
+    const radius = 26;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    const getColor = () => {
+        if (data.status === 'warning') return 'var(--ui-warning)';
+        if (data.status === 'error') return 'var(--ui-danger)';
+        if (data.status === 'good') return 'var(--ui-success)';
+        return 'var(--ui-accent-primary)';
+    };
+
+    return (
+        <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-16 h-16">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 60 60">
+                    <circle cx="30" cy="30" r={radius} fill="none" stroke="var(--ui-bg-tertiary)" strokeWidth="4" />
+                    <circle
+                        cx="30" cy="30" r={radius}
+                        fill="none"
+                        stroke={getColor()}
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-lg font-bold tabular-nums" style={{ color: getColor() }}>{data.value}</span>
+                    {data.label && <span className="text-[8px] font-medium" style={{ color: 'var(--ui-text-muted)' }}>{data.label}</span>}
+                </div>
+            </div>
+        </div>
+    );
+});
+
+// --- Default Text Preview: Standard value + label + trend ---
+const DefaultPreview = memo(function DefaultPreview({ data }: ComplicationPreviewProps) {
+    const getTrendColor = () => {
+        if (data.trend === 'up') return 'var(--ui-success-text)';
+        if (data.trend === 'down') return 'var(--ui-danger-text)';
+        return 'var(--ui-text-muted)';
+    };
+
+    const getValueColor = () => {
+        if (data.status === 'warning') return 'var(--ui-warning-text)';
+        if (data.status === 'error') return 'var(--ui-danger-text)';
+        if (data.status === 'good') return 'var(--ui-success-text)';
+        return 'var(--ui-text-primary)';
+    };
+
+    return (
+        <div className="flex-1 flex flex-col justify-end">
+            {/* Main Value */}
+            <span
+                className="text-[1.75rem] font-bold tracking-tight leading-none tabular-nums"
+                style={{ color: getValueColor() }}
+            >
+                {data.value}
+            </span>
+
+            {/* Footer: Label + Trend */}
+            <div className="flex items-center gap-2 mt-1">
+                {data.label && (
+                    <span className="text-[11px] font-medium" style={{ color: 'var(--ui-text-muted)' }}>
+                        {data.label}
+                    </span>
+                )}
+                {data.trend && data.trendValue && (
+                    <span
+                        className="text-[11px] font-bold flex items-center gap-0.5"
+                        style={{ color: getTrendColor() }}
+                    >
+                        {data.trend === 'up' ? <MdArrowUpward className="w-3 h-3" /> :
+                            data.trend === 'down' ? <MdArrowDownward className="w-3 h-3" /> : null}
+                        {data.trendValue}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+});
+
+// --- YTD Sales Preview: Robinhood-style ---
+const SalesYTDPreview = memo(function SalesYTDPreview({ data }: ComplicationPreviewProps) {
+    const isPositive = !data.trend || data.trend === 'up' || data.trend === 'neutral';
+    const trendColor = isPositive ? 'var(--ui-success)' : 'var(--ui-danger)';
+
+    // Generate SVG path from real chart data
+    const chartPath = useMemo(() => {
+        const points = data.chartData;
+        if (!points || points.length < 2) return null;
+
+        const width = 100;
+        const height = 32;
+        const maxVal = Math.max(...points);
+        const minVal = Math.min(...points);
+        const range = maxVal - minVal || 1;
+
+        const linePoints = points.map((val, i) => {
+            const x = (i / (points.length - 1)) * width;
+            const y = height - ((val - minVal) / range) * (height - 4) - 2;
+            return `${x},${y}`;
+        });
+
+        const linePath = `M${linePoints.join(' L')}`;
+        const areaPath = `${linePath} L100,${height} L0,${height} Z`;
+
+        return { linePath, areaPath, endY: linePoints[linePoints.length - 1].split(',')[1] };
+    }, [data.chartData]);
+
+    return (
+        <div className="flex-1 flex flex-col">
+            {/* Value row */}
+            <div className="flex items-baseline gap-1.5">
+                <span
+                    className="text-[22px] font-semibold tracking-tight leading-none tabular-nums"
+                    style={{ color: 'var(--ui-text-primary)' }}
+                >
+                    {data.value}
+                </span>
+                {data.delta && (
+                    <span
+                        className="text-xs font-medium tabular-nums"
+                        style={{ color: trendColor }}
+                    >
+                        {data.delta}
+                    </span>
+                )}
+            </div>
+
+            {/* Sparkline fills remaining space */}
+            <div className="relative flex-1 min-h-[28px] mt-1.5 -mx-1">
+                {chartPath ? (
+                    <svg
+                        className="absolute inset-0 w-full h-full"
+                        viewBox="0 0 100 32"
+                        preserveAspectRatio="none"
+                    >
+                        <defs>
+                            <linearGradient id="rhGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor={trendColor} stopOpacity="0.15" />
+                                <stop offset="100%" stopColor={trendColor} stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <path d={chartPath.areaPath} fill="url(#rhGradient)" />
+                        <path
+                            d={chartPath.linePath}
+                            fill="none"
+                            stroke={trendColor}
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </svg>
+                ) : (
+                    <div
+                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        style={{ background: 'var(--ui-border-secondary)' }}
+                    />
+                )}
+            </div>
+        </div>
+    );
+});
+
+// --- Preview Registry: Maps widget IDs to their custom preview components ---
+const WIDGET_PREVIEWS: Record<string, React.ComponentType<ComplicationPreviewProps>> = {
+    ClockWidget: ClockPreview,
+    DateWidget: DatePreview,
+    Humidity: GaugePreview,
+    FanController: GaugePreview,
+    SalesYTDCumulativeLine: SalesYTDPreview,
+};
+
+// --- Main Complication Component ---
 interface WidgetComplicationProps {
     widgetId: string;
     isVisible?: boolean;
+    title: string;
+    Icon: React.ComponentType<{ className?: string }>;
 }
 
-const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisible = true }: WidgetComplicationProps) {
+const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisible = true, title, Icon }: WidgetComplicationProps) {
     const { data, loading } = useWidgetPreview(widgetId);
-    const [dataReady, setDataReady] = useState(false);
 
-    useEffect(() => {
-        if (!loading && data?.value) {
-            setDataReady(true);
-        }
-    }, [loading, data?.value]);
+    // Extract base widget type (e.g., "FanController:abc123" -> "FanController")
+    const baseWidgetId = widgetId.includes(':') ? widgetId.split(':')[0] : widgetId;
 
-    // Show content when data is ready AND this preset is visible
-    const showContent = dataReady && isVisible;
+    const isLoading = loading && isVisible;
+    const showContent = !loading && isVisible && data?.value;
 
-    // Loading/Empty State
-    if (!loading && !data?.value && !dataReady) {
-        return (
-             <div className="flex-1 flex flex-col justify-end p-1 opacity-50 pointer-events-none">
-                <div className="h-6 w-1/2 bg-[var(--ui-bg-tertiary)] rounded opacity-50" />
-            </div>
-        );
-    }
+    // Get custom preview component or use default
+    const PreviewComponent = WIDGET_PREVIEWS[baseWidgetId] || DefaultPreview;
 
     return (
-        <div className="relative flex-1 w-full flex flex-col justify-end overflow-hidden pt-1">
-            {/* Skeleton loader */}
-            <div
-                className="absolute inset-x-0 bottom-0 flex flex-col justify-end gap-1"
-                style={{
-                    opacity: showContent ? 0 : 1,
-                    transition: "opacity 0.2s ease-out",
-                    pointerEvents: 'none',
-                    height: '100%'
-                }}
-            >
-                <div className="widget-complication-skeleton" />
+        <div className="flex flex-col h-full w-full">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-1">
+                <div
+                    className="p-1 rounded-md"
+                    style={{ background: 'var(--ui-bg-tertiary)' }}
+                >
+                    <Icon className="w-3.5 h-3.5 text-[var(--ui-text-muted)]" />
+                </div>
+                <span
+                    className="text-[10px] uppercase tracking-wider font-semibold truncate flex-1 text-[var(--ui-text-muted)]"
+                >
+                    {title}
+                </span>
             </div>
 
-            {/* Actual data */}
-            {dataReady && data?.value && (
-                <div
-                    className="flex flex-col w-full h-full justify-between"
-                    style={{
-                        opacity: showContent ? 1 : 0,
-                        transition: "opacity 0.3s ease-in",
-                    }}
-                >
-                   {/* Main Value - BIG */}
-                    <div className="mt-auto mb-0.5">
-                        <span className="text-[1.6rem] font-bold tracking-tight leading-none text-[var(--ui-text-primary)]">
-                            {data.value}
-                        </span>
+            {/* Content */}
+            <div className="flex-1 min-h-0 flex flex-col">
+                {isLoading ? (
+                    <div className="flex-1 flex flex-col justify-end gap-2 animate-pulse">
+                        <div className="h-7 w-2/3 rounded" style={{ background: 'var(--ui-bg-tertiary)' }} />
+                        <div className="h-3 w-1/3 rounded" style={{ background: 'var(--ui-bg-tertiary)', opacity: 0.5 }} />
                     </div>
-
-                    {/* Footer Row: Label/Secondary + Trend */}
-                    <div className="flex items-end justify-between w-full min-h-[18px]">
-                        {/* Left: Label or Secondary Value */}
-                        <div className="flex flex-col justify-end overflow-hidden mr-2">
-                            <span className="text-[11px] font-medium text-[var(--ui-text-muted)] truncate leading-tight">
-                                {data.secondaryValue || data.label}
-                            </span>
-                        </div>
-
-                         {/* Right: Trend */}
-                        {data.trendValue && data.trend ? (
-                            <div className={`flex items-center gap-0.5 text-[11px] font-bold shrink-0 ${
-                                data.trend === 'up' ? 'text-[var(--ui-success)]' : 
-                                data.trend === 'down' ? 'text-[var(--ui-danger)]' : 'text-[var(--ui-text-muted)]'
-                            }`}>
-                                {data.trend === 'up' ? <MdArrowUpward className="w-3 h-3" /> : 
-                                 data.trend === 'down' ? <MdArrowDownward className="w-3 h-3" /> : 
-                                 <MdRemove className="w-3 h-3" />}
-                                <span>{data.trendValue}</span>
-                            </div>
-                        ) : (
-                             // Fallback to simpler status indicator if no trend
-                           data.status && data.status !== "neutral" && (
-                             <div className={`shrink-0 w-2 h-2 rounded-full mb-1 ${
-                                 data.status === 'good' ? 'bg-[var(--ui-success)]' :
-                                 data.status === 'warning' ? 'bg-[var(--ui-warning)]' :
-                                 data.status === 'error' ? 'bg-[var(--ui-danger)]' : 'bg-zinc-500'
-                             }`} 
-                             style={{ boxShadow: `0 0 6px var(--ui-${data.status === 'good' ? 'success' : data.status === 'warning' ? 'warning' : 'danger'})` }}
-                             />
-                           )
-                        )}
+                ) : showContent ? (
+                    <PreviewComponent data={data} />
+                ) : (
+                    <div className="flex-1 flex items-end">
+                        <span className="text-sm" style={{ color: 'var(--ui-text-muted)' }}>--</span>
                     </div>
-                    
-                    {/* Top Right Status Dot (Subtle indicator) */}
-                     {data.status && data.status !== "neutral" && (
-                         <div className={`absolute top-0 right-0 w-1.5 h-1.5 rounded-full ${
-                                 data.status === 'good' ? 'bg-[var(--ui-success)]' :
-                                 data.status === 'warning' ? 'bg-[var(--ui-warning)]' :
-                                 data.status === 'error' ? 'bg-[var(--ui-danger)]' : 'bg-zinc-500'
-                             }`} 
-                             style={{ 
-                                 boxShadow: `0 0 4px var(--ui-${data.status === 'good' ? 'success' : data.status === 'warning' ? 'warning' : 'danger'})`,
-                                 opacity: 0.8 
-                            }}
-                        />
-                    )}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 });
@@ -315,7 +559,7 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 100 : 'auto',
-        opacity: isDragging ? 0.3 : 1,
+        opacity: isDragging ? 0.3 : 1, // Dim when dragging
         touchAction: 'none',
     };
 
@@ -323,18 +567,21 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         <div
             ref={setNodeRef}
             style={style}
-            className="mobile-widget-card"
+            className="mobile-widget-card group select-none cursor-pointer active:scale-[0.98] transition-all"
             onClick={() => !isDragging && onTap()}
             {...attributes}
             {...listeners}
         >
-            <div className="mobile-widget-card-header">
-                <div className="mobile-widget-card-icon">
-                    <TypeIcon className="w-4 h-4" />
-                </div>
-                <span className="mobile-widget-card-title">{title}</span>
-            </div>
-            <WidgetComplication widgetId={widgetId} isVisible={isVisible && !isDragging} />
+            {/* 
+               Pass header info down to complication for integrated layout 
+               The 'mobile-widget-card' CSS class handles the container look (background/border)
+            */}
+            <WidgetComplication
+                widgetId={widgetId}
+                isVisible={isVisible && !isDragging}
+                title={title}
+                Icon={TypeIcon}
+            />
         </div>
     );
 });
@@ -362,12 +609,12 @@ const DragOverlayItem = memo(function DragOverlayItem({ widgetId }: DragOverlayI
             <div className="mobile-widget-card-drag-indicator">
                 <MdDragIndicator className="w-4 h-4" />
             </div>
-            <div className="mobile-widget-card-header">
-                <div className="mobile-widget-card-icon">
-                    <TypeIcon className="w-4 h-4" />
-                </div>
-                <span className="mobile-widget-card-title">{title}</span>
-            </div>
+            <WidgetComplication
+                widgetId={widgetId}
+                isVisible={true}
+                title={title}
+                Icon={TypeIcon}
+            />
         </div>
     );
 });
@@ -1536,13 +1783,12 @@ const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId, isVisible = 
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
         >
-            <div className="mobile-widget-card-header">
-                <div className="mobile-widget-card-icon">
-                    <TypeIcon className="w-4 h-4" />
-                </div>
-                <span className="mobile-widget-card-title">{title}</span>
-            </div>
-            <WidgetComplication widgetId={widgetId} isVisible={isVisible} />
+            <WidgetComplication
+                widgetId={widgetId}
+                isVisible={isVisible}
+                title={title}
+                Icon={TypeIcon}
+            />
         </motion.div>
     );
 });
@@ -1950,30 +2196,30 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 <div className="flex items-center gap-3">
                     {/* Icon - simple crossfade without layout shift */}
                     <div className="relative w-5 h-5">
-                        <MdBookmarks 
-                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200" 
-                            style={{ 
+                        <MdBookmarks
+                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200"
+                            style={{
                                 color: "var(--ui-accent-primary)",
-                                opacity: isWidgetDragging ? 0 : 1 
-                            }} 
+                                opacity: isWidgetDragging ? 0 : 1
+                            }}
                         />
-                        <MdDragIndicator 
-                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200" 
-                            style={{ 
+                        <MdDragIndicator
+                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200"
+                            style={{
                                 color: "var(--ui-accent-primary)",
-                                opacity: isWidgetDragging ? 1 : 0 
-                            }} 
+                                opacity: isWidgetDragging ? 1 : 0
+                            }}
                         />
                     </div>
                     <div>
-                        <h1 
-                            className="text-lg font-semibold transition-opacity duration-200" 
+                        <h1
+                            className="text-lg font-semibold transition-opacity duration-200"
                             style={{ color: "var(--ui-text-primary)" }}
                         >
                             {isWidgetDragging ? "Editing Layout" : activePreset.name}
                         </h1>
-                        <p 
-                            className="text-xs transition-opacity duration-200" 
+                        <p
+                            className="text-xs transition-opacity duration-200"
                             style={{ color: "var(--ui-text-muted)" }}
                         >
                             {isWidgetDragging
@@ -1983,9 +2229,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                         </p>
                     </div>
                 </div>
-                
+
                 {/* Header buttons - single container animation */}
-                <div 
+                <div
                     className="flex items-center gap-2 transition-all duration-200 ease-out"
                     style={{
                         opacity: isWidgetDragging ? 0 : 1,
@@ -2007,7 +2253,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                             <MdVisibility className="w-5 h-5" />
                         )}
                     </motion.button>
-                    
+
                     {/* Add Widget */}
                     <motion.button
                         onClick={handleOpenWidgetPicker}
@@ -2017,7 +2263,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     >
                         <MdAdd className="w-5 h-5" />
                     </motion.button>
-                    
+
                     {/* Settings */}
                     <motion.button
                         onClick={onSettingsClick}

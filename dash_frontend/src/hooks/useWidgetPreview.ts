@@ -21,6 +21,8 @@ export interface WidgetPreviewData {
     status?: 'good' | 'warning' | 'error' | 'neutral';
     secondaryValue?: string;
     icon?: 'clock' | 'calendar' | 'chart' | 'list' | 'gauge' | 'dollar' | 'truck' | 'box' | 'users' | 'door';
+    /** Optional array of numeric values for mini charts */
+    chartData?: number[];
 }
 
 // Widget-specific preview configs
@@ -182,13 +184,32 @@ const WIDGET_PREVIEW_CONFIGS: Record<string, PreviewConfig> = {
         queryId: 'SalesYTDCumulative',
         transform: (data: any[]) => {
             if (!data?.length) return {};
-            // Data is daily with cumulative totals
-            const lastEntry = data[data.length - 1];
-            const total = lastEntry?.total || data.reduce((sum, d) => sum + (d.total || 0), 0);
+
+            // Data is daily sales: { period: "2026-01-15", total: 12345 }
+            // We need to compute cumulative sum
+            const sortedData = [...data].sort((a, b) =>
+                a.period.localeCompare(b.period)
+            );
+
+            // Calculate cumulative totals
+            let cumulative = 0;
+            const cumulativeData = sortedData.map(d => {
+                cumulative += (d.total || 0);
+                return cumulative;
+            });
+
+            const ytdTotal = cumulativeData[cumulativeData.length - 1] || 0;
+
+            // Sample data points for mini chart (take ~12 evenly spaced points)
+            const step = Math.max(1, Math.floor(cumulativeData.length / 12));
+            const chartData = cumulativeData
+                .filter((_, i) => i % step === 0 || i === cumulativeData.length - 1);
+
             return {
-                value: formatCompact(total),
+                value: formatCompact(ytdTotal),
                 label: 'YTD Total',
                 icon: 'chart',
+                chartData,
             };
         },
     },
