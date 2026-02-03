@@ -54,12 +54,14 @@ interface DrawerContentProps
     showHandle?: boolean;
     /** Direction of the drawer */
     direction?: "top" | "bottom" | "left" | "right";
+    /** Additional classes for the overlay */
+    overlayClassName?: string;
 }
 
 const DrawerContent = React.forwardRef<
     React.ElementRef<typeof DrawerPrimitive.Content>,
     DrawerContentProps
->(({ className, children, showHandle = true, direction = "bottom", ...props }, ref) => {
+>(({ className, children, showHandle = true, direction = "bottom", overlayClassName, ...props }, ref) => {
     const directionClasses = {
         top: "inset-x-0 top-0 rounded-b-xl border-b",
         bottom: "inset-x-0 bottom-0 rounded-t-xl border-t",
@@ -67,9 +69,13 @@ const DrawerContent = React.forwardRef<
         right: "inset-y-0 right-0 w-[85%] max-w-md rounded-l-xl border-l",
     };
 
+    // Extract z-index from className if present to match overlay
+    const zIndexMatch = className?.match(/z-\[?(\d+)\]?/);
+    const customZIndex = zIndexMatch ? zIndexMatch[0] : null;
+
     return (
         <DrawerPortal>
-            <DrawerOverlay />
+            <DrawerOverlay className={cn(customZIndex, overlayClassName)} />
             <DrawerPrimitive.Content
                 ref={ref}
                 className={cn(

@@ -13,14 +13,15 @@ import { widgetSettingsService } from "@/lib/widgetSettings";
 import { authService } from "@/lib/auth";
 import { useACInfinityOptional, ACInfinityGlobalSettings } from "@/contexts/ACInfinityContext";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogBody,
-    DialogFooter,
-} from "@/components/ui/dialog";
+    Drawer,
+    DrawerContent,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerDescription,
+    DrawerBody,
+    DrawerFooter,
+    DrawerClose,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 
 interface WidgetSettingsDialogProps {
@@ -134,22 +135,39 @@ export default function WidgetSettingsDialog({
         onClose();
     };
 
+    const handleOpenChange = (open: boolean) => {
+        if (!open) {
+            handleCancel();
+        }
+    };
+
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
-            <DialogContent size="md" closeOnOutsideClick={true}>
-                <DialogHeader className="bg-ui-bg-secondary/50">
+        <Drawer open={isOpen} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
+            <DrawerContent 
+                className="z-[200] max-h-[90vh]" 
+                showHandle={true}
+            >
+                <DrawerHeader className="bg-ui-bg-secondary/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-ui-accent-primary/10 rounded-lg">
                             <Settings className="w-5 h-5 text-ui-accent-primary" />
                         </div>
-                        <div>
-                            <DialogTitle>{schema.title}</DialogTitle>
-                            <DialogDescription>{widgetTitle}</DialogDescription>
+                        <div className="flex-1 min-w-0">
+                            <DrawerTitle>{schema.title}</DrawerTitle>
+                            <DrawerDescription className="truncate">{widgetTitle}</DrawerDescription>
                         </div>
+                        <DrawerClose asChild>
+                            <button
+                                className="p-2 -mr-2 rounded-lg text-ui-text-secondary hover:text-ui-text-primary hover:bg-ui-bg-tertiary transition-colors"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </DrawerClose>
                     </div>
-                </DialogHeader>
+                </DrawerHeader>
 
-                <DialogBody className="max-h-[60vh]">
+                <DrawerBody className="max-h-[50vh]">
                     {schema.description && (
                         <p className="text-sm text-ui-text-secondary mb-4">
                             {schema.description}
@@ -188,28 +206,31 @@ export default function WidgetSettingsDialog({
                             );
                         })}
                     </div>
-                </DialogBody>
+                </DrawerBody>
 
-                <DialogFooter className="justify-between">
+                <DrawerFooter className="flex-row justify-between gap-2 safe-bottom">
                     <Button
                         variant="ghost"
                         onClick={handleReset}
                         className="gap-2 text-ui-text-secondary"
+                        size="sm"
                     >
                         <RefreshCw className="w-4 h-4" />
-                        Reset to Defaults
+                        Reset
                     </Button>
                     <div className="flex gap-2">
-                        <Button variant="ghost" onClick={handleCancel}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave} disabled={!hasChanges}>
+                        <DrawerClose asChild>
+                            <Button variant="ghost" size="sm">
+                                Cancel
+                            </Button>
+                        </DrawerClose>
+                        <Button onClick={handleSave} disabled={!hasChanges} size="sm">
                             Save Changes
                         </Button>
                     </div>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </DrawerFooter>
+            </DrawerContent>
+        </Drawer>
     );
 }
 

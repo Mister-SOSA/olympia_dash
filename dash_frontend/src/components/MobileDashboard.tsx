@@ -9,6 +9,7 @@ import React, {
     useRef,
     memo,
 } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
 import { getWidgetById } from "@/constants/widgets";
@@ -31,6 +32,7 @@ import {
     DragStartEvent,
     DragEndEvent,
     UniqueIdentifier,
+    DragOverlay,
 } from "@dnd-kit/core";
 import {
     arrayMove,
@@ -81,6 +83,9 @@ import {
     MdBookmarks,
     MdEdit,
     MdDragIndicator,
+    MdArrowUpward,
+    MdArrowDownward,
+    MdRemove,
 } from "react-icons/md";
 
 // Hooks & contexts
@@ -180,45 +185,92 @@ const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisibl
     // Show content when data is ready AND this preset is visible
     const showContent = dataReady && isVisible;
 
+    // Loading/Empty State
     if (!loading && !data?.value && !dataReady) {
-        return null;
+        return (
+             <div className="flex-1 flex flex-col justify-end p-1 opacity-50 pointer-events-none">
+                <div className="h-6 w-1/2 bg-[var(--ui-bg-tertiary)] rounded opacity-50" />
+            </div>
+        );
     }
 
     return (
-        <div className="widget-complication-container">
-            {/* Skeleton loader - shows while loading or when not visible */}
+        <div className="relative flex-1 w-full flex flex-col justify-end overflow-hidden pt-1">
+            {/* Skeleton loader */}
             <div
-                className="widget-complication-loading"
+                className="absolute inset-x-0 bottom-0 flex flex-col justify-end gap-1"
                 style={{
                     opacity: showContent ? 0 : 1,
                     transition: "opacity 0.2s ease-out",
+                    pointerEvents: 'none',
+                    height: '100%'
                 }}
             >
                 <div className="widget-complication-skeleton" />
             </div>
 
-            {/* Actual data - fades in when visible */}
+            {/* Actual data */}
             {dataReady && data?.value && (
                 <div
-                    className="widget-complication"
+                    className="flex flex-col w-full h-full justify-between"
                     style={{
                         opacity: showContent ? 1 : 0,
                         transition: "opacity 0.3s ease-in",
                     }}
                 >
-                    {data.status && data.status !== "neutral" && (
-                        <div className={`widget-complication-status ${data.status}`} />
-                    )}
-                    <div className="widget-complication-value">
-                        <span>{data.value}</span>
-                        {data.trendValue && data.trend && (
-                            <span className={`widget-complication-trend ${data.trend}`}>
-                                {data.trendValue}
+                   {/* Main Value - BIG */}
+                    <div className="mt-auto mb-0.5">
+                        <span className="text-[1.6rem] font-bold tracking-tight leading-none text-[var(--ui-text-primary)]">
+                            {data.value}
+                        </span>
+                    </div>
+
+                    {/* Footer Row: Label/Secondary + Trend */}
+                    <div className="flex items-end justify-between w-full min-h-[18px]">
+                        {/* Left: Label or Secondary Value */}
+                        <div className="flex flex-col justify-end overflow-hidden mr-2">
+                            <span className="text-[11px] font-medium text-[var(--ui-text-muted)] truncate leading-tight">
+                                {data.secondaryValue || data.label}
                             </span>
+                        </div>
+
+                         {/* Right: Trend */}
+                        {data.trendValue && data.trend ? (
+                            <div className={`flex items-center gap-0.5 text-[11px] font-bold shrink-0 ${
+                                data.trend === 'up' ? 'text-[var(--ui-success)]' : 
+                                data.trend === 'down' ? 'text-[var(--ui-danger)]' : 'text-[var(--ui-text-muted)]'
+                            }`}>
+                                {data.trend === 'up' ? <MdArrowUpward className="w-3 h-3" /> : 
+                                 data.trend === 'down' ? <MdArrowDownward className="w-3 h-3" /> : 
+                                 <MdRemove className="w-3 h-3" />}
+                                <span>{data.trendValue}</span>
+                            </div>
+                        ) : (
+                             // Fallback to simpler status indicator if no trend
+                           data.status && data.status !== "neutral" && (
+                             <div className={`shrink-0 w-2 h-2 rounded-full mb-1 ${
+                                 data.status === 'good' ? 'bg-[var(--ui-success)]' :
+                                 data.status === 'warning' ? 'bg-[var(--ui-warning)]' :
+                                 data.status === 'error' ? 'bg-[var(--ui-danger)]' : 'bg-zinc-500'
+                             }`} 
+                             style={{ boxShadow: `0 0 6px var(--ui-${data.status === 'good' ? 'success' : data.status === 'warning' ? 'warning' : 'danger'})` }}
+                             />
+                           )
                         )}
                     </div>
-                    {data.label && (
-                        <div className="widget-complication-label">{data.label}</div>
+                    
+                    {/* Top Right Status Dot (Subtle indicator) */}
+                     {data.status && data.status !== "neutral" && (
+                         <div className={`absolute top-0 right-0 w-1.5 h-1.5 rounded-full ${
+                                 data.status === 'good' ? 'bg-[var(--ui-success)]' :
+                                 data.status === 'warning' ? 'bg-[var(--ui-warning)]' :
+                                 data.status === 'error' ? 'bg-[var(--ui-danger)]' : 'bg-zinc-500'
+                             }`} 
+                             style={{ 
+                                 boxShadow: `0 0 4px var(--ui-${data.status === 'good' ? 'success' : data.status === 'warning' ? 'warning' : 'danger'})`,
+                                 opacity: 0.8 
+                            }}
+                        />
                     )}
                 </div>
             )}
@@ -248,13 +300,7 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         transform,
         transition,
         isDragging,
-    } = useSortable({ 
-        id: widgetId,
-        transition: {
-            duration: 250,
-            easing: 'ease',
-        },
-    });
+    } = useSortable({ id: widgetId });
 
     const { title, TypeIcon } = useMemo(() => {
         const cfg = getWidgetConfig(widgetId);
@@ -266,9 +312,10 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
     }, [widgetId]);
 
     const style: React.CSSProperties = {
-        transform: CSS.Translate.toString(transform),
+        transform: CSS.Transform.toString(transform),
         transition,
-        zIndex: isDragging ? 1000 : undefined,
+        zIndex: isDragging ? 100 : 'auto',
+        opacity: isDragging ? 0.3 : 1,
         touchAction: 'none',
     };
 
@@ -276,17 +323,11 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         <div
             ref={setNodeRef}
             style={style}
-            className={`mobile-widget-card ${isDragging ? 'mobile-widget-card-dragging' : ''}`}
+            className="mobile-widget-card"
             onClick={() => !isDragging && onTap()}
             {...attributes}
             {...listeners}
         >
-            {/* Drag indicator - shows when dragging */}
-            {isDragging && (
-                <div className="mobile-widget-card-drag-indicator">
-                    <MdDragIndicator className="w-4 h-4" />
-                </div>
-            )}
             <div className="mobile-widget-card-header">
                 <div className="mobile-widget-card-icon">
                     <TypeIcon className="w-4 h-4" />
@@ -297,6 +338,43 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         </div>
     );
 });
+
+// ============================================
+// Drag Overlay Item
+// ============================================
+
+interface DragOverlayItemProps {
+    widgetId: string;
+}
+
+const DragOverlayItem = memo(function DragOverlayItem({ widgetId }: DragOverlayItemProps) {
+    const { title, TypeIcon } = useMemo(() => {
+        const cfg = getWidgetConfig(widgetId);
+        const def = getWidgetById(widgetId);
+        return {
+            title: def?.title || cfg?.title || widgetId,
+            TypeIcon: getWidgetTypeIcon(widgetId),
+        };
+    }, [widgetId]);
+
+    return (
+        <div className="mobile-widget-card mobile-widget-card-dragging">
+            <div className="mobile-widget-card-drag-indicator">
+                <MdDragIndicator className="w-4 h-4" />
+            </div>
+            <div className="mobile-widget-card-header">
+                <div className="mobile-widget-card-icon">
+                    <TypeIcon className="w-4 h-4" />
+                </div>
+                <span className="mobile-widget-card-title">{title}</span>
+            </div>
+        </div>
+    );
+});
+
+// ============================================
+// Trash Drop Zone - Enhanced Visual Feedback
+// ============================================});
 
 // ============================================
 // Trash Drop Zone - Enhanced Visual Feedback
@@ -320,9 +398,9 @@ const TrashDropZone = memo(function TrashDropZone({ isVisible, isOver }: TrashDr
                         scale: isOver ? 1.08 : 1,
                     }}
                     exit={{ opacity: 0, y: 60, scale: 0.95 }}
-                    transition={{ 
-                        type: "spring", 
-                        stiffness: 400, 
+                    transition={{
+                        type: "spring",
+                        stiffness: 400,
                         damping: 25,
                         mass: 0.8,
                     }}
@@ -341,18 +419,18 @@ const TrashDropZone = memo(function TrashDropZone({ isVisible, isOver }: TrashDr
                                 rotate: isOver ? [0, -15, 15, -10, 10, 0] : 0,
                                 y: isOver ? -2 : 0,
                             }}
-                            transition={{ 
-                                type: "spring", 
-                                stiffness: 600, 
+                            transition={{
+                                type: "spring",
+                                stiffness: 600,
                                 damping: 15,
                                 rotate: { duration: 0.5, ease: "easeInOut" }
                             }}
                         >
                             <MdDelete className={`w-7 h-7 ${isOver ? 'text-white' : 'text-white/90'}`} />
                         </motion.div>
-                        <motion.span 
+                        <motion.span
                             className="text-white text-sm font-semibold"
-                            animate={{ 
+                            animate={{
                                 scale: isOver ? 1.05 : 1,
                                 y: isOver ? 1 : 0,
                             }}
@@ -488,6 +566,13 @@ const SortableWidgetGrid = memo(function SortableWidgetGrid({
                         />
                     ))}
                 </div>
+
+                {typeof document !== 'undefined' && createPortal(
+                    <DragOverlay zIndex={1000}>
+                        {activeId ? <DragOverlayItem widgetId={activeId as string} /> : null}
+                    </DragOverlay>,
+                    document.body
+                )}
             </SortableContext>
         </DndContext>
     );
@@ -1863,34 +1948,34 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             {/* Header */}
             <div className="mobile-grid-header">
                 <div className="flex items-center gap-3">
-                    <AnimatePresence mode="wait">
-                        {isWidgetDragging ? (
-                            <motion.div
-                                key="dragging"
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.8, opacity: 0 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            >
-                                <MdDragIndicator className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="normal"
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.8, opacity: 0 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            >
-                                <MdBookmarks className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    {/* Icon - simple crossfade without layout shift */}
+                    <div className="relative w-5 h-5">
+                        <MdBookmarks 
+                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200" 
+                            style={{ 
+                                color: "var(--ui-accent-primary)",
+                                opacity: isWidgetDragging ? 0 : 1 
+                            }} 
+                        />
+                        <MdDragIndicator 
+                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200" 
+                            style={{ 
+                                color: "var(--ui-accent-primary)",
+                                opacity: isWidgetDragging ? 1 : 0 
+                            }} 
+                        />
+                    </div>
                     <div>
-                        <h1 className="text-lg font-semibold" style={{ color: "var(--ui-text-primary)" }}>
+                        <h1 
+                            className="text-lg font-semibold transition-opacity duration-200" 
+                            style={{ color: "var(--ui-text-primary)" }}
+                        >
                             {isWidgetDragging ? "Editing Layout" : activePreset.name}
                         </h1>
-                        <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
+                        <p 
+                            className="text-xs transition-opacity duration-200" 
+                            style={{ color: "var(--ui-text-muted)" }}
+                        >
                             {isWidgetDragging
                                 ? "Drag to reorder"
                                 : `${enabledWidgetIds.length} widget${enabledWidgetIds.length !== 1 ? "s" : ""}`
@@ -1898,64 +1983,50 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {/* Privacy Toggle - hidden during drag */}
-                    <AnimatePresence>
-                        {!isWidgetDragging && (
-                            <motion.button
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0, opacity: 0 }}
-                                onClick={togglePrivacy}
-                                className={`mobile-header-button ${privacySettings.enabled ? "bg-ui-accent-secondary text-white" : ""
-                                    }`}
-                                aria-label={privacySettings.enabled ? "Disable privacy mode" : "Enable privacy mode"}
-                                aria-pressed={privacySettings.enabled}
-                                whileTap={{ scale: 0.9 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            >
-                                {privacySettings.enabled ? (
-                                    <MdVisibilityOff className="w-5 h-5" />
-                                ) : (
-                                    <MdVisibility className="w-5 h-5" />
-                                )}
-                            </motion.button>
+                
+                {/* Header buttons - single container animation */}
+                <div 
+                    className="flex items-center gap-2 transition-all duration-200 ease-out"
+                    style={{
+                        opacity: isWidgetDragging ? 0 : 1,
+                        transform: isWidgetDragging ? 'scale(0.9)' : 'scale(1)',
+                        pointerEvents: isWidgetDragging ? 'none' : 'auto',
+                    }}
+                >
+                    {/* Privacy Toggle */}
+                    <motion.button
+                        onClick={togglePrivacy}
+                        className={`mobile-header-button ${privacySettings.enabled ? "bg-ui-accent-secondary text-white" : ""}`}
+                        aria-label={privacySettings.enabled ? "Disable privacy mode" : "Enable privacy mode"}
+                        aria-pressed={privacySettings.enabled}
+                        whileTap={{ scale: 0.9 }}
+                    >
+                        {privacySettings.enabled ? (
+                            <MdVisibilityOff className="w-5 h-5" />
+                        ) : (
+                            <MdVisibility className="w-5 h-5" />
                         )}
-                    </AnimatePresence>
-                    {/* Add Widget - hidden during drag */}
-                    <AnimatePresence>
-                        {!isWidgetDragging && (
-                            <motion.button
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0, opacity: 0 }}
-                                onClick={handleOpenWidgetPicker}
-                                className="mobile-header-button"
-                                aria-label="Add widgets"
-                                whileTap={{ scale: 0.9 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            >
-                                <MdAdd className="w-5 h-5" />
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
-                    {/* Settings - hidden during drag */}
-                    <AnimatePresence>
-                        {!isWidgetDragging && (
-                            <motion.button
-                                initial={{ scale: 0, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0, opacity: 0 }}
-                                onClick={onSettingsClick}
-                                className="mobile-header-button"
-                                aria-label="Settings"
-                                whileTap={{ scale: 0.9 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            >
-                                <MdSettings className="w-5 h-5" />
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
+                    </motion.button>
+                    
+                    {/* Add Widget */}
+                    <motion.button
+                        onClick={handleOpenWidgetPicker}
+                        className="mobile-header-button"
+                        aria-label="Add widgets"
+                        whileTap={{ scale: 0.9 }}
+                    >
+                        <MdAdd className="w-5 h-5" />
+                    </motion.button>
+                    
+                    {/* Settings */}
+                    <motion.button
+                        onClick={onSettingsClick}
+                        className="mobile-header-button"
+                        aria-label="Settings"
+                        whileTap={{ scale: 0.9 }}
+                    >
+                        <MdSettings className="w-5 h-5" />
+                    </motion.button>
                 </div>
             </div>
 
