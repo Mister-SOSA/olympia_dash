@@ -1776,43 +1776,58 @@ export default function WidgetPicker({
                             </div>
 
                             {/* Status bar */}
-                            <div className="px-4 pb-3 flex items-center gap-2">
-                                <span
-                                    className="text-sm font-medium px-2 py-0.5 rounded-md"
+                            <div className="px-4 pb-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                                <motion.span
+                                    layout
+                                    className="text-sm font-medium px-2.5 py-1 rounded-md whitespace-nowrap flex-shrink-0"
                                     style={{
                                         backgroundColor: enabledCount > 0 ? 'var(--ui-success-bg)' : 'var(--ui-bg-tertiary)',
                                         color: enabledCount > 0 ? 'var(--ui-success-text)' : 'var(--ui-text-muted)'
                                     }}
                                 >
                                     {enabledCount} active
-                                </span>
-                                {hasChanges && (
-                                    <span
-                                        className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
-                                        style={{
-                                            backgroundColor: 'var(--ui-warning-bg)',
-                                            color: 'var(--ui-warning-text)'
-                                        }}
-                                    >
-                                        <span
-                                            className="w-1.5 h-1.5 rounded-full animate-pulse"
-                                            style={{ backgroundColor: 'var(--ui-warning)' }}
-                                        />
-                                        Unsaved
-                                    </span>
-                                )}
-                                {activePresetName && (
-                                    <span
-                                        className="text-sm font-medium px-2 py-0.5 rounded-md flex items-center gap-1.5"
-                                        style={{
-                                            backgroundColor: 'var(--ui-accent-primary-bg)',
-                                            color: 'var(--ui-accent-primary)'
-                                        }}
-                                    >
-                                        <Sparkles className="w-3 h-3" />
-                                        {activePresetName}
-                                    </span>
-                                )}
+                                </motion.span>
+                                <AnimatePresence mode="popLayout">
+                                    {hasChanges && (
+                                        <motion.span
+                                            key="unsaved-badge"
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                            exit={{ opacity: 0, scale: 0.8, x: -10 }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                            className="text-sm font-medium px-2.5 py-1 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
+                                            style={{
+                                                backgroundColor: 'var(--ui-warning-bg)',
+                                                color: 'var(--ui-warning-text)'
+                                            }}
+                                        >
+                                            <span
+                                                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                                                style={{ backgroundColor: 'var(--ui-warning)' }}
+                                            />
+                                            Unsaved
+                                        </motion.span>
+                                    )}
+                                    {activePresetName && (
+                                        <motion.span
+                                            key="preset-badge"
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.8, x: -10 }}
+                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                            exit={{ opacity: 0, scale: 0.8, x: -10 }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                            className="text-sm font-medium px-2.5 py-1 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 max-w-[140px]"
+                                            style={{
+                                                backgroundColor: 'var(--ui-accent-primary-bg)',
+                                                color: 'var(--ui-accent-primary)'
+                                            }}
+                                        >
+                                            <Sparkles className="w-3 h-3 flex-shrink-0" />
+                                            <span className="truncate">{activePresetName}</span>
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             {/* Search */}
@@ -1943,15 +1958,14 @@ export default function WidgetPicker({
                                         const IconComponent = CATEGORY_ICONS[category];
 
                                         return (
-                                            <div key={category}>
-                                                <div className="flex items-center gap-2 mb-3 sticky top-0 py-2 -mx-4 px-4"
+                                            <motion.div key={category} layout>
+                                                <div className="flex items-center gap-2 mb-3 sticky top-0 py-2 -mx-4 px-4 z-10"
                                                     style={{ backgroundColor: 'var(--ui-bg-primary)' }}
                                                 >
                                                     {IconComponent && (
-                                                        <IconComponent
-                                                            className="w-4 h-4"
-                                                            style={{ color: 'var(--ui-text-muted)' }}
-                                                        />
+                                                        <div style={{ color: 'var(--ui-text-muted)' }}>
+                                                            <IconComponent className="w-4 h-4" />
+                                                        </div>
                                                     )}
                                                     <span
                                                         className="text-sm font-semibold"
@@ -1959,68 +1973,109 @@ export default function WidgetPicker({
                                                     >
                                                         {CATEGORY_METADATA[category].label}
                                                     </span>
-                                                    <span
+                                                    <motion.span
+                                                        key={`${category}-count-${stats?.enabled}`}
+                                                        initial={{ scale: 1.2 }}
+                                                        animate={{ scale: 1 }}
                                                         className="text-xs"
                                                         style={{ color: 'var(--ui-text-muted)' }}
                                                     >
                                                         {stats?.enabled || 0}/{stats?.total || 0}
-                                                    </span>
+                                                    </motion.span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    {widgets.map((widget) =>
-                                                        widget.allowMultiple ? (
-                                                            <MobileMultiInstanceWidgetCard
-                                                                key={widget.id}
-                                                                widget={widget}
-                                                                instances={getWidgetInstances(tempLayout, widget.id)}
-                                                                onAddInstance={() => addWidgetInstance(widget.id)}
-                                                                onRemoveInstance={removeWidgetInstance}
-                                                                canAddMore={canAddInstance(tempLayout, widget.id)}
-                                                            />
-                                                        ) : (
-                                                            <MobileWidgetCard
-                                                                key={widget.id}
-                                                                widget={widget}
-                                                                isEnabled={isWidgetEnabled(widget.id)}
-                                                                onToggle={() => toggleWidget(widget.id)}
-                                                            />
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
+                                                <motion.div className="space-y-2" layout>
+                                                    <AnimatePresence mode="popLayout">
+                                                        {widgets.map((widget) =>
+                                                            widget.allowMultiple ? (
+                                                                <motion.div
+                                                                    key={widget.id}
+                                                                    layout
+                                                                    initial={{ opacity: 0, y: -10 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                                                                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                                                >
+                                                                    <MobileMultiInstanceWidgetCard
+                                                                        widget={widget}
+                                                                        instances={getWidgetInstances(tempLayout, widget.id)}
+                                                                        onAddInstance={() => addWidgetInstance(widget.id)}
+                                                                        onRemoveInstance={removeWidgetInstance}
+                                                                        canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                                    />
+                                                                </motion.div>
+                                                            ) : (
+                                                                <motion.div
+                                                                    key={widget.id}
+                                                                    layout
+                                                                    initial={{ opacity: 0, y: -10 }}
+                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                                                                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                                                >
+                                                                    <MobileWidgetCard
+                                                                        widget={widget}
+                                                                        isEnabled={isWidgetEnabled(widget.id)}
+                                                                        onToggle={() => toggleWidget(widget.id)}
+                                                                    />
+                                                                </motion.div>
+                                                            )
+                                                        )}
+                                                    </AnimatePresence>
+                                                </motion.div>
+                                            </motion.div>
                                         );
                                     })}
                                 </div>
                             ) : (
                                 // Flat list
-                                <div className="space-y-2 pb-32">
+                                <div className="pb-32">
                                     <div
                                         className="text-xs mb-3"
                                         style={{ color: 'var(--ui-text-muted)' }}
                                     >
                                         {filteredWidgets.length} result{filteredWidgets.length !== 1 ? "s" : ""} • {visibleEnabledCount} selected
                                     </div>
-                                    {filteredWidgets.map((widget) =>
-                                        widget.allowMultiple ? (
-                                            <MobileMultiInstanceWidgetCard
-                                                key={widget.id}
-                                                widget={widget}
-                                                instances={getWidgetInstances(tempLayout, widget.id)}
-                                                onAddInstance={() => addWidgetInstance(widget.id)}
-                                                onRemoveInstance={removeWidgetInstance}
-                                                canAddMore={canAddInstance(tempLayout, widget.id)}
-                                                showCategory={selectedCategory === "all"}
-                                            />
-                                        ) : (
-                                            <MobileWidgetCard
-                                                key={widget.id}
-                                                widget={widget}
-                                                isEnabled={isWidgetEnabled(widget.id)}
-                                                onToggle={() => toggleWidget(widget.id)}
-                                                showCategory={selectedCategory === "all"}
-                                            />
-                                        )
-                                    )}
+                                    <motion.div className="space-y-2" layout>
+                                        <AnimatePresence mode="popLayout">
+                                            {filteredWidgets.map((widget) =>
+                                                widget.allowMultiple ? (
+                                                    <motion.div
+                                                        key={widget.id}
+                                                        layout
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                                                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                                    >
+                                                        <MobileMultiInstanceWidgetCard
+                                                            widget={widget}
+                                                            instances={getWidgetInstances(tempLayout, widget.id)}
+                                                            onAddInstance={() => addWidgetInstance(widget.id)}
+                                                            onRemoveInstance={removeWidgetInstance}
+                                                            canAddMore={canAddInstance(tempLayout, widget.id)}
+                                                            showCategory={selectedCategory === "all"}
+                                                        />
+                                                    </motion.div>
+                                                ) : (
+                                                    <motion.div
+                                                        key={widget.id}
+                                                        layout
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                                                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                                    >
+                                                        <MobileWidgetCard
+                                                            widget={widget}
+                                                            isEnabled={isWidgetEnabled(widget.id)}
+                                                            onToggle={() => toggleWidget(widget.id)}
+                                                            showCategory={selectedCategory === "all"}
+                                                        />
+                                                    </motion.div>
+                                                )
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
                                 </div>
                             )}
                         </div>
@@ -2218,35 +2273,57 @@ export default function WidgetPicker({
                         <div className="w-px h-6" style={{ backgroundColor: 'var(--ui-border-primary)' }} />
 
                         {/* Status */}
-                        <div className="flex items-center gap-3">
-                            {activePresetName && (
-                                <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg" style={{
-                                    backgroundColor: 'var(--ui-accent-primary-bg)'
-                                }}>
-                                    <div style={{ color: 'var(--ui-accent-primary)' }}>
-                                        <Sparkles className="w-3 h-3" />
-                                    </div>
-                                    <span className="text-xs font-medium" style={{ color: 'var(--ui-accent-primary)' }}>{activePresetName}</span>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium tabular-nums" style={enabledCount > 0 ? {
-                                backgroundColor: 'var(--ui-success-bg)',
-                                color: 'var(--ui-success-text)'
-                            } : {
-                                backgroundColor: 'var(--ui-bg-tertiary)',
-                                color: 'var(--ui-text-muted)'
-                            }}>
+                        <div className="flex items-center gap-2">
+                            <AnimatePresence mode="popLayout">
+                                {activePresetName && (
+                                    <motion.div
+                                        key="desktop-preset-badge"
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.9, x: -8 }}
+                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, x: -8 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        className="flex items-center gap-2 px-2.5 py-1 rounded-lg"
+                                        style={{ backgroundColor: 'var(--ui-accent-primary-bg)' }}
+                                    >
+                                        <Sparkles className="w-3 h-3" style={{ color: 'var(--ui-accent-primary)' }} />
+                                        <span className="text-xs font-medium max-w-[120px] truncate" style={{ color: 'var(--ui-accent-primary)' }}>{activePresetName}</span>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            <motion.div
+                                layout
+                                className="flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-medium tabular-nums"
+                                style={enabledCount > 0 ? {
+                                    backgroundColor: 'var(--ui-success-bg)',
+                                    color: 'var(--ui-success-text)'
+                                } : {
+                                    backgroundColor: 'var(--ui-bg-tertiary)',
+                                    color: 'var(--ui-text-muted)'
+                                }}
+                            >
                                 {enabledCount} active
-                            </div>
-                            {hasChanges && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium" style={{
-                                    backgroundColor: 'var(--ui-warning-bg)',
-                                    color: 'var(--ui-warning-text)'
-                                }}>
-                                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--ui-warning)' }} />
-                                    Unsaved
-                                </div>
-                            )}
+                            </motion.div>
+                            <AnimatePresence mode="popLayout">
+                                {hasChanges && (
+                                    <motion.div
+                                        key="desktop-unsaved-badge"
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.9, x: -8 }}
+                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, x: -8 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+                                        style={{
+                                            backgroundColor: 'var(--ui-warning-bg)',
+                                            color: 'var(--ui-warning-text)'
+                                        }}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: 'var(--ui-warning)' }} />
+                                        Unsaved
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
 
                         {/* Actions */}

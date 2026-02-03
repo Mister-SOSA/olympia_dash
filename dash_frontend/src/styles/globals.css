@@ -1422,19 +1422,56 @@ main {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  touch-action: manipulation;
   overflow: hidden;
+  will-change: transform, box-shadow;
+  transform-origin: center center;
+  /* Smooth transitions for non-dragging states */
+  transition: border-color 200ms ease, background-color 200ms ease;
 }
 
-.mobile-widget-card:active:not(.mobile-widget-card-dragging) {
-  transform: scale(0.97);
+/* Holding state - subtle scale up */
+.mobile-widget-card-holding {
+  border-color: var(--ui-accent-primary);
+  background: var(--ui-bg-tertiary);
 }
 
+/* Dragging state - elevated with shadow */
 .mobile-widget-card-dragging {
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
-  opacity: 1;
-  transform: scale(1.05);
+  z-index: 1000;
+  border-color: var(--ui-accent-primary);
+  background: var(--ui-bg-secondary);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   cursor: grabbing;
+  transform: scale(1.03);
+}
+
+/* Over trash zone state - danger colors */
+.mobile-widget-card-over-trash {
+  border-color: var(--ui-danger) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.mobile-widget-card-over-trash .mobile-widget-card-icon {
+  background: var(--ui-danger);
+}
+
+/* Drag indicator - shows when holding/dragging */
+.mobile-widget-card-drag-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--ui-accent-primary);
+  color: white;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(var(--ui-accent-primary-rgb, 59, 130, 246), 0.4);
+  will-change: transform, opacity;
 }
 
 /* Card Header - Icon + Title inline */
@@ -1583,6 +1620,44 @@ main {
   background: rgba(59, 130, 246, 0.08);
   border: 2px dashed rgba(59, 130, 246, 0.5);
   animation: placeholder-pulse 1s ease-in-out infinite;
+}
+
+/* ========================================
+   MOBILE TRASH ZONE
+   ======================================== */
+
+.mobile-trash-zone {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+
+.mobile-trash-zone-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  border-radius: 1.25rem;
+  background: rgba(239, 68, 68, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(239, 68, 68, 0.2);
+  pointer-events: auto;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  will-change: transform, background-color;
+}
+
+.mobile-trash-zone-content.active {
+  background: rgb(239, 68, 68);
+  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(239, 68, 68, 0.4);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 @keyframes placeholder-pulse {

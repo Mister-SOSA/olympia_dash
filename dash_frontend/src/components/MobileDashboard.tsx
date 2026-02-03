@@ -20,6 +20,26 @@ import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 import "swiper/css/pagination";
 
+// dnd-kit for drag and drop
+import {
+    DndContext,
+    closestCenter,
+    TouchSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragStartEvent,
+    DragEndEvent,
+    UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    useSortable,
+    rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 // Widget registry
 import {
     WIDGET_CONFIGS,
@@ -35,7 +55,6 @@ import {
     MdWidgets,
     MdSettings,
     MdClose,
-    MdExpandMore,
     MdBarChart,
     MdAttachMoney,
     MdShoppingCart,
@@ -61,6 +80,7 @@ import {
     MdVisibility,
     MdBookmarks,
     MdEdit,
+    MdDragIndicator,
 } from "react-icons/md";
 
 // Hooks & contexts
@@ -89,29 +109,6 @@ import {
     subscribeMobilePresets,
 } from "@/utils/mobilePresetUtils";
 
-// DnD Kit
-import {
-    DndContext,
-    closestCenter,
-    pointerWithin,
-    TouchSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    type DragEndEvent,
-    type DragStartEvent,
-    type DragOverEvent,
-    useDroppable,
-    type CollisionDetection,
-} from "@dnd-kit/core";
-import {
-    arrayMove,
-    SortableContext,
-    useSortable,
-    rectSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
 // ============================================
 // Constants & Types
 // ============================================
@@ -129,7 +126,6 @@ const CATEGORY_ICONS: Record<WidgetCategory, React.ComponentType<{ className?: s
 
 // Animation presets for consistent motion
 const SPRING_TRANSITION = { type: "spring", stiffness: 400, damping: 30 };
-const EASE_OUT_TRANSITION = { type: "tween", duration: 0.25, ease: [0.32, 0.72, 0, 1] };
 
 export interface MobileDashboardProps {
     onSettingsClick: () => void;
@@ -231,18 +227,18 @@ const WidgetComplication = memo(function WidgetComplication({ widgetId, isVisibl
 });
 
 // ============================================
-// Sortable Widget Card - Memoized
+// Sortable Widget Card - using dnd-kit
 // ============================================
 
 interface SortableWidgetCardProps {
     widgetId: string;
-    onClick: () => void;
+    onTap: () => void;
     isVisible?: boolean;
 }
 
 const SortableWidgetCard = memo(function SortableWidgetCard({
     widgetId,
-    onClick,
+    onTap,
     isVisible = true,
 }: SortableWidgetCardProps) {
     const {
@@ -252,7 +248,13 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: widgetId });
+    } = useSortable({ 
+        id: widgetId,
+        transition: {
+            duration: 250,
+            easing: 'ease',
+        },
+    });
 
     const { title, TypeIcon } = useMemo(() => {
         const cfg = getWidgetConfig(widgetId);
@@ -264,11 +266,10 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
     }, [widgetId]);
 
     const style: React.CSSProperties = {
-        transform: CSS.Transform.toString(transform),
-        transition: isDragging ? undefined : 'transform 200ms ease',
+        transform: CSS.Translate.toString(transform),
+        transition,
+        zIndex: isDragging ? 1000 : undefined,
         touchAction: 'none',
-        zIndex: isDragging ? 999 : 'auto',
-        position: 'relative',
     };
 
     return (
@@ -276,72 +277,219 @@ const SortableWidgetCard = memo(function SortableWidgetCard({
             ref={setNodeRef}
             style={style}
             className={`mobile-widget-card ${isDragging ? 'mobile-widget-card-dragging' : ''}`}
-            onClick={() => {
-                if (!isDragging) {
-                    vibrate(10);
-                    onClick();
-                }
-            }}
+            onClick={() => !isDragging && onTap()}
             {...attributes}
             {...listeners}
         >
+            {/* Drag indicator - shows when dragging */}
+            {isDragging && (
+                <div className="mobile-widget-card-drag-indicator">
+                    <MdDragIndicator className="w-4 h-4" />
+                </div>
+            )}
             <div className="mobile-widget-card-header">
                 <div className="mobile-widget-card-icon">
                     <TypeIcon className="w-4 h-4" />
                 </div>
                 <span className="mobile-widget-card-title">{title}</span>
             </div>
-            <WidgetComplication widgetId={widgetId} isVisible={isVisible} />
+            <WidgetComplication widgetId={widgetId} isVisible={isVisible && !isDragging} />
         </div>
     );
 });
 
 // ============================================
-// Trash Drop Zone - Memoized
+// Trash Drop Zone - Enhanced Visual Feedback
 // ============================================
 
 interface TrashDropZoneProps {
-    isOver: boolean;
     isVisible: boolean;
+    isOver: boolean;
 }
 
-const TrashDropZone = memo(function TrashDropZone({ isOver, isVisible }: TrashDropZoneProps) {
-    const { setNodeRef, isOver: dndIsOver } = useDroppable({ id: "trash-zone" });
-    const showActive = isOver || dndIsOver;
-
+const TrashDropZone = memo(function TrashDropZone({ isVisible, isOver }: TrashDropZoneProps) {
     return (
         <AnimatePresence>
             {isVisible && (
                 <motion.div
-                    ref={setNodeRef}
-                    className="fixed bottom-0 inset-x-0 z-[200] flex justify-center"
-                    style={{
-                        paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
-                        paddingTop: "16px",
+                    className="mobile-trash-zone"
+                    initial={{ opacity: 0, y: 80, scale: 0.9 }}
+                    animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: isOver ? 1.08 : 1,
                     }}
-                    initial={{ opacity: 0, y: 60 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 60 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    exit={{ opacity: 0, y: 60, scale: 0.95 }}
+                    transition={{ 
+                        type: "spring", 
+                        stiffness: 400, 
+                        damping: 25,
+                        mass: 0.8,
+                    }}
                 >
                     <motion.div
-                        className="flex items-center gap-2 px-6 py-4 rounded-2xl text-sm font-semibold shadow-2xl"
+                        className={`mobile-trash-zone-content ${isOver ? 'active' : ''}`}
                         animate={{
-                            scale: showActive ? 1.1 : 1,
-                            backgroundColor: showActive ? "#ef4444" : "rgba(239, 68, 68, 0.9)",
+                            backgroundColor: isOver ? 'rgb(239, 68, 68)' : 'rgba(239, 68, 68, 0.85)',
+                            scale: isOver ? 1.02 : 1,
                         }}
-                        style={{
-                            color: "#ffffff",
-                            backdropFilter: "blur(12px)",
-                        }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     >
-                        <MdDelete className={`w-6 h-6 ${showActive ? "animate-bounce" : ""}`} />
-                        <span>{showActive ? "Release to remove" : "Drop here to remove"}</span>
+                        <motion.div
+                            animate={{
+                                scale: isOver ? 1.3 : 1,
+                                rotate: isOver ? [0, -15, 15, -10, 10, 0] : 0,
+                                y: isOver ? -2 : 0,
+                            }}
+                            transition={{ 
+                                type: "spring", 
+                                stiffness: 600, 
+                                damping: 15,
+                                rotate: { duration: 0.5, ease: "easeInOut" }
+                            }}
+                        >
+                            <MdDelete className={`w-7 h-7 ${isOver ? 'text-white' : 'text-white/90'}`} />
+                        </motion.div>
+                        <motion.span 
+                            className="text-white text-sm font-semibold"
+                            animate={{ 
+                                scale: isOver ? 1.05 : 1,
+                                y: isOver ? 1 : 0,
+                            }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                        >
+                            {isOver ? 'Release to Remove' : 'Drag Here to Remove'}
+                        </motion.span>
                     </motion.div>
                 </motion.div>
             )}
         </AnimatePresence>
+    );
+});
+
+// ============================================
+// Sortable Widget Grid - Using dnd-kit
+// ============================================
+
+interface SortableWidgetGridProps {
+    widgetIds: string[];
+    onReorder: (newOrder: string[]) => void;
+    onWidgetClick: (widgetId: string) => void;
+    onRemoveWidget: (widgetId: string) => void;
+    onDragStateChange: (isDragging: boolean) => void;
+    isVisible?: boolean;
+}
+
+const SortableWidgetGrid = memo(function SortableWidgetGrid({
+    widgetIds,
+    onReorder,
+    onWidgetClick,
+    onRemoveWidget,
+    onDragStateChange,
+    isVisible = true,
+}: SortableWidgetGridProps) {
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+    const [isOverTrash, setIsOverTrash] = useState(false);
+
+    // Touch sensor with delay activation (long press to drag)
+    // Pointer sensor for desktop/mouse with distance activation
+    const sensors = useSensors(
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 200,
+                tolerance: 8,
+            },
+        }),
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        })
+    );
+
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        const { active } = event;
+        setActiveId(active.id);
+        onDragStateChange(true);
+        vibrate([20, 10, 20]);
+    }, [onDragStateChange]);
+
+    const handleDragMove = useCallback((event: { activatorEvent: Event; delta: { x: number; y: number } }) => {
+        // Check if dragging over trash zone using the current pointer position
+        const activatorEvent = event.activatorEvent as TouchEvent | MouseEvent;
+        let clientY: number;
+
+        if ('touches' in activatorEvent && activatorEvent.touches.length > 0) {
+            clientY = activatorEvent.touches[0].clientY + event.delta.y;
+        } else if ('clientY' in activatorEvent) {
+            clientY = activatorEvent.clientY + event.delta.y;
+        } else {
+            return;
+        }
+
+        const viewportHeight = window.innerHeight;
+        const trashZoneTop = viewportHeight - 120;
+        const newIsOverTrash = clientY > trashZoneTop;
+
+        if (newIsOverTrash !== isOverTrash) {
+            setIsOverTrash(newIsOverTrash);
+            vibrate(newIsOverTrash ? 30 : 15);
+        }
+    }, [isOverTrash]);
+
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
+        const { active, over } = event;
+
+        // If over trash, remove the widget
+        if (isOverTrash && activeId) {
+            vibrate([50, 30, 50]);
+            onRemoveWidget(activeId as string);
+        } else if (over && active.id !== over.id) {
+            // Reorder
+            const oldIndex = widgetIds.indexOf(active.id as string);
+            const newIndex = widgetIds.indexOf(over.id as string);
+            const newOrder = arrayMove(widgetIds, oldIndex, newIndex);
+            onReorder(newOrder);
+            vibrate(20);
+        }
+
+        setActiveId(null);
+        setIsOverTrash(false);
+        onDragStateChange(false);
+    }, [activeId, isOverTrash, onDragStateChange, onRemoveWidget, onReorder, widgetIds]);
+
+    const handleDragCancel = useCallback(() => {
+        setActiveId(null);
+        setIsOverTrash(false);
+        onDragStateChange(false);
+    }, [onDragStateChange]);
+
+    return (
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
+        >
+            <SortableContext items={widgetIds} strategy={rectSortingStrategy}>
+                {/* Trash zone */}
+                <TrashDropZone isVisible={!!activeId} isOver={isOverTrash} />
+
+                {/* Widget grid */}
+                <div className="mobile-widget-grid">
+                    {widgetIds.map((widgetId) => (
+                        <SortableWidgetCard
+                            key={widgetId}
+                            widgetId={widgetId}
+                            onTap={() => onWidgetClick(widgetId)}
+                            isVisible={isVisible}
+                        />
+                    ))}
+                </div>
+            </SortableContext>
+        </DndContext>
     );
 });
 
@@ -712,129 +860,6 @@ const PullToRefresh = memo(function PullToRefresh({ onRefresh, children }: PullT
             </div>
             {children}
         </div>
-    );
-});
-
-// ============================================
-// Draggable Widget Grid
-// ============================================
-
-interface DraggableGridProps {
-    widgetIds: string[];
-    onReorder: (newOrder: string[]) => void;
-    onWidgetClick: (widgetId: string) => void;
-    onRemoveWidget: (widgetId: string) => void;
-    isVisible?: boolean;
-}
-
-// Custom collision detection: prioritize sortable items, only use trash when pointer is directly over it
-const customCollisionDetection: CollisionDetection = (args) => {
-    // First check if pointer is over the trash zone
-    const pointerCollisions = pointerWithin(args);
-    const trashCollision = pointerCollisions.find((c) => c.id === "trash-zone");
-    if (trashCollision) {
-        return [trashCollision];
-    }
-
-    // Otherwise use closestCenter for the sortable items
-    return closestCenter(args);
-};
-
-const DraggableWidgetGrid = memo(function DraggableWidgetGrid({
-    widgetIds,
-    onReorder,
-    onWidgetClick,
-    onRemoveWidget,
-    isVisible = true,
-}: DraggableGridProps) {
-    const [items, setItems] = useState(widgetIds);
-    const [activeId, setActiveId] = useState<string | null>(null);
-    const [isOverTrash, setIsOverTrash] = useState(false);
-
-    // Hold to drag: 200ms delay, 5px tolerance during delay
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                delay: 200,
-                tolerance: 5,
-            },
-        }),
-        useSensor(TouchSensor, {
-            activationConstraint: {
-                delay: 200,
-                tolerance: 5,
-            },
-        })
-    );
-
-    // Sync items when widgetIds change
-    useEffect(() => {
-        setItems(widgetIds);
-    }, [widgetIds]);
-
-    const handleDragStart = useCallback((event: DragStartEvent) => {
-        setActiveId(event.active.id as string);
-        vibrate(50);
-    }, []);
-
-    const handleDragOver = useCallback((event: DragOverEvent) => {
-        setIsOverTrash(event.over?.id === "trash-zone");
-    }, []);
-
-    const handleDragEnd = useCallback(
-        (event: DragEndEvent) => {
-            const { active, over } = event;
-            setActiveId(null);
-            setIsOverTrash(false);
-
-            if (over?.id === "trash-zone") {
-                onRemoveWidget(active.id as string);
-                vibrate([50, 30, 50]);
-                return;
-            }
-
-            if (over && active.id !== over.id) {
-                setItems((currentItems) => {
-                    const oldIndex = currentItems.indexOf(active.id as string);
-                    const newIndex = currentItems.indexOf(over.id as string);
-                    const newItems = arrayMove(currentItems, oldIndex, newIndex);
-                    onReorder(newItems);
-                    return newItems;
-                });
-                vibrate(20);
-            }
-        },
-        [onReorder, onRemoveWidget]
-    );
-
-    const handleDragCancel = useCallback(() => {
-        setActiveId(null);
-        setIsOverTrash(false);
-    }, []);
-
-    return (
-        <DndContext
-            sensors={sensors}
-            collisionDetection={customCollisionDetection}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-        >
-            <TrashDropZone isOver={isOverTrash} isVisible={!!activeId} />
-            <SortableContext items={items} strategy={rectSortingStrategy}>
-                <div className="mobile-widget-grid">
-                    {items.map((widgetId) => (
-                        <SortableWidgetCard
-                            key={widgetId}
-                            widgetId={widgetId}
-                            onClick={() => onWidgetClick(widgetId)}
-                            isVisible={isVisible}
-                        />
-                    ))}
-                </div>
-            </SortableContext>
-        </DndContext>
     );
 });
 
@@ -1453,6 +1478,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const [pendingPresetSlot, setPendingPresetSlot] = useState<number | null>(null);
     const [visiblePresetIndex, setVisiblePresetIndex] = useState<number>(() => readMobilePresets().activePresetIndex);
 
+    // *** Drag state - controls swiper blocking ***
+    const [isWidgetDragging, setIsWidgetDragging] = useState(false);
+
     // Refs
     const swiperRef = useRef<SwiperType | null>(null);
     const lastSyncedIndex = useRef(-1);
@@ -1534,6 +1562,15 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             saveMobilePresets(newState);
             return newState;
         });
+    }, []);
+
+    // Handle drag state changes - block swiper when dragging
+    const handleDragStateChange = useCallback((isDragging: boolean) => {
+        setIsWidgetDragging(isDragging);
+        // Disable/enable swiper touch when drag state changes
+        if (swiperRef.current) {
+            swiperRef.current.allowTouchMove = !isDragging;
+        }
     }, []);
 
     const handleRefresh = useCallback(async () => {
@@ -1826,53 +1863,99 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             {/* Header */}
             <div className="mobile-grid-header">
                 <div className="flex items-center gap-3">
-                    <MdBookmarks className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                    <AnimatePresence mode="wait">
+                        {isWidgetDragging ? (
+                            <motion.div
+                                key="dragging"
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                <MdDragIndicator className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="normal"
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                <MdBookmarks className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                     <div>
                         <h1 className="text-lg font-semibold" style={{ color: "var(--ui-text-primary)" }}>
-                            {activePreset.name}
+                            {isWidgetDragging ? "Editing Layout" : activePreset.name}
                         </h1>
                         <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
-                            {enabledWidgetIds.length} widget{enabledWidgetIds.length !== 1 ? "s" : ""}
+                            {isWidgetDragging
+                                ? "Drag to reorder"
+                                : `${enabledWidgetIds.length} widget${enabledWidgetIds.length !== 1 ? "s" : ""}`
+                            }
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* Privacy Toggle */}
-                    <motion.button
-                        onClick={togglePrivacy}
-                        className={`mobile-header-button ${privacySettings.enabled ? "bg-ui-accent-secondary text-white" : ""
-                            }`}
-                        aria-label={privacySettings.enabled ? "Disable privacy mode" : "Enable privacy mode"}
-                        aria-pressed={privacySettings.enabled}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                        {privacySettings.enabled ? (
-                            <MdVisibilityOff className="w-5 h-5" />
-                        ) : (
-                            <MdVisibility className="w-5 h-5" />
+                    {/* Privacy Toggle - hidden during drag */}
+                    <AnimatePresence>
+                        {!isWidgetDragging && (
+                            <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={togglePrivacy}
+                                className={`mobile-header-button ${privacySettings.enabled ? "bg-ui-accent-secondary text-white" : ""
+                                    }`}
+                                aria-label={privacySettings.enabled ? "Disable privacy mode" : "Enable privacy mode"}
+                                aria-pressed={privacySettings.enabled}
+                                whileTap={{ scale: 0.9 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                {privacySettings.enabled ? (
+                                    <MdVisibilityOff className="w-5 h-5" />
+                                ) : (
+                                    <MdVisibility className="w-5 h-5" />
+                                )}
+                            </motion.button>
                         )}
-                    </motion.button>
-                    {/* Add Widget */}
-                    <motion.button
-                        onClick={handleOpenWidgetPicker}
-                        className="mobile-header-button"
-                        aria-label="Add widgets"
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                        <MdAdd className="w-5 h-5" />
-                    </motion.button>
-                    {/* Settings */}
-                    <motion.button
-                        onClick={onSettingsClick}
-                        className="mobile-header-button"
-                        aria-label="Settings"
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                        <MdSettings className="w-5 h-5" />
-                    </motion.button>
+                    </AnimatePresence>
+                    {/* Add Widget - hidden during drag */}
+                    <AnimatePresence>
+                        {!isWidgetDragging && (
+                            <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={handleOpenWidgetPicker}
+                                className="mobile-header-button"
+                                aria-label="Add widgets"
+                                whileTap={{ scale: 0.9 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                <MdAdd className="w-5 h-5" />
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                    {/* Settings - hidden during drag */}
+                    <AnimatePresence>
+                        {!isWidgetDragging && (
+                            <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                onClick={onSettingsClick}
+                                className="mobile-header-button"
+                                aria-label="Settings"
+                                whileTap={{ scale: 0.9 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                            >
+                                <MdSettings className="w-5 h-5" />
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
@@ -1897,9 +1980,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     spaceBetween={0}
                     slidesPerView={1}
                     speed={300}
-                    followFinger={true}
-                    shortSwipes={true}
-                    longSwipes={true}
+                    followFinger={!isWidgetDragging}
+                    shortSwipes={!isWidgetDragging}
+                    longSwipes={!isWidgetDragging}
                     longSwipesRatio={0.25}
                     longSwipesMs={150}
                     resistance={true}
@@ -1908,10 +1991,10 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     touchAngle={45}
                     threshold={5}
                     touchStartPreventDefault={false}
-                    touchMoveStopPropagation={false}
-                    passiveListeners={true}
-                    allowTouchMove={true}
-                    edgeSwipeDetection={true}
+                    touchMoveStopPropagation={isWidgetDragging}
+                    passiveListeners={!isWidgetDragging}
+                    allowTouchMove={!isWidgetDragging}
+                    edgeSwipeDetection={!isWidgetDragging}
                     edgeSwipeThreshold={20}
                     modules={[Pagination]}
                     className="h-full w-full"
@@ -1958,11 +2041,12 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                                         ) : (
                                             <>
                                                 {isActivePreset ? (
-                                                    <DraggableWidgetGrid
+                                                    <SortableWidgetGrid
                                                         widgetIds={presetWidgetIds}
                                                         onReorder={handleReorder}
                                                         onWidgetClick={handleWidgetClick}
                                                         onRemoveWidget={handleRemoveWidget}
+                                                        onDragStateChange={handleDragStateChange}
                                                         isVisible={isPresetVisible}
                                                     />
                                                 ) : (
