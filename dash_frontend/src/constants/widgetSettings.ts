@@ -166,7 +166,36 @@ const DATE_FORMAT_FIELD: SelectSettingField = {
 // ============================================
 
 export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
-    // Clock Widget
+    // DateTime Widget (Combined Clock + Date)
+    DateTimeWidget: {
+        widgetId: 'DateTimeWidget',
+        title: 'Date & Time Settings',
+        description: 'Layout adapts automatically to widget size',
+        sections: [
+            {
+                title: 'Time Display',
+                fields: [
+                    CLOCK_FORMAT_FIELD,
+                    SHOW_SECONDS_FIELD,
+                    {
+                        key: 'animateDigits',
+                        type: 'toggle',
+                        label: 'Animate Digits',
+                        description: 'Smooth rolling animation when digits change',
+                        default: true,
+                    } as ToggleSettingField,
+                ],
+            },
+            {
+                title: 'Timezone',
+                fields: [
+                    TIMEZONE_FIELD,
+                ],
+            },
+        ],
+    },
+
+    // Legacy Clock Widget (deprecated - use DateTimeWidget)
     ClockWidget: {
         widgetId: 'ClockWidget',
         title: 'Clock Settings',
@@ -178,12 +207,19 @@ export const WIDGET_SETTINGS_SCHEMAS: Record<string, WidgetSettingsSchema> = {
                     CLOCK_FORMAT_FIELD,
                     SHOW_SECONDS_FIELD,
                     TIMEZONE_FIELD,
+                    {
+                        key: 'animateDigits',
+                        type: 'toggle',
+                        label: 'Animate Digits',
+                        description: 'Smooth rolling animation when digits change',
+                        default: true,
+                    } as ToggleSettingField,
                 ],
             },
         ],
     },
 
-    // Date Widget
+    // Legacy Date Widget (deprecated - use DateTimeWidget)
     DateWidget: {
         widgetId: 'DateWidget',
         title: 'Date Settings',
