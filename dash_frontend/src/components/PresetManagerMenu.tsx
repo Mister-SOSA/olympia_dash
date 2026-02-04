@@ -2,10 +2,11 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { DashboardPreset, Widget, PresetType } from "@/types";
+import { toast } from "sonner";
 import {
     X,
     Save,
-    Sparkles,
+    Bookmark,
     Grid3X3,
     Maximize2,
     Edit3,
@@ -40,6 +41,8 @@ interface PresetManagerMenuProps {
     onSavePreset: (index: number, layout: Widget[], type: PresetType, name?: string, description?: string) => void;
     onUpdatePreset: (index: number, updates: Partial<DashboardPreset>) => void;
     onClearPreset: (index: number) => void;
+    onCreateBlank: (index: number) => void;
+    onOpenWidgetMenu?: () => void;
     currentLayout: Widget[];
 }
 
@@ -404,11 +407,13 @@ export default function PresetManagerMenu({
     onSavePreset,
     onUpdatePreset,
     onClearPreset,
+    onCreateBlank,
+    onOpenWidgetMenu,
     currentLayout,
 }: PresetManagerMenuProps) {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [dialogType, setDialogType] = useState<"empty" | "save">("save");
+    const [dialogType, setDialogType] = useState<"create" | "save">("create");
     const [dialogIndex, setDialogIndex] = useState<number>(0);
     const [editName, setEditName] = useState("");
     const [editDescription, setEditDescription] = useState("");
@@ -427,7 +432,7 @@ export default function PresetManagerMenu({
     const handleLoadOrSave = (index: number) => {
         const preset = presets[index];
         if (!preset || preset.layout.filter(w => w.enabled).length === 0) {
-            setDialogType("empty");
+            setDialogType("create");
             setDialogIndex(index);
             setDialogOpen(true);
         } else {
@@ -436,22 +441,21 @@ export default function PresetManagerMenu({
         }
     };
 
-    const handleCreateBlank = (index: number) => {
-        const now = new Date().toISOString();
-        const newPreset: DashboardPreset = {
-            type: "grid",
-            layout: currentLayout.map((w) => ({ ...w, enabled: false })),
-            name: `Preset ${index + 1}`,
-            description: "",
-            createdAt: now,
-            updatedAt: now
-        };
-        onSavePreset(index, newPreset.layout, "grid", newPreset.name, newPreset.description);
+    const handleCreateBlankLocal = (index: number) => {
+        onCreateBlank(index);
+        setDialogOpen(false);
+        onClose();
+        // Open widget menu after a short delay
+        if (onOpenWidgetMenu) {
+            setTimeout(() => onOpenWidgetMenu(), 100);
+        }
     };
 
-    const handleSavePreset = (index: number, layout: Widget[], type: PresetType) => {
-        const name = generatePresetName(layout);
-        onSavePreset(index, layout, type, name, "");
+    const handleCreateFromCurrent = (index: number, type: PresetType) => {
+        const name = generatePresetName(currentLayout);
+        onSavePreset(index, currentLayout, type, name, "");
+        setDialogOpen(false);
+        onClose();
     };
 
     const handleStartEdit = (index: number) => {
@@ -483,6 +487,9 @@ export default function PresetManagerMenu({
         const emptyIndex = presets.findIndex(p => !p || p.layout.filter(w => w.enabled).length === 0);
         if (emptyIndex !== -1) {
             onSavePreset(emptyIndex, preset.layout, preset.type, `${preset.name} (Copy)`, preset.description);
+            toast.success(`Duplicated to Slot ${emptyIndex + 1}`);
+        } else {
+            toast.error("No empty slots available");
         }
     };
 
@@ -524,7 +531,7 @@ export default function PresetManagerMenu({
                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{
                                     backgroundColor: 'var(--ui-accent-primary-bg)',
                                 }}>
-                                    <Sparkles className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
+                                    <Bookmark className="w-5 h-5" style={{ color: 'var(--ui-accent-primary)' }} />
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-semibold" style={{ color: 'var(--ui-text-primary)' }}>
@@ -645,8 +652,12 @@ export default function PresetManagerMenu({
                 dialogType={dialogType}
                 presetIndex={dialogIndex}
                 currentLayout={currentLayout}
-                onCreateBlank={handleCreateBlank}
-                onSavePreset={handleSavePreset}
+                onCreateBlank={handleCreateBlankLocal}
+                onCreateFromCurrent={handleCreateFromCurrent}
+                onSavePreset={(index, layout, type) => {
+                    const name = generatePresetName(layout);
+                    onSavePreset(index, layout, type, name, "");
+                }}
                 onLoadPreset={() => { }}
             />
         </>

@@ -1888,6 +1888,22 @@ tbody>tr:nth-child(odd) {
   transition: none;
 }
 
+/* CSS animation for refresh progress - eliminates need for JS state updates */
+@keyframes refresh-progress {
+  from {
+    stroke-dashoffset: 50.265;
+    /* 2 * PI * 8 = full circle */
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.refresh-ring-progress-animated {
+  transform-origin: center;
+}
+
 .Toastify__toast-container {
   font-size: 2rem;
   font-family: 'Roboto', sans-serif;

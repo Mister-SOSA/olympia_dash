@@ -47,6 +47,7 @@ interface DashboardDockProps {
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
     onPresetSave: (index: number) => void;
+    onPresetCreate: (index: number) => void;
     onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'navigation') => void;
     onVisibilityChange?: (visible: boolean) => void;
 }
@@ -58,6 +59,7 @@ export default function DashboardDock({
     onPresetManagerClick,
     onPresetClick,
     onPresetSave,
+    onPresetCreate,
     onSettingsClick,
     onVisibilityChange,
 }: DashboardDockProps) {
@@ -161,7 +163,7 @@ export default function DashboardDock({
 
     const handleCreatePreset = () => {
         if (firstAvailableSlot !== -1) {
-            onPresetSave(firstAvailableSlot);
+            onPresetCreate(firstAvailableSlot);
         }
     };
 

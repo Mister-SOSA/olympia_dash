@@ -38,14 +38,12 @@ export default function Widget({
     const [loading, setLoading] = useState(!!endpoint);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [refreshProgress, setRefreshProgress] = useState(0);
-    const [isResetting, setIsResetting] = useState(false);
+    // Track animation reset - this triggers CSS animation restart
+    const [animationKey, setAnimationKey] = useState(0);
     const isInitialLoadRef = useRef(true);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const loaderHideRef = useRef<NodeJS.Timeout | null>(null);
-    const lastFetchTimeRef = useRef<number>(Date.now());
     const viewTrackedRef = useRef(false);
 
     // Track widget view on mount (only once per session)
@@ -136,13 +134,8 @@ export default function Widget({
                 finish();
             }
 
-            lastFetchTimeRef.current = Date.now();
-
-            // Reset progress instantly (no transition)
-            setIsResetting(true);
-            setRefreshProgress(0);
-            // Re-enable transition after reset
-            setTimeout(() => setIsResetting(false), 50);
+            // Reset the CSS animation by changing the key
+            setAnimationKey(prev => prev + 1);
         }
     };
 
@@ -165,33 +158,10 @@ export default function Widget({
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
-            if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
             if (abortControllerRef.current) abortControllerRef.current.abort();
             if (loaderHideRef.current) clearTimeout(loaderHideRef.current);
         };
     }, [endpoint, refreshInterval]);
-
-    // Progress indicator effect - only runs after initial load completes
-    useEffect(() => {
-        // Don't run progress updates while loading or if no refresh interval
-        if (loading || !refreshInterval || refreshInterval <= 0) {
-            return;
-        }
-
-        const progressUpdateInterval = 200;
-        progressIntervalRef.current = setInterval(() => {
-            const elapsed = Date.now() - lastFetchTimeRef.current;
-            const progress = Math.min((elapsed / refreshInterval) * 100, 100);
-            setRefreshProgress(progress);
-        }, progressUpdateInterval);
-
-        return () => {
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-                progressIntervalRef.current = null;
-            }
-        };
-    }, [loading, refreshInterval]);
 
     const handleRetry = () => {
         isInitialLoadRef.current = true; // Treat manual retry as initial load
@@ -200,6 +170,9 @@ export default function Widget({
         fetchData();
     };
 
+    // Calculate animation duration for CSS (in seconds)
+    const animationDuration = refreshInterval ? refreshInterval / 1000 : 30;
+
     return (
         <div className="widget">
             {/* Drag Handle Container - clips the handle so it slides from the edge */}
@@ -207,8 +180,8 @@ export default function Widget({
                 <div className="widget-drag-handle" title="Drag to move widget" />
             </div>
 
-            {/* Persistent refresh indicator - respects user settings */}
-            {endpoint && refreshInterval && showRefreshIndicator && (
+            {/* Persistent refresh indicator - uses CSS animation instead of state */}
+            {endpoint && refreshInterval && showRefreshIndicator && !loading && (
                 <div className="widget-refresh-indicator">
                     <svg width="20" height="20" viewBox="0 0 20 20" className="refresh-ring">
                         <circle
@@ -221,6 +194,7 @@ export default function Widget({
                             opacity="0.3"
                         />
                         <circle
+                            key={animationKey}
                             cx="10"
                             cy="10"
                             r="8"
@@ -228,9 +202,12 @@ export default function Widget({
                             stroke="rgba(59, 130, 246, 0.5)"
                             strokeWidth="2"
                             strokeDasharray={`${2 * Math.PI * 8}`}
-                            strokeDashoffset={`${2 * Math.PI * 8 * (1 - refreshProgress / 100)}`}
+                            strokeDashoffset={`${2 * Math.PI * 8}`}
                             strokeLinecap="round"
-                            className={`refresh-ring-progress ${isResetting ? 'no-transition' : ''}`}
+                            className="refresh-ring-progress-animated"
+                            style={{
+                                animation: `refresh-progress ${animationDuration}s linear forwards`,
+                            }}
                         />
                     </svg>
                 </div>

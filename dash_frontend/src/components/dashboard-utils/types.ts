@@ -34,7 +34,7 @@ export interface DashboardUIState {
 }
 
 export type SettingsViewType = 'account' | 'appearance' | 'layout' | 'navigation' | 'widgets' | 'regional' | 'notifications' | 'privacy' | 'presets' | 'shortcuts' | 'advanced';
-export type PresetDialogType = "empty" | "save" | "overwrite";
+export type PresetDialogType = "create" | "save" | "overwrite";
 
 // =============================================================================
 // Constants

@@ -398,14 +398,16 @@ const GridDashboard = forwardRef<GridDashboardHandle, GridDashboardProps>(
         // Refresh all widgets
         const handleRefreshAll = useCallback(() => {
             console.log('Refreshing all widgets...');
-            const newKeys: Record<string, number> = {};
-            layout.forEach(w => {
-                if (w.enabled) {
-                    newKeys[w.id] = (refreshKeys[w.id] || 0) + 1;
-                }
+            setRefreshKeys(prevKeys => {
+                const newKeys: Record<string, number> = {};
+                layout.forEach(w => {
+                    if (w.enabled) {
+                        newKeys[w.id] = (prevKeys[w.id] || 0) + 1;
+                    }
+                });
+                return newKeys;
             });
-            setRefreshKeys(newKeys);
-        }, [layout, refreshKeys]);
+        }, [layout]);
 
         // Compact method exposed to parent
         useImperativeHandle(ref, () => ({

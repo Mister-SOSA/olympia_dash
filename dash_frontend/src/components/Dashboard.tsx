@@ -77,7 +77,7 @@ export default function Dashboard() {
   const [settingsView, setSettingsView] = useState<SettingsViewType>('account');
   const [presetManagerOpen, setPresetManagerOpen] = useState(false);
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
-  const [presetDialogType, setPresetDialogType] = useState<PresetDialogType>("save");
+  const [presetDialogType, setPresetDialogType] = useState<PresetDialogType>("create");
   const [presetDialogIndex, setPresetDialogIndex] = useState<number>(0);
   const [isDockVisible, setIsDockVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -225,7 +225,7 @@ export default function Dashboard() {
   const handlePresetClick = useCallback((index: number) => {
     const result = presetClickHandler(index);
     if (result.action === 'empty') {
-      setPresetDialogType("empty");
+      setPresetDialogType("create");
       setPresetDialogIndex(index);
       setPresetDialogOpen(true);
     }
@@ -234,10 +234,34 @@ export default function Dashboard() {
   // Handle preset save (right-click)
   const handlePresetSave = useCallback((index: number) => {
     const result = presetSaveHandler(index);
-    setPresetDialogType(result.action === 'save' ? "save" : "overwrite");
+    // If slot is empty, show create dialog instead of save
+    if (result.action === 'save') {
+      // Check if current layout has widgets to save
+      const hasWidgets = layout.filter(w => w.enabled).length > 0;
+      if (!hasWidgets) {
+        // No widgets to save, show create dialog
+        setPresetDialogType("create");
+      } else {
+        setPresetDialogType("save");
+      }
+    } else {
+      setPresetDialogType("overwrite");
+    }
     setPresetDialogIndex(index);
     setPresetDialogOpen(true);
-  }, [presetSaveHandler]);
+  }, [presetSaveHandler, layout]);
+
+  // Handle preset create (+ button on dock)
+  const handlePresetCreate = useCallback((index: number) => {
+    setPresetDialogType("create");
+    setPresetDialogIndex(index);
+    setPresetDialogOpen(true);
+  }, []);
+
+  // Handle creating a preset from current layout (used by Create dialog)
+  const handleCreateFromCurrent = useCallback((index: number, type: PresetType) => {
+    handleSaveToPreset(index, layout, type);
+  }, [handleSaveToPreset, layout]);
 
   // Handle save from widget menu
   const handleSave = useCallback(() => {
@@ -351,6 +375,7 @@ export default function Dashboard() {
             onPresetManagerClick={() => setPresetManagerOpen(true)}
             onPresetClick={handlePresetClick}
             onPresetSave={handlePresetSave}
+            onPresetCreate={handlePresetCreate}
             onSettingsClick={(view?: SettingsViewType) => {
               setSettingsView(view || 'account');
               setSettingsOpen(true);
@@ -368,6 +393,7 @@ export default function Dashboard() {
             onPresetManagerClick={() => setPresetManagerOpen(true)}
             onPresetClick={handlePresetClick}
             onPresetSave={handlePresetSave}
+            onPresetCreate={handlePresetCreate}
             onSettingsClick={(view?: SettingsViewType) => {
               setSettingsView(view || 'account');
               setSettingsOpen(true);
@@ -428,6 +454,11 @@ export default function Dashboard() {
             }
             toast.warning(`Cleared Preset ${index + 1}`);
           }}
+          onCreateBlank={handleCreateBlank}
+          onOpenWidgetMenu={() => {
+            setMenuOpen(true);
+            updateTempLayout();
+          }}
           currentLayout={layout}
         />
 
@@ -439,8 +470,13 @@ export default function Dashboard() {
           presetIndex={presetDialogIndex}
           currentLayout={layout}
           onCreateBlank={handleCreateBlank}
+          onCreateFromCurrent={handleCreateFromCurrent}
           onSavePreset={handleSaveToPreset}
           onLoadPreset={loadPreset}
+          onOpenWidgetMenu={() => {
+            setMenuOpen(true);
+            updateTempLayout();
+          }}
         />
 
         {/* Widget Menu Modal */}

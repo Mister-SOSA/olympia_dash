@@ -32,7 +32,8 @@ interface DashboardTaskbarProps {
     onPresetManagerClick: () => void;
     onPresetClick: (index: number) => void;
     onPresetSave: (index: number) => void;
-    onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'dock' | 'navigation') => void;
+    onPresetCreate: (index: number) => void;
+    onSettingsClick: (view?: 'widgets' | 'presets' | 'privacy' | 'navigation') => void;
     onVisibilityChange?: (visible: boolean) => void;
 }
 
@@ -382,6 +383,7 @@ export default function DashboardTaskbar({
     onPresetManagerClick,
     onPresetClick,
     onPresetSave,
+    onPresetCreate,
     onSettingsClick,
     onVisibilityChange,
 }: DashboardTaskbarProps) {
@@ -467,9 +469,9 @@ export default function DashboardTaskbar({
 
     const handleCreatePreset = useCallback(() => {
         if (firstAvailableSlot !== -1) {
-            onPresetSave(firstAvailableSlot);
+            onPresetCreate(firstAvailableSlot);
         }
-    }, [firstAvailableSlot, onPresetSave]);
+    }, [firstAvailableSlot, onPresetCreate]);
 
     const handleAutoCycleToggle = useCallback(() => {
         const { preferencesService } = require('@/lib/preferences');
