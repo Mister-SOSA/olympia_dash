@@ -121,6 +121,9 @@ const layoutToWidgets = (rglLayout: Layout[], existingWidgets: Widget[]): Widget
  * This is a proper bin-packing algorithm that finds the first available position for each widget.
  */
 const compactLayout = (layout: Layout[], cols: number): Layout[] => {
+    // Guard against empty layout or invalid cols
+    if (!layout.length || cols < 1) return layout;
+
     // Sort by y then x to process top-to-bottom, left-to-right
     const sorted = [...layout].sort((a, b) => {
         if (a.y !== b.y) return a.y - b.y;
@@ -149,19 +152,25 @@ const compactLayout = (layout: Layout[], cols: number): Layout[] => {
     };
 
     const findFirstAvailablePosition = (w: number, h: number): { x: number; y: number } => {
-        for (let y = 0; ; y++) {
-            for (let x = 0; x <= cols - w; x++) {
-                if (!isOccupied(x, y, w, h)) {
+        // Clamp width to cols to prevent infinite loop
+        const effectiveW = Math.min(w, cols);
+        const maxY = 1000; // Safety limit to prevent infinite loops
+
+        for (let y = 0; y < maxY; y++) {
+            for (let x = 0; x <= cols - effectiveW; x++) {
+                if (!isOccupied(x, y, effectiveW, h)) {
                     return { x, y };
                 }
             }
         }
+        // Fallback: place at origin if we hit the limit (shouldn't happen)
+        return { x: 0, y: 0 };
     };
 
     // Place each widget in the first available position
     const compacted: Layout[] = sorted.map(item => {
         const pos = findFirstAvailablePosition(item.w, item.h);
-        markOccupied(pos.x, pos.y, item.w, item.h);
+        markOccupied(pos.x, pos.y, Math.min(item.w, cols), item.h);
         return { ...item, x: pos.x, y: pos.y };
     });
 
