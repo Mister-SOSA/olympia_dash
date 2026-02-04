@@ -4,11 +4,11 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { FaMicrosoft } from 'react-icons/fa';
 import { MdDevices, MdRefresh } from 'react-icons/md';
 import { IoTimeOutline } from 'react-icons/io5';
+import { HiOutlineQrCode } from 'react-icons/hi2';
 import { isIOSPWA, isPWA, openOAuthInBrowser, storeOAuthRedirect } from '@/utils/pwaUtils';
 import QRCodeSVG from 'react-qr-code';
 
@@ -25,6 +25,7 @@ function LoginContent() {
     const [error, setError] = useState<string>('');
     const [errorVisible, setErrorVisible] = useState(false);
     const [isPWAMode, setIsPWAMode] = useState(false);
+    const [activeTab, setActiveTab] = useState<'microsoft' | 'device'>('microsoft');
 
     // Track if authentication succeeded to prevent race condition errors
     const authSucceededRef = useRef(false);
@@ -339,9 +340,7 @@ function LoginContent() {
     if (loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-ui-bg-primary animate-in fade-in duration-300">
-                <div className="relative">
-                    <Loader />
-                </div>
+                <Loader />
                 {loadingMessage && (
                     <p className="mt-6 text-sm text-ui-text-secondary animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {loadingMessage}
@@ -353,176 +352,180 @@ function LoginContent() {
 
     return (
         <div className="min-h-screen bg-ui-bg-primary flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-            <div className="w-full max-w-6xl">
-                {/* Header */}
-                <div className="text-center mb-8 sm:mb-12">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-ui-text-primary mb-2">
-                        Olympia Dashboard
-                    </h1>
-                    <p className="text-sm sm:text-base text-ui-text-secondary">
-                        Sign in to access your dashboard
-                    </p>
+            <div className="w-full max-w-md">
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
+                    <img
+                        src="/icon-512.png"
+                        alt="Olympia"
+                        className="w-16 h-16 rounded-2xl"
+                    />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                    {/* Microsoft OAuth Login */}
-                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
-                        <CardHeader className="space-y-1 pb-4 sm:pb-6">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                <div className="p-1.5 sm:p-2 bg-ui-accent-primary-bg rounded-lg">
-                                    <FaMicrosoft className="w-5 h-5 sm:w-6 sm:h-6 text-ui-accent-primary-text" />
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-ui-text-primary mb-2">Sign in</h1>
+                    <p className="text-sm text-ui-text-secondary">Choose how you'd like to sign in</p>
+                </div>
+
+                {/* Mobile Tab Switcher */}
+                <div className="sm:hidden flex gap-1 p-1 bg-ui-bg-secondary rounded-lg mb-6 border border-ui-border-primary">
+                    <button
+                        onClick={() => setActiveTab('microsoft')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-colors ${activeTab === 'microsoft'
+                            ? 'bg-ui-bg-tertiary text-ui-text-primary'
+                            : 'text-ui-text-muted hover:text-ui-text-secondary'
+                            }`}
+                    >
+                        <FaMicrosoft className="w-4 h-4" />
+                        Microsoft
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('device')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-colors ${activeTab === 'device'
+                            ? 'bg-ui-bg-tertiary text-ui-text-primary'
+                            : 'text-ui-text-muted hover:text-ui-text-secondary'
+                            }`}
+                    >
+                        <MdDevices className="w-4 h-4" />
+                        Device Pair
+                    </button>
+                </div>
+
+                {/* Login Methods */}
+                <div className="space-y-4">
+                    {/* Microsoft Login */}
+                    <div className={`${activeTab !== 'microsoft' ? 'hidden sm:block' : ''}`}>
+                        <div className="p-5 rounded-xl bg-ui-bg-secondary border border-ui-border-primary">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-lg bg-ui-accent-primary-bg flex items-center justify-center flex-shrink-0">
+                                    <FaMicrosoft className="w-5 h-5 text-ui-accent-primary-text" />
                                 </div>
-                                <CardTitle className="text-xl sm:text-2xl text-ui-text-primary">
-                                    Microsoft Account
-                                </CardTitle>
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-medium text-ui-text-primary">Microsoft Account</h3>
+                                    <p className="text-xs text-ui-text-muted">Sign in with your work account</p>
+                                </div>
                             </div>
-                            <CardDescription className="text-xs sm:text-sm text-ui-text-secondary">
-                                Sign in with your Microsoft work account
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+
                             <Button
                                 onClick={handleLogin}
                                 disabled={loading}
-                                className="w-full h-11 sm:h-12 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium text-sm sm:text-base transition-all duration-200"
+                                className="w-full h-11 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium transition-colors"
                             >
                                 <FaMicrosoft className="mr-2 h-4 w-4" />
-                                {loading ? 'Redirecting...' : 'Sign in with Microsoft'}
+                                Continue with Microsoft
                             </Button>
-                            {/* Error message with animation */}
+
+                            {/* Error Message */}
                             <div
                                 className={`overflow-hidden transition-all duration-200 ease-out ${errorVisible && error && !deviceCode
-                                    ? 'max-h-20 opacity-100 mt-3 sm:mt-4'
+                                    ? 'max-h-20 opacity-100 mt-4'
                                     : 'max-h-0 opacity-0 mt-0'
                                     }`}
                             >
-                                <p className="text-xs sm:text-sm text-ui-danger-text break-words bg-ui-danger-bg/10 px-3 py-2 rounded-md border border-ui-danger-border/20">
+                                <p className="text-sm text-ui-danger-text bg-ui-danger-bg/10 px-3 py-2 rounded-md border border-ui-danger-border/20">
                                     {error}
                                 </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+
+                    {/* Divider - Desktop only */}
+                    <div className="hidden sm:flex items-center gap-4">
+                        <div className="flex-1 h-px bg-ui-border-primary" />
+                        <span className="text-xs text-ui-text-muted uppercase">or</span>
+                        <div className="flex-1 h-px bg-ui-border-primary" />
+                    </div>
 
                     {/* Device Pairing */}
-                    <Card className="bg-ui-bg-secondary border-ui-border-primary">
-                        <CardHeader className="space-y-1 pb-4 sm:pb-6">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                                <div className="p-1.5 sm:p-2 bg-ui-accent-secondary-bg rounded-lg">
-                                    <MdDevices className="w-5 h-5 sm:w-6 sm:h-6 text-ui-accent-secondary-text" />
+                    <div className={`${activeTab !== 'device' ? 'hidden sm:block' : ''}`}>
+                        <div className="p-5 rounded-xl bg-ui-bg-secondary border border-ui-border-primary">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-lg bg-ui-accent-secondary-bg flex items-center justify-center flex-shrink-0">
+                                    <HiOutlineQrCode className="w-5 h-5 text-ui-accent-secondary-text" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <CardTitle className="text-xl sm:text-2xl text-ui-text-primary">
-                                        Device Pairing
-                                    </CardTitle>
+                                    <h3 className="font-medium text-ui-text-primary">Device Pairing</h3>
+                                    <p className="text-xs text-ui-text-muted">For TVs, kiosks & shared displays</p>
                                 </div>
                             </div>
-                            <CardDescription className="text-xs sm:text-sm text-ui-text-secondary">
-                                Display dashboard on a TV or kiosk screen
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+
                             {deviceLoading ? (
-                                <div className="flex flex-col items-center justify-center py-6 sm:py-8 animate-in fade-in duration-200">
+                                <div className="flex flex-col items-center justify-center py-6 animate-in fade-in duration-200">
                                     <Loader />
-                                    <p className="text-ui-text-secondary mt-4 text-xs sm:text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
+                                    <p className="text-ui-text-secondary mt-4 text-sm">
                                         Generating pairing code...
                                     </p>
                                 </div>
                             ) : userCode ? (
-                                <div className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                    <div className="bg-ui-bg-primary border border-ui-border-primary rounded-lg p-4 sm:p-6">
-                                        {/* QR Code Section */}
-                                        <div className="flex flex-col items-center mb-4 sm:mb-6">
-                                            <p className="text-xs sm:text-sm text-ui-text-secondary mb-3">
-                                                Scan with your phone:
-                                            </p>
-                                            <div className="bg-white p-3 sm:p-4 rounded-lg shadow-lg">
-                                                <QRCodeSVG
-                                                    value={`${window.location.origin}/pair?code=${userCode}`}
-                                                    size={160}
-                                                    level="M"
-                                                />
-                                            </div>
+                                <div className="space-y-4 animate-in fade-in duration-200">
+                                    {/* QR Code Section */}
+                                    <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start bg-ui-bg-tertiary p-4 rounded-lg">
+                                        <div className="bg-white p-2 rounded-lg flex-shrink-0">
+                                            <QRCodeSVG
+                                                value={`${window.location.origin}/pair?code=${userCode}`}
+                                                size={100}
+                                                level="M"
+                                            />
                                         </div>
-
-                                        <div className="relative my-4 sm:my-6">
-                                            <div className="absolute inset-0 flex items-center">
-                                                <div className="w-full border-t border-ui-border-primary"></div>
-                                            </div>
-                                            <div className="relative flex justify-center text-xs">
-                                                <span className="bg-ui-bg-primary px-2 text-ui-text-muted">
-                                                    or manually enter
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="text-center mb-3 sm:mb-4">
-                                            <p className="text-xs sm:text-sm text-ui-text-secondary mb-1">
-                                                Visit on your computer:
+                                        <div className="flex-1 text-center sm:text-left">
+                                            <p className="text-xs text-ui-text-muted mb-1">
+                                                Scan QR code or visit:
                                             </p>
-                                            <p className="text-sm sm:text-lg font-semibold text-ui-accent-primary-text font-mono break-all">
+                                            <p className="text-sm font-mono text-ui-accent-primary-text font-medium mb-3 break-all">
                                                 {window.location.origin}/pair
                                             </p>
-                                        </div>
-
-                                        <div className="text-center">
-                                            <p className="text-xs sm:text-sm text-ui-text-secondary mb-2 sm:mb-3">
-                                                Enter this code:
-                                            </p>
-                                            <div className="text-3xl sm:text-5xl font-bold text-ui-text-primary tracking-[0.3em] sm:tracking-[0.5em] font-mono py-3 sm:py-4">
+                                            <p className="text-xs text-ui-text-muted mb-1">Enter code:</p>
+                                            <div className="text-2xl font-bold text-ui-text-primary tracking-[0.2em] font-mono">
                                                 {userCode}
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="flex items-center justify-center gap-2 mt-3 sm:mt-4 text-xs text-ui-text-muted">
-                                            <IoTimeOutline className="w-3 h-3 sm:w-4 sm:h-4 animate-pulse" />
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-xs text-ui-text-muted">
+                                            <IoTimeOutline className="w-4 h-4" />
                                             <span>Expires in 15 minutes</span>
                                         </div>
+                                        <Button
+                                            onClick={() => {
+                                                setDeviceCode('');
+                                                setUserCode('');
+                                                setApiUnavailable(false);
+                                                deviceCodeRequestedRef.current = false;
+                                                handleRequestDeviceCode();
+                                            }}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-ui-text-muted hover:text-ui-text-primary"
+                                        >
+                                            <MdRefresh className="mr-1 h-4 w-4" />
+                                            Refresh
+                                        </Button>
                                     </div>
-
-                                    <Button
-                                        onClick={() => {
-                                            setDeviceCode('');
-                                            setUserCode('');
-                                            setApiUnavailable(false);
-                                            deviceCodeRequestedRef.current = false;
-                                            handleRequestDeviceCode();
-                                        }}
-                                        variant="outline"
-                                        className="w-full h-10 sm:h-auto border-ui-border-primary hover:bg-ui-bg-tertiary text-ui-text-secondary text-sm transition-all duration-200"
-                                    >
-                                        <MdRefresh className="mr-2 h-4 w-4" />
-                                        Generate New Code
-                                    </Button>
                                 </div>
                             ) : (
-                                <div className="text-center py-6 sm:py-8 animate-in fade-in duration-200">
-                                    {/* Error state with animation */}
-                                    <div
-                                        className={`transition-all duration-200 ease-out ${errorVisible && error
-                                            ? 'opacity-100 transform translate-y-0'
-                                            : 'opacity-0 transform -translate-y-2'
-                                            }`}
-                                    >
-                                        <p className="text-ui-danger-text mb-3 sm:mb-4 text-xs sm:text-sm break-words px-2 bg-ui-danger-bg/10 py-2 rounded-md mx-2">
+                                <div className="text-center py-2 animate-in fade-in duration-200">
+                                    {errorVisible && error && (
+                                        <p className="text-sm text-ui-danger-text bg-ui-danger-bg/10 px-3 py-2 rounded-md border border-ui-danger-border/20 mb-4">
                                             {error || 'Failed to generate code'}
                                         </p>
-                                    </div>
+                                    )}
                                     <Button
                                         onClick={() => {
                                             setApiUnavailable(false);
                                             deviceCodeRequestedRef.current = false;
                                             handleRequestDeviceCode();
                                         }}
-                                        className="bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover h-10 sm:h-auto text-sm transition-all duration-200"
+                                        className="bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white"
                                     >
                                         <MdRefresh className="mr-2 h-4 w-4" />
-                                        Try Again
+                                        Generate Pairing Code
                                     </Button>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -540,3 +543,4 @@ export default function LoginPage() {
         </Suspense>
     );
 }
+
