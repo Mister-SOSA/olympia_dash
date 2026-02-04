@@ -4,10 +4,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Loader } from '@/components/ui/loader';
+import { FaMicrosoft } from 'react-icons/fa';
+import { MdCheckCircle } from 'react-icons/md';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,7 +141,7 @@ function PairContent() {
 
     if (checkingAuth) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
                 <Loader />
             </div>
         );
@@ -149,63 +149,92 @@ function PairContent() {
 
     if (!isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-                <Card className="w-full max-w-md bg-slate-800/50 border-slate-700">
-                    <CardHeader>
-                        <CardTitle className="text-2xl text-white">Authentication Required</CardTitle>
-                        <CardDescription className="text-slate-400">
-                            You must sign in before pairing a device
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary p-4">
+                <div className="w-full max-w-md">
+                    {/* Logo */}
+                    <div className="flex justify-center mb-6">
+                        <img
+                            src="/icon-512.png"
+                            alt="Olympia"
+                            className="w-16 h-16 rounded-2xl"
+                        />
+                    </div>
+
+                    {/* Header */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-bold text-ui-text-primary mb-2">Sign in Required</h1>
+                        <p className="text-sm text-ui-text-secondary">You must sign in before pairing a device</p>
+                    </div>
+
+                    {/* Sign in card */}
+                    <div className="p-5 rounded-xl bg-ui-bg-secondary border border-ui-border-primary">
                         <Button
                             onClick={handleLogin}
                             disabled={loading}
-                            className="w-full bg-blue-600 hover:bg-blue-700"
+                            className="w-full h-11 bg-ui-accent-primary hover:bg-ui-accent-primary-hover text-white font-medium transition-colors"
                         >
+                            <FaMicrosoft className="mr-2 h-4 w-4" />
                             {loading ? 'Redirecting...' : 'Sign in with Microsoft'}
                         </Button>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-                <Card className="w-full max-w-md bg-slate-800/50 border-slate-700">
-                    <CardHeader>
-                        <CardTitle className="text-2xl text-green-400">Success!</CardTitle>
-                        <CardDescription className="text-slate-400">
-                            Device paired successfully
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-slate-300">
-                            Your device has been paired. The TV dashboard will now authenticate automatically.
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary p-4">
+                <div className="w-full max-w-md">
+                    {/* Logo */}
+                    <div className="flex justify-center mb-6">
+                        <img
+                            src="/icon-512.png"
+                            alt="Olympia"
+                            className="w-16 h-16 rounded-2xl"
+                        />
+                    </div>
+
+                    {/* Success card */}
+                    <div className="p-6 rounded-xl bg-ui-bg-secondary border border-ui-border-primary text-center">
+                        <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                            <MdCheckCircle className="w-6 h-6 text-green-500" />
+                        </div>
+                        <h1 className="text-xl font-bold text-ui-text-primary mb-2">Device Paired!</h1>
+                        <p className="text-sm text-ui-text-secondary">
+                            Your device has been paired successfully. The dashboard will now authenticate automatically.
                         </p>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-            <Card className="w-full max-w-md bg-slate-800/50 border-slate-700">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-white">Pair Device</CardTitle>
-                    <CardDescription className="text-slate-400">
-                        Enter the code displayed on your TV dashboard
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+        <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary p-4">
+            <div className="w-full max-w-md">
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
+                    <img
+                        src="/icon-512.png"
+                        alt="Olympia"
+                        className="w-16 h-16 rounded-2xl"
+                    />
+                </div>
+
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-ui-text-primary mb-2">Pair Device</h1>
+                    <p className="text-sm text-ui-text-secondary">Enter the code displayed on your TV dashboard</p>
+                </div>
+
+                {/* Pair form */}
+                <div className="p-5 rounded-xl bg-ui-bg-secondary border border-ui-border-primary">
                     <form onSubmit={handlePair} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="userCode" className="text-slate-300">
+                            <label htmlFor="userCode" className="text-sm font-medium text-ui-text-primary">
                                 Pairing Code
-                            </Label>
+                            </label>
                             <Input
                                 id="userCode"
                                 type="text"
@@ -213,28 +242,30 @@ function PairContent() {
                                 value={userCode}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserCode(e.target.value.toUpperCase())}
                                 maxLength={6}
-                                className="text-center text-2xl font-mono tracking-widest uppercase bg-slate-900/50 border-slate-700 text-white"
+                                className="text-center text-2xl font-mono tracking-widest uppercase h-14"
                                 disabled={loading}
                             />
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-ui-text-muted">
                                 Enter the 6-character code shown on your TV
                             </p>
                         </div>
 
                         {error && (
-                            <p className="text-sm text-red-400">{error}</p>
+                            <p className="text-sm text-ui-danger-text bg-ui-danger-bg/10 px-3 py-2 rounded-md border border-ui-danger-border/20">
+                                {error}
+                            </p>
                         )}
 
                         <Button
                             type="submit"
                             disabled={loading || userCode.length !== 6}
-                            className="w-full bg-purple-600 hover:bg-purple-700"
+                            className="w-full h-11 bg-ui-accent-secondary hover:bg-ui-accent-secondary-hover text-white font-medium transition-colors"
                         >
                             {loading ? 'Pairing...' : 'Pair Device'}
                         </Button>
                     </form>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 }
@@ -242,7 +273,7 @@ function PairContent() {
 export default function PairPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+            <div className="min-h-screen flex items-center justify-center bg-ui-bg-primary">
                 <Loader />
             </div>
         }>
