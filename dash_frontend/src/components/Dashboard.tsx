@@ -17,6 +17,7 @@ import SettingsMenu from "./SettingsMenu";
 import OnboardingFlow from "./OnboardingFlow";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { Loader } from "./ui/loader";
+import DebugMenu from "./DebugMenu";
 
 // Dashboard extracted components and hooks
 import {
@@ -39,6 +40,7 @@ import { useIsMobile } from "@/hooks/useMediaQuery";
 import { usePresetAutoCycle } from "@/hooks/usePresetAutoCycle";
 import { usePrivacy } from "@/contexts/PrivacyContext";
 import { useSettings } from "@/hooks/useSettings";
+import { useDebugMenuTrigger } from "@/hooks/useDebugMenuTrigger";
 
 // Utils
 import {
@@ -81,6 +83,7 @@ export default function Dashboard() {
   const [presetDialogIndex, setPresetDialogIndex] = useState<number>(0);
   const [isDockVisible, setIsDockVisible] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [debugMenuOpen, setDebugMenuOpen] = useState(false);
 
   // Track whether the user is actively editing (to defer remote updates safely)
   const isEditingRef = useRef(false);
@@ -218,6 +221,14 @@ export default function Dashboard() {
   }, [layout]);
 
   // ==========================================================================
+  // Debug Menu Trigger (Alt+J or 10 background clicks)
+  // ==========================================================================
+  useDebugMenuTrigger({
+    onToggle: () => setDebugMenuOpen(prev => !prev),
+    isOpen: debugMenuOpen,
+  });
+
+  // ==========================================================================
   // Event Handlers
   // ==========================================================================
 
@@ -334,6 +345,25 @@ export default function Dashboard() {
             onAdminClick={user?.role === 'admin' ? () => router.push('/admin') : undefined}
             presets={presets}
             initialView={settingsView}
+          />
+
+          {/* Secret Debug Menu (also available on mobile) */}
+          <DebugMenu
+            isOpen={debugMenuOpen}
+            onClose={() => setDebugMenuOpen(false)}
+            layout={layout}
+            presets={presets}
+            user={user}
+            onLayoutChange={(newLayout: Widget[]) => {
+              setLayout(newLayout);
+              saveLayoutToStorage(newLayout, { source: 'local-interaction' });
+            }}
+            onPresetsChange={(newPresets: (DashboardPreset | null)[]) => {
+              setPresets(newPresets);
+              savePresetsToStorage(newPresets);
+            }}
+            onPresetLoad={loadPreset}
+            onForceRefresh={() => window.location.reload()}
           />
         </div>
       </>
@@ -536,6 +566,25 @@ export default function Dashboard() {
             <FullscreenWidget layout={layout} />
           )}
         </motion.div>
+
+        {/* Secret Debug Menu */}
+        <DebugMenu
+          isOpen={debugMenuOpen}
+          onClose={() => setDebugMenuOpen(false)}
+          layout={layout}
+          presets={presets}
+          user={user}
+          onLayoutChange={(newLayout: Widget[]) => {
+            setLayout(newLayout);
+            saveLayoutToStorage(newLayout, { source: 'local-interaction' });
+          }}
+          onPresetsChange={(newPresets: (DashboardPreset | null)[]) => {
+            setPresets(newPresets);
+            savePresetsToStorage(newPresets);
+          }}
+          onPresetLoad={loadPreset}
+          onForceRefresh={() => window.location.reload()}
+        />
       </div>
     </>
   );

@@ -196,7 +196,7 @@ const PresetDialog = memo(function PresetDialog({
                         </>
                     );
                 }
-                
+
                 return (
                     <>
                         <div className="text-center">
