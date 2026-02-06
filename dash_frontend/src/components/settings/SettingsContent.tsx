@@ -1151,6 +1151,78 @@ export function SettingsContent({
                                             step={DOCK_SETTINGS.opacity.step}
                                             unit="%"
                                         />
+                                        <SliderSetting
+                                            label="Icon Gap"
+                                            description="Space between icons"
+                                            value={settings.dockGap}
+                                            onChange={(val) => updateSetting('dockGap', val)}
+                                            min={DOCK_SETTINGS.gap.min}
+                                            max={DOCK_SETTINGS.gap.max}
+                                            step={DOCK_SETTINGS.gap.step}
+                                            unit="px"
+                                        />
+                                        <SliderSetting
+                                            label="Padding"
+                                            description="Inner padding of the dock"
+                                            value={settings.dockPadding}
+                                            onChange={(val) => updateSetting('dockPadding', val)}
+                                            min={DOCK_SETTINGS.padding.min}
+                                            max={DOCK_SETTINGS.padding.max}
+                                            step={DOCK_SETTINGS.padding.step}
+                                            unit="px"
+                                        />
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Dock Style">
+                                    <p className="text-xs text-ui-text-tertiary mb-3">Visual style of the dock background</p>
+                                    <div className="flex gap-2">
+                                        {(['opaque', 'glass', 'clear'] as const).map((style) => (
+                                            <button
+                                                key={style}
+                                                onClick={() => updateSetting('dockStyle', style)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${settings.dockStyle === style
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                {style}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Dock Border Radius">
+                                    <div className="flex gap-2">
+                                        {(['none', 'small', 'medium', 'large', 'pill'] as const).map((r) => (
+                                            <button
+                                                key={r}
+                                                onClick={() => updateSetting('dockBorderRadius', r)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${settings.dockBorderRadius === r
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                {r}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Subsection>
+
+                                <Subsection title="Icon Shape">
+                                    <div className="flex gap-2">
+                                        {(['square', 'rounded', 'circle'] as const).map((shape) => (
+                                            <button
+                                                key={shape}
+                                                onClick={() => updateSetting('dockIconBorderRadius', shape)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${settings.dockIconBorderRadius === shape
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                {shape}
+                                            </button>
+                                        ))}
                                     </div>
                                 </Subsection>
 

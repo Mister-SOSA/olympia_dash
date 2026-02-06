@@ -304,7 +304,7 @@ function SystemTray({
                             onSettingsContext('presets');
                         }}
                         className={autoCycleEnabled
-                            ? "bg-ui-info text-white"
+                            ? "bg-ui-info text-white ring-2 ring-ui-info/50"
                             : "bg-ui-bg-tertiary text-ui-text-primary hover:bg-ui-bg-quaternary"
                         }
                         tooltipSide={tooltipSide}

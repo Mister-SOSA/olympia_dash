@@ -35,6 +35,9 @@ import {
     type TaskbarPosition,
     type TaskbarSize,
     type TaskbarStyle,
+    type DockBorderRadius,
+    type DockIconBorderRadius,
+    type DockStyle,
 } from '@/constants/settings';
 
 // Type definitions for all settings
@@ -77,6 +80,11 @@ export interface UserSettings {
     dockShowCreatePreset: boolean;
     dockShowAutoCycleToggle: boolean;
     dockShowEmptyDockHint: boolean;
+    dockBorderRadius: DockBorderRadius;
+    dockIconBorderRadius: DockIconBorderRadius;
+    dockStyle: DockStyle;
+    dockGap: number;
+    dockPadding: number;
 
     // Navigation
     navigationMode: NavigationMode;
@@ -166,6 +174,11 @@ const DEFAULT_SETTINGS: UserSettings = {
     dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.default,
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.default,
     dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.default,
+    dockBorderRadius: DOCK_SETTINGS.borderRadius.default,
+    dockIconBorderRadius: DOCK_SETTINGS.iconBorderRadius.default,
+    dockStyle: DOCK_SETTINGS.style.default,
+    dockGap: DOCK_SETTINGS.gap.default,
+    dockPadding: DOCK_SETTINGS.padding.default,
 
     // Navigation
     navigationMode: NAVIGATION_SETTINGS.mode.default,
@@ -250,6 +263,11 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     dockShowCreatePreset: DOCK_SETTINGS.showCreatePreset.key,
     dockShowAutoCycleToggle: DOCK_SETTINGS.showAutoCycleToggle.key,
     dockShowEmptyDockHint: DOCK_SETTINGS.showEmptyDockHint.key,
+    dockBorderRadius: DOCK_SETTINGS.borderRadius.key,
+    dockIconBorderRadius: DOCK_SETTINGS.iconBorderRadius.key,
+    dockStyle: DOCK_SETTINGS.style.key,
+    dockGap: DOCK_SETTINGS.gap.key,
+    dockPadding: DOCK_SETTINGS.padding.key,
 
     navigationMode: NAVIGATION_SETTINGS.mode.key,
     taskbarPosition: NAVIGATION_SETTINGS.taskbarPosition.key,

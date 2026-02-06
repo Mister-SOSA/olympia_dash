@@ -255,6 +255,45 @@ export const DOCK_SETTINGS = {
         label: 'Empty Dashboard Hint',
         description: 'Show dock tutorial animation when dashboard is empty',
     },
+    borderRadius: {
+        key: 'dock.borderRadius',
+        default: 'large' as const,
+        options: ['none', 'small', 'medium', 'large', 'pill'] as const,
+        label: 'Dock Border Radius',
+        description: 'Roundness of the dock container corners',
+    },
+    iconBorderRadius: {
+        key: 'dock.iconBorderRadius',
+        default: 'rounded' as const,
+        options: ['square', 'rounded', 'circle'] as const,
+        label: 'Icon Shape',
+        description: 'Shape of dock icon buttons',
+    },
+    style: {
+        key: 'dock.style',
+        default: 'glass' as const,
+        options: ['opaque', 'glass', 'clear'] as const,
+        label: 'Dock Style',
+        description: 'Visual style of the dock background',
+    },
+    gap: {
+        key: 'dock.gap',
+        default: 4,
+        min: 0,
+        max: 12,
+        step: 2,
+        label: 'Icon Gap',
+        description: 'Spacing between dock icons',
+    },
+    padding: {
+        key: 'dock.padding',
+        default: 12,
+        min: 4,
+        max: 24,
+        step: 2,
+        label: 'Dock Padding',
+        description: 'Inner padding of the dock container',
+    },
 } as const;
 
 // ============================================
@@ -564,6 +603,9 @@ export type NavigationMode = typeof NAVIGATION_SETTINGS.mode.options[number];
 export type TaskbarPosition = typeof NAVIGATION_SETTINGS.taskbarPosition.options[number];
 export type TaskbarSize = typeof NAVIGATION_SETTINGS.taskbarSize.options[number];
 export type TaskbarStyle = typeof NAVIGATION_SETTINGS.taskbarStyle.options[number];
+export type DockBorderRadius = typeof DOCK_SETTINGS.borderRadius.options[number];
+export type DockIconBorderRadius = typeof DOCK_SETTINGS.iconBorderRadius.options[number];
+export type DockStyle = typeof DOCK_SETTINGS.style.options[number];
 
 // Settings categories for UI organization
 export const SETTINGS_CATEGORIES = [

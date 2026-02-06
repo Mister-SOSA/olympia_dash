@@ -83,7 +83,12 @@ export default function DashboardDock({
         dockShowPrivacyToggle,
         dockShowSettingsToggle,
         dockShowCreatePreset,
-        dockShowAutoCycleToggle
+        dockShowAutoCycleToggle,
+        dockBorderRadius,
+        dockIconBorderRadius,
+        dockStyle,
+        dockGap,
+        dockPadding,
     } = settings;
 
     // Calculate initialized presets and first available slot
@@ -187,6 +192,11 @@ export default function DashboardDock({
                             magnification={dockMagnification}
                             iconSize={dockIconSize}
                             magnificationScale={dockMagnificationScale}
+                            borderRadius={dockBorderRadius}
+                            dockStyle={dockStyle}
+                            gap={dockGap}
+                            padding={dockPadding}
+                            iconBorderRadius={dockIconBorderRadius}
                         >
                             {/* Widgets Icon - Blue */}
                             {dockShowWidgetsToggle && (
@@ -253,7 +263,7 @@ export default function DashboardDock({
                                         onSettingsClick('presets');
                                     }}
                                     className={settings.autoCycleEnabled
-                                        ? "bg-ui-info text-white shadow-sm"
+                                        ? "bg-ui-info text-white shadow-sm ring-2 ring-ui-info/50"
                                         : "bg-ui-bg-tertiary text-ui-text-primary shadow-sm hover:bg-ui-bg-quaternary"
                                     }
                                 >

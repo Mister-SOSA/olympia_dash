@@ -10,10 +10,29 @@ export interface DockProps {
     magnification?: boolean;
     iconSize?: number;
     magnificationScale?: number;
+    borderRadius?: 'none' | 'small' | 'medium' | 'large' | 'pill';
+    dockStyle?: 'opaque' | 'glass' | 'clear';
+    gap?: number;
+    padding?: number;
+    iconBorderRadius?: 'square' | 'rounded' | 'circle';
 }
 
+const DOCK_BORDER_RADIUS_MAP = {
+    none: 'rounded-none',
+    small: 'rounded-lg',
+    medium: 'rounded-xl',
+    large: 'rounded-2xl',
+    pill: 'rounded-full',
+} as const;
+
+const DOCK_STYLE_MAP = {
+    opaque: 'bg-ui-bg-secondary',
+    glass: 'bg-ui-bg-secondary/60 backdrop-blur-xl',
+    clear: 'bg-transparent',
+} as const;
+
 export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
-    ({ className, children, magnification = true, iconSize = 48, magnificationScale = 1.4 }, ref) => {
+    ({ className, children, magnification = true, iconSize = 48, magnificationScale = 1.4, borderRadius = 'large', dockStyle = 'glass', gap = 4, padding = 12, iconBorderRadius = 'rounded' }, ref) => {
         const mouseX = useMotionValue(Infinity);
 
         const baseHeight = iconSize + 16;
@@ -24,13 +43,19 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                 onMouseMove={(e) => mouseX.set(e.pageX)}
                 onMouseLeave={() => mouseX.set(Infinity)}
                 className={cn(
-                    "flex gap-1 items-end rounded-2xl px-3 pb-2",
-                    "bg-ui-bg-secondary/95 backdrop-blur-xl",
-                    "border border-ui-border-primary",
-                    "shadow-xl",
+                    "flex items-end",
+                    DOCK_BORDER_RADIUS_MAP[borderRadius],
+                    DOCK_STYLE_MAP[dockStyle],
+                    dockStyle !== 'clear' && "border border-ui-border-primary shadow-xl",
                     className
                 )}
-                style={{ height: `${baseHeight}px` }}
+                style={{
+                    height: `${baseHeight}px`,
+                    gap: `${gap}px`,
+                    paddingLeft: `${padding}px`,
+                    paddingRight: `${padding}px`,
+                    paddingBottom: `${Math.max(padding / 2, 4)}px`,
+                }}
             >
                 {React.Children.map(children, (child) => {
                     if (React.isValidElement(child)) {
@@ -39,6 +64,7 @@ export const Dock = React.forwardRef<HTMLDivElement, DockProps>(
                             magnification,
                             iconSize,
                             magnificationScale,
+                            iconBorderRadius,
                         });
                     }
                     return child;
@@ -57,10 +83,17 @@ export interface DockIconProps {
     magnification?: boolean;
     iconSize?: number;
     magnificationScale?: number;
+    iconBorderRadius?: 'square' | 'rounded' | 'circle';
     onClick?: () => void;
     onContextMenu?: (e: React.MouseEvent) => void;
     title?: string;
 }
+
+const ICON_BORDER_RADIUS_MAP = {
+    square: 'rounded-md',
+    rounded: 'rounded-xl',
+    circle: 'rounded-full',
+} as const;
 
 export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
     ({
@@ -70,6 +103,7 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
         magnification = true,
         iconSize = 48,
         magnificationScale = 1.4,
+        iconBorderRadius = 'rounded',
         onClick,
         onContextMenu,
         title
@@ -107,7 +141,8 @@ export const DockIcon = React.forwardRef<HTMLButtonElement, DockIconProps>(
                 onContextMenu={onContextMenu}
                 title={title}
                 className={cn(
-                    "flex aspect-square items-center justify-center rounded-xl",
+                    "flex aspect-square items-center justify-center",
+                    ICON_BORDER_RADIUS_MAP[iconBorderRadius],
                     "transition-colors duration-200",
                     className
                 )}

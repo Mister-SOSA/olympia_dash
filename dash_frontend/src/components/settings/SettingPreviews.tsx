@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // Real Drag Handle Component
@@ -201,8 +202,27 @@ interface DockPreviewProps {
         dockMagnificationScale: number;
         dockAutoHide: boolean;
         dockTriggerDistance: number;
+        dockBorderRadius: 'none' | 'small' | 'medium' | 'large' | 'pill';
+        dockIconBorderRadius: 'square' | 'rounded' | 'circle';
+        dockStyle: 'opaque' | 'glass' | 'clear';
+        dockGap: number;
+        dockPadding: number;
     };
 }
+
+const PREVIEW_DOCK_RADIUS = {
+    none: 'rounded-none',
+    small: 'rounded-lg',
+    medium: 'rounded-xl',
+    large: 'rounded-[18px]',
+    pill: 'rounded-full',
+} as const;
+
+const PREVIEW_ICON_RADIUS = {
+    square: 'rounded-sm',
+    rounded: 'rounded-xl',
+    circle: 'rounded-full',
+} as const;
 
 export function DockPreview({ settings }: DockPreviewProps) {
     return (
@@ -212,15 +232,32 @@ export function DockPreview({ settings }: DockPreviewProps) {
             <div className="absolute inset-x-4 top-11 h-3 bg-ui-bg-tertiary/20 rounded" />
             <div className="absolute left-4 right-20 top-16 h-3 bg-ui-bg-tertiary/15 rounded" />
 
-            {/* Preview Dock - macOS style */}
+            {/* Preview Dock */}
             <div
-                className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end gap-1 px-2 pb-2 pt-2 rounded-[18px] bg-ui-bg-secondary/80 backdrop-blur-xl border border-white/10 shadow-lg"
-                style={{ opacity: settings.dockOpacity / 100 }}
+                className={cn(
+                    "absolute bottom-2 left-1/2 -translate-x-1/2 flex items-end pt-2 shadow-lg",
+                    PREVIEW_DOCK_RADIUS[settings.dockBorderRadius],
+                    settings.dockStyle === 'opaque'
+                        ? 'bg-ui-bg-secondary border border-white/10'
+                        : settings.dockStyle === 'glass'
+                            ? 'bg-ui-bg-secondary/60 backdrop-blur-xl border border-white/10'
+                            : 'bg-transparent',
+                )}
+                style={{
+                    opacity: settings.dockOpacity / 100,
+                    gap: `${Math.max(settings.dockGap / 3, 1)}px`,
+                    paddingLeft: `${Math.max(settings.dockPadding / 3, 2)}px`,
+                    paddingRight: `${Math.max(settings.dockPadding / 3, 2)}px`,
+                    paddingBottom: `${Math.max(settings.dockPadding / 6, 2)}px`,
+                }}
             >
                 {[1, 2, 3, 4, 5].map((i) => (
                     <motion.div
                         key={i}
-                        className={`rounded-xl ${i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary'}`}
+                        className={cn(
+                            PREVIEW_ICON_RADIUS[settings.dockIconBorderRadius],
+                            i === 3 ? 'bg-ui-accent-primary' : 'bg-ui-bg-tertiary',
+                        )}
                         style={{
                             width: `${settings.dockIconSize / 3.5}px`,
                             height: `${settings.dockIconSize / 3.5}px`,
