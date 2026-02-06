@@ -38,6 +38,8 @@ import {
     saveMobilePresets,
     getStarterPresets,
     toggleWidgetInActivePreset,
+    addWidgetToActivePreset,
+    removeWidgetFromActivePreset,
     updateActivePresetWidgets,
     savePreset,
     findNextEmptySlot,
@@ -45,6 +47,11 @@ import {
 } from "@/utils/mobilePresetUtils";
 import { getWidgetById } from "@/constants/widgets";
 import { getWidgetConfig } from "@/components/widgets/registry";
+import {
+    generateInstanceId,
+    createWidgetId,
+    getWidgetType,
+} from "@/utils/widgetInstanceUtils";
 
 // Mobile components
 import {
@@ -141,6 +148,51 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
     const handleToggleWidget = useCallback((widgetId: string) => {
         setPresetsState((prev) => {
             const newState = toggleWidgetInActivePreset(prev, widgetId);
+            saveMobilePresets(newState);
+            return newState;
+        });
+    }, []);
+
+    const handleAddWidgetInstance = useCallback((widgetType: string) => {
+        const config = getWidgetConfig(widgetType);
+        if (!config?.allowMultiple) return;
+
+        // Check max instances
+        const currentInstances = enabledWidgetIds.filter(
+            (id) => getWidgetType(id) === widgetType
+        ).length;
+        if (config.maxInstances !== undefined && currentInstances >= config.maxInstances) {
+            toast.error(`Maximum ${config.maxInstances} instances reached`);
+            return;
+        }
+
+        const instanceId = generateInstanceId();
+        const fullId = createWidgetId(widgetType, instanceId);
+
+        setPresetsState((prev) => {
+            const newState = addWidgetToActivePreset(prev, fullId);
+            saveMobilePresets(newState);
+            return newState;
+        });
+        toast.success(`Added ${config.title} instance`);
+    }, [enabledWidgetIds]);
+
+    const handleRemoveWidgetInstance = useCallback((widgetId: string) => {
+        const baseType = getWidgetType(widgetId);
+        const config = getWidgetConfig(baseType);
+        const widgetName = config?.title || baseType;
+
+        setPresetsState((prev) => {
+            const newState = removeWidgetFromActivePreset(prev, widgetId);
+            saveMobilePresets(newState);
+            return newState;
+        });
+        toast.success(`Removed ${widgetName} instance`);
+    }, []);
+
+    const handleBulkUpdateWidgets = useCallback((newWidgetIds: string[]) => {
+        setPresetsState((prev) => {
+            const newState = updateActivePresetWidgets(prev, newWidgetIds);
             saveMobilePresets(newState);
             return newState;
         });
@@ -438,6 +490,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     isOpen={widgetPickerOpen}
                     enabledWidgetIds={enabledWidgetIds}
                     onToggleWidget={handleToggleWidget}
+                    onAddWidgetInstance={handleAddWidgetInstance}
+                    onRemoveWidgetInstance={handleRemoveWidgetInstance}
+                    onBulkUpdate={handleBulkUpdateWidgets}
                     onClose={handleCloseWidgetPicker}
                 />
 
@@ -723,6 +778,9 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                 isOpen={widgetPickerOpen}
                 enabledWidgetIds={enabledWidgetIds}
                 onToggleWidget={handleToggleWidget}
+                onAddWidgetInstance={handleAddWidgetInstance}
+                onRemoveWidgetInstance={handleRemoveWidgetInstance}
+                onBulkUpdate={handleBulkUpdateWidgets}
                 onClose={handleCloseWidgetPicker}
             />
 

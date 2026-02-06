@@ -69,19 +69,36 @@ export const getStarterPresets = (): MobilePresetsState => {
 };
 
 /**
+ * Validate a widget ID - supports both singleton IDs ("ClockWidget") 
+ * and multi-instance IDs ("FanController:abc123")
+ */
+const isValidWidgetId = (id: string): boolean => {
+    const validBaseIds = new Set(WIDGET_CONFIGS.map(w => w.id));
+    // Check direct match (singleton widgets)
+    if (validBaseIds.has(id)) return true;
+    // Check multi-instance format: "BaseType:instanceId"
+    const separatorIndex = id.indexOf(":");
+    if (separatorIndex > 0) {
+        const baseType = id.substring(0, separatorIndex);
+        const config = WIDGET_CONFIGS.find(w => w.id === baseType);
+        return config?.allowMultiple === true;
+    }
+    return false;
+};
+
+/**
  * Read presets from preferences
  */
 export const readMobilePresets = (): MobilePresetsState => {
     try {
         const saved = preferencesService.get<MobilePresetsState | undefined>(MOBILE_PRESETS_KEY, undefined);
         if (saved && Array.isArray(saved.presets)) {
-            // Validate widget IDs
-            const validIds = new Set(WIDGET_CONFIGS.map(w => w.id));
+            // Validate widget IDs - supports both singleton and multi-instance formats
             const presets = saved.presets.map(preset => {
                 if (!preset) return null;
                 return {
                     ...preset,
-                    widgetIds: preset.widgetIds.filter(id => validIds.has(id)),
+                    widgetIds: preset.widgetIds.filter(isValidWidgetId),
                 };
             });
 
@@ -210,6 +227,38 @@ export const toggleWidgetInActivePreset = (
         : [...activePreset.widgetIds, widgetId];
 
     return updateActivePresetWidgets(state, newWidgetIds);
+};
+
+/**
+ * Add a widget ID to the active preset (without toggling - always adds)
+ */
+export const addWidgetToActivePreset = (
+    state: MobilePresetsState,
+    widgetId: string
+): MobilePresetsState => {
+    const activePreset = state.presets[state.activePresetIndex];
+    if (!activePreset) return state;
+
+    // Don't add duplicates
+    if (activePreset.widgetIds.includes(widgetId)) return state;
+
+    return updateActivePresetWidgets(state, [...activePreset.widgetIds, widgetId]);
+};
+
+/**
+ * Remove a widget ID from the active preset
+ */
+export const removeWidgetFromActivePreset = (
+    state: MobilePresetsState,
+    widgetId: string
+): MobilePresetsState => {
+    const activePreset = state.presets[state.activePresetIndex];
+    if (!activePreset) return state;
+
+    return updateActivePresetWidgets(
+        state,
+        activePreset.widgetIds.filter(id => id !== widgetId)
+    );
 };
 
 /**

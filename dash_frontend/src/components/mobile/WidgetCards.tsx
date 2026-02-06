@@ -26,7 +26,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { getWidgetById } from "@/constants/widgets";
-import { getWidgetConfig } from "@/components/widgets/registry";
+import { getWidgetConfigById } from "@/components/widgets/registry";
 import { useWidgetPreview } from "@/hooks/useWidgetPreview";
 import { getWidgetTypeIcon, vibrate } from "./utils";
 import { WIDGET_PREVIEWS, DefaultPreview, type ComplicationPreviewProps } from "./WidgetPreviews";
@@ -117,7 +117,7 @@ export const SortableWidgetCard = memo(function SortableWidgetCard({
     } = useSortable({ id: widgetId });
 
     const { title, TypeIcon } = useMemo(() => {
-        const cfg = getWidgetConfig(widgetId);
+        const cfg = getWidgetConfigById(widgetId);
         const def = getWidgetById(widgetId);
         return {
             title: def?.title || cfg?.title || widgetId,
@@ -162,7 +162,7 @@ interface StaticWidgetCardProps {
 
 export const StaticWidgetCard = memo(function StaticWidgetCard({ widgetId, isVisible = true }: StaticWidgetCardProps) {
     const { title, TypeIcon } = useMemo(() => {
-        const config = getWidgetConfig(widgetId);
+        const config = getWidgetConfigById(widgetId);
         const def = getWidgetById(widgetId);
         return {
             title: def?.title || config?.title || widgetId,
@@ -196,7 +196,7 @@ interface DragOverlayItemProps {
 
 const DragOverlayItem = memo(function DragOverlayItem({ widgetId }: DragOverlayItemProps) {
     const { title, TypeIcon } = useMemo(() => {
-        const cfg = getWidgetConfig(widgetId);
+        const cfg = getWidgetConfigById(widgetId);
         const def = getWidgetById(widgetId);
         return {
             title: def?.title || cfg?.title || widgetId,

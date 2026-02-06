@@ -1,22 +1,28 @@
 "use client";
 
 import React, { memo, useState, useCallback, useMemo, useRef, useEffect, Suspense } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
 import {
-    MdWidgets,
     MdClose,
     MdTune,
     MdSearch,
     MdCheck,
+    MdAdd,
+    MdRemove,
+    MdExpandMore,
+    MdSelectAll,
+    MdDeselect,
 } from "react-icons/md";
 import { getWidgetById } from "@/constants/widgets";
 import {
     WIDGET_CONFIGS,
     type WidgetCategory,
-    getWidgetConfig,
-    getAvailableCategories,
+    CATEGORY_ORDER,
+    CATEGORY_METADATA,
+    getWidgetConfigById,
     searchWidgets,
+    groupWidgetsByCategory,
     type WidgetConfig,
 } from "@/components/widgets/registry";
 import { useWidgetPermissions } from "@/hooks/useWidgetPermissions";
@@ -25,6 +31,11 @@ import { WidgetErrorBoundary } from "@/components/ErrorBoundary";
 import WidgetSettingsDialog from "@/components/WidgetSettingsDialog";
 import { getWidgetSettingsSchema } from "@/constants/widgetSettings";
 import { CATEGORY_ICONS, getWidgetTypeIcon, vibrate } from "./utils";
+import {
+    getWidgetType,
+    getWidgetInstances as getInstancesFromLayout,
+    isMultiInstanceWidget,
+} from "@/utils/widgetInstanceUtils";
 
 // ============================================
 // Detail View (Full Screen Widget) - Using Vaul Drawer
@@ -38,7 +49,7 @@ interface DetailViewProps {
 
 export const DetailView = memo(function DetailView({ isOpen, widgetId, onClose }: DetailViewProps) {
     const widgetDef = widgetId ? getWidgetById(widgetId) : null;
-    const config = widgetId ? getWidgetConfig(widgetId) : null;
+    const config = widgetId ? getWidgetConfigById(widgetId) : null;
     const [settingsOpen, setSettingsOpen] = useState(false);
     const hasSettings = widgetId ? getWidgetSettingsSchema(widgetId) !== null : false;
     const title = widgetDef?.title || config?.title || widgetId || '';
@@ -170,42 +181,514 @@ interface MobileWidgetPickerProps {
     isOpen: boolean;
     enabledWidgetIds: string[];
     onToggleWidget: (widgetId: string) => void;
+    onAddWidgetInstance: (widgetType: string) => void;
+    onRemoveWidgetInstance: (widgetId: string) => void;
+    onBulkUpdate: (newWidgetIds: string[]) => void;
     onClose: () => void;
 }
 
+// ── Singleton toggle row ──────────────────────────────────
+const PickerToggleRow = memo(function PickerToggleRow({
+    widget,
+    isEnabled,
+    onToggle,
+    CategoryIcon,
+}: {
+    widget: WidgetConfig;
+    isEnabled: boolean;
+    onToggle: () => void;
+    CategoryIcon: React.ComponentType<{ className?: string }>;
+}) {
+    return (
+        <motion.button
+            onClick={onToggle}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl active:scale-[0.98] text-left transition-colors"
+            style={
+                isEnabled
+                    ? { backgroundColor: "var(--ui-accent-primary-bg)" }
+                    : { backgroundColor: "transparent" }
+            }
+            aria-pressed={isEnabled}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        >
+            {/* Category icon */}
+            <div
+                className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{
+                    backgroundColor: isEnabled
+                        ? "var(--ui-accent-primary)"
+                        : "var(--ui-bg-tertiary)",
+                    color: isEnabled ? "#ffffff" : "var(--ui-text-muted)",
+                }}
+            >
+                <CategoryIcon className="w-[18px] h-[18px]" />
+            </div>
+
+            {/* Title + description */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                    <span
+                        className="text-[15px] font-semibold truncate"
+                        style={{
+                            color: isEnabled
+                                ? "var(--ui-accent-primary)"
+                                : "var(--ui-text-primary)",
+                        }}
+                    >
+                        {widget.title}
+                    </span>
+                    {widget.beta && (
+                        <span
+                            className="text-[8px] font-bold px-1 py-px rounded uppercase flex-shrink-0"
+                            style={{
+                                backgroundColor: "var(--ui-warning-bg)",
+                                color: "var(--ui-warning-text)",
+                            }}
+                        >
+                            Beta
+                        </span>
+                    )}
+                </div>
+                <p
+                    className="text-xs truncate mt-0.5"
+                    style={{ color: "var(--ui-text-muted)" }}
+                >
+                    {widget.description}
+                </p>
+            </div>
+
+            {/* Toggle indicator */}
+            <div
+                className="flex-shrink-0 w-5 h-5 rounded-md border-[1.5px] flex items-center justify-center transition-all"
+                style={
+                    isEnabled
+                        ? {
+                            backgroundColor: "var(--ui-accent-primary)",
+                            borderColor: "var(--ui-accent-primary)",
+                        }
+                        : { borderColor: "var(--ui-border-secondary)" }
+                }
+            >
+                {isEnabled && (
+                    <MdCheck className="w-3.5 h-3.5" style={{ color: "#ffffff" }} />
+                )}
+            </div>
+        </motion.button>
+    );
+});
+
+// ── Multi-instance stepper row ────────────────────────────
+const PickerInstanceRow = memo(function PickerInstanceRow({
+    widget,
+    instanceCount,
+    onAdd,
+    onRemoveLast,
+    canAddMore,
+    CategoryIcon,
+}: {
+    widget: WidgetConfig;
+    instanceCount: number;
+    onAdd: () => void;
+    onRemoveLast: () => void;
+    canAddMore: boolean;
+    CategoryIcon: React.ComponentType<{ className?: string }>;
+}) {
+    const hasInstances = instanceCount > 0;
+    const maxInstances = widget.maxInstances;
+
+    return (
+        <div
+            className="flex items-center gap-3 px-3 py-3 rounded-xl transition-colors"
+            style={
+                hasInstances
+                    ? { backgroundColor: "var(--ui-accent-primary-bg)" }
+                    : { backgroundColor: "transparent" }
+            }
+        >
+            {/* Category icon with count badge */}
+            <div className="flex-shrink-0 relative">
+                <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center"
+                    style={{
+                        backgroundColor: hasInstances
+                            ? "var(--ui-accent-primary)"
+                            : "var(--ui-bg-tertiary)",
+                        color: hasInstances ? "#ffffff" : "var(--ui-text-muted)",
+                    }}
+                >
+                    <CategoryIcon className="w-[18px] h-[18px]" />
+                </div>
+                {hasInstances && (
+                    <span
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                        style={{
+                            backgroundColor: "var(--ui-bg-primary)",
+                            color: "var(--ui-accent-primary)",
+                            border: "1.5px solid var(--ui-accent-primary)",
+                        }}
+                    >
+                        {instanceCount}
+                    </span>
+                )}
+            </div>
+
+            {/* Title + meta */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                    <span
+                        className="text-[15px] font-semibold truncate"
+                        style={{
+                            color: hasInstances
+                                ? "var(--ui-accent-primary)"
+                                : "var(--ui-text-primary)",
+                        }}
+                    >
+                        {widget.title}
+                    </span>
+                    {widget.beta && (
+                        <span
+                            className="text-[8px] font-bold px-1 py-px rounded uppercase flex-shrink-0"
+                            style={{
+                                backgroundColor: "var(--ui-warning-bg)",
+                                color: "var(--ui-warning-text)",
+                            }}
+                        >
+                            Beta
+                        </span>
+                    )}
+                </div>
+                <p
+                    className="text-xs truncate mt-0.5"
+                    style={{ color: "var(--ui-text-muted)" }}
+                >
+                    {hasInstances
+                        ? `${instanceCount} active${maxInstances ? ` of ${maxInstances}` : ""}`
+                        : widget.description}
+                </p>
+            </div>
+
+            {/* Stepper control */}
+            <div className="flex-shrink-0 flex items-center gap-0.5">
+                {/* Remove */}
+                <motion.button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        vibrate(10);
+                        onRemoveLast();
+                    }}
+                    disabled={!hasInstances}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-0"
+                    style={{
+                        backgroundColor: hasInstances
+                            ? "var(--ui-danger-bg)"
+                            : "transparent",
+                        color: hasInstances
+                            ? "var(--ui-danger)"
+                            : "var(--ui-text-muted)",
+                    }}
+                    whileTap={hasInstances ? { scale: 0.85 } : undefined}
+                >
+                    <MdRemove className="w-4 h-4" />
+                </motion.button>
+
+                {/* Count */}
+                <span
+                    className="w-6 text-center text-sm font-bold tabular-nums"
+                    style={{
+                        color: hasInstances
+                            ? "var(--ui-accent-primary)"
+                            : "var(--ui-text-muted)",
+                    }}
+                >
+                    {instanceCount}
+                </span>
+
+                {/* Add */}
+                <motion.button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        vibrate(10);
+                        onAdd();
+                    }}
+                    disabled={!canAddMore}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
+                    style={{
+                        backgroundColor: canAddMore
+                            ? "var(--ui-accent-primary)"
+                            : "var(--ui-bg-tertiary)",
+                        color: canAddMore ? "#ffffff" : "var(--ui-text-muted)",
+                    }}
+                    whileTap={canAddMore ? { scale: 0.85 } : undefined}
+                >
+                    <MdAdd className="w-4 h-4" />
+                </motion.button>
+            </div>
+        </div>
+    );
+});
+
+// ── Category accordion section ────────────────────────────
+const CategorySection = memo(function CategorySection({
+    category,
+    widgets,
+    enabledSet,
+    enabledWidgetIds,
+    enabledCount,
+    totalCount,
+    onToggleWidget,
+    onAddWidgetInstance,
+    onRemoveWidgetInstance,
+    onEnableAll,
+    onDisableAll,
+    canAddMoreInstances,
+    getInstanceIdsForType,
+    defaultExpanded,
+}: {
+    category: WidgetCategory;
+    widgets: WidgetConfig[];
+    enabledSet: Set<string>;
+    enabledWidgetIds: string[];
+    enabledCount: number;
+    totalCount: number;
+    onToggleWidget: (id: string) => void;
+    onAddWidgetInstance: (type: string) => void;
+    onRemoveWidgetInstance: (id: string) => void;
+    onEnableAll: () => void;
+    onDisableAll: () => void;
+    canAddMoreInstances: (type: string) => boolean;
+    getInstanceIdsForType: (type: string) => string[];
+    defaultExpanded: boolean;
+}) {
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+    const IconComponent = CATEGORY_ICONS[category];
+    const allEnabled = enabledCount >= totalCount;
+    const noneEnabled = enabledCount === 0;
+
+    return (
+        <div>
+            {/* Section header - tap to expand/collapse */}
+            <div className="flex items-center gap-1 px-1 py-2.5">
+                <button
+                    onClick={() => {
+                        vibrate(5);
+                        setIsExpanded((v) => !v);
+                    }}
+                    className="flex-1 flex items-center gap-2.5 active:opacity-70 transition-opacity min-w-0"
+                >
+                    <div
+                        className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }}
+                    >
+                        <IconComponent className="w-4 h-4" />
+                    </div>
+                    <span
+                        className="text-sm font-bold flex-1 text-left truncate"
+                        style={{ color: "var(--ui-text-primary)" }}
+                    >
+                        {CATEGORY_METADATA[category].label}
+                    </span>
+                    {enabledCount > 0 && (
+                        <span
+                            className="text-xs font-semibold px-1.5 py-0.5 rounded-md tabular-nums flex-shrink-0"
+                            style={{
+                                backgroundColor: "var(--ui-accent-primary-bg)",
+                                color: "var(--ui-accent-primary)",
+                            }}
+                        >
+                            {enabledCount}
+                        </span>
+                    )}
+                    <span
+                        className="text-xs tabular-nums flex-shrink-0"
+                        style={{ color: "var(--ui-text-muted)" }}
+                    >
+                        {totalCount}
+                    </span>
+                    <MdExpandMore
+                        className={`w-5 h-5 transition-transform duration-200 flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                        style={{ color: "var(--ui-text-muted)" }}
+                    />
+                </button>
+
+                {/* Category-level enable/disable */}
+                {isExpanded && (
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <motion.button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                vibrate(10);
+                                onEnableAll();
+                            }}
+                            disabled={allEnabled}
+                            className="w-7 h-7 rounded-md flex items-center justify-center transition-colors disabled:opacity-25"
+                            style={{
+                                backgroundColor: allEnabled ? "transparent" : "var(--ui-success-bg)",
+                                color: allEnabled ? "var(--ui-text-muted)" : "var(--ui-success)",
+                            }}
+                            whileTap={!allEnabled ? { scale: 0.85 } : undefined}
+                            aria-label={`Enable all ${CATEGORY_METADATA[category].label}`}
+                        >
+                            <MdSelectAll className="w-3.5 h-3.5" />
+                        </motion.button>
+                        <motion.button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                vibrate(10);
+                                onDisableAll();
+                            }}
+                            disabled={noneEnabled}
+                            className="w-7 h-7 rounded-md flex items-center justify-center transition-colors disabled:opacity-25"
+                            style={{
+                                backgroundColor: noneEnabled ? "transparent" : "var(--ui-danger-bg)",
+                                color: noneEnabled ? "var(--ui-text-muted)" : "var(--ui-danger)",
+                            }}
+                            whileTap={!noneEnabled ? { scale: 0.85 } : undefined}
+                            aria-label={`Disable all ${CATEGORY_METADATA[category].label}`}
+                        >
+                            <MdDeselect className="w-3.5 h-3.5" />
+                        </motion.button>
+                    </div>
+                )}
+            </div>
+
+            {/* Content */}
+            <AnimatePresence initial={false}>
+                {isExpanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                    >
+                        <div className="pb-2 space-y-0.5">
+                            {widgets.map((widget) => {
+                                if (widget.allowMultiple) {
+                                    const instanceIds = getInstanceIdsForType(widget.id);
+                                    return (
+                                        <PickerInstanceRow
+                                            key={widget.id}
+                                            widget={widget}
+                                            instanceCount={instanceIds.length}
+                                            onAdd={() => onAddWidgetInstance(widget.id)}
+                                            onRemoveLast={() => {
+                                                const last = instanceIds[instanceIds.length - 1];
+                                                if (last) onRemoveWidgetInstance(last);
+                                            }}
+                                            canAddMore={canAddMoreInstances(widget.id)}
+                                            CategoryIcon={IconComponent}
+                                        />
+                                    );
+                                }
+
+                                return (
+                                    <PickerToggleRow
+                                        key={widget.id}
+                                        widget={widget}
+                                        isEnabled={enabledSet.has(widget.id)}
+                                        onToggle={() => onToggleWidget(widget.id)}
+                                        CategoryIcon={IconComponent}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+});
+
+// ── Main MobileWidgetPicker ───────────────────────────────
 export const MobileWidgetPicker = memo(function MobileWidgetPicker({
     isOpen,
     enabledWidgetIds,
     onToggleWidget,
+    onAddWidgetInstance,
+    onRemoveWidgetInstance,
+    onBulkUpdate,
     onClose,
 }: MobileWidgetPickerProps) {
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<WidgetCategory | "all">("all");
     const { filterAccessibleWidgets } = useWidgetPermissions();
+    const listRef = useRef<HTMLDivElement>(null);
+
+    // Reset search when drawer closes
+    useEffect(() => {
+        if (!isOpen) setSearchTerm("");
+    }, [isOpen]);
 
     const accessibleWidgets = useMemo(
         () => filterAccessibleWidgets(WIDGET_CONFIGS, "view") as WidgetConfig[],
         [filterAccessibleWidgets]
     );
 
-    const filteredWidgets = useMemo(() => {
-        let widgets = accessibleWidgets;
-        if (selectedCategory !== "all") {
-            widgets = widgets.filter((w) => w.category === selectedCategory);
-        }
-        if (searchTerm) {
-            widgets = searchWidgets(searchTerm, widgets);
-        }
-        return widgets;
-    }, [accessibleWidgets, searchTerm, selectedCategory]);
+    // Search filtered widgets
+    const isSearching = searchTerm.trim().length > 0;
+    const searchResults = useMemo(() => {
+        if (!isSearching) return [];
+        return searchWidgets(searchTerm, accessibleWidgets);
+    }, [searchTerm, accessibleWidgets, isSearching]);
 
-    const categories = useMemo(() => getAvailableCategories(), []);
-    const enabledSet = useMemo(() => new Set(enabledWidgetIds), [enabledWidgetIds]);
+    // Group by category for default view
+    const groupedWidgets = useMemo(
+        () => groupWidgetsByCategory(accessibleWidgets),
+        [accessibleWidgets]
+    );
 
-    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-    }, []);
+    const enabledSet = useMemo(
+        () => new Set(enabledWidgetIds),
+        [enabledWidgetIds]
+    );
 
+    // Count enabled per category (including multi-instance)
+    const categoryStats = useMemo(() => {
+        const stats: Record<string, { total: number; enabled: number }> = {};
+        accessibleWidgets.forEach((w) => {
+            if (!stats[w.category]) stats[w.category] = { total: 0, enabled: 0 };
+            stats[w.category].total++;
+            if (w.allowMultiple) {
+                const count = enabledWidgetIds.filter(
+                    (id) => getWidgetType(id) === w.id
+                ).length;
+                stats[w.category].enabled += count;
+            } else if (enabledSet.has(w.id)) {
+                stats[w.category].enabled++;
+            }
+        });
+        return stats;
+    }, [accessibleWidgets, enabledWidgetIds, enabledSet]);
+
+    const enabledCount = enabledWidgetIds.length;
+
+    // For multi-instance: get instance IDs
+    const getInstanceIdsForType = useCallback(
+        (widgetType: string): string[] =>
+            enabledWidgetIds.filter(
+                (id) => getWidgetType(id) === widgetType && isMultiInstanceWidget(id)
+            ),
+        [enabledWidgetIds]
+    );
+
+    // Can add more instances?
+    const canAddMoreInstances = useCallback(
+        (widgetType: string): boolean => {
+            const config = accessibleWidgets.find((w) => w.id === widgetType);
+            if (!config?.allowMultiple) return false;
+            const cur = enabledWidgetIds.filter(
+                (id) => getWidgetType(id) === widgetType
+            ).length;
+            if (config.maxInstances !== undefined) return cur < config.maxInstances;
+            return true;
+        },
+        [accessibleWidgets, enabledWidgetIds]
+    );
+
+    const handleSearchChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value),
+        []
+    );
     const handleClearSearch = useCallback(() => setSearchTerm(""), []);
 
     const handleToggle = useCallback(
@@ -216,11 +699,63 @@ export const MobileWidgetPicker = memo(function MobileWidgetPicker({
         [onToggleWidget]
     );
 
-    const handleOpenChange = useCallback((open: boolean) => {
-        if (!open) {
-            onClose();
-        }
-    }, [onClose]);
+    const handleOpenChange = useCallback(
+        (open: boolean) => {
+            if (!open) onClose();
+        },
+        [onClose]
+    );
+
+    // ── Bulk actions ──────────────────────────────────
+    const handleSelectAll = useCallback(() => {
+        vibrate(10);
+        const singletonIds = accessibleWidgets
+            .filter((w) => !w.allowMultiple)
+            .map((w) => w.id);
+        // Keep existing multi-instance IDs, add all singletons
+        const multiInstanceIds = enabledWidgetIds.filter((id) => isMultiInstanceWidget(id));
+        const merged = [...new Set([...multiInstanceIds, ...singletonIds])];
+        onBulkUpdate(merged);
+    }, [accessibleWidgets, enabledWidgetIds, onBulkUpdate]);
+
+    const handleRemoveAll = useCallback(() => {
+        vibrate(10);
+        onBulkUpdate([]);
+    }, [onBulkUpdate]);
+
+    const handleEnableAllInCategory = useCallback(
+        (category: WidgetCategory) => {
+            const categoryWidgets = accessibleWidgets.filter(
+                (w) => w.category === category && !w.allowMultiple
+            );
+            const idsToAdd = categoryWidgets.map((w) => w.id);
+            const merged = [...new Set([...enabledWidgetIds, ...idsToAdd])];
+            onBulkUpdate(merged);
+        },
+        [accessibleWidgets, enabledWidgetIds, onBulkUpdate]
+    );
+
+    const handleDisableAllInCategory = useCallback(
+        (category: WidgetCategory) => {
+            const categoryWidgetIds = new Set(
+                accessibleWidgets
+                    .filter((w) => w.category === category)
+                    .map((w) => w.id)
+            );
+            // Remove singletons + multi-instance widgets in this category
+            const filtered = enabledWidgetIds.filter((id) => {
+                const baseType = getWidgetType(id);
+                return !categoryWidgetIds.has(baseType);
+            });
+            onBulkUpdate(filtered);
+        },
+        [accessibleWidgets, enabledWidgetIds, onBulkUpdate]
+    );
+
+    const totalWidgetCount = accessibleWidgets.filter((w) => !w.allowMultiple).length;
+    const allSingletonsEnabled = accessibleWidgets
+        .filter((w) => !w.allowMultiple)
+        .every((w) => enabledSet.has(w.id));
 
     return (
         <Drawer.Root
@@ -241,205 +776,248 @@ export const MobileWidgetPicker = memo(function MobileWidgetPicker({
                     aria-label="Add widgets"
                 >
                     {/* Drag handle */}
-                    <div className="flex justify-center pt-3 pb-2">
+                    <div className="flex justify-center pt-3 pb-1">
                         <Drawer.Handle
                             className="w-10 h-1 rounded-full"
                             style={{ backgroundColor: "var(--ui-border-secondary)" }}
                         />
                     </div>
 
-                    {/* Header */}
+                    {/* ─── Header ─── */}
                     <div
-                        className="flex-shrink-0 border-b"
-                        style={{ borderColor: "var(--ui-border-primary)" }}
+                        className="flex-shrink-0 px-4 pb-3"
                     >
-                        <div className="px-4 pb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <MdWidgets className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
-                                <div>
-                                    <Drawer.Title
-                                        className="text-lg font-semibold"
-                                        style={{ color: "var(--ui-text-primary)" }}
-                                    >
-                                        Add Widgets
-                                    </Drawer.Title>
-                                    <p className="text-xs" style={{ color: "var(--ui-text-muted)" }}>
-                                        {enabledSet.size} selected
-                                    </p>
-                                </div>
+                        {/* Title row */}
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <Drawer.Title
+                                    className="text-xl font-bold"
+                                    style={{ color: "var(--ui-text-primary)" }}
+                                >
+                                    Widgets
+                                </Drawer.Title>
+                                <p
+                                    className="text-xs mt-0.5"
+                                    style={{ color: "var(--ui-text-muted)" }}
+                                >
+                                    {enabledCount} active on this preset
+                                </p>
                             </div>
                             <Drawer.Close asChild>
                                 <button
-                                    className="p-2 rounded-lg active:scale-95 transition-transform"
-                                    style={{ color: "var(--ui-text-secondary)" }}
+                                    className="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                                    style={{
+                                        backgroundColor: "var(--ui-bg-tertiary)",
+                                        color: "var(--ui-text-secondary)",
+                                    }}
                                     aria-label="Close"
                                 >
-                                    <MdClose className="w-5 h-5" />
+                                    <MdClose className="w-4 h-4" />
                                 </button>
                             </Drawer.Close>
                         </div>
 
                         {/* Search */}
-                        <div className="px-4 pb-3">
-                            <div className="relative">
-                                <MdSearch
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                                    style={{ color: "var(--ui-text-muted)" }}
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Search widgets..."
-                                    value={searchTerm}
-                                    onChange={handleSearchChange}
-                                    className="w-full pl-10 pr-10 py-2.5 rounded-lg border text-sm"
+                        <div className="relative">
+                            <MdSearch
+                                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                                style={{ color: "var(--ui-text-muted)" }}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Search widgets..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                className="w-full pl-9 pr-9 py-2.5 rounded-xl border text-sm"
+                                style={{
+                                    backgroundColor: "var(--ui-bg-secondary)",
+                                    borderColor: "var(--ui-border-primary)",
+                                    color: "var(--ui-text-primary)",
+                                }}
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={handleClearSearch}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center"
                                     style={{
-                                        backgroundColor: "var(--ui-bg-secondary)",
-                                        borderColor: "var(--ui-border-primary)",
-                                        color: "var(--ui-text-primary)",
+                                        backgroundColor: "var(--ui-bg-tertiary)",
+                                        color: "var(--ui-text-muted)",
                                     }}
-                                />
-                                {searchTerm && (
-                                    <button
-                                        onClick={handleClearSearch}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2"
-                                        style={{ color: "var(--ui-text-muted)" }}
-                                        aria-label="Clear search"
-                                    >
-                                        <MdClose className="w-4 h-4" />
-                                    </button>
-                                )}
-                            </div>
+                                    aria-label="Clear search"
+                                >
+                                    <MdClose className="w-3 h-3" />
+                                </button>
+                            )}
                         </div>
 
-                        {/* Category Pills */}
-                        <div className="px-4 pb-3 overflow-x-auto scrollbar-hide">
-                            <div className="flex gap-2" role="tablist" aria-label="Widget categories">
-                                <button
-                                    onClick={() => setSelectedCategory("all")}
-                                    role="tab"
-                                    aria-selected={selectedCategory === "all"}
-                                    className="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
-                                    style={
-                                        selectedCategory === "all"
-                                            ? { backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }
-                                            : { backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }
-                                    }
-                                >
-                                    All
-                                </button>
-                                {categories.map((category) => {
-                                    const IconComponent = CATEGORY_ICONS[category];
-                                    return (
-                                        <button
-                                            key={category}
-                                            onClick={() => setSelectedCategory(category)}
-                                            role="tab"
-                                            aria-selected={selectedCategory === category}
-                                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors active:scale-95"
-                                            style={
-                                                selectedCategory === category
-                                                    ? { backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }
-                                                    : { backgroundColor: "var(--ui-bg-tertiary)", color: "var(--ui-text-secondary)" }
-                                            }
-                                        >
-                                            {IconComponent && <IconComponent className="w-3.5 h-3.5" />}
-                                            <span>{category}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                        {/* Quick actions */}
+                        <div className="flex items-center gap-2 mt-2.5">
+                            <motion.button
+                                onClick={handleSelectAll}
+                                disabled={allSingletonsEnabled}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30"
+                                style={{
+                                    backgroundColor: "var(--ui-success-bg)",
+                                    color: "var(--ui-success)",
+                                }}
+                                whileTap={!allSingletonsEnabled ? { scale: 0.95 } : undefined}
+                            >
+                                <MdSelectAll className="w-3.5 h-3.5" />
+                                Select All
+                            </motion.button>
+                            <motion.button
+                                onClick={handleRemoveAll}
+                                disabled={enabledCount === 0}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30"
+                                style={{
+                                    backgroundColor: "var(--ui-danger-bg)",
+                                    color: "var(--ui-danger)",
+                                }}
+                                whileTap={enabledCount > 0 ? { scale: 0.95 } : undefined}
+                            >
+                                <MdDeselect className="w-3.5 h-3.5" />
+                                Remove All
+                            </motion.button>
                         </div>
                     </div>
 
-                    {/* Widget List */}
-                    <div className="flex-1 overflow-y-auto px-4 py-3">
-                        {filteredWidgets.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full py-12">
-                                <MdWidgets
-                                    className="w-12 h-12 mb-3 opacity-40"
-                                    style={{ color: "var(--ui-text-tertiary)" }}
-                                />
-                                <p className="font-medium" style={{ color: "var(--ui-text-secondary)" }}>
-                                    No widgets found
-                                </p>
-                            </div>
+                    {/* Divider */}
+                    <div
+                        className="h-px flex-shrink-0"
+                        style={{ backgroundColor: "var(--ui-border-primary)" }}
+                    />
+
+                    {/* ─── Widget List ─── */}
+                    <div ref={listRef} className="flex-1 overflow-y-auto px-4 pt-2 pb-4">
+                        {isSearching ? (
+                            /* Search results - flat list */
+                            searchResults.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16">
+                                    <MdSearch
+                                        className="w-10 h-10 mb-2 opacity-30"
+                                        style={{ color: "var(--ui-text-tertiary)" }}
+                                    />
+                                    <p
+                                        className="text-sm font-medium"
+                                        style={{ color: "var(--ui-text-secondary)" }}
+                                    >
+                                        No matches for &ldquo;{searchTerm}&rdquo;
+                                    </p>
+                                    <button
+                                        onClick={handleClearSearch}
+                                        className="mt-3 px-4 py-1.5 text-xs font-medium rounded-lg active:scale-95 transition-transform"
+                                        style={{
+                                            backgroundColor: "var(--ui-bg-tertiary)",
+                                            color: "var(--ui-text-secondary)",
+                                        }}
+                                    >
+                                        Clear search
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-0.5 pb-4">
+                                    <p
+                                        className="text-xs px-1 py-2"
+                                        style={{ color: "var(--ui-text-muted)" }}
+                                    >
+                                        {searchResults.length} result{searchResults.length !== 1 ? "s" : ""}
+                                    </p>
+                                    {searchResults.map((widget) => {
+                                        const CatIcon = CATEGORY_ICONS[widget.category];
+                                        if (widget.allowMultiple) {
+                                            const instanceIds = getInstanceIdsForType(widget.id);
+                                            return (
+                                                <PickerInstanceRow
+                                                    key={widget.id}
+                                                    widget={widget}
+                                                    instanceCount={instanceIds.length}
+                                                    onAdd={() => {
+                                                        vibrate(10);
+                                                        onAddWidgetInstance(widget.id);
+                                                    }}
+                                                    onRemoveLast={() => {
+                                                        vibrate(10);
+                                                        const last = instanceIds[instanceIds.length - 1];
+                                                        if (last) onRemoveWidgetInstance(last);
+                                                    }}
+                                                    canAddMore={canAddMoreInstances(widget.id)}
+                                                    CategoryIcon={CatIcon}
+                                                />
+                                            );
+                                        }
+                                        return (
+                                            <PickerToggleRow
+                                                key={widget.id}
+                                                widget={widget}
+                                                isEnabled={enabledSet.has(widget.id)}
+                                                onToggle={() => handleToggle(widget.id)}
+                                                CategoryIcon={CatIcon}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )
                         ) : (
-                            <div className="space-y-2 pb-8">
-                                {filteredWidgets.map((widget) => {
-                                    const isEnabled = enabledSet.has(widget.id);
-                                    const TypeIcon = getWidgetTypeIcon(widget.id);
+                            /* Default: category accordions */
+                            <div className="space-y-1 pb-4">
+                                {CATEGORY_ORDER.map((category) => {
+                                    const widgets = groupedWidgets[category];
+                                    if (!widgets?.length) return null;
+                                    const stats = categoryStats[category];
 
                                     return (
-                                        <motion.button
-                                            key={widget.id}
-                                            onClick={() => handleToggle(widget.id)}
-                                            className="w-full flex items-start gap-3 p-4 rounded-xl border text-left"
-                                            style={
-                                                isEnabled
-                                                    ? {
-                                                        backgroundColor: "var(--ui-accent-primary-bg)",
-                                                        borderColor: "var(--ui-accent-primary-border)",
-                                                    }
-                                                    : {
-                                                        backgroundColor: "var(--ui-bg-secondary)",
-                                                        borderColor: "var(--ui-border-primary)",
-                                                    }
+                                        <CategorySection
+                                            key={category}
+                                            category={category}
+                                            widgets={widgets}
+                                            enabledSet={enabledSet}
+                                            enabledWidgetIds={enabledWidgetIds}
+                                            enabledCount={stats?.enabled || 0}
+                                            totalCount={stats?.total || 0}
+                                            onToggleWidget={handleToggle}
+                                            onAddWidgetInstance={(type) => {
+                                                vibrate(10);
+                                                onAddWidgetInstance(type);
+                                            }}
+                                            onRemoveWidgetInstance={(id) => {
+                                                vibrate(10);
+                                                onRemoveWidgetInstance(id);
+                                            }}
+                                            onEnableAll={() => handleEnableAllInCategory(category)}
+                                            onDisableAll={() => handleDisableAllInCategory(category)}
+                                            canAddMoreInstances={canAddMoreInstances}
+                                            getInstanceIdsForType={getInstanceIdsForType}
+                                            defaultExpanded={
+                                                (stats?.enabled || 0) > 0
                                             }
-                                            aria-pressed={isEnabled}
-                                            whileTap={{ scale: 0.98 }}
-                                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                        >
-                                            <div
-                                                className="flex-shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center mt-0.5 transition-all"
-                                                style={
-                                                    isEnabled
-                                                        ? {
-                                                            backgroundColor: "var(--ui-accent-primary)",
-                                                            borderColor: "var(--ui-accent-primary)",
-                                                        }
-                                                        : {
-                                                            borderColor: "var(--ui-border-secondary)",
-                                                        }
-                                                }
-                                            >
-                                                {isEnabled && <MdCheck className="w-4 h-4 text-white" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h3
-                                                    className="font-semibold truncate"
-                                                    style={{
-                                                        color: isEnabled
-                                                            ? "var(--ui-accent-primary)"
-                                                            : "var(--ui-text-primary)",
-                                                    }}
-                                                >
-                                                    {widget.title}
-                                                </h3>
-                                                <p
-                                                    className="text-sm line-clamp-2"
-                                                    style={{ color: "var(--ui-text-muted)" }}
-                                                >
-                                                    {widget.description}
-                                                </p>
-                                            </div>
-                                        </motion.button>
+                                        />
                                     );
                                 })}
                             </div>
                         )}
                     </div>
 
-                    {/* Footer */}
+                    {/* ─── Footer ─── */}
                     <div
-                        className="flex-shrink-0 border-t p-4 safe-bottom"
-                        style={{ borderColor: "var(--ui-border-primary)" }}
+                        className="flex-shrink-0 border-t px-4 pt-3 safe-bottom"
+                        style={{
+                            borderColor: "var(--ui-border-primary)",
+                            paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+                        }}
                     >
                         <Drawer.Close asChild>
                             <motion.button
-                                className="w-full py-3 rounded-xl font-semibold"
-                                style={{ backgroundColor: "var(--ui-accent-primary)", color: "#ffffff" }}
+                                className="w-full py-3 rounded-xl font-semibold text-[15px]"
+                                style={{
+                                    backgroundColor: "var(--ui-accent-primary)",
+                                    color: "#ffffff",
+                                }}
                                 whileTap={{ scale: 0.98 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 400,
+                                    damping: 25,
+                                }}
                             >
                                 Done
                             </motion.button>
