@@ -1,9 +1,9 @@
 import React, { useMemo, useCallback, useState } from "react";
 import Widget from "./Widget";
 import { useWidgetSettings } from "@/hooks/useWidgetSettings";
+import { CheckCircle2, Clock, Wrench, Package, BoxSelect } from "lucide-react";
 
 const WIDGET_ID = 'MachineStockStatus';
-// import { ScrollArea } from "@/components/ui/scroll-area";
 
 /* -------------------------------------- */
 /* 📊 Types & Interfaces                  */
@@ -62,7 +62,7 @@ interface StatusCardProps {
     title: string;
     machines: MachineStockData[];
     statusColor: 'success' | 'warning' | 'error';
-    icon: string;
+    icon: React.ReactNode;
     compact?: boolean;
     showDescriptions?: boolean;
 }
@@ -73,16 +73,19 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
             bg: 'var(--badge-success-text)',
             border: 'var(--badge-success-text)',
             bgLight: 'var(--badge-success-bg)',
+            borderLight: 'var(--badge-success-border)',
         };
         if (statusColor === 'warning') return {
             bg: 'var(--badge-warning-text)',
             border: 'var(--badge-warning-text)',
             bgLight: 'var(--badge-warning-bg)',
+            borderLight: 'var(--badge-warning-border)',
         };
         return {
             bg: 'var(--badge-error-text)',
             border: 'var(--badge-error-text)',
             bgLight: 'var(--badge-error-bg)',
+            borderLight: 'var(--badge-error-border)',
         };
     };
 
@@ -90,23 +93,25 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
 
     return (
         <div className="flex flex-col h-full min-h-[200px]">
-            <div className="rounded-lg border-2 flex flex-col h-full" style={{
-                borderColor: colors.border,
-                backgroundColor: 'var(--background-light)'
+            <div className="rounded-xl border flex flex-col h-full overflow-hidden" style={{
+                borderColor: colors.borderLight,
+                backgroundColor: 'var(--background-light)',
             }}>
                 {/* Header */}
-                <div className="px-3 py-2 border-b-2 flex-shrink-0" style={{
+                <div className="px-3 py-2.5 border-b flex-shrink-0" style={{
                     backgroundColor: colors.bgLight,
-                    borderColor: colors.border
+                    borderColor: colors.borderLight,
                 }}>
                     <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-base flex items-center gap-1.5" style={{ color: 'var(--table-text-primary)' }}>
-                            <span className="text-xl">{icon}</span>
+                        <h3 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--table-text-primary)' }}>
+                            <span className="flex items-center justify-center w-6 h-6 rounded-md" style={{ backgroundColor: colors.bg, color: 'var(--background-dark)' }}>
+                                {icon}
+                            </span>
                             <span className="truncate">{title}</span>
                         </h3>
-                        <span className="font-bold px-2 py-0.5 rounded-full text-xs flex-shrink-0" style={{
+                        <span className="font-bold tabular-nums px-2.5 py-0.5 rounded-full text-xs flex-shrink-0" style={{
                             backgroundColor: colors.bg,
-                            color: 'var(--background-dark)'
+                            color: 'var(--background-dark)',
                         }}>
                             {machines.length}
                         </span>
@@ -114,91 +119,103 @@ const StatusCard: React.FC<StatusCardProps> = ({ title, machines, statusColor, i
                 </div>
 
                 {/* Machine List */}
-                <div className="p-2 space-y-1.5 overflow-y-auto flex-1">
+                <div className="p-2 space-y-1 overflow-y-auto flex-1">
                     {machines.length === 0 ? (
-                        <div className="text-center py-4 text-sm" style={{ color: 'var(--text-muted)' }}>
-                            No machines in this status
+                        <div className="flex flex-col items-center justify-center py-6 gap-2" style={{ color: 'var(--text-muted)' }}>
+                            <BoxSelect size={24} strokeWidth={1.5} />
+                            <span className="text-xs">No machines</span>
                         </div>
                     ) : (
                         machines.map((machine) => {
-                            // Highlight if in cost center 1 (success status) and has available units
                             const isAvailable = statusColor === 'success' && machine.available > 0;
 
                             return compact ? (
-                                // Compact view for tabbed mode
                                 <div
                                     key={machine.part_code}
-                                    className="rounded px-2 py-1.5 border transition-colors flex items-center justify-between gap-2"
+                                    className="group rounded-lg px-2.5 py-1.5 border transition-all duration-150 flex items-center justify-between gap-2"
                                     style={{
                                         backgroundColor: isAvailable ? colors.bgLight : 'var(--background-highlight)',
-                                        borderColor: isAvailable ? colors.border : 'var(--border-light)',
+                                        borderColor: isAvailable ? colors.borderLight : 'var(--border-light)',
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = isAvailable
                                             ? 'var(--badge-success-bg)'
                                             : 'var(--ui-bg-tertiary)';
+                                        e.currentTarget.style.borderColor = isAvailable
+                                            ? colors.border
+                                            : 'var(--border-light)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = isAvailable
                                             ? colors.bgLight
                                             : 'var(--background-highlight)';
+                                        e.currentTarget.style.borderColor = isAvailable
+                                            ? colors.borderLight
+                                            : 'var(--border-light)';
                                     }}
                                 >
-                                    {/* Machine Code - Bold and prominent */}
-                                    <div className="font-bold text-sm truncate flex-1 min-w-0" style={{ color: 'var(--table-text-primary)' }}>
-                                        {machine.part_code}
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <Package size={13} style={{ color: 'var(--table-text-secondary)', flexShrink: 0 }} />
+                                        <span className="font-semibold text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>
+                                            {machine.part_code}
+                                        </span>
                                     </div>
 
-                                    {/* Compact Metrics */}
-                                    <div className="flex gap-1.5 flex-shrink-0 items-center">
-                                        <div className="flex items-center gap-1 rounded px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
-                                            <span className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>A:</span>
-                                            <span className="text-xs font-bold" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</span>
+                                    <div className="flex gap-1 flex-shrink-0 items-center">
+                                        <div className="flex items-center gap-1 rounded-md px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--table-text-secondary)' }}>Avl</span>
+                                            <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 rounded px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
-                                            <span className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>H:</span>
-                                            <span className="text-xs font-bold" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</span>
+                                        <div className="flex items-center gap-1 rounded-md px-1.5 py-0.5" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                            <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--table-text-secondary)' }}>Hld</span>
+                                            <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</span>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                // Full detail view for full-screen mode
                                 <div
                                     key={machine.part_code}
-                                    className="rounded-md p-2.5 border transition-colors"
+                                    className="group rounded-lg p-2.5 border transition-all duration-150"
                                     style={{
                                         backgroundColor: isAvailable ? colors.bgLight : 'var(--background-highlight)',
-                                        borderColor: isAvailable ? colors.border : 'var(--border-light)',
+                                        borderColor: isAvailable ? colors.borderLight : 'var(--border-light)',
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = isAvailable
                                             ? 'var(--badge-success-bg)'
                                             : 'var(--ui-bg-tertiary)';
+                                        e.currentTarget.style.borderColor = isAvailable
+                                            ? colors.border
+                                            : 'var(--border-light)';
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = isAvailable
                                             ? colors.bgLight
                                             : 'var(--background-highlight)';
+                                        e.currentTarget.style.borderColor = isAvailable
+                                            ? colors.borderLight
+                                            : 'var(--border-light)';
                                     }}
                                 >
                                     <div className="flex items-center justify-between gap-3">
-                                        {/* Machine Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-bold text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>{machine.part_code}</div>
-                                            {showDescriptions && (
-                                                <div className="text-xs truncate mt-0.5" style={{ color: 'var(--table-text-secondary)' }}>{machine.part_desc}</div>
-                                            )}
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <Package size={14} style={{ color: 'var(--table-text-secondary)', flexShrink: 0 }} />
+                                            <div className="min-w-0">
+                                                <div className="font-semibold text-sm truncate" style={{ color: 'var(--table-text-primary)' }}>{machine.part_code}</div>
+                                                {showDescriptions && (
+                                                    <div className="text-xs truncate mt-0.5" style={{ color: 'var(--table-text-secondary)' }}>{machine.part_desc}</div>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        {/* Metrics with labels */}
-                                        <div className="flex gap-2 flex-shrink-0">
-                                            <div className="text-center rounded px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
-                                                <div className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>Avail</div>
-                                                <div className="font-bold text-sm" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</div>
+                                        <div className="flex gap-1.5 flex-shrink-0">
+                                            <div className="text-center rounded-md px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                                <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--table-text-secondary)' }}>Avail</div>
+                                                <div className="font-bold text-sm tabular-nums" style={{ color: 'var(--badge-success-text)' }}>{machine.available}</div>
                                             </div>
-                                            <div className="text-center rounded px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
-                                                <div className="text-[10px]" style={{ color: 'var(--table-text-secondary)' }}>Hold</div>
-                                                <div className="font-bold text-sm" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</div>
+                                            <div className="text-center rounded-md px-2.5 py-1" style={{ backgroundColor: 'var(--background-dark)' }}>
+                                                <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'var(--table-text-secondary)' }}>Hold</div>
+                                                <div className="font-bold text-sm tabular-nums" style={{ color: 'var(--badge-warning-text)' }}>{machine.on_hold}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -237,175 +254,107 @@ export default function MachineStockStatus() {
     const renderFunction = useCallback((data: MachineStockData[]) => {
         const groupedMachines = groupMachinesByStatus(data);
 
-        // Calculate summary metrics
         const totalAvailable = groupedMachines.available.reduce((sum, m) => sum + m.available, 0);
         const totalInQueue = groupedMachines.queueForRepair.length;
         const totalAtRepair = groupedMachines.atRepairShop.length;
 
+        const tabs = [
+            { key: 'cc1' as const, label: 'Available', shortLabel: 'CC1', icon: <CheckCircle2 size={14} />, count: totalAvailable, color: 'success' },
+            { key: 'cc2' as const, label: 'Queue', shortLabel: 'CC2', icon: <Clock size={14} />, count: totalInQueue, color: 'warning' },
+            { key: 'cc5' as const, label: 'Repair', shortLabel: 'CC5', icon: <Wrench size={14} />, count: totalAtRepair, color: 'error' },
+        ] as const;
+
+        const getTabColors = (color: string, active: boolean) => {
+            const map: Record<string, { activeBg: string; activeBorder: string; inactiveBg: string; inactiveBorder: string; text: string; badgeBg: string; badgeText: string }> = {
+                success: {
+                    activeBg: 'var(--badge-success-text)', activeBorder: 'var(--badge-success-text)',
+                    inactiveBg: 'var(--badge-success-bg)', inactiveBorder: 'var(--badge-success-border)',
+                    text: 'var(--badge-success-text)', badgeBg: 'var(--badge-success-text)', badgeText: 'var(--background-dark)',
+                },
+                warning: {
+                    activeBg: 'var(--badge-warning-text)', activeBorder: 'var(--badge-warning-text)',
+                    inactiveBg: 'var(--badge-warning-bg)', inactiveBorder: 'var(--badge-warning-border)',
+                    text: 'var(--badge-warning-text)', badgeBg: 'var(--badge-warning-text)', badgeText: 'var(--background-dark)',
+                },
+                error: {
+                    activeBg: 'var(--badge-error-text)', activeBorder: 'var(--badge-error-text)',
+                    inactiveBg: 'var(--badge-error-bg)', inactiveBorder: 'var(--badge-error-border)',
+                    text: 'var(--badge-error-text)', badgeBg: 'var(--badge-error-text)', badgeText: 'var(--background-dark)',
+                },
+            };
+            return map[color] || map.success;
+        };
+
         return (
             <div className="h-full w-full @container p-0">
-                {/* 
-                    Tabbed View for Small/Medium: < @5xl (1024px)
-                    Interactive tabs to switch between cost centers
-                */}
+                {/* Tabbed View: < @5xl */}
                 <div className="@5xl:hidden h-full flex flex-col gap-2">
-                    {/* Tab Navigation */}
                     <div className="flex gap-1.5">
-                        {/* Cost Center 1 Tab */}
-                        <button
-                            onClick={() => setActiveTab('cc1')}
-                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
-                            style={activeTab === 'cc1' ? {
-                                backgroundColor: 'var(--badge-success-text)',
-                                color: 'var(--background-dark)',
-                                borderColor: 'var(--badge-success-text)',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                            } : {
-                                backgroundColor: 'var(--badge-success-bg)',
-                                color: 'var(--badge-success-text)',
-                                borderColor: 'var(--badge-success-border)',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (activeTab !== 'cc1') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-success-bg)';
-                                    e.currentTarget.style.opacity = '0.8';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (activeTab !== 'cc1') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-success-bg)';
-                                    e.currentTarget.style.opacity = '1';
-                                }
-                            }}
-                        >
-                            <div className="flex items-center justify-center gap-2">
-                                <span>✅</span>
-                                <span className="hidden @md:inline">CC1</span>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc1' ? {
-                                    backgroundColor: 'var(--background-dark)',
-                                    color: 'var(--badge-success-text)'
-                                } : {
-                                    backgroundColor: 'var(--badge-success-text)',
-                                    color: 'var(--background-dark)'
-                                }}>
-                                    {totalAvailable}
-                                </span>
-                            </div>
-                        </button>
-
-                        {/* Cost Center 2 Tab */}
-                        <button
-                            onClick={() => setActiveTab('cc2')}
-                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
-                            style={activeTab === 'cc2' ? {
-                                backgroundColor: 'var(--badge-warning-text)',
-                                color: 'var(--background-dark)',
-                                borderColor: 'var(--badge-warning-text)',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                            } : {
-                                backgroundColor: 'var(--badge-warning-bg)',
-                                color: 'var(--badge-warning-text)',
-                                borderColor: 'var(--badge-warning-border)',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (activeTab !== 'cc2') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-warning-bg)';
-                                    e.currentTarget.style.opacity = '0.8';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (activeTab !== 'cc2') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-warning-bg)';
-                                    e.currentTarget.style.opacity = '1';
-                                }
-                            }}
-                        >
-                            <div className="flex items-center justify-center gap-2">
-                                <span>⏳</span>
-                                <span className="hidden @md:inline">CC2</span>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc2' ? {
-                                    backgroundColor: 'var(--background-dark)',
-                                    color: 'var(--badge-warning-text)'
-                                } : {
-                                    backgroundColor: 'var(--badge-warning-text)',
-                                    color: 'var(--background-dark)'
-                                }}>
-                                    {totalInQueue}
-                                </span>
-                            </div>
-                        </button>
-
-                        {/* Cost Center 5 Tab */}
-                        <button
-                            onClick={() => setActiveTab('cc5')}
-                            className="flex-1 rounded-lg px-2 py-2 font-bold text-sm transition-all border-2"
-                            style={activeTab === 'cc5' ? {
-                                backgroundColor: 'var(--badge-error-text)',
-                                color: 'var(--background-dark)',
-                                borderColor: 'var(--badge-error-text)',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                            } : {
-                                backgroundColor: 'var(--badge-error-bg)',
-                                color: 'var(--badge-error-text)',
-                                borderColor: 'var(--badge-error-border)',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (activeTab !== 'cc5') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-error-bg)';
-                                    e.currentTarget.style.opacity = '0.8';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (activeTab !== 'cc5') {
-                                    e.currentTarget.style.backgroundColor = 'var(--badge-error-bg)';
-                                    e.currentTarget.style.opacity = '1';
-                                }
-                            }}
-                        >
-                            <div className="flex items-center justify-center gap-2">
-                                <span>🔧</span>
-                                <span className="hidden @md:inline">CC5</span>
-                                <span className="px-2 py-0.5 rounded-full text-xs font-bold" style={activeTab === 'cc5' ? {
-                                    backgroundColor: 'var(--background-dark)',
-                                    color: 'var(--badge-error-text)'
-                                } : {
-                                    backgroundColor: 'var(--badge-error-text)',
-                                    color: 'var(--background-dark)'
-                                }}>
-                                    {totalAtRepair}
-                                </span>
-                            </div>
-                        </button>
+                        {tabs.map((tab) => {
+                            const isActive = activeTab === tab.key;
+                            const c = getTabColors(tab.color, isActive);
+                            return (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                    className="flex-1 rounded-lg px-2 py-2 font-semibold text-sm transition-all border"
+                                    style={isActive ? {
+                                        backgroundColor: c.activeBg,
+                                        color: 'var(--background-dark)',
+                                        borderColor: c.activeBorder,
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                    } : {
+                                        backgroundColor: c.inactiveBg,
+                                        color: c.text,
+                                        borderColor: c.inactiveBorder,
+                                    }}
+                                >
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        {tab.icon}
+                                        <span className="hidden @md:inline">{tab.shortLabel}</span>
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-bold tabular-nums" style={isActive ? {
+                                            backgroundColor: 'var(--background-dark)',
+                                            color: c.text,
+                                        } : {
+                                            backgroundColor: c.badgeBg,
+                                            color: c.badgeText,
+                                        }}>
+                                            {tab.count}
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Tab Content */}
                     <div className="flex-1 min-h-0">
                         {activeTab === 'cc1' && (
                             <StatusCard
-                                title="Cost Center 1"
+                                title="Available & Ready"
                                 machines={groupedMachines.available}
                                 statusColor="success"
-                                icon="✅"
+                                icon={<CheckCircle2 size={14} />}
                                 compact={true}
                                 showDescriptions={showMachineDescriptions}
                             />
                         )}
                         {activeTab === 'cc2' && (
                             <StatusCard
-                                title="Cost Center 2"
+                                title="Queue for Repair"
                                 machines={groupedMachines.queueForRepair}
                                 statusColor="warning"
-                                icon="⏳"
+                                icon={<Clock size={14} />}
                                 compact={true}
                                 showDescriptions={showMachineDescriptions}
                             />
                         )}
                         {activeTab === 'cc5' && (
                             <StatusCard
-                                title="Cost Center 5"
+                                title="At Repair Shop"
                                 machines={groupedMachines.atRepairShop}
                                 statusColor="error"
-                                icon="🔧"
+                                icon={<Wrench size={14} />}
                                 compact={true}
                                 showDescriptions={showMachineDescriptions}
                             />
@@ -413,32 +362,29 @@ export default function MachineStockStatus() {
                     </div>
                 </div>
 
-                {/* 
-                    Full View: > @5xl (1024px+)
-                    Shows all 3 columns side-by-side
-                */}
+                {/* Full View: @5xl+ */}
                 <div className="hidden @5xl:grid h-full grid-cols-3 gap-3">
                     <StatusCard
-                        title="Cost Center 1"
+                        title="Available & Ready"
                         machines={groupedMachines.available}
                         statusColor="success"
-                        icon="✅"
+                        icon={<CheckCircle2 size={14} />}
                         compact={false}
                         showDescriptions={showMachineDescriptions}
                     />
                     <StatusCard
-                        title="Cost Center 2"
+                        title="Queue for Repair"
                         machines={groupedMachines.queueForRepair}
                         statusColor="warning"
-                        icon="⏳"
+                        icon={<Clock size={14} />}
                         compact={false}
                         showDescriptions={showMachineDescriptions}
                     />
                     <StatusCard
-                        title="Cost Center 5"
+                        title="At Repair Shop"
                         machines={groupedMachines.atRepairShop}
                         statusColor="error"
-                        icon="🔧"
+                        icon={<Wrench size={14} />}
                         compact={false}
                         showDescriptions={showMachineDescriptions}
                     />
