@@ -403,6 +403,14 @@ const STATIC_WIDGETS: Record<string, () => WidgetPreviewData> = {
             icon: 'calendar',
         };
     },
+    DateTimeWidget: () => {
+        const now = new Date();
+        return {
+            value: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            label: now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
+            icon: 'clock',
+        };
+    },
 };
 
 // FanController is handled specially - uses ACInfinityContext data

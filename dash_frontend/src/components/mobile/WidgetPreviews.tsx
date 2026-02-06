@@ -313,12 +313,98 @@ export const SalesYTDPreview = memo(function SalesYTDPreview({ data }: Complicat
 });
 
 // ============================================
+// DateTime Preview: Analog clock with date aperture + digital time
+// ============================================
+
+export const DateTimePreview = memo(function DateTimePreview({ data }: ComplicationPreviewProps) {
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+        const interval = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const hours = time.getHours() % 12;
+    const minutes = time.getMinutes();
+    const seconds = time.getSeconds();
+
+    const hourDeg = (hours * 30) + (minutes * 0.5);
+    const minuteDeg = minutes * 6;
+    const secondDeg = seconds * 6;
+
+    const dayNum = time.getDate();
+    const dayName = time.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const timeStr = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    const cx = 50, cy = 50;
+
+    const hand = (angle: number, length: number, width: number, color: string) => {
+        const rad = ((angle - 90) * Math.PI) / 180;
+        return (
+            <line
+                x1={cx} y1={cy}
+                x2={cx + length * Math.cos(rad)}
+                y2={cy + length * Math.sin(rad)}
+                stroke={color} strokeWidth={width} strokeLinecap="round"
+            />
+        );
+    };
+
+    return (
+        <div className="flex-1 flex items-center gap-3">
+            {/* Analog clock — same size as ClockPreview */}
+            <div className="relative w-16 h-16 flex-shrink-0">
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                    <circle cx={cx} cy={cy} r="44" fill="var(--ui-bg-primary)" stroke="var(--ui-border-primary)" strokeWidth="2" />
+                    {/* 12 hour markers */}
+                    {Array.from({ length: 12 }, (_, i) => {
+                        const a = (i * 30 - 90) * (Math.PI / 180);
+                        const maj = i % 3 === 0;
+                        return (
+                            <line key={i}
+                                x1={cx + (maj ? 34 : 37) * Math.cos(a)} y1={cy + (maj ? 34 : 37) * Math.sin(a)}
+                                x2={cx + 41 * Math.cos(a)} y2={cy + 41 * Math.sin(a)}
+                                stroke={maj ? 'var(--ui-text-secondary)' : 'var(--ui-text-muted)'}
+                                strokeWidth={maj ? 2.5 : 1} strokeLinecap="round" opacity={maj ? 1 : 0.5}
+                            />
+                        );
+                    })}
+                    {/* Date window at 3 o'clock */}
+                    <rect x="58" y="44" width="17" height="12" rx="2.5"
+                        fill="var(--ui-bg-tertiary)" stroke="var(--ui-border-primary)" strokeWidth="0.8" />
+                    <text x="66.5" y="50.5" textAnchor="middle" dominantBaseline="central"
+                        fill="var(--ui-accent-primary)" fontSize="8" fontWeight="700"
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                    >{dayNum}</text>
+                    {/* Hands */}
+                    {hand(hourDeg, 20, 3.5, 'var(--ui-text-primary)')}
+                    {hand(minuteDeg, 28, 2.5, 'var(--ui-text-secondary)')}
+                    {hand(secondDeg, 30, 0.8, 'var(--ui-accent-primary)')}
+                    {/* Center */}
+                    <circle cx={cx} cy={cy} r="3" fill="var(--ui-text-primary)" />
+                    <circle cx={cx} cy={cy} r="1.5" fill="var(--ui-accent-primary)" />
+                </svg>
+            </div>
+
+            {/* Right side — day name + digital time stacked */}
+            <div className="flex flex-col justify-center min-w-0">
+                <span className="text-[10px] font-bold tracking-widest leading-none"
+                    style={{ color: 'var(--ui-accent-primary)' }}>{dayName}</span>
+                <span className="text-lg font-bold leading-tight tabular-nums mt-0.5"
+                    style={{ color: 'var(--ui-text-primary)' }}>{timeStr}</span>
+            </div>
+        </div>
+    );
+});
+
+// ============================================
 // Preview Registry: Maps widget IDs to their custom preview components
 // ============================================
 
 export const WIDGET_PREVIEWS: Record<string, React.ComponentType<ComplicationPreviewProps>> = {
     ClockWidget: ClockPreview,
     DateWidget: DatePreview,
+    DateTimeWidget: DateTimePreview,
     Humidity: GaugePreview,
     FanController: GaugePreview,
     SalesYTDCumulativeLine: SalesYTDPreview,

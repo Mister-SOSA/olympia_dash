@@ -1,20 +1,21 @@
 "use client";
 
-import React, { memo, useMemo, useState, useCallback } from "react";
+import React, { memo, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MdDelete, MdDragIndicator } from "react-icons/md";
+import { MdDelete } from "react-icons/md";
 import {
     DndContext,
     closestCenter,
     TouchSensor,
-    PointerSensor,
+    MouseSensor,
     useSensor,
     useSensors,
     DragStartEvent,
     DragEndEvent,
     UniqueIdentifier,
     DragOverlay,
+    defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
 import {
     arrayMove,
@@ -97,12 +98,14 @@ interface SortableWidgetCardProps {
     widgetId: string;
     onTap: () => void;
     isVisible?: boolean;
+    isAnyDragging?: boolean;
 }
 
 export const SortableWidgetCard = memo(function SortableWidgetCard({
     widgetId,
     onTap,
     isVisible = true,
+    isAnyDragging = false,
 }: SortableWidgetCardProps) {
     const {
         attributes,
@@ -126,7 +129,6 @@ export const SortableWidgetCard = memo(function SortableWidgetCard({
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 100 : 'auto',
-        opacity: isDragging ? 0.3 : 1,
         touchAction: 'none',
     };
 
@@ -134,8 +136,8 @@ export const SortableWidgetCard = memo(function SortableWidgetCard({
         <div
             ref={setNodeRef}
             style={style}
-            className="mobile-widget-card group select-none cursor-pointer active:scale-[0.98] transition-all"
-            onClick={() => !isDragging && onTap()}
+            className={`mobile-widget-card select-none ${isDragging ? 'mobile-widget-card-ghost' : ''}`}
+            onClick={() => !isDragging && !isAnyDragging && onTap()}
             {...attributes}
             {...listeners}
         >
@@ -203,17 +205,26 @@ const DragOverlayItem = memo(function DragOverlayItem({ widgetId }: DragOverlayI
     }, [widgetId]);
 
     return (
-        <div className="mobile-widget-card mobile-widget-card-dragging">
-            <div className="mobile-widget-card-drag-indicator">
-                <MdDragIndicator className="w-4 h-4" />
-            </div>
+        <motion.div
+            className="mobile-widget-card mobile-widget-card-overlay"
+            initial={{ scale: 1, boxShadow: "0 0 0 rgba(0,0,0,0)" }}
+            animate={{
+                scale: 1.04,
+                boxShadow: "0 16px 48px rgba(0,0,0,0.18), 0 6px 16px rgba(0,0,0,0.1)",
+            }}
+            transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 30,
+            }}
+        >
             <WidgetComplication
                 widgetId={widgetId}
                 isVisible={true}
                 title={title}
                 Icon={TypeIcon}
             />
-        </div>
+        </motion.div>
     );
 });
 
@@ -232,52 +243,56 @@ const TrashDropZone = memo(function TrashDropZone({ isVisible, isOver }: TrashDr
             {isVisible && (
                 <motion.div
                     className="mobile-trash-zone"
-                    initial={{ opacity: 0, y: 80, scale: 0.9 }}
-                    animate={{
-                        opacity: 1,
-                        y: 0,
-                        scale: isOver ? 1.08 : 1,
-                    }}
-                    exit={{ opacity: 0, y: 60, scale: 0.95 }}
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.95 }}
                     transition={{
                         type: "spring",
-                        stiffness: 400,
-                        damping: 25,
-                        mass: 0.8,
+                        stiffness: 500,
+                        damping: 35,
+                        mass: 0.6,
                     }}
                 >
                     <motion.div
-                        className={`mobile-trash-zone-content ${isOver ? 'active' : ''}`}
+                        className="mobile-trash-zone-content"
                         animate={{
-                            backgroundColor: isOver ? 'rgb(239, 68, 68)' : 'rgba(239, 68, 68, 0.85)',
-                            scale: isOver ? 1.02 : 1,
+                            backgroundColor: isOver
+                                ? 'rgb(239, 68, 68)'
+                                : 'rgba(120, 120, 128, 0.24)',
+                            scale: isOver ? 1.06 : 1,
+                            borderColor: isOver
+                                ? 'rgba(239, 68, 68, 0.5)'
+                                : 'rgba(120, 120, 128, 0.2)',
                         }}
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        transition={{
+                            type: "spring",
+                            stiffness: 500,
+                            damping: 30,
+                        }}
                     >
                         <motion.div
                             animate={{
-                                scale: isOver ? 1.3 : 1,
-                                rotate: isOver ? [0, -15, 15, -10, 10, 0] : 0,
-                                y: isOver ? -2 : 0,
+                                scale: isOver ? 1.15 : 1,
+                                y: isOver ? -1 : 0,
                             }}
                             transition={{
                                 type: "spring",
-                                stiffness: 600,
-                                damping: 15,
-                                rotate: { duration: 0.5, ease: "easeInOut" }
+                                stiffness: 500,
+                                damping: 25,
                             }}
                         >
-                            <MdDelete className={`w-7 h-7 ${isOver ? 'text-white' : 'text-white/90'}`} />
+                            <MdDelete className={`w-5 h-5 ${isOver ? 'text-white' : 'text-[var(--ui-text-secondary)]'}`} />
                         </motion.div>
                         <motion.span
-                            className="text-white text-sm font-semibold"
-                            animate={{
-                                scale: isOver ? 1.05 : 1,
-                                y: isOver ? 1 : 0,
+                            className={`text-sm font-medium ${isOver ? 'text-white' : 'text-[var(--ui-text-secondary)]'}`}
+                            animate={{ scale: isOver ? 1.02 : 1 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 500,
+                                damping: 30,
                             }}
-                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
                         >
-                            {isOver ? 'Release to Remove' : 'Drag Here to Remove'}
+                            {isOver ? 'Release to Remove' : 'Remove'}
                         </motion.span>
                     </motion.div>
                 </motion.div>
@@ -309,17 +324,18 @@ export const SortableWidgetGrid = memo(function SortableWidgetGrid({
 }: SortableWidgetGridProps) {
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [isOverTrash, setIsOverTrash] = useState(false);
+    const justFinishedDragging = useRef(false);
 
     // Touch sensor with delay activation (long press to drag)
-    // Pointer sensor for desktop/mouse with distance activation
+    // Mouse sensor for desktop only
     const sensors = useSensors(
         useSensor(TouchSensor, {
             activationConstraint: {
-                delay: 200,
-                tolerance: 8,
+                delay: 500,
+                tolerance: 5,
             },
         }),
-        useSensor(PointerSensor, {
+        useSensor(MouseSensor, {
             activationConstraint: {
                 distance: 8,
             },
@@ -330,11 +346,10 @@ export const SortableWidgetGrid = memo(function SortableWidgetGrid({
         const { active } = event;
         setActiveId(active.id);
         onDragStateChange(true);
-        vibrate([20, 10, 20]);
+        vibrate([15, 5, 15]);
     }, [onDragStateChange]);
 
     const handleDragMove = useCallback((event: { activatorEvent: Event; delta: { x: number; y: number } }) => {
-        // Check if dragging over trash zone using the current pointer position
         const activatorEvent = event.activatorEvent as TouchEvent | MouseEvent;
         let clientY: number;
 
@@ -347,34 +362,36 @@ export const SortableWidgetGrid = memo(function SortableWidgetGrid({
         }
 
         const viewportHeight = window.innerHeight;
-        const trashZoneTop = viewportHeight - 120;
+        const trashZoneTop = viewportHeight - 100;
         const newIsOverTrash = clientY > trashZoneTop;
 
         if (newIsOverTrash !== isOverTrash) {
             setIsOverTrash(newIsOverTrash);
-            vibrate(newIsOverTrash ? 30 : 15);
+            vibrate(newIsOverTrash ? 20 : 10);
         }
     }, [isOverTrash]);
 
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
 
-        // If over trash, remove the widget
         if (isOverTrash && activeId) {
-            vibrate([50, 30, 50]);
+            vibrate([30, 15, 30]);
             onRemoveWidget(activeId as string);
         } else if (over && active.id !== over.id) {
-            // Reorder
             const oldIndex = widgetIds.indexOf(active.id as string);
             const newIndex = widgetIds.indexOf(over.id as string);
             const newOrder = arrayMove(widgetIds, oldIndex, newIndex);
             onReorder(newOrder);
-            vibrate(20);
+            vibrate(15);
         }
 
         setActiveId(null);
         setIsOverTrash(false);
         onDragStateChange(false);
+
+        // Brief cooldown to prevent accidental taps right after dropping
+        justFinishedDragging.current = true;
+        setTimeout(() => { justFinishedDragging.current = false; }, 200);
     }, [activeId, isOverTrash, onDragStateChange, onRemoveWidget, onReorder, widgetIds]);
 
     const handleDragCancel = useCallback(() => {
@@ -382,6 +399,12 @@ export const SortableWidgetGrid = memo(function SortableWidgetGrid({
         setIsOverTrash(false);
         onDragStateChange(false);
     }, [onDragStateChange]);
+
+    const handleWidgetClick = useCallback((widgetId: string) => {
+        if (!justFinishedDragging.current) {
+            onWidgetClick(widgetId);
+        }
+    }, [onWidgetClick]);
 
     return (
         <DndContext
@@ -402,14 +425,26 @@ export const SortableWidgetGrid = memo(function SortableWidgetGrid({
                         <SortableWidgetCard
                             key={widgetId}
                             widgetId={widgetId}
-                            onTap={() => onWidgetClick(widgetId)}
+                            onTap={() => handleWidgetClick(widgetId)}
                             isVisible={isVisible}
+                            isAnyDragging={!!activeId}
                         />
                     ))}
                 </div>
 
                 {typeof document !== 'undefined' && createPortal(
-                    <DragOverlay zIndex={1000}>
+                    <DragOverlay
+                        zIndex={1000}
+                        dropAnimation={{
+                            duration: 300,
+                            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                            sideEffects: defaultDropAnimationSideEffects({
+                                className: {
+                                    active: 'mobile-widget-card-ghost',
+                                },
+                            }),
+                        }}
+                    >
                         {activeId ? <DragOverlayItem widgetId={activeId as string} /> : null}
                     </DragOverlay>,
                     document.body

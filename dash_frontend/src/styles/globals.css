@@ -1412,32 +1412,50 @@ main {
   flex-direction: column;
   padding: 0.875rem;
   border-radius: 1rem;
-  border: 1px solid var(--ui-border-primary);
+  border: 1.5px solid var(--ui-border-primary);
   background: var(--ui-bg-secondary);
   min-height: 110px;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
   overflow: hidden;
   will-change: transform;
   transform-origin: center center;
+  cursor: pointer;
+  /* Smooth transitions for ghost ↔ normal */
+  transition:
+    border-color 300ms cubic-bezier(0.25, 1, 0.5, 1),
+    border-style 0ms,
+    background 300ms cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 300ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* Holding state - subtle scale up */
-.mobile-widget-card-holding {
-  border-color: var(--ui-accent-primary);
-  background: var(--ui-bg-tertiary);
+/* Content inside the card — fades for ghost state */
+.mobile-widget-card > * {
+  transition: opacity 250ms cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* Dragging state - elevated with shadow */
-.mobile-widget-card-dragging {
-  z-index: 1000 !important;
+/* Ghost state — clean themed placeholder box */
+.mobile-widget-card-ghost {
+  border-style: dashed;
+  border-width: 2px;
   border-color: var(--ui-accent-primary);
+  background: color-mix(in srgb, var(--ui-accent-primary) 8%, var(--ui-bg-secondary));
+  box-shadow: none;
+}
+
+.mobile-widget-card-ghost > * {
+  opacity: 0;
+}
+
+/* Overlay card — the floating piece under the finger */
+.mobile-widget-card-overlay {
+  border-color: var(--ui-border-primary);
   background: var(--ui-bg-secondary);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   cursor: grabbing;
-  /* Note: scale is handled by dnd-kit transform, don't override here */
+  /* Override the base transition - overlay handles its own via framer */
+  transition: none;
 }
 
 /* Over trash zone state - danger colors */
@@ -1450,23 +1468,7 @@ main {
   background: var(--ui-danger);
 }
 
-/* Drag indicator - shows when holding/dragging */
-.mobile-widget-card-drag-indicator {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  background: var(--ui-accent-primary);
-  color: white;
-  z-index: 10;
-  box-shadow: 0 4px 12px rgba(var(--ui-accent-primary-rgb, 59, 130, 246), 0.4);
-  will-change: transform, opacity;
-}
+/* Drag indicator - no longer needed, overlay handles visual */
 
 /* Card Header - Icon + Title inline */
 .mobile-widget-card-header {
@@ -1636,22 +1638,22 @@ main {
 .mobile-trash-zone-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  border-radius: 1.25rem;
-  background: rgba(239, 68, 68, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25), 0 4px 16px rgba(239, 68, 68, 0.2);
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 100px;
+  background: rgba(120, 120, 128, 0.24);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
   pointer-events: auto;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(120, 120, 128, 0.2);
   will-change: transform, background-color;
 }
 
 .mobile-trash-zone-content.active {
   background: rgb(239, 68, 68);
-  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(239, 68, 68, 0.4);
-  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 @keyframes placeholder-pulse {

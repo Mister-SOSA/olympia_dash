@@ -461,50 +461,74 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
             {/* Header */}
             <div className="mobile-grid-header">
                 <div className="flex items-center gap-3">
-                    {/* Icon - simple crossfade without layout shift */}
+                    {/* Icon - springy crossfade */}
                     <div className="relative w-5 h-5">
-                        <MdBookmarks
-                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200"
-                            style={{
-                                color: "var(--ui-accent-primary)",
-                                opacity: isWidgetDragging ? 0 : 1
-                            }}
-                        />
-                        <MdDragIndicator
-                            className="w-5 h-5 absolute inset-0 transition-opacity duration-200"
-                            style={{
-                                color: "var(--ui-accent-primary)",
-                                opacity: isWidgetDragging ? 1 : 0
-                            }}
-                        />
+                        <motion.div
+                            className="absolute inset-0"
+                            animate={{ opacity: isWidgetDragging ? 0 : 1, scale: isWidgetDragging ? 0.5 : 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        >
+                            <MdBookmarks className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                        </motion.div>
+                        <motion.div
+                            className="absolute inset-0"
+                            animate={{ opacity: isWidgetDragging ? 1 : 0, scale: isWidgetDragging ? 1 : 0.5 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        >
+                            <MdDragIndicator className="w-5 h-5" style={{ color: "var(--ui-accent-primary)" }} />
+                        </motion.div>
                     </div>
-                    <div>
-                        <h1
-                            className="text-lg font-semibold transition-opacity duration-200"
-                            style={{ color: "var(--ui-text-primary)" }}
-                        >
-                            {isWidgetDragging ? "Editing Layout" : activePreset.name}
-                        </h1>
-                        <p
-                            className="text-xs transition-opacity duration-200"
-                            style={{ color: "var(--ui-text-muted)" }}
-                        >
-                            {isWidgetDragging
-                                ? "Drag to reorder"
-                                : `${enabledWidgetIds.length} widget${enabledWidgetIds.length !== 1 ? "s" : ""}`
-                            }
-                        </p>
+                    <div className="overflow-hidden">
+                        {/* Title with crossfade */}
+                        <div className="relative h-[1.575rem]">
+                            <motion.h1
+                                className="text-lg font-semibold absolute inset-0"
+                                style={{ color: "var(--ui-text-primary)" }}
+                                animate={{ opacity: isWidgetDragging ? 0 : 1, y: isWidgetDragging ? -4 : 0 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                            >
+                                {activePreset.name}
+                            </motion.h1>
+                            <motion.h1
+                                className="text-lg font-semibold absolute inset-0"
+                                style={{ color: "var(--ui-text-primary)" }}
+                                animate={{ opacity: isWidgetDragging ? 1 : 0, y: isWidgetDragging ? 0 : 4 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                            >
+                                Editing Layout
+                            </motion.h1>
+                        </div>
+                        {/* Subtitle with crossfade */}
+                        <div className="relative h-[1rem]">
+                            <motion.p
+                                className="text-xs absolute inset-0"
+                                style={{ color: "var(--ui-text-muted)" }}
+                                animate={{ opacity: isWidgetDragging ? 0 : 1 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                            >
+                                {`${enabledWidgetIds.length} widget${enabledWidgetIds.length !== 1 ? "s" : ""}`}
+                            </motion.p>
+                            <motion.p
+                                className="text-xs absolute inset-0"
+                                style={{ color: "var(--ui-text-muted)" }}
+                                animate={{ opacity: isWidgetDragging ? 1 : 0 }}
+                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                            >
+                                Hold &amp; drag to reorder
+                            </motion.p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Header buttons - single container animation */}
-                <div
-                    className="flex items-center gap-2 transition-all duration-200 ease-out"
-                    style={{
+                {/* Header buttons - spring scale out */}
+                <motion.div
+                    className="flex items-center gap-2"
+                    animate={{
                         opacity: isWidgetDragging ? 0 : 1,
-                        transform: isWidgetDragging ? 'scale(0.9)' : 'scale(1)',
-                        pointerEvents: isWidgetDragging ? 'none' : 'auto',
+                        scale: isWidgetDragging ? 0.85 : 1,
                     }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    style={{ pointerEvents: isWidgetDragging ? 'none' : 'auto' }}
                 >
                     {/* Privacy Toggle */}
                     <motion.button
@@ -540,7 +564,7 @@ export default function MobileDashboard({ onSettingsClick }: MobileDashboardProp
                     >
                         <MdSettings className="w-5 h-5" />
                     </motion.button>
-                </div>
+                </motion.div>
             </div>
 
             {/* Preset Tabs */}
