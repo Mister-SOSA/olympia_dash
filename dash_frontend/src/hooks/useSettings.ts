@@ -347,6 +347,7 @@ export function useSettings() {
                     key.startsWith('dashboard') ||
                     key.startsWith('grid') ||
                     key.startsWith('dock') ||
+                    key.startsWith('navigation') ||
                     key.startsWith('dragHandle') ||
                     key.startsWith('widget') ||
                     key.startsWith('notifications') ||
