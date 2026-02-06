@@ -398,6 +398,7 @@ export default function DashboardTaskbar({
         taskbarSize,
         taskbarAutoHide,
         taskbarOpacity,
+        taskbarStyle,
         taskbarShowClock,
         taskbarShowDate,
         dockShowWidgetsToggle,
@@ -499,7 +500,12 @@ export default function DashboardTaskbar({
                     <div
                         className={`
                             w-full h-full flex items-center justify-between px-2
-                            bg-ui-bg-secondary/95 backdrop-blur-xl
+                            ${taskbarStyle === 'opaque'
+                                ? 'bg-ui-bg-secondary'
+                                : taskbarStyle === 'glass'
+                                    ? 'bg-ui-bg-secondary/60 backdrop-blur-xl'
+                                    : 'bg-transparent'
+                            }
                             ${taskbarPosition === 'top'
                                 ? 'border-b border-ui-border-primary shadow-xl'
                                 : 'border-t border-ui-border-primary shadow-xl'

@@ -1007,6 +1007,24 @@ export function SettingsContent({
                                     </div>
                                 </Subsection>
 
+                                <Subsection title="Taskbar Style">
+                                    <p className="text-xs text-ui-text-tertiary mb-3">Visual style of the taskbar background</p>
+                                    <div className="flex gap-2">
+                                        {(['opaque', 'glass', 'clear'] as const).map((style) => (
+                                            <button
+                                                key={style}
+                                                onClick={() => updateSetting('taskbarStyle', style)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all capitalize ${settings.taskbarStyle === style
+                                                    ? 'bg-ui-accent-primary text-white'
+                                                    : 'bg-ui-bg-tertiary text-ui-text-secondary hover:text-ui-text-primary'
+                                                    }`}
+                                            >
+                                                {style}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </Subsection>
+
                                 <Subsection title="Taskbar Clock">
                                     <div className="rounded-lg border border-ui-border-primary overflow-hidden divide-y divide-ui-border-primary">
                                         <ToggleSetting

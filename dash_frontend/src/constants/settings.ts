@@ -303,6 +303,13 @@ export const NAVIGATION_SETTINGS = {
         label: 'Taskbar Opacity',
         description: 'Background transparency of the taskbar',
     },
+    taskbarStyle: {
+        key: 'navigation.taskbarStyle',
+        default: 'glass' as const,
+        options: ['opaque', 'glass', 'clear'] as const,
+        label: 'Taskbar Style',
+        description: 'Visual style of the taskbar background',
+    },
     taskbarShowClock: {
         key: 'navigation.taskbarShowClock',
         default: true,
@@ -556,6 +563,7 @@ export type NumberFormat = typeof DATA_SETTINGS.numberFormat.options[number];
 export type NavigationMode = typeof NAVIGATION_SETTINGS.mode.options[number];
 export type TaskbarPosition = typeof NAVIGATION_SETTINGS.taskbarPosition.options[number];
 export type TaskbarSize = typeof NAVIGATION_SETTINGS.taskbarSize.options[number];
+export type TaskbarStyle = typeof NAVIGATION_SETTINGS.taskbarStyle.options[number];
 
 // Settings categories for UI organization
 export const SETTINGS_CATEGORIES = [

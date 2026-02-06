@@ -34,6 +34,7 @@ import {
     type NavigationMode,
     type TaskbarPosition,
     type TaskbarSize,
+    type TaskbarStyle,
 } from '@/constants/settings';
 
 // Type definitions for all settings
@@ -84,6 +85,7 @@ export interface UserSettings {
     taskbarSize: TaskbarSize;
     taskbarAutoHide: boolean;
     taskbarOpacity: number;
+    taskbarStyle: TaskbarStyle;
     taskbarShowClock: boolean;
     taskbarShowDate: boolean;
 
@@ -172,6 +174,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     taskbarSize: NAVIGATION_SETTINGS.taskbarSize.default,
     taskbarAutoHide: NAVIGATION_SETTINGS.taskbarAutoHide.default,
     taskbarOpacity: NAVIGATION_SETTINGS.taskbarOpacity.default,
+    taskbarStyle: NAVIGATION_SETTINGS.taskbarStyle.default,
     taskbarShowClock: NAVIGATION_SETTINGS.taskbarShowClock.default,
     taskbarShowDate: NAVIGATION_SETTINGS.taskbarShowDate.default,
 
@@ -254,6 +257,7 @@ const SETTINGS_KEY_MAP: Record<keyof UserSettings, string> = {
     taskbarSize: NAVIGATION_SETTINGS.taskbarSize.key,
     taskbarAutoHide: NAVIGATION_SETTINGS.taskbarAutoHide.key,
     taskbarOpacity: NAVIGATION_SETTINGS.taskbarOpacity.key,
+    taskbarStyle: NAVIGATION_SETTINGS.taskbarStyle.key,
     taskbarShowClock: NAVIGATION_SETTINGS.taskbarShowClock.key,
     taskbarShowDate: NAVIGATION_SETTINGS.taskbarShowDate.key,
 
